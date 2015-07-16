@@ -22,3 +22,4 @@ More thoughts ...
 
 Useful design patterns we may consider employing are Builder and AbstractFactory. The former might come in useful if we hava a set of objects that must be created together (e.g. objects for processing unstructured vs structured grids), the latter for assembling a collection of objects on the fly given what is specified in a configuration file. See https://github.com/faif/python-patterns for examples in python.
 
+For reading FVCOM output, we can use PySeidon (https://github.com/GrumpyNounours/PySeidon), which already has a neat class structure for reading and interrogating data (including subsetting in time and space).
