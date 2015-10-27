@@ -14,16 +14,16 @@ def main():
     config = get_config(config_filename=parsed_args.config)
     
     # Initiate logging
-    logging.basicConfig(filename="{}/pylag.log".format(config.get('DEFAULT', 'out_dir')),
+    logging.basicConfig(filename="{}/pylag_out.log".format(config.get('GENERAL', 'out_dir')),
                         filemode='w',
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                         datefmt='%m/%d/%Y %I:%M:%S %p',
-                        level=config.get('DEFAULT', 'log_level'))
+                        level=config.get('GENERAL', 'log_level'))
     logger = logging.getLogger(__name__)
     logger.info('Starting PyLag')
     
     # Record configuration to file
-    with open("{}/pylag_run.cfg".format(config.get('DEFAULT', 'out_dir')), 'wb') as config_out:
+    with open("{}/pylag_out.cfg".format(config.get('GENERAL', 'out_dir')), 'wb') as config_out:
         logger.info('Writing run config to file')
         config.write(config_out)
         
