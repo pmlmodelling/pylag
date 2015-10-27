@@ -4,6 +4,8 @@ import logging
 
 from configuration import get_config
 
+from model import get_model
+
 def main():
     # Parse command line agruments
     parser = argparse.ArgumentParser()
@@ -26,7 +28,12 @@ def main():
     with open("{}/pylag_out.cfg".format(config.get('GENERAL', 'out_dir')), 'wb') as config_out:
         logger.info('Writing run config to file')
         config.write(config_out)
-        
+    
+    # Initialise model object and run
+    model = get_model(config)
+    model.run()
+     
+    # End logging and exit
     logger.info('Stopping PyLag')
 
 if __name__ == '__main__':
