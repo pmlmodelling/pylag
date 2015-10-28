@@ -1,6 +1,7 @@
 import sys
 import argparse
 import logging
+import subprocess
 
 from configuration import get_config
 
@@ -22,7 +23,11 @@ def main():
                         datefmt='%m/%d/%Y %I:%M:%S %p',
                         level=config.get('GENERAL', 'log_level'))
     logger = logging.getLogger(__name__)
+    
+    # Save the version of the code used (current commit + status)
     logger.info('Starting PyLag')
+    logger.info('git log -n -1:\n' + subprocess.check_output(["git", "log", "-n", "1"]))
+    logger.info('git status:\n' + subprocess.check_output(["git", "status"]))
     
     # Record configuration to file
     with open("{}/pylag_out.cfg".format(config.get('GENERAL', 'out_dir')), 'wb') as config_out:
