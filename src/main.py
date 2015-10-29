@@ -34,9 +34,14 @@ def main():
         logger.info('Writing run config to file')
         config.write(config_out)
     
-    # Initialise model object and run
+    # Initialise model object from config
     model = get_model(config)
+    
+    # Run the simulation
     model.run()
+    
+    # Close output files etc
+    model.shutdown()
      
     # End logging and exit
     logger.info('Stopping PyLag')
