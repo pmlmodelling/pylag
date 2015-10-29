@@ -1,5 +1,7 @@
 import logging
 
+from particle import get_particle_seed
+
 class ParticleTrackingModel(object):
     def __init__(self, config):
         self.config = config
@@ -12,7 +14,7 @@ class FVCOMParticleTrackingModel(ParticleTrackingModel):
         super(FVCOMParticleTrackingModel, self).__init__(*args, **kwargs)
         
     def run(self):
-        pass
+        particles = get_particle_seed(self.config)
 
 def get_model(config):
     logger = logging.getLogger(__name__)
