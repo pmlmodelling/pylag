@@ -1,37 +1,37 @@
-import logging
-
 from particle import get_particle_seed
 from netcdf_logger import NetCDFLogger
 
-class ParticleTrackingModel(object):
+class ModelFactory(object):
     def __init__(self, config):
         self.config = config
     
-    def run(self):
-        pass
-    
-    def shutdown(self):
-        pass
-    
-class FVCOMParticleTrackingModel(ParticleTrackingModel):
-    def __init__(self, *args, **kwargs):
-        super(FVCOMParticleTrackingModel, self).__init__(*args, **kwargs)
-        
-    def run(self):
-        # Create seed particle set
-        self.particle_set = get_particle_seed(self.config)
-        
-        # Initialise netCDF data logger
-        self.data_logger = NetCDFLogger(self.config, len(self.particle_set))
-        
-    def shutdown(self):
-        if hasattr(self, 'data_logger'):
-            self.data_logger.close()
+    def make_grid_reader(self): pass
 
-def get_model(config):
-    logger = logging.getLogger(__name__)
+class FVCOMModelFactory(ModelFactory):
+    def __init__(self, *args, **kwargs):
+        super(FVCOMModelFactory, self).__init__(*args, **kwargs)
+
+    def make_grid_reader(self):
+        pass
+
+def get_model_factory(config):
     if config.get("OCEAN_CIRCULATION_MODEL", "NAME") == "FVCOM":
-        logger.info('Creating a new FVCOM particle tracking model.')
-        return FVCOMParticleTrackingModel(config)
+        return FVCOMModelFactory(config)
     else:
-        raise ValueError('Unsupported ocean circulation model.')
+        raise ValueError('Unsupported ocean circulation model.')    
+    
+def run(config):
+    factory = get_model_factory(config)
+
+    grid_reader = factory.make_grid_reader()
+    
+    # Create seed particle set
+    particle_set = get_particle_seed(config)
+
+    # Initialise netCDF data logger
+    data_logger = NetCDFLogger(config, len(particle_set))
+    
+    # TODO - Stuff!
+    
+    # Close output files
+    data_logger.close()

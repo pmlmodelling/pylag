@@ -4,8 +4,7 @@ import logging
 import subprocess
 
 from configuration import get_config
-
-from model import get_model
+import model
 
 def main():
     # Parse command line agruments
@@ -34,14 +33,8 @@ def main():
         logger.info('Writing run config to file')
         config.write(config_out)
     
-    # Initialise model object from config
-    model = get_model(config)
-    
     # Run the simulation
-    model.run()
-    
-    # Close output files etc
-    model.shutdown()
+    model.run(config)
      
     # End logging and exit
     logger.info('Stopping PyLag')
