@@ -8,6 +8,10 @@ class Particle(object):
         self._xpos = xpos
         self._ypos = ypos
         self._zpos = zpos
+        
+        self._in_domain = False
+        
+        self._host_horizontal_elem = None 
     
     # x position
     @property
@@ -35,6 +39,26 @@ class Particle(object):
     @zpos.setter
     def zpos(self, value):
         self._zpos = value
+        
+    # Is the particle in the model domain? True or false.
+    @property
+    def in_domain(self):
+        return self._in_domain
+    
+    @in_domain.setter
+    def in_domain(self, value):
+        self._in_domain = value
+        
+    # Particle host horizontal element
+    # TODO how to do this on both structured and unstructured grids without
+    # changing Particle's interface?
+    @property
+    def host_horizontal_elem(self):
+        return self._host_horizontal_elem
+
+    @host_horizontal_elem.setter
+    def host_horizontal_elem(self, value):
+        self._host_horizontal_elem = value
 
 def get_particle_seed(config=None):
     global _seed
