@@ -1,9 +1,36 @@
 import numpy as np
+import os
+from netCDF4 import Dataset
+
+def create_fvcom_grid_metrics_file(ncin_file_name):
+    # Name of grid file to be created
+    ncout_file_name = 'grid_metrics.nc'
+
+    # Make new file with global attributes and copied variables
+    var_to_copy = ['nv', 'nbe', 'x', 'y', 'xc', 'yc', 'siglev', 'siglay', 'h', 'a1u', 'a2u', 'aw0', 'awx', 'awy']
+    os.system("ncks -O -v "+",".join(var_to_copy)+" "+ncin_file_name+" "+ncout_file_name)
+    
+    # Add nv and nbe
+    ds_in = Dataset(ncin_file_name, 'r')
+    nv = ds_in.variables['nv'][:] - 1 # -1 for zero based numbering
+    nbe = ds_in.variables['nbe'][:] - 1 # -1 for zero based numbering
+    
+    # Sort the adjacency array
+    nbe_sorted = sort_adjacency_array(nv, nbe)
+    
+    # Write updates nv and nbe variables to file
+    ds_out = Dataset(ncout_file_name,'a')
+    ds_out.variables['nv'][:] = nv[:]
+    ds_out.variables['nbe'][:] = nbe_sorted[:]
+    
+    # Close files
+    ds_in.close()
+    ds_out.close()
 
 def round_time(dt, round_to=3600):
     """
     Round given datetime object to the number of given seconds
-    
+    c
     Parameters:
     -----------
     dt: Datetime

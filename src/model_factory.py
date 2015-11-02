@@ -34,47 +34,61 @@ class FVCOMModelReader(ModelReader):
     def _read_grid(self):
         logger = logging.getLogger(__name__)
         logger.info('Reading FVCOM\'s grid')
-        self._file_name = self.config.get('OCEAN_CIRCULATION_MODEL', 
-                                          'data_file')
         
-        self._ncfile = Dataset(self._file_name, 'r')
+        # Try to read grid data from the grid metrics file, in which neighbour
+        # element info (nbe) has been ordered to match node ordering in nv.
+        grid_metrics_file = False
+        if self.config.has_option('OCEAN_CIRCULATION_MODEL', 'grid_metrics_file'):
+            grid_file = self.config.get('OCEAN_CIRCULATION_MODEL', 'grid_metrics_file')
+            grid_metrics_file = True
+        else:
+            grid_file = self.config.get('OCEAN_CIRCULATION_MODEL', 'data_file')
+        
+        ncfile = Dataset(grid_file, 'r')
         
         # Number of nodes
-        self._n_nodes = len(self._ncfile.dimensions['node'])
+        self._n_nodes = len(ncfile.dimensions['node'])
         
         # Number of elements
-        self._n_elems = len(self._ncfile.dimensions['nele'])
+        self._n_elems = len(ncfile.dimensions['nele'])
         
         # Sigma lavels
-        self._n_siglev = len(self._ncfile.dimensions['siglev'])
+        self._n_siglev = len(ncfile.dimensions['siglev'])
         
         # Number of sigma layers
-        self._n_siglay = len(self._ncfile.dimensions['siglay'])
+        self._n_siglay = len(ncfile.dimensions['siglay'])
         
-        # Grid connectivity
-        self._nv = self._ncfile.variables['nv'][:] - 1
-        
-        # Grid adjacency
-        nbe = self._ncfile.variables['nbe'][:] - 1
-        self._nbe = sort_adjacency_array(self._nv, nbe)
+        # Grid connectivity/adjacency. If a separate grid metrics file has been
+        # supplied "assume" that nv and nbe have been preprocessed
+        if grid_metrics_file:
+            self._nv = ncfile.variables['nv'][:]
+            self._nbe = ncfile.variables['nbe'][:]
+        else:
+            self._nv = ncfile.variables['nv'][:] - 1
+            
+            logger.info('NO GRID METRICS FILE GIVEN. Grid adjacency will be ' \
+            'computed in run. To save time, this should be precomputed using' \
+            ' unstruct_grid_tools and saved in a separate grid metrics file.')
+            nbe = ncfile.variables['nbe'][:] - 1
+            self._nbe = sort_adjacency_array(self._nv, nbe)
         
         # Nodal x coordinates
-        self._x = self._ncfile.variables['x'][:]
+        self._x = ncfile.variables['x'][:]
         
         # Nodal y coordinates
-        self._y = self._ncfile.variables['y'][:]
+        self._y = ncfile.variables['y'][:]
 
         # Element x coordinates (taken at face centre)
-        self._xc = self._ncfile.variables['xc'][:]
+        self._xc = ncfile.variables['xc'][:]
         
         # Element y coordinates (taken at face centre)
-        self._yc = self._ncfile.variables['yc'][:]
+        self._yc = ncfile.variables['yc'][:]
 
         # Sigma levels at nodal coordinates
-        self._siglev = self._ncfile.variables['siglev'][:]
+        self._siglev = ncfile.variables['siglev'][:]
         
         # Sigma layers at nodal coordinates
-        self._siglay = self._ncfile.variables['siglay'][:]
+        self._siglay = ncfile.variables['siglay'][:]
         
         # TODO Does it make sense to precompute the following (relatively
         # expensive on large grids) or to simply compute on the fly? From 
@@ -103,7 +117,7 @@ class FVCOMModelReader(ModelReader):
         # TODO?
         
         # Bathymetry
-        self._h = self._ncfile.variables['h'][:]
+        self._h = ncfile.variables['h'][:]
 
         # Create upper right cartesian grid
         self._vxmin = np.min(self._x)
