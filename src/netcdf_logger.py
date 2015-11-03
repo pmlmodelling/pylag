@@ -1,5 +1,5 @@
 import logging
-from netCDF4 import Dataset
+from netCDF4 import Dataset, date2num
 
 class NetCDFLogger(object):
     """
@@ -39,31 +39,45 @@ class NetCDFLogger(object):
         self._ncfile.title = 'PyLag -- Plymouth Marine Laboratory'
 
         # Create coordinate dimensions
-        self._ncfile.createDimension('Particles', n_particles)
-        self._ncfile.createDimension('Time', None)
+        self._ncfile.createDimension('particles', n_particles)
+        self._ncfile.createDimension('time', None)
  
         # Add time variable
-        self._time = self._ncfile.createVariable('time','i4',('Time',))
+        self._time = self._ncfile.createVariable('time','i4',('time',))
         self._time.units = 'seconds since 1960-01-01 00:00:00'
         self._time.calendar = 'standard'
         self._time.long_name = 'Time'
         
         # Add position variables
-        self._xpos = self._ncfile.createVariable('xpos', self._data_type, ('Time', 'Particles',))
+        self._xpos = self._ncfile.createVariable('xpos', self._data_type, ('time', 'particles',))
         self._xpos.units = 'meters (m)'
         self._xpos.long_name = 'Particle x position'
         
-        self._ypos = self._ncfile.createVariable('ypos', self._data_type, ('Time', 'Particles',))
+        self._ypos = self._ncfile.createVariable('ypos', self._data_type, ('time', 'particles',))
         self._ypos.units = 'meters (m)'
         self._ypos.long_name = 'Particle y position'        
         
-        self._zpos = self._ncfile.createVariable('zpos', self._data_type, ('Time', 'Particles',))
+        self._zpos = self._ncfile.createVariable('zpos', self._data_type, ('time', 'particles',))
         self._zpos.units = 'meters (m)'
         self._zpos.long_name = 'Particle z position'
         
         # Add extra grid variables
         #self._indomain = self._ncfile.createVariable('indomain', 'i4', ('Time', 'Particles',))
         #self._inwater = self._ncfile.createVariable('inwater', 'i4', ('Time', 'Particles',))
+
+    def write(self, time, particle_set):
+        # Next time index
+        tidx = self._time.shape[0]
+        
+        # Convert datetime object to int and write to file
+        time_out = date2num(time, units = self._time.units, calendar = self._time.calendar)
+        self._time[tidx] = time_out
+        
+        # Write particle position data to file
+        for idx, particle in enumerate(particle_set):
+            self._xpos[tidx, idx] = particle.xpos
+            self._ypos[tidx, idx] = particle.ypos
+            self._zpos[tidx, idx] = particle.zpos
         
     def close(self):
         logger = logging.getLogger(__name__)

@@ -54,5 +54,8 @@ def run(config):
     # Initialise netCDF data logger
     data_logger = NetCDFLogger(config, len(particle_set))
     
+    # Write particle initial positions to file
+    data_logger.write(time_manager.time, particle_set)
+
     # Close output files
     data_logger.close()
