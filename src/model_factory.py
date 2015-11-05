@@ -30,6 +30,7 @@ class FVCOMModelReader(ModelReader):
         super(FVCOMModelReader, self).__init__(*args, **kwargs)
 
         self._read_grid()
+        self._init_vars()
 
     def _read_grid(self):
         logger = logging.getLogger(__name__)
@@ -124,6 +125,24 @@ class FVCOMModelReader(ModelReader):
         self._x_upper_right_cart = self._x - self._vxmin
         self._vymin = np.min(self._y)
         self._y_upper_right_cart = self._y - self._vymin
+        
+        ncfile.close()
+        
+    def _init_vars(self):
+        """
+        Create and initialise class data members pointing to time dependent
+        variables. No data copying is performed at this time.
+        """
+        file_name = self.config.get('OCEAN_CIRCULATION_MODEL', 'data_file')
+        self._data_file = Dataset(file_name, 'r')
+        
+        # Dictionary providing access to netcdf variables
+        self._vars = {}
+        
+        # Initialise witout data copying
+        var_names = ['u', 'v', 'zeta']
+        for name in var_names:
+            self._vars[name] = self._data_file.variables[name]
         
     def find_host_using_local_search(self, particle, guess=0):
         """
