@@ -9,7 +9,7 @@ class ModelReader(object):
     def __init__(self, config):
         self.config = config
         
-    def find_host(self, xpos, ypos, guess=0):
+    def find_host(self, xpos, ypos, guess=None):
         pass
     
 class FVCOMModelReader(ModelReader):
