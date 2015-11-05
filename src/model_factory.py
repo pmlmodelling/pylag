@@ -1,6 +1,6 @@
 import sys
 import numpy as np
-from netCDF4 import Dataset
+from netCDF4 import Dataset, num2date
 import logging
 
 from unstruct_grid_tools import sort_adjacency_array
@@ -136,6 +136,10 @@ class FVCOMModelReader(ModelReader):
         file_name = self.config.get('OCEAN_CIRCULATION_MODEL', 'data_file')
         self._data_file = Dataset(file_name, 'r')
         
+        # Read in time and convert to basetime object
+        time = self._data_file.variables['time']
+        self._time = num2date(time[:], units=time.units)
+        
         # Dictionary providing access to netcdf variables
         self._vars = {}
         
@@ -207,6 +211,35 @@ class FVCOMModelReader(ModelReader):
         # Particle is not in the domain
         raise ValueError('Particle is not in the domain')
 
+    def get_local_environment(self, time, x, y, z, host_elem):
+        """
+        Return local environmental conditions for the provided time, x, y, and 
+        z coordinates. Conditions include:
+        
+        h: water depth (m)
+        zeta: sea surface elevation (m)
+        u: eastward velocity component (m/s)
+        v: northward velocity component (m/s)
+        
+        TODO - Make host elem optional.
+        """
+        local_environment = {}
+        
+        nodes = self._nv[:,host_elem].squeeze()
+
+        phi = get_natural_coords(x, y, self._x[nodes], self._y[nodes])
+
+        t_fraction, tidx1, tidx2 = get_time_fraction(time, self._time)
+
+        # Bathymetry - h
+        local_environment['h'] = interpolate_within_element(self._h[nodes], phi)
+        
+        # Sea surface elevation - zeta
+        zeta_nodes = (1.0 - t_fraction)*self._vars['zeta'][tidx1, nodes] + t_fraction * self._vars['zeta'][tidx2, nodes]
+        local_environment['zeta'] = interpolate_within_element(zeta_nodes, phi)
+
+        return local_environment
+        
 class ModelFactory(object):
     def __init__(self, config):
         self.config = config
@@ -245,3 +278,29 @@ def get_natural_coords(x, y, x_nodes, y_nodes):
     phi[2] = 1.0 - phi[0] - phi[1]
     
     return phi
+
+def interpolate_within_element(var, phi):
+    return var[0] + phi[0] * (var[1] - var[0]) + phi[1] * (var[2] - var[0])
+
+def get_time_fraction(time, time_array):
+    # Find indices for times within time_array that bracket `time'
+    tidx1 = None
+    for idx, t_test in enumerate(time_array):
+        if time >= t_test and idx < (len(time_array) - 1):
+            tidx1 = idx
+            break
+
+    if tidx1 is None:
+        logger = logging.getLogger(__name__)
+        logger.info('The provided date {} lies outside of the range for which '\
+        'there exists simulation output. Limits are: t_start = {}, t_end '\
+        '= {}'.format(time, time_array[0], time_array[-1]))
+        raise TypeError('Time out of range.')
+
+    # Adjacent time index
+    tidx2 = tidx1 + 1
+    
+    # Calculate time fraction according to the formula (t - t1)/(t2 - t1)
+    tdelta_1 = float((time - time_array[tidx1]).total_seconds())
+    tdelta_2 = float((time_array[tidx2] - time_array[tidx1]).total_seconds())
+    return tdelta_1/tdelta_2, tidx1, tidx2
