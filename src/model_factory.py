@@ -9,20 +9,7 @@ class ModelReader(object):
     def __init__(self, config):
         self.config = config
         
-    def find_host_using_local_search(self, particle, guess=0):
-        """
-        Find host element for a single particle. Typically, if 
-        """
-        pass
-    
-    def find_host_using_global_search(self, particle):
-        """
-        Find host elements for a set of particles. Subclasses may use
-        the location of one particle to speed up the locating of other particles
-        within the domain -- assuming at least some particles are likely to 
-        be co-located -- which should provide a speed up relative to algorithms
-        that perform a global search for each and every particle in the set.
-        """
+    def find_host(self, particle, guess=0):
         pass
     
 class FVCOMModelReader(ModelReader):
@@ -31,6 +18,19 @@ class FVCOMModelReader(ModelReader):
 
         self._read_grid()
         self._init_vars()
+        
+    def find_host(self, particle, guess=None):
+        if guess is not None:
+            try:
+                return self._find_host_using_local_search(particle, guess)
+            except ValueError:
+                pass
+            
+        # Global search
+        try:
+            return self._find_host_using_global_search(particle)
+        except ValueError:
+            return -1
 
     def _read_grid(self):
         logger = logging.getLogger(__name__)
@@ -148,7 +148,7 @@ class FVCOMModelReader(ModelReader):
         for name in var_names:
             self._vars[name] = self._data_file.variables[name]
         
-    def find_host_using_local_search(self, particle, guess=0):
+    def _find_host_using_local_search(self, particle, guess=0):
         """
         Try to establish the host horizontal element for the particle.
         The algorithm adopted is as described in Shadden (2009), adapted for
@@ -196,7 +196,7 @@ class FVCOMModelReader(ModelReader):
                 # Local search failed
                 raise ValueError('Particle not found using local search.')
 
-    def find_host_using_global_search(self, particle):
+    def _find_host_using_global_search(self, particle):
 
         for i in range(self._n_elems):
             nodes = self._nv[:,i].squeeze()
