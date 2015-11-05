@@ -9,7 +9,7 @@ class ModelReader(object):
     def __init__(self, config):
         self.config = config
         
-    def find_host(self, particle, guess=0):
+    def find_host(self, xpos, ypos, guess=0):
         pass
     
 class FVCOMModelReader(ModelReader):
@@ -19,16 +19,16 @@ class FVCOMModelReader(ModelReader):
         self._read_grid()
         self._init_vars()
         
-    def find_host(self, particle, guess=None):
+    def find_host(self, xpos, ypos, guess=None):
         if guess is not None:
             try:
-                return self._find_host_using_local_search(particle, guess)
+                return self._find_host_using_local_search(xpos, ypos, guess)
             except ValueError:
                 pass
             
         # Global search
         try:
-            return self._find_host_using_global_search(particle)
+            return self._find_host_using_global_search(xpos, ypos)
         except ValueError:
             return -1
 
@@ -148,7 +148,7 @@ class FVCOMModelReader(ModelReader):
         for name in var_names:
             self._vars[name] = self._data_file.variables[name]
         
-    def _find_host_using_local_search(self, particle, guess=0):
+    def _find_host_using_local_search(self, xpos, ypos, guess=0):
         """
         Try to establish the host horizontal element for the particle.
         The algorithm adopted is as described in Shadden (2009), adapted for
@@ -176,7 +176,7 @@ class FVCOMModelReader(ModelReader):
             nodes = self._nv[:,guess].squeeze()
             
             # Transform to natural coordinates
-            phi = get_natural_coords(particle.xpos, particle.ypos, self._x[nodes], self._y[nodes])
+            phi = get_natural_coords(xpos, ypos, self._x[nodes], self._y[nodes])
 
             # Check to see if the particle is in the current element
             if np.min(phi) >= 0.0:
@@ -196,13 +196,13 @@ class FVCOMModelReader(ModelReader):
                 # Local search failed
                 raise ValueError('Particle not found using local search.')
 
-    def _find_host_using_global_search(self, particle):
+    def _find_host_using_global_search(self, xpos, ypos):
 
         for i in range(self._n_elems):
             nodes = self._nv[:,i].squeeze()
             
             # Transform to natural coordinates
-            phi = get_natural_coords(particle.xpos, particle.ypos, self._x[nodes], self._y[nodes])
+            phi = get_natural_coords(xpos, ypos, self._x[nodes], self._y[nodes])
 
             # Check to see if the particle is in the current element
             if np.min(phi) >= 0.0:

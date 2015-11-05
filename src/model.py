@@ -22,7 +22,7 @@ def run(config):
     guess = None
     particles_in_domain = 0
     for idx, particle in enumerate(particle_set):
-        particle_set[idx].host_horizontal_elem = grid_reader.find_host(particle, guess)
+        particle_set[idx].host_horizontal_elem = grid_reader.find_host(particle.xpos, particle.ypos, guess)
 
         if particle_set[idx].host_horizontal_elem != -1:
             particle_set[idx].in_domain = True
