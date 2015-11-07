@@ -3,7 +3,7 @@ import numpy as np
 from netCDF4 import Dataset, num2date
 import logging
 
-import mesh_toolkit as mtk
+import _mesh_toolkit as mtk
 
 from unstruct_grid_tools import sort_adjacency_array
 
@@ -28,7 +28,7 @@ class FVCOMModelReader(ModelReader):
             except ValueError:
                 pass
 
-        return self._find_host_using_global_search(xpos, ypos)
+        return mtk.find_host_using_global_search(xpos, ypos, self._x, self._y, self._nv)
 
     def _read_grid(self):
         logger = logging.getLogger(__name__)
@@ -70,7 +70,7 @@ class FVCOMModelReader(ModelReader):
             ' unstruct_grid_tools and saved in a separate grid metrics file.')
             nbe = ncfile.variables['nbe'][:] - 1
             self._nbe = sort_adjacency_array(self._nv, nbe)
-        
+            
         # Nodal x coordinates
         self._x = ncfile.variables['x'][:]
         
@@ -173,12 +173,12 @@ class FVCOMModelReader(ModelReader):
         while True:
             nodes = self._nv[:,guess].squeeze()
             
-            x_nodes = np.array(self._x[nodes], dtype=np.float64)
-            y_nodes = np.array(self._y[nodes], dtype=np.float64)
+            x_nodes = np.array(self._x[nodes], dtype=np.float32)
+            y_nodes = np.array(self._y[nodes], dtype=np.float32)
             
             # Transform to natural coordinates
-            phi = np.empty(3, dtype=np.float64)
-            mtk.get_barycentric_coords_wrapper(xpos, ypos, x_nodes, y_nodes, phi)
+            phi = np.empty(3, dtype=np.float32)
+            mtk.get_barycentric_coords(xpos, ypos, x_nodes, y_nodes, phi)
 
             # Check to see if the particle is in the current element
             if np.min(phi) >= 0.0:
@@ -199,7 +199,7 @@ class FVCOMModelReader(ModelReader):
                 raise ValueError('Particle not found using local search.')
 
     def _find_host_using_global_search(self, xpos, ypos):
-
+        
         for i in range(self._n_elems):
             nodes = self._nv[:,i].squeeze()
             

@@ -1,11 +1,6 @@
-from distutils.core import setup, Extension
-import numpy
-from Cython.Distutils import build_ext
+from distutils.core import setup
+from Cython.Build import cythonize
 
 setup(
-    cmdclass={'build_ext': build_ext},
-    ext_modules=[Extension("mesh_toolkit",
-                 sources=["_mesh_toolkit.pyx", "mesh_toolkit.c"],
-                 include_dirs=[numpy.get_include()])],
+    ext_modules=cythonize("_mesh_toolkit.pyx"),            
 )
-
