@@ -1,4 +1,7 @@
-from __future__ import division
+# cython: Profile=True
+# cython: linetrace=True
+
+cimport cython
 
 import numpy as np
 
@@ -15,33 +18,40 @@ ctypedef np.float32_t DTYPE_FLOAT_t
 
 ctypedef np.int32_t DTYPE_INT_t
 
+#@cython.boundscheck(False)
 def find_host_using_global_search(DTYPE_FLOAT_t x, DTYPE_FLOAT_t y,
         np.ndarray[DTYPE_FLOAT_t, ndim=1] x_nodes,
         np.ndarray[DTYPE_FLOAT_t, ndim=1] y_nodes,
         np.ndarray[DTYPE_INT_t, ndim=2] nv):
     assert x_nodes.dtype == DTYPE_FLOAT and y_nodes.dtype == DTYPE_FLOAT and nv.dtype == DTYPE_INT
 
-    cdef int i # Loop counter
+    cdef int i, j # Loop counters
+    cdef int vertex # Vertex identifier
     cdef int n_elems = nv.shape[1] # No. of elements
-    cdef np.ndarray[DTYPE_INT_t, ndim=1] vertices = np.empty(3, dtype=DTYPE_INT)
+    cdef int n_vertices = nv.shape[0] # No. of vertices in a triangle
     cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] x_tri = np.empty(3, dtype=DTYPE_FLOAT)
     cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] y_tri = np.empty(3, dtype=DTYPE_FLOAT)
-    cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] phi = np.empty(3, dtype=DTYPE_FLOAT) 
+    cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] phi = np.empty(3, dtype=DTYPE_FLOAT)
+    cdef float phi_test
 
     for i in range(n_elems):
-        vertices = nv[:,i].squeeze()
-        x_tri[:] = x_nodes[vertices]
-        y_tri[:] = y_nodes[vertices]
+        for j in range(n_vertices):
+            vertex = nv[j,i]
+            x_tri[j] = x_nodes[vertex]
+            y_tri[j] = y_nodes[vertex]
 
         # Transform to natural coordinates
         get_barycentric_coords(x, y, x_tri, y_tri, phi)
 
         # Check to see if the particle is in the current element
-        if phi.min() >= 0.0:
-            return i
+        phi_test = phi[0]
+        if phi[1] < phi_test: phi_test = phi[1]
+        if phi[2] < phi_test: phi_test = phi[2]  
+        if phi_test >= 0.0: return i
     raise ValueError('Particle not found.')
 
 # create the wrapper code, with numpy type annotations
+#@cython.boundscheck(False)
 def get_barycentric_coords(DTYPE_FLOAT_t x, DTYPE_FLOAT_t y,
         np.ndarray[DTYPE_FLOAT_t, ndim=1] x_tri,
         np.ndarray[DTYPE_FLOAT_t, ndim=1] y_tri,
