@@ -198,25 +198,6 @@ class FVCOMModelReader(ModelReader):
                 # Local search failed
                 raise ValueError('Particle not found using local search.')
 
-    def _find_host_using_global_search(self, xpos, ypos):
-        
-        for i in range(self._n_elems):
-            nodes = self._nv[:,i].squeeze()
-            
-            x_nodes = np.array(self._x[nodes], dtype=np.float64)
-            y_nodes = np.array(self._y[nodes], dtype=np.float64)
-            
-            # Transform to natural coordinates
-            phi = np.empty(3, dtype=np.float64)
-            mtk.get_barycentric_coords_wrapper(xpos, ypos, x_nodes, y_nodes, phi)
-
-            # Check to see if the particle is in the current element
-            if np.min(phi) >= 0.0:
-                return i
-            
-        # Particle is not in the domain
-        raise ValueError('Particle is not in the domain')
-
     def get_local_environment(self, time, x, y, z, host_elem):
         """
         Return local environmental conditions for the provided time, x, y, and 
