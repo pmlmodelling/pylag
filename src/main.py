@@ -4,7 +4,7 @@ import logging
 import subprocess
 
 from configuration import get_config
-import model
+from model import get_simulator
 
 def main():
     # Parse command line agruments
@@ -34,7 +34,8 @@ def main():
         config.write(config_out)
     
     # Run the simulation
-    model.run(config)
+    simulator = get_simulator(config)
+    simulator.run(config)
      
     # End logging and exit
     logger.info('Stopping PyLag')
