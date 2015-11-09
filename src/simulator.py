@@ -1,4 +1,4 @@
-from model_factory import get_model_factory
+from model_factory import get_model
 from time_manager import TimeManager
 
 def get_simulator(config):
@@ -17,15 +17,11 @@ class TraceSimulator(Simulator):
         self.time_manager = TimeManager(config)
     
     def run(self, config):
-        
-        # Factory for specific model types (e.g. FVCOM)
-        factory = get_model_factory(config)
-
-        # Model specific grid reader (for finding host elements etc)
-        grid_reader = factory.make_grid_reader()
+        # Model object
+        model = get_model(config)
 
         # Create particle seed
-        grid_reader.create_particle_set()
+        model.create_particle_set()
 
         #    # Update variables describing the particle's local environment
         #    # TODO environment is unused here, but will be updated
@@ -36,7 +32,7 @@ class TraceSimulator(Simulator):
         #                particle.host_horizontal_elem)
 
         # Write initial state to file
-        grid_reader.write(self.time_manager.time)
+        model.write(self.time_manager.time)
 
         # Close output files
-        grid_reader.shutdown()
+        model.shutdown()
