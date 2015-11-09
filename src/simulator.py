@@ -1,4 +1,4 @@
-from model_factory import get_model
+from model import get_model
 from time_manager import TimeManager
 
 def get_simulator(config):
