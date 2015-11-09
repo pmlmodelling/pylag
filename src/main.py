@@ -4,7 +4,7 @@ import logging
 import subprocess
 
 from configuration import get_config
-from model import get_simulator
+from simulator import get_simulator
 
 def main():
     # Parse command line agruments
