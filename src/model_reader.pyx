@@ -13,20 +13,37 @@ ctypedef np.int32_t DTYPE_INT_t
 
 from unstruct_grid_tools import sort_adjacency_array
 
-class ModelReader(object):
+cdef class ModelReader(object):
+
+    def find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, guess=None):
+        pass
+    
+cdef class FVCOMModelReader(ModelReader):
+    # Name of file containing velocity field data
+    cdef object data_file_name
+
+    # Name of file containing grid data
+    cdef object grid_file_name
+
+    # Grid dimensions
+    cdef DTYPE_INT_t _n_elems, _n_nodes, _n_siglay, _n_siglev
+    
+    # Element connectivity
+    cdef DTYPE_INT_t[:,:] _nv
+    
+    # Element adjacency
+    cdef DTYPE_INT_t[:,:] _nbe
+    
+    # Nodal coordinates
+    cdef DTYPE_FLOAT_t[:] _x
+    cdef DTYPE_FLOAT_t[:] _y
+    
     def __init__(self, data_file_name, grid_file_name=None):
         self.data_file_name = data_file_name
         self.grid_file_name = grid_file_name
 
-    def find_host(self, xpos, ypos, guess=None):
-        pass
-    
-class FVCOMModelReader(ModelReader):
-    def __init__(self, *args, **kwargs):
-        super(FVCOMModelReader, self).__init__(*args, **kwargs)
-
         self._read_grid()
-        self._init_vars()     
+        #self._init_vars()     
         
     def find_host(self, xpos, ypos, guess=None):
         if guess is not None:
@@ -62,7 +79,7 @@ class FVCOMModelReader(ModelReader):
         
         # Grid connectivity/adjacency. If a separate grid metrics file has been
         # supplied "assume" that nv and nbe have been preprocessed
-        if hasattr(self, "grid_file_name"):
+        if self.grid_file_name is not None:
             self._nv = ncfile.variables['nv'][:]
             self._nbe = ncfile.variables['nbe'][:]
         else:
@@ -81,16 +98,16 @@ class FVCOMModelReader(ModelReader):
         self._y = ncfile.variables['y'][:]
 
         # Element x coordinates (taken at face centre)
-        self._xc = ncfile.variables['xc'][:]
+        #self._xc = ncfile.variables['xc'][:]
         
         # Element y coordinates (taken at face centre)
-        self._yc = ncfile.variables['yc'][:]
+        #self._yc = ncfile.variables['yc'][:]
 
         # Sigma levels at nodal coordinates
-        self._siglev = ncfile.variables['siglev'][:]
+        #self._siglev = ncfile.variables['siglev'][:]
         
         # Sigma layers at nodal coordinates
-        self._siglay = ncfile.variables['siglay'][:]
+        #self._siglay = ncfile.variables['siglay'][:]
         
         # TODO Does it make sense to precompute the following (relatively
         # expensive on large grids) or to simply compute on the fly? From 
@@ -119,36 +136,36 @@ class FVCOMModelReader(ModelReader):
         # TODO?
         
         # Bathymetry
-        self._h = ncfile.variables['h'][:]
+        #self._h = ncfile.variables['h'][:]
 
         # Create upper right cartesian grid
-        self._vxmin = np.min(self._x)
-        self._x_upper_right_cart = self._x - self._vxmin
-        self._vymin = np.min(self._y)
-        self._y_upper_right_cart = self._y - self._vymin
+        #self._vxmin = np.min(self._x)
+        #self._x_upper_right_cart = self._x - self._vxmin
+        #self._vymin = np.min(self._y)
+        #self._y_upper_right_cart = self._y - self._vymin
         
         ncfile.close()
         
-    def _init_vars(self):
-        """
-        Create and initialise class data members pointing to time dependent
-        variables. No data copying is performed at this time.
-        """
-        self._data_file = Dataset(self.data_file_name, 'r')
+#    def _init_vars(self):
+#        """
+#        Create and initialise class data members pointing to time dependent
+#        variables. No data copying is performed at this time.
+#        """
+#        self._data_file = Dataset(self.data_file_name, 'r')
         
         # Read in time and convert to basetime object
-        time = self._data_file.variables['time']
-        self._time = num2date(time[:], units=time.units)
+#        time = self._data_file.variables['time']
+#        self._time = num2date(time[:], units=time.units)
         
         # Dictionary providing access to netcdf variables
-        self._vars = {}
+#        self._vars = {}
         
         # Initialise witout data copying
-        var_names = ['u', 'v', 'zeta']
-        for name in var_names:
-            self._vars[name] = self._data_file.variables[name]
+#        var_names = ['u', 'v', 'zeta']
+#        for name in var_names:
+#            self._vars[name] = self._data_file.variables[name]
         
-    def _find_host_using_local_search(self, xpos, ypos, guess=0):
+    def _find_host_using_local_search(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
         """
         Try to establish the host horizontal element for the particle.
         The algorithm adopted is as described in Shadden (2009), adapted for
@@ -172,19 +189,30 @@ class FVCOMModelReader(ModelReader):
         Shadden, S. 2009 TODO
         """
 
+        cdef int i # Loop counters
+        cdef int vertex # Vertex identifier
+        cdef int n_vertices = 3 # No. of vertices in a triangle
+
+        # Intermediate arrays
+        cdef DTYPE_FLOAT_t[:] x_tri = np.empty(3, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] y_tri = np.empty(3, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] phi = np.empty(3, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t phi_test
+
         while True:
-            nodes = self._nv[:,guess].squeeze()
-            
-            x_nodes = np.array(self._x[nodes], dtype=np.float32)
-            y_nodes = np.array(self._y[nodes], dtype=np.float32)
-            
+            for i in xrange(n_vertices):
+                vertex = self._nv[i,guess]
+                x_tri[i] = self._x[vertex]
+                y_tri[i] = self._y[vertex]
+
             # Transform to natural coordinates
-            phi = np.empty(3, dtype=np.float32)
-            self._get_barycentric_coords(xpos, ypos, x_nodes, y_nodes, phi)
+            self._get_barycentric_coords(xpos, ypos, x_tri, y_tri, phi)
 
             # Check to see if the particle is in the current element
-            if np.min(phi) >= 0.0:
-                return guess
+            phi_test = phi[0]
+            if phi[1] < phi_test: phi_test = phi[1]
+            if phi[2] < phi_test: phi_test = phi[2]  
+            if phi_test >= 0.0: return guess
 
             # If not, use phi to select the next element to be searched
             if phi[0] < 0.0:
@@ -205,25 +233,20 @@ class FVCOMModelReader(ModelReader):
 
         cdef int i, j # Loop counters
         cdef int vertex # Vertex identifier
-        cdef int n_elems = self._n_elems # No. of elements
         cdef int n_vertices = 3 # No. of vertices in a triangle
-
-        # Cython memory views for faster indexing
-        cdef DTYPE_FLOAT_t[:] x_nodes = self._x
-        cdef DTYPE_FLOAT_t[:] y_nodes = self._y
-        cdef DTYPE_INT_t[:,:] nv = self._nv
 
         # Intermediate arrays
         cdef DTYPE_FLOAT_t[:] x_tri = np.empty(3, dtype=DTYPE_FLOAT)
         cdef DTYPE_FLOAT_t[:] y_tri = np.empty(3, dtype=DTYPE_FLOAT)
         cdef DTYPE_FLOAT_t[:] phi = np.empty(3, dtype=DTYPE_FLOAT)
         cdef DTYPE_FLOAT_t phi_test
-
-        for i in range(n_elems):
+        
+        print "Starting global search."
+        for i in range(self._n_elems):
             for j in range(n_vertices):
-                vertex = nv[j,i]
-                x_tri[j] = x_nodes[vertex]
-                y_tri[j] = y_nodes[vertex]
+                vertex = self._nv[j,i]
+                x_tri[j] = self._x[vertex]
+                y_tri[j] = self._y[vertex]
 
             # Transform to natural coordinates
             self._get_barycentric_coords(x, y, x_tri, y_tri, phi)
@@ -236,7 +259,7 @@ class FVCOMModelReader(ModelReader):
         return -1
     
     #@cython.boundscheck(False)
-    def _get_barycentric_coords(self, DTYPE_FLOAT_t& x, DTYPE_FLOAT_t& y,
+    cdef _get_barycentric_coords(self, DTYPE_FLOAT_t x, DTYPE_FLOAT_t y,
             DTYPE_FLOAT_t[:] x_tri, DTYPE_FLOAT_t[:] y_tri, DTYPE_FLOAT_t[:] phi):
 
         cdef DTYPE_FLOAT_t a11, a12, a21, a22, det
