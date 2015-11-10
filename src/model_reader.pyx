@@ -208,9 +208,12 @@ class FVCOMModelReader(ModelReader):
         cdef int n_elems = self._n_elems # No. of elements
         cdef int n_vertices = 3 # No. of vertices in a triangle
 
+        # Cython memory views for faster indexing
         cdef DTYPE_FLOAT_t[:] x_nodes = self._x
         cdef DTYPE_FLOAT_t[:] y_nodes = self._y
+        cdef DTYPE_INT_t[:,:] nv = self._nv
 
+        # Intermediate arrays
         cdef DTYPE_FLOAT_t[:] x_tri = np.empty(3, dtype=DTYPE_FLOAT)
         cdef DTYPE_FLOAT_t[:] y_tri = np.empty(3, dtype=DTYPE_FLOAT)
         cdef DTYPE_FLOAT_t[:] phi = np.empty(3, dtype=DTYPE_FLOAT)
@@ -218,7 +221,7 @@ class FVCOMModelReader(ModelReader):
 
         for i in range(n_elems):
             for j in range(n_vertices):
-                vertex = self._nv[j,i]
+                vertex = nv[j,i]
                 x_tri[j] = x_nodes[vertex]
                 y_tri[j] = y_nodes[vertex]
 
