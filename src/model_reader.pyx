@@ -208,16 +208,19 @@ class FVCOMModelReader(ModelReader):
         cdef int n_elems = self._n_elems # No. of elements
         cdef int n_vertices = 3 # No. of vertices in a triangle
 
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] x_tri = np.empty(3, dtype=DTYPE_FLOAT)
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] y_tri = np.empty(3, dtype=DTYPE_FLOAT)
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] phi = np.empty(3, dtype=DTYPE_FLOAT)
-        cdef float phi_test
+        cdef DTYPE_FLOAT_t[:] x_nodes = self._x
+        cdef DTYPE_FLOAT_t[:] y_nodes = self._y
+
+        cdef DTYPE_FLOAT_t[:] x_tri = np.empty(3, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] y_tri = np.empty(3, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] phi = np.empty(3, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t phi_test
 
         for i in range(n_elems):
             for j in range(n_vertices):
                 vertex = self._nv[j,i]
-                x_tri[j] = self._x[vertex]
-                y_tri[j] = self._y[vertex]
+                x_tri[j] = x_nodes[vertex]
+                y_tri[j] = y_nodes[vertex]
 
             # Transform to natural coordinates
             self._get_barycentric_coords(x, y, x_tri, y_tri, phi)
@@ -231,10 +234,7 @@ class FVCOMModelReader(ModelReader):
     
     #@cython.boundscheck(False)
     def _get_barycentric_coords(self, DTYPE_FLOAT_t& x, DTYPE_FLOAT_t& y,
-            np.ndarray[DTYPE_FLOAT_t, ndim=1] x_tri,
-            np.ndarray[DTYPE_FLOAT_t, ndim=1] y_tri,
-            np.ndarray[DTYPE_FLOAT_t, ndim=1] phi):
-        assert x_tri.dtype == DTYPE_FLOAT and y_tri.dtype == DTYPE_FLOAT and phi.dtype == DTYPE_FLOAT
+            DTYPE_FLOAT_t[:] x_tri, DTYPE_FLOAT_t[:] y_tri, DTYPE_FLOAT_t[:] phi):
 
         cdef DTYPE_FLOAT_t a11, a12, a21, a22, det
 
