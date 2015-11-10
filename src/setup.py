@@ -4,5 +4,5 @@ from distutils.core import setup
 from Cython.Build import cythonize
 
 setup(
-    ext_modules=cythonize("_mesh_toolkit.pyx"),
+    ext_modules=cythonize("model_reader.pyx", "_mesh_toolkit.pyx"),
 )

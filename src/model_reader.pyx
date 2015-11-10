@@ -2,6 +2,15 @@ import numpy as np
 from netCDF4 import Dataset, num2date
 import logging
 
+# Cython imports
+cimport numpy as np
+np.import_array()
+
+DTYPE_FLOAT = np.float32
+DTYPE_INT = np.int32
+ctypedef np.float32_t DTYPE_FLOAT_t
+ctypedef np.int32_t DTYPE_INT_t
+
 import _mesh_toolkit as mtk
 
 from unstruct_grid_tools import sort_adjacency_array
@@ -28,7 +37,7 @@ class FVCOMModelReader(ModelReader):
             except ValueError:
                 pass
 
-        return mtk.find_host_using_global_search(xpos, ypos, self._x, self._y, self._nv)
+        return self._find_host_using_global_search(xpos, ypos)
 
     def _read_grid(self):
         logger = logging.getLogger(__name__)
@@ -192,6 +201,35 @@ class FVCOMModelReader(ModelReader):
             if guess == -1:
                 # Local search failed
                 raise ValueError('Particle not found using local search.')
+
+    #@cython.boundscheck(False)
+    def _find_host_using_global_search(self, x, y):
+
+        cdef int i, j # Loop counters
+        cdef int vertex # Vertex identifier
+        cdef int n_elems = self._n_elems # No. of elements
+        cdef int n_vertices = 3 # No. of vertices in a triangle
+
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] x_tri = np.empty(3, dtype=DTYPE_FLOAT)
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] y_tri = np.empty(3, dtype=DTYPE_FLOAT)
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] phi = np.empty(3, dtype=DTYPE_FLOAT)
+        cdef float phi_test
+
+        for i in range(n_elems):
+            for j in range(n_vertices):
+                vertex = self._nv[j,i]
+                x_tri[j] = self._x[vertex]
+                y_tri[j] = self._y[vertex]
+
+            # Transform to natural coordinates
+            mtk.get_barycentric_coords(x, y, x_tri, y_tri, phi)
+
+            # Check to see if the particle is in the current element
+            phi_test = phi[0]
+            if phi[1] < phi_test: phi_test = phi[1]
+            if phi[2] < phi_test: phi_test = phi[2]  
+            if phi_test >= 0.0: return i
+        return -1
 
     def get_local_environment(self, time, x, y, z, host_elem):
         """
