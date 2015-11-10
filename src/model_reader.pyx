@@ -165,7 +165,7 @@ cdef class FVCOMModelReader(ModelReader):
 #        for name in var_names:
 #            self._vars[name] = self._data_file.variables[name]
         
-    def _find_host_using_local_search(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
+    cdef _find_host_using_local_search(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
         """
         Try to establish the host horizontal element for the particle.
         The algorithm adopted is as described in Shadden (2009), adapted for
@@ -229,7 +229,7 @@ cdef class FVCOMModelReader(ModelReader):
                 raise ValueError('Particle not found using local search.')
 
     #@cython.boundscheck(False)
-    def _find_host_using_global_search(self, DTYPE_FLOAT_t& x, DTYPE_FLOAT_t& y):
+    cdef _find_host_using_global_search(self, DTYPE_FLOAT_t x, DTYPE_FLOAT_t y):
 
         cdef int i, j # Loop counters
         cdef int vertex # Vertex identifier
@@ -242,8 +242,8 @@ cdef class FVCOMModelReader(ModelReader):
         cdef DTYPE_FLOAT_t phi_test
         
         print "Starting global search."
-        for i in range(self._n_elems):
-            for j in range(n_vertices):
+        for i in xrange(self._n_elems):
+            for j in xrange(n_vertices):
                 vertex = self._nv[j,i]
                 x_tri[j] = self._x[vertex]
                 y_tri[j] = self._y[vertex]
