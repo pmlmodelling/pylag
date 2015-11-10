@@ -20,8 +20,8 @@ class TraceSimulator(Simulator):
         # Model object
         model = get_model(config)
 
-        # Create particle seed
-        model.create_particle_set()
+        # Initialise time counter, create particle seed
+        model.initialise(self.time_manager.time)
 
         # Write initial state to file
         model.record(self.time_manager.time)

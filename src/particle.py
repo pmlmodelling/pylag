@@ -2,7 +2,7 @@ import numpy as np
 import logging
 
 class Particle(object):
-    def __init__(self, group_id, xpos, ypos, zpos, host=None, h=None):
+    def __init__(self, group_id, xpos, ypos, zpos, host=None, h=None, zeta=None):
         self._group_id = group_id
         
         self._xpos = xpos
@@ -14,6 +14,8 @@ class Particle(object):
         self._host_horizontal_elem = host
         
         self._h = h
+        
+        self._zeta = None
     
     # x position
     @property
@@ -70,6 +72,15 @@ class Particle(object):
     @h.setter
     def h(self, value):
         self._h = value
+        
+    # zeta - Sea surface elevation at the particle's current position
+    @property
+    def zeta(self):
+        return self._zeta
+    
+    @h.setter
+    def zeta(self, value):
+        self._zeta = value
 
 def get_particle_seed(config=None):
     global _seed

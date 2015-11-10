@@ -18,6 +18,9 @@ cdef class ModelReader(object):
     def find_host(self, xpos, ypos, guess=None):
         pass
     
+    def get_time(self, time_ref):
+        pass
+    
     def get_bathymetry(self, xpos, ypos, host):
         pass
     
@@ -55,13 +58,13 @@ cdef class FVCOMModelReader(ModelReader):
     cdef DTYPE_FLOAT_t[:] _h
     
     # Sea surface elevation
-    cdef DTYPE_FLOAT_t[:,:,:] _zeta
+    cdef DTYPE_FLOAT_t[:,:] _zeta
     
     # u/v velocity components
     cdef DTYPE_FLOAT_t[:,:,:] _u
     cdef DTYPE_FLOAT_t[:,:,:] _v
     
-    # Time (datetime obj)
+    # Time array (datetime obj, list)
     cdef object _time
     
     def __init__(self, data_file_name, grid_file_name=None):
@@ -79,6 +82,28 @@ cdef class FVCOMModelReader(ModelReader):
                 pass
 
         return self._find_host_using_global_search(xpos, ypos)
+
+    def get_time(self, time_ref):
+        # Find indices for times within time_array that bracket time_ref.
+        tidx1 = None
+        for idx, t_test in enumerate(self._time):
+            if time_ref >= t_test and idx < (len(self._time) - 1):
+                tidx1 = idx
+                break
+
+        if tidx1 is None:
+            logger = logging.getLogger(__name__)
+            logger.info('The provided date {} lies outside of the range for which '\
+            'there exists simulation output. Limits are: t_start = {}, t_end '\
+            '= {}'.format(time_ref, self._time[0], self._time[-1]))
+            raise TypeError('Time out of range.')
+
+        # Adjacent time index
+        tidx2 = tidx1 + 1
+
+        # Calculate time fraction according to the formula (t - t1)/(t2 - t1)
+        time_fraction = (time_ref - self._time[tidx1]).total_seconds() / (self._time[tidx2] - self._time[tidx1]).total_seconds()
+        return tidx1, tidx2, time_fraction
 
     def get_bathymetry(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
         """
@@ -108,8 +133,42 @@ cdef class FVCOMModelReader(ModelReader):
 
         return h
     
-    def get_sea_sur_elev(self, xpos, ypos, time):
-        pass
+    def get_sea_sur_elev(self, DTYPE_INT_t tidx_last, DTYPE_INT_t tidx_next, 
+            DTYPE_FLOAT_t time_fraction, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, 
+            DTYPE_INT_t host):
+        """
+        Return sea surface elevation at the supplied x/y coordinates.
+        """
+        cdef int i # Loop counters
+        cdef int vertex # Vertex identifier
+        cdef int n_vertices = 3 # No. of vertices in a triangle
+        cdef DTYPE_FLOAT_t zeta # Sea surface elevation at (t, xpos, ypos)
+
+        # Intermediate arrays
+        cdef DTYPE_FLOAT_t[:] x_tri = np.empty(3, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] y_tri = np.empty(3, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] zeta_tri_t_last = np.empty(3, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] zeta_tri_t_next = np.empty(3, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] zeta_tri = np.empty(3, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] phi = np.empty(3, dtype=DTYPE_FLOAT)
+
+        for i in xrange(n_vertices):
+            vertex = self._nv[i,host]
+            x_tri[i] = self._x[vertex]
+            y_tri[i] = self._y[vertex]
+            zeta_tri_t_last[i] = self._zeta[tidx_last, vertex]
+            zeta_tri_t_next[i] = self._zeta[tidx_next, vertex]
+
+        # Calculate barycentric coordinates
+        self._get_barycentric_coords(xpos, ypos, x_tri, y_tri, phi)
+
+        # Interpolate in time
+        self._interpolate_in_time_at_tri_nodes(time_fraction, zeta_tri_t_last, zeta_tri_t_next, zeta_tri)
+
+        # Interpolate in space
+        zeta = self._interpolate_within_element(zeta_tri, phi)
+
+        return zeta
 
     def _read_grid(self):
         logger = logging.getLogger(__name__)
@@ -177,8 +236,7 @@ cdef class FVCOMModelReader(ModelReader):
         
         # Interpolation parameters (a1u, a2u, aw0, awx, awy)
         # TODO?
-        
-        # Bathymetry
+
         self._h = ncfile.variables['h'][:]
 
         # Create upper right cartesian grid
@@ -198,6 +256,9 @@ cdef class FVCOMModelReader(ModelReader):
         # Read in time and convert to basetime object
         time = self._data_file.variables['time']
         self._time = num2date(time[:], units=time.units)
+        
+        # Initialise memory view for zeta
+        self._zeta = self._data_file.variables['zeta'][:,:]
         
     cdef _find_host_using_local_search(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
         """
@@ -311,60 +372,17 @@ cdef class FVCOMModelReader(ModelReader):
         phi[1] = (a21*(x - x_tri[0]) + a22*(y - y_tri[0]))/det
         phi[2] = 1.0 - phi[0] - phi[1]
 
+    cdef _interpolate_in_time_at_tri_nodes(self, DTYPE_FLOAT_t time_fraction, 
+            DTYPE_FLOAT_t[:] zeta_tri_t_last, DTYPE_FLOAT_t[:] zeta_tri_t_next, 
+            DTYPE_FLOAT_t[:] zeta_tri):
+
+        cdef DTYPE_INT_t i # Loop counter
+        cdef DTYPE_INT_t n_vertices = 3 # No. of vertices in a triangle
+        
+        for i in xrange(n_vertices):
+            zeta_tri[i] = (1.0 - time_fraction) * zeta_tri_t_last[i] + time_fraction * zeta_tri_t_next[i]
+
     cdef DTYPE_FLOAT_t _interpolate_within_element(self, DTYPE_FLOAT_t[:] var, DTYPE_FLOAT_t[:] phi):
         cdef DTYPE_FLOAT_t interpolated_var
         interpolated_var = var[0] + phi[0] * (var[1] - var[0]) + phi[1] * (var[2] - var[0])
         return interpolated_var
-
-    def get_local_environment(self, time, x, y, z, host_elem):
-        """
-        Return local environmental conditions for the provided time, x, y, and 
-        z coordinates. Conditions include:
-        
-        h: water depth (m)
-        zeta: sea surface elevation (m)
-        u: eastward velocity component (m/s)
-        v: northward velocity component (m/s)
-        
-        TODO - Make host elem optional.
-        """
-        pass
-        #local_environment = {}
-        
-        #nodes = self._nv[:,host_elem].squeeze()
-
-        #phi = get_natural_coords(x, y, self._x[nodes], self._y[nodes])
-
-        #t_fraction, tidx1, tidx2 = get_time_fraction(time, self._time)
-
-        # Bathymetry - h
-        #local_environment['h'] = interpolate_within_element(self._h[nodes], phi)
-        
-        # Sea surface elevation - zeta
-        #zeta_nodes = (1.0 - t_fraction)*self._vars['zeta'][tidx1, nodes] + t_fraction * self._vars['zeta'][tidx2, nodes]
-        #local_environment['zeta'] = interpolate_within_element(zeta_nodes, phi)
-
-        #return local_environment
-
-def get_time_fraction(time, time_array):
-    # Find indices for times within time_array that bracket `time'
-    tidx1 = None
-    for idx, t_test in enumerate(time_array):
-        if time >= t_test and idx < (len(time_array) - 1):
-            tidx1 = idx
-            break
-
-    if tidx1 is None:
-        logger = logging.getLogger(__name__)
-        logger.info('The provided date {} lies outside of the range for which '\
-        'there exists simulation output. Limits are: t_start = {}, t_end '\
-        '= {}'.format(time, time_array[0], time_array[-1]))
-        raise TypeError('Time out of range.')
-
-    # Adjacent time index
-    tidx2 = tidx1 + 1
-    
-    # Calculate time fraction according to the formula (t - t1)/(t2 - t1)
-    tdelta_1 = float((time - time_array[tidx1]).total_seconds())
-    tdelta_2 = float((time_array[tidx2] - time_array[tidx1]).total_seconds())
-    return tdelta_1/tdelta_2, tidx1, tidx2
