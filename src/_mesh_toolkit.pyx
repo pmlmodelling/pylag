@@ -52,7 +52,7 @@ def find_host_using_global_search(DTYPE_FLOAT_t x, DTYPE_FLOAT_t y,
 
 # create the wrapper code, with numpy type annotations
 #@cython.boundscheck(False)
-def get_barycentric_coords(DTYPE_FLOAT_t x, DTYPE_FLOAT_t y,
+def get_barycentric_coords(DTYPE_FLOAT_t& x, DTYPE_FLOAT_t& y,
         np.ndarray[DTYPE_FLOAT_t, ndim=1] x_tri,
         np.ndarray[DTYPE_FLOAT_t, ndim=1] y_tri,
         np.ndarray[DTYPE_FLOAT_t, ndim=1] phi):
