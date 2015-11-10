@@ -11,8 +11,6 @@ DTYPE_INT = np.int32
 ctypedef np.float32_t DTYPE_FLOAT_t
 ctypedef np.int32_t DTYPE_INT_t
 
-import _mesh_toolkit as mtk
-
 from unstruct_grid_tools import sort_adjacency_array
 
 class ModelReader(object):
@@ -182,7 +180,7 @@ class FVCOMModelReader(ModelReader):
             
             # Transform to natural coordinates
             phi = np.empty(3, dtype=np.float32)
-            mtk.get_barycentric_coords(xpos, ypos, x_nodes, y_nodes, phi)
+            self._get_barycentric_coords(xpos, ypos, x_nodes, y_nodes, phi)
 
             # Check to see if the particle is in the current element
             if np.min(phi) >= 0.0:
@@ -203,7 +201,7 @@ class FVCOMModelReader(ModelReader):
                 raise ValueError('Particle not found using local search.')
 
     #@cython.boundscheck(False)
-    def _find_host_using_global_search(self, x, y):
+    def _find_host_using_global_search(self, DTYPE_FLOAT_t& x, DTYPE_FLOAT_t& y):
 
         cdef int i, j # Loop counters
         cdef int vertex # Vertex identifier
@@ -222,7 +220,7 @@ class FVCOMModelReader(ModelReader):
                 y_tri[j] = self._y[vertex]
 
             # Transform to natural coordinates
-            mtk.get_barycentric_coords(x, y, x_tri, y_tri, phi)
+            self._get_barycentric_coords(x, y, x_tri, y_tri, phi)
 
             # Check to see if the particle is in the current element
             phi_test = phi[0]
@@ -230,6 +228,29 @@ class FVCOMModelReader(ModelReader):
             if phi[2] < phi_test: phi_test = phi[2]  
             if phi_test >= 0.0: return i
         return -1
+    
+    #@cython.boundscheck(False)
+    def _get_barycentric_coords(self, DTYPE_FLOAT_t& x, DTYPE_FLOAT_t& y,
+            np.ndarray[DTYPE_FLOAT_t, ndim=1] x_tri,
+            np.ndarray[DTYPE_FLOAT_t, ndim=1] y_tri,
+            np.ndarray[DTYPE_FLOAT_t, ndim=1] phi):
+        assert x_tri.dtype == DTYPE_FLOAT and y_tri.dtype == DTYPE_FLOAT and phi.dtype == DTYPE_FLOAT
+
+        cdef DTYPE_FLOAT_t a11, a12, a21, a22, det
+
+        # Array elements
+        a11 = y_tri[2] - y_tri[0]
+        a12 = x_tri[0] - x_tri[2]
+        a21 = y_tri[0] - y_tri[1]
+        a22 = x_tri[1] - x_tri[0]
+
+        # Determinant
+        det = a11 * a22 - a12 * a21
+
+        # Transformation to barycentric coordinates
+        phi[0] = (a11*(x - x_tri[0]) + a12*(y - y_tri[0]))/det
+        phi[1] = (a21*(x - x_tri[0]) + a22*(y - y_tri[0]))/det
+        phi[2] = 1.0 - phi[0] - phi[1]
 
     def get_local_environment(self, time, x, y, z, host_elem):
         """
