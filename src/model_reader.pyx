@@ -15,7 +15,7 @@ from unstruct_grid_tools import sort_adjacency_array
 
 cdef class ModelReader(object):
 
-    def find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, guess=None):
+    def find_host(self, xpos, ypos, guess=None):
         pass
     
 cdef class FVCOMModelReader(ModelReader):
@@ -24,6 +24,9 @@ cdef class FVCOMModelReader(ModelReader):
 
     # Name of file containing grid data
     cdef object grid_file_name
+    
+    # NetCDF4 data file giving access to time dependent fields
+    cdef object _data_file
 
     # Grid dimensions
     cdef DTYPE_INT_t _n_elems, _n_nodes, _n_siglay, _n_siglev
@@ -37,13 +40,30 @@ cdef class FVCOMModelReader(ModelReader):
     # Nodal coordinates
     cdef DTYPE_FLOAT_t[:] _x
     cdef DTYPE_FLOAT_t[:] _y
+
+    # Element centre coordinates
+    cdef DTYPE_FLOAT_t[:] _xc
+    cdef DTYPE_FLOAT_t[:] _yc   
+    
+    # Bathymetry
+    cdef DTYPE_FLOAT_t[:] _h
+    
+    # Sea surface elevation
+    cdef DTYPE_FLOAT_t[:,:,:] _zeta
+    
+    # u/v velocity components
+    cdef DTYPE_FLOAT_t[:,:,:] _u
+    cdef DTYPE_FLOAT_t[:,:,:] _v
+    
+    # Time (datetime obj)
+    cdef object _time
     
     def __init__(self, data_file_name, grid_file_name=None):
         self.data_file_name = data_file_name
         self.grid_file_name = grid_file_name
 
         self._read_grid()
-        #self._init_vars()     
+        self._init_vars()     
         
     def find_host(self, xpos, ypos, guess=None):
         if guess is not None:
@@ -65,16 +85,9 @@ cdef class FVCOMModelReader(ModelReader):
         else:
             ncfile = Dataset(self.data_file_name, 'r')
         
-        # Number of nodes
         self._n_nodes = len(ncfile.dimensions['node'])
-        
-        # Number of elements
         self._n_elems = len(ncfile.dimensions['nele'])
-        
-        # Sigma lavels
         self._n_siglev = len(ncfile.dimensions['siglev'])
-        
-        # Number of sigma layers
         self._n_siglay = len(ncfile.dimensions['siglay'])
         
         # Grid connectivity/adjacency. If a separate grid metrics file has been
@@ -90,18 +103,11 @@ cdef class FVCOMModelReader(ModelReader):
             ' unstruct_grid_tools and saved in a separate grid metrics file.')
             nbe = ncfile.variables['nbe'][:] - 1
             self._nbe = sort_adjacency_array(self._nv, nbe)
-            
-        # Nodal x coordinates
-        self._x = ncfile.variables['x'][:]
-        
-        # Nodal y coordinates
-        self._y = ncfile.variables['y'][:]
 
-        # Element x coordinates (taken at face centre)
-        #self._xc = ncfile.variables['xc'][:]
-        
-        # Element y coordinates (taken at face centre)
-        #self._yc = ncfile.variables['yc'][:]
+        self._x = ncfile.variables['x'][:]
+        self._y = ncfile.variables['y'][:]
+        self._xc = ncfile.variables['xc'][:]
+        self._yc = ncfile.variables['yc'][:]
 
         # Sigma levels at nodal coordinates
         #self._siglev = ncfile.variables['siglev'][:]
@@ -136,7 +142,7 @@ cdef class FVCOMModelReader(ModelReader):
         # TODO?
         
         # Bathymetry
-        #self._h = ncfile.variables['h'][:]
+        self._h = ncfile.variables['h'][:]
 
         # Create upper right cartesian grid
         #self._vxmin = np.min(self._x)
@@ -146,24 +152,15 @@ cdef class FVCOMModelReader(ModelReader):
         
         ncfile.close()
         
-#    def _init_vars(self):
-#        """
-#        Create and initialise class data members pointing to time dependent
-#        variables. No data copying is performed at this time.
-#        """
-#        self._data_file = Dataset(self.data_file_name, 'r')
+    def _init_vars(self):
+        """
+        Set up access to the NetCDF data file and initialise time.
+        """
+        self._data_file = Dataset(self.data_file_name, 'r')
         
         # Read in time and convert to basetime object
-#        time = self._data_file.variables['time']
-#        self._time = num2date(time[:], units=time.units)
-        
-        # Dictionary providing access to netcdf variables
-#        self._vars = {}
-        
-        # Initialise witout data copying
-#        var_names = ['u', 'v', 'zeta']
-#        for name in var_names:
-#            self._vars[name] = self._data_file.variables[name]
+        time = self._data_file.variables['time']
+        self._time = num2date(time[:], units=time.units)
         
     cdef _find_host_using_local_search(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
         """
@@ -241,7 +238,6 @@ cdef class FVCOMModelReader(ModelReader):
         cdef DTYPE_FLOAT_t[:] phi = np.empty(3, dtype=DTYPE_FLOAT)
         cdef DTYPE_FLOAT_t phi_test
         
-        print "Starting global search."
         for i in xrange(self._n_elems):
             for j in xrange(n_vertices):
                 vertex = self._nv[j,i]
