@@ -18,6 +18,12 @@ cdef class ModelReader(object):
     def find_host(self, xpos, ypos, guess=None):
         pass
     
+    def get_bathymetry(self, xpos, ypos, host):
+        pass
+    
+    def get_sea_sur_elev(self, xpos, ypos, time):
+        pass
+    
 cdef class FVCOMModelReader(ModelReader):
     # Name of file containing velocity field data
     cdef object data_file_name
@@ -73,6 +79,37 @@ cdef class FVCOMModelReader(ModelReader):
                 pass
 
         return self._find_host_using_global_search(xpos, ypos)
+
+    def get_bathymetry(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
+        """
+        Return bathymetry at the supplied x/y coordinates.
+        """
+        cdef int i # Loop counters
+        cdef int vertex # Vertex identifier
+        cdef int n_vertices = 3 # No. of vertices in a triangle
+        cdef DTYPE_FLOAT_t h # Bathymetry at (xpos, ypos)
+
+        # Intermediate arrays
+        cdef DTYPE_FLOAT_t[:] x_tri = np.empty(3, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] y_tri = np.empty(3, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] h_tri = np.empty(3, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] phi = np.empty(3, dtype=DTYPE_FLOAT)
+
+        for i in xrange(n_vertices):
+            vertex = self._nv[i,host]
+            x_tri[i] = self._x[vertex]
+            y_tri[i] = self._y[vertex]
+            h_tri[i] = self._h[vertex]
+
+        # Calculate barycentric coordinates
+        self._get_barycentric_coords(xpos, ypos, x_tri, y_tri, phi)
+
+        h = self._interpolate_within_element(h_tri, phi)
+
+        return h
+    
+    def get_sea_sur_elev(self, xpos, ypos, time):
+        pass
 
     def _read_grid(self):
         logger = logging.getLogger(__name__)
@@ -274,6 +311,11 @@ cdef class FVCOMModelReader(ModelReader):
         phi[1] = (a21*(x - x_tri[0]) + a22*(y - y_tri[0]))/det
         phi[2] = 1.0 - phi[0] - phi[1]
 
+    cdef DTYPE_FLOAT_t _interpolate_within_element(self, DTYPE_FLOAT_t[:] var, DTYPE_FLOAT_t[:] phi):
+        cdef DTYPE_FLOAT_t interpolated_var
+        interpolated_var = var[0] + phi[0] * (var[1] - var[0]) + phi[1] * (var[2] - var[0])
+        return interpolated_var
+
     def get_local_environment(self, time, x, y, z, host_elem):
         """
         Return local environmental conditions for the provided time, x, y, and 
@@ -303,9 +345,6 @@ cdef class FVCOMModelReader(ModelReader):
         #local_environment['zeta'] = interpolate_within_element(zeta_nodes, phi)
 
         #return local_environment
-    
-def interpolate_within_element(var, phi):
-    return var[0] + phi[0] * (var[1] - var[0]) + phi[1] * (var[2] - var[0])
 
 def get_time_fraction(time, time_array):
     # Find indices for times within time_array that bracket `time'

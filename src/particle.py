@@ -2,7 +2,7 @@ import numpy as np
 import logging
 
 class Particle(object):
-    def __init__(self, group_id, xpos, ypos, zpos):
+    def __init__(self, group_id, xpos, ypos, zpos, host=None, h=None):
         self._group_id = group_id
         
         self._xpos = xpos
@@ -11,7 +11,9 @@ class Particle(object):
         
         self._in_domain = False
         
-        self._host_horizontal_elem = None 
+        self._host_horizontal_elem = host
+        
+        self._h = h
     
     # x position
     @property
@@ -59,6 +61,15 @@ class Particle(object):
     @host_horizontal_elem.setter
     def host_horizontal_elem(self, value):
         self._host_horizontal_elem = value
+
+    # h - Water depth at the particle's current position
+    @property
+    def h(self):
+        return self._h
+    
+    @h.setter
+    def h(self, value):
+        self._h = value
 
 def get_particle_seed(config=None):
     global _seed
