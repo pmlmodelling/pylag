@@ -205,22 +205,23 @@ class FVCOMModelReader(ModelReader):
         
         TODO - Make host elem optional.
         """
-        local_environment = {}
+        pass
+        #local_environment = {}
         
-        nodes = self._nv[:,host_elem].squeeze()
+        #nodes = self._nv[:,host_elem].squeeze()
 
-        phi = get_natural_coords(x, y, self._x[nodes], self._y[nodes])
+        #phi = get_natural_coords(x, y, self._x[nodes], self._y[nodes])
 
-        t_fraction, tidx1, tidx2 = get_time_fraction(time, self._time)
+        #t_fraction, tidx1, tidx2 = get_time_fraction(time, self._time)
 
         # Bathymetry - h
-        local_environment['h'] = interpolate_within_element(self._h[nodes], phi)
+        #local_environment['h'] = interpolate_within_element(self._h[nodes], phi)
         
         # Sea surface elevation - zeta
-        zeta_nodes = (1.0 - t_fraction)*self._vars['zeta'][tidx1, nodes] + t_fraction * self._vars['zeta'][tidx2, nodes]
-        local_environment['zeta'] = interpolate_within_element(zeta_nodes, phi)
+        #zeta_nodes = (1.0 - t_fraction)*self._vars['zeta'][tidx1, nodes] + t_fraction * self._vars['zeta'][tidx2, nodes]
+        #local_environment['zeta'] = interpolate_within_element(zeta_nodes, phi)
 
-        return local_environment
+        #return local_environment
     
 def interpolate_within_element(var, phi):
     return var[0] + phi[0] * (var[1] - var[0]) + phi[1] * (var[2] - var[0])
