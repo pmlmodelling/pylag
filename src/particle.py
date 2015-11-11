@@ -15,7 +15,7 @@ class Particle(object):
         
         self._h = h
         
-        self._zeta = None
+        self._zeta = zeta
     
     # x position
     @property
@@ -78,7 +78,7 @@ class Particle(object):
     def zeta(self):
         return self._zeta
     
-    @h.setter
+    @zeta.setter
     def zeta(self, value):
         self._zeta = value
 
