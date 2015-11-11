@@ -61,6 +61,15 @@ class NetCDFLogger(object):
         self._zpos.units = 'meters (m)'
         self._zpos.long_name = 'Particle z position'
         
+        # Add local environmental variables
+        self._h = self._ncfile.createVariable('h', self._data_type, ('time', 'particles',))
+        self._h.units = 'meters (m)'
+        self._h.long_name = 'Water depth'
+        
+        self._zeta = self._ncfile.createVariable('zeta', self._data_type, ('time', 'particles',))
+        self._zeta.units = 'meters (m)'
+        self._zeta.long_name = 'Sea surface elevation'
+        
         # Add extra grid variables
         #self._indomain = self._ncfile.createVariable('indomain', 'i4', ('Time', 'Particles',))
         #self._inwater = self._ncfile.createVariable('inwater', 'i4', ('Time', 'Particles',))
@@ -78,6 +87,8 @@ class NetCDFLogger(object):
             self._xpos[tidx, idx] = particle.xpos
             self._ypos[tidx, idx] = particle.ypos
             self._zpos[tidx, idx] = particle.zpos
+            self._h[tidx, idx] = particle.h
+            self._zeta[tidx, idx] = particle.zeta
         
     def close(self):
         logger = logging.getLogger(__name__)
