@@ -12,6 +12,12 @@ class OPTModel(object):
     def initialise(self, time):
         pass
     
+    def advect(self, time, time_step):
+        pass
+    
+    def rand_walk(self):
+        pass
+    
     def record(self, time):
         pass
     
@@ -44,6 +50,9 @@ class FVCOMOPTModel(OPTModel):
         # Create seed particle set
         self._create_particle_set()
 
+    def advect(self, time, time_step):
+        pass
+        
     def record(self, time):
         # Intialise data logger
         if not hasattr(self, "data_logger"):
