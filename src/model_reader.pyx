@@ -10,7 +10,7 @@ np.import_array()
 from data_types_python import DTYPE_INT, DTYPE_FLOAT
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
-from unstruct_grid_tools import sort_adjacency_array
+from unstruct_grid_tools import round_time, sort_adjacency_array
 
 cdef class ModelReader(object):
 
@@ -252,9 +252,11 @@ cdef class FVCOMModelReader(ModelReader):
         """
         self._data_file = Dataset(self.data_file_name, 'r')
         
-        # Read in time and convert to basetime object
-        time = self._data_file.variables['time']
-        self._time = num2date(time[:], units=time.units)
+        # Read in time and convert to datetime object, then round to the nearest
+        # hour (TODO pass in the rounding interval from the config file)
+        time_raw = self._data_file.variables['time']
+        datetime_raw = num2date(time_raw[:], units=time_raw.units)
+        self._time = round_time(datetime_raw)
         
         # Initialise memory view for zeta
         self._zeta = self._data_file.variables['zeta'][:,:]

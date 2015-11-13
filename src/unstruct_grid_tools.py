@@ -1,6 +1,7 @@
 import numpy as np
 import os
 from netCDF4 import Dataset
+import datetime
 
 def create_fvcom_grid_metrics_file(ncin_file_name):
     # Name of grid file to be created
@@ -27,26 +28,29 @@ def create_fvcom_grid_metrics_file(ncin_file_name):
     ds_in.close()
     ds_out.close()
 
-def round_time(dt, round_to=3600):
+def round_time(datetime_raw, round_to=3600):
     """
     Round given datetime object to the number of given seconds
     c
     Parameters:
     -----------
-    dt: Datetime
-        Date and time
+    dt: List, Datetime
+        List of datetime objects to be rounded
         
     round_to: int
         No. of seconds to round to (default 3600, or one hour)
         
     Returns:
     --------
-    -/-: Datetime
-        Rounded datetime object
+    datetime_rounded: List, Datetime
+        List of rounded datetime objects
     """
-    seconds = (dt - dt.min).seconds
-    rounding = (seconds + round_to/2) // round_to * round_to
-    return dt + datetime.timedelta(0,rounding-seconds,-dt.microsecond)
+    datetime_rounded = []
+    for dt in datetime_raw:
+        seconds = (dt - dt.min).seconds
+        rounding = (seconds + round_to/2) // round_to * round_to
+        datetime_rounded.append(dt + datetime.timedelta(0,rounding-seconds,-dt.microsecond))
+    return datetime_rounded
 
 def sort_adjacency_array(nv, nbe):
     """
