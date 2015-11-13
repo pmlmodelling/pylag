@@ -6,10 +6,8 @@ import logging
 cimport numpy as np
 np.import_array()
 
-DTYPE_FLOAT = np.float32
-DTYPE_INT = np.int32
-ctypedef np.float32_t DTYPE_FLOAT_t
-ctypedef np.int32_t DTYPE_INT_t
+# Data types used for constructing C data structures
+from data_types cimport DTYPE_INT, DTYPE_INT_t, DTYPE_FLOAT, DTYPE_FLOAT_t
 
 from unstruct_grid_tools import sort_adjacency_array
 
