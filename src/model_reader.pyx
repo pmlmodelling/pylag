@@ -7,8 +7,8 @@ cimport numpy as np
 np.import_array()
 
 # Data types used for constructing C data structures
-from data_types import DTYPE_INT, DTYPE_FLOAT
-from data_types cimport DTYPE_INT_t, DTYPE_FLOAT_t
+from data_types_python import DTYPE_INT, DTYPE_FLOAT
+from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 from unstruct_grid_tools import sort_adjacency_array
 
