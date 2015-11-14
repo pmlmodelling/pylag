@@ -1,58 +1,80 @@
+import numpy as np
 import copy
 import datetime
 
-class TimeManager(object):
+# Cython imports
+cimport numpy as np
+np.import_array()
+
+# Data types used for constructing C data structures
+from data_types_python import DTYPE_INT, DTYPE_FLOAT
+from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
+
+cdef class TimeManager(object):
+    cdef object _datetime_start
+    cdef object _datetime_end
+    
+    cdef DTYPE_INT_t _time_start
+    cdef DTYPE_INT_t _time_end
+    cdef DTYPE_INT_t _time
+
+    cdef DTYPE_INT_t _time_step
+    cdef DTYPE_INT_t _output_frequency
+    
     def __init__(self, config):
-        self.config = config
+        self._initialise_time_vars(config)
         
-        self._initialise_time_vars()
+    def _initialise_time_vars(self, config):
+        datetime_start = config.get("PARTICLES", "start_datetime")
+        self._datetime_start = datetime.datetime.strptime(datetime_start, "%Y-%m-%d %H:%M:%S")
+        datetime_end = config.get("PARTICLES", "end_datetime")
+        self._datetime_end = datetime.datetime.strptime(datetime_end, "%Y-%m-%d %H:%M:%S")
         
-    def _initialise_time_vars(self):
-        start_datetime = self.config.get("PARTICLES", "start_datetime")
-        self._time_start = datetime.datetime.strptime(start_datetime, "%Y-%m-%d %H:%M:%S")
+        # Convert time counters to seconds (of type int)
+        self._time_start = 0
+        self._time_end = int((self._datetime_end - self._datetime_start).total_seconds())
 
-        end_datetime = self.config.get("PARTICLES", "end_datetime")
-        self._time_end = datetime.datetime.strptime(end_datetime, "%Y-%m-%d %H:%M:%S")
+        # Initialise the current time
+        self._time = self._time_start
         
-        self._time_step = self.config.getint("PARTICLES", "time_step")
-        
-        self._output_frequency = self.config.getint("PARTICLES", "output_frequency")
-
-        # Set the current time to the start time
-        self._time = copy.deepcopy(self._time_start)
+        self._time_step = config.getint("PARTICLES", "time_step")
+        self._output_frequency = config.getint("PARTICLES", "output_frequency")
 
     def update_current_time(self):
-        self._time = self._time + datetime.timedelta(0, self._time_step)
+        self._time = self._time + self._time_step
         
     def write_output_to_file(self):
-        time_diff = (self._time - self._time_start).total_seconds()
-        if time_diff % self._output_frequency == 0:
-            return True
-        return False
+        cdef DTYPE_INT_t time_diff
         
-    # Current date and time
-    @property
-    def time(self):
-        return self._time
+        time_diff = self._time - self._time_start
+        if time_diff % self._output_frequency == 0:
+            return 1
+        return 0
     
-    @time.setter
-    def time(self, value):
-        self._time = value
+    # Properties:
 
-    # Integration time step
-    @property
-    def time_step(self):
-        return self._time_step
+    # Integration start datetime
+    property datetime_start:
+        def __get__(self):
+            return self._datetime_start
     
-    @time_step.setter
-    def time_step(self, value):
-        self._time_step = value
+    # Integration end datetime
+    property datetime_end:
+        def __get__(self):
+            return self._datetime_end
+        
+    # Current time (seconds elapsed since start)
+    property time:
+        def __get__(self):
+            return self._time
+        
+    # Integration time step (seconds)
+    property time_step:
+        def __get__(self):
+            return self._time_step
+ 
+     # Integration end time (seconds)
+    property time_end:
+        def __get__(self):
+            return self._time_end
 
-    # Integration end time
-    @property
-    def time_end(self):
-        return self._time_end
-    
-    @time_end.setter
-    def time_end(self, value):
-        self._time_end = value

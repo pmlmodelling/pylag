@@ -1,6 +1,8 @@
 import numpy as np
 from netCDF4 import Dataset, num2date
+import datetime
 import logging
+
 
 # Cython imports
 cimport numpy as np
@@ -35,7 +37,7 @@ cdef class FVCOMModelReader(ModelReader):
     
     # NetCDF4 data file giving access to time dependent fields
     cdef object _data_file
-
+    
     # Grid dimensions
     cdef DTYPE_INT_t _n_elems, _n_nodes, _n_siglay, _n_siglev
     
@@ -57,21 +59,28 @@ cdef class FVCOMModelReader(ModelReader):
     cdef DTYPE_FLOAT_t[:] _h
     
     # Sea surface elevation
-    cdef DTYPE_FLOAT_t[:,:] _zeta
+    cdef DTYPE_FLOAT_t[:] _zeta_last
+    cdef DTYPE_FLOAT_t[:] _zeta_next
     
     # u/v velocity components
-    cdef DTYPE_FLOAT_t[:,:,:] _u
-    cdef DTYPE_FLOAT_t[:,:,:] _v
+    cdef DTYPE_FLOAT_t[:,:] _u_last
+    cdef DTYPE_FLOAT_t[:,:] _u_next
+    cdef DTYPE_FLOAT_t[:,:] _v_last
+    cdef DTYPE_FLOAT_t[:,:] _v_next
+    cdef DTYPE_FLOAT_t[:,:] _omega_last
+    cdef DTYPE_FLOAT_t[:,:] _omega_next
     
-    # Time array (datetime obj, list)
-    cdef object _time
+    # Time array
+    cdef DTYPE_INT_t[:] _time
+    cdef DTYPE_INT_t _tidx_last
+    cdef DTYPE_INT_t _tidx_next
     
-    def __init__(self, data_file_name, grid_file_name=None):
-        self.data_file_name = data_file_name
-        self.grid_file_name = grid_file_name
+    def __init__(self, config, datetime_start):
+        self.data_file_name = config.get("OCEAN_CIRCULATION_MODEL", "data_file")
+        self.grid_file_name = config.get("OCEAN_CIRCULATION_MODEL", "grid_metrics_file")
 
         self._read_grid()
-        self._init_vars()     
+        self._init_vars(datetime_start)     
         
     def find_host(self, xpos, ypos, guess=None):
         if guess is not None:
@@ -82,27 +91,43 @@ cdef class FVCOMModelReader(ModelReader):
 
         return self._find_host_using_global_search(xpos, ypos)
 
-    def get_time(self, time_ref):
-        # Find indices for times within time_array that bracket time_ref.
-        tidx1 = None
+    def update_time_vars(self, time_ref):
+        # Find indices for times within time_array that bracket time_start
+        tidx_last = None
         for idx, t_test in enumerate(self._time):
             if time_ref >= t_test and idx < (len(self._time) - 1):
-                tidx1 = idx
+                tidx_last = idx
                 break
 
-        if tidx1 is None:
+        if tidx_last is None:
             logger = logging.getLogger(__name__)
-            logger.info('The provided date {} lies outside of the range for which '\
-            'there exists simulation output. Limits are: t_start = {}, t_end '\
-            '= {}'.format(time_ref, self._time[0], self._time[-1]))
+            logger.info('The provided time {} lies outside of the range for which '\
+            'there exists input data.'.format(time_ref))
             raise TypeError('Time out of range.')
 
         # Adjacent time index
-        tidx2 = tidx1 + 1
+        tidx_next = tidx_last + 1
+        
+        # Save time indices
+        self._tidx_last = tidx_last
+        self._tidx_next = tidx_next
+        
+        # Initialise memory views for zeta
+        self._zeta_last = self._data_file.variables['zeta'][self._tidx_last,:]
+        self._zeta_next = self._data_file.variables['zeta'][self._tidx_next,:]
+        
+        # Initialise memory views for u, v and w
+        self._u_last = self._data_file.variables['u'][self._tidx_last,:,:]
+        self._u_next = self._data_file.variables['u'][self._tidx_next,:,:]
+        self._v_last = self._data_file.variables['v'][self._tidx_last,:,:]
+        self._v_next = self._data_file.variables['v'][self._tidx_next,:,:]
+        self._omega_last = self._data_file.variables['omega'][self._tidx_last,:,:]
+        self._omega_next = self._data_file.variables['omega'][self._tidx_next,:,:]
 
+    def get_time_fraction(self, time_ref):
         # Calculate time fraction according to the formula (t - t1)/(t2 - t1)
-        time_fraction = (time_ref - self._time[tidx1]).total_seconds() / (self._time[tidx2] - self._time[tidx1]).total_seconds()
-        return tidx1, tidx2, time_fraction
+        time_fraction = float(time_ref - self._time[self._tidx_last]) / float(self._time[self._tidx_next] - self._time[self._tidx_last])
+        return time_fraction
 
     def get_bathymetry(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
         """
@@ -132,9 +157,8 @@ cdef class FVCOMModelReader(ModelReader):
 
         return h
     
-    def get_sea_sur_elev(self, DTYPE_INT_t tidx_last, DTYPE_INT_t tidx_next, 
-            DTYPE_FLOAT_t time_fraction, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, 
-            DTYPE_INT_t host):
+    def get_sea_sur_elev(self, DTYPE_FLOAT_t time_fraction, DTYPE_FLOAT_t xpos,
+            DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
         """
         Return sea surface elevation at the supplied x/y coordinates.
         """
@@ -155,8 +179,8 @@ cdef class FVCOMModelReader(ModelReader):
             vertex = self._nv[i,host]
             x_tri[i] = self._x[vertex]
             y_tri[i] = self._y[vertex]
-            zeta_tri_t_last[i] = self._zeta[tidx_last, vertex]
-            zeta_tri_t_next[i] = self._zeta[tidx_next, vertex]
+            zeta_tri_t_last[i] = self._zeta_last[vertex]
+            zeta_tri_t_next[i] = self._zeta_next[vertex]
 
         # Calculate barycentric coordinates
         self._get_barycentric_coords(xpos, ypos, x_tri, y_tri, phi)
@@ -246,20 +270,27 @@ cdef class FVCOMModelReader(ModelReader):
         
         ncfile.close()
         
-    def _init_vars(self):
+    def _init_vars(self, datetime_start):
         """
         Set up access to the NetCDF data file and initialise time.
         """
         self._data_file = Dataset(self.data_file_name, 'r')
         
-        # Read in time and convert to datetime object, then round to the nearest
-        # hour (TODO pass in the rounding interval from the config file)
+        # Read in time and convert to a list of datetime object, then round to 
+        # the nearest hour (TODO pass in the rounding interval from the config file)
         time_raw = self._data_file.variables['time']
         datetime_raw = num2date(time_raw[:], units=time_raw.units)
-        self._time = round_time(datetime_raw)
+        datetime_rounded = round_time(datetime_raw)
         
-        # Initialise memory view for zeta
-        self._zeta = self._data_file.variables['zeta'][:,:]
+        # Convert to seconds using time_start as a reference point
+        time_seconds = []
+        for time in datetime_rounded:
+            time_seconds.append((time - datetime_start).total_seconds())
+        self._time = np.array(time_seconds, dtype=DTYPE_INT)
+
+        # Set time indices for reading frames, and initialise time-dependent 
+        # variable reading frames
+        self.update_time_vars(0) # 0s for simulation start
         
     cdef _find_host_using_local_search(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
         """

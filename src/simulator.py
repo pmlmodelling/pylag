@@ -21,7 +21,7 @@ class TraceSimulator(Simulator):
         model = get_model(config)
 
         # Initialise time counters, create particle seed
-        model.initialise(self.time_manager.time)
+        model.initialise(self.time_manager.datetime_start, self.time_manager.time)
 
         # Write initial state to file
         model.record(self.time_manager.time)
@@ -30,7 +30,7 @@ class TraceSimulator(Simulator):
         while self.time_manager.time < self.time_manager.time_end:
             model.advect(self.time_manager.time, self.time_manager.time_step)
             self.time_manager.update_current_time()
-            if self.time_manager.write_output_to_file():
+            if self.time_manager.write_output_to_file() == 1:
                 model.record(self.time_manager.time)
 
         # Close output files

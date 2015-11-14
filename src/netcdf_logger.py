@@ -79,8 +79,7 @@ class NetCDFLogger(object):
         tidx = self._time.shape[0]
         
         # Convert datetime object to int and write to file
-        time_out = date2num(time, units = self._time.units, calendar = self._time.calendar)
-        self._time[tidx] = time_out
+        self._time[tidx] = time
         
         # Write particle position data to file
         for idx, particle in enumerate(particle_set):
