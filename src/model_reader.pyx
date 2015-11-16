@@ -14,29 +14,7 @@ from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 from unstruct_grid_tools import round_time, sort_adjacency_array
 
-cdef class ModelReader(object):
-
-    def find_host(self, xpos, ypos, guess=None):
-        pass
-    
-    def update_time_vars(self, time_ref):
-        pass
-
-    def get_time_fraction(self, time_ref):
-        pass    
-    
-    def get_bathymetry(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
-        pass
-    
-    def get_sea_sur_elev(self, DTYPE_FLOAT_t time_fraction, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
-        pass
-
-    def get_velocity(self, DTYPE_INT_t time, DTYPE_FLOAT_t xpos, 
-            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_FLOAT_t[:] vel):
-        pass
-
-cdef class FVCOMModelReader(ModelReader):
+cdef class FVCOMDataReader:
     # Name of file containing velocity field data
     cdef object data_file_name
 

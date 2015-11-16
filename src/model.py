@@ -1,7 +1,6 @@
 import logging
-from datetime import datetime
 
-import model_reader
+from model_reader import FVCOMDataReader
 from particle import get_particle_seed
 from netcdf_logger import NetCDFLogger
 
@@ -29,29 +28,29 @@ class FVCOMOPTModel(OPTModel):
         super(FVCOMOPTModel, self).__init__(*args, **kwargs)
 
     def initialise(self, datetime_start, time):
-        # Create model reader
-        self.model_reader = model_reader.FVCOMModelReader(self.config, datetime_start)
+        # Create FVCOM data reader
+        self.data_reader = FVCOMDataReader(self.config, datetime_start)
 
         # Create seed particle set
         self.particle_set = get_particle_seed(self.config)
 
         # Time fraction used for interpolation
-        time_fraction = self.model_reader.get_time_fraction(time)
+        time_fraction = self.data_reader.get_time_fraction(time)
 
         # Find particle host elements within the model domain and initalise the
         # particle's local environment
         guess = None
         particles_in_domain = 0
         for idx, particle in enumerate(self.particle_set):
-            self.particle_set[idx].host_horizontal_elem = self.model_reader.find_host(particle.xpos, particle.ypos, guess)
+            self.particle_set[idx].host_horizontal_elem = self.data_reader.find_host(particle.xpos, particle.ypos, guess)
 
             if self.particle_set[idx].host_horizontal_elem != -1:
                 self.particle_set[idx].in_domain = True
 
-                self.particle_set[idx].h = self.model_reader.get_bathymetry(particle.xpos, 
+                self.particle_set[idx].h = self.data_reader.get_bathymetry(particle.xpos, 
                         particle.ypos, particle.host_horizontal_elem)
 
-                self.particle_set[idx].zeta = self.model_reader.get_sea_sur_elev(time_fraction, particle.xpos, 
+                self.particle_set[idx].zeta = self.data_reader.get_sea_sur_elev(time_fraction, particle.xpos, 
                         particle.ypos, particle.host_horizontal_elem)
 
                 particles_in_domain += 1
