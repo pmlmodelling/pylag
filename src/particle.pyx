@@ -1,8 +1,31 @@
 import numpy as np
 import logging
 
-class Particle(object):
-    def __init__(self, group_id, xpos, ypos, zpos, host=None, h=None, zeta=None):
+# Cython imports
+cimport numpy as np
+np.import_array()
+
+# Data types used for constructing C data structures
+from data_types_python import DTYPE_INT, DTYPE_FLOAT
+from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
+
+cdef class Particle(object):
+    cdef DTYPE_INT_t _group_id
+    cdef DTYPE_FLOAT_t _xpos
+    cdef DTYPE_FLOAT_t _ypos
+    cdef DTYPE_FLOAT_t _zpos
+    
+    cdef DTYPE_INT_t _in_domain
+    
+    cdef DTYPE_FLOAT_t _host_horizontal_elem
+    
+    cdef DTYPE_FLOAT_t _h
+    
+    cdef DTYPE_FLOAT_t _zeta
+
+    def __init__(self, DTYPE_INT_t group_id, DTYPE_FLOAT_t xpos, 
+            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host=-999, 
+            DTYPE_FLOAT_t h=-999., DTYPE_FLOAT_t zeta=-999.):
         self._group_id = group_id
         
         self._xpos = xpos
@@ -16,71 +39,62 @@ class Particle(object):
         self._h = h
         
         self._zeta = zeta
+
+    # Group ID
+    property group_id:
+        def __get__(self):
+            return self._group_id
+        def __set__(self, DTYPE_INT_t value):
+            self._group_id = value
     
     # x position
-    @property
-    def xpos(self):
-        return self._xpos
-    
-    @xpos.setter
-    def xpos(self, value):
-        self._xpos = value
-    
-    # y postion
-    @property
-    def ypos(self):
-        return self._ypos
-    
-    @ypos.setter
-    def ypos(self, value):
-        self._ypos = value
-    
+    property xpos:
+        def __get__(self):
+            return self._xpos
+        def __set__(self, DTYPE_FLOAT_t value):
+            self._xpos = value
+            
+    # y position
+    property ypos:
+        def __get__(self):
+            return self._ypos
+        def __set__(self, DTYPE_FLOAT_t value):
+            self._ypos = value
+            
     # z position
-    @property
-    def zpos(self):
-        return self._zpos
+    property zpos:
+        def __get__(self):
+            return self._zpos
+        def __set__(self, DTYPE_FLOAT_t value):
+            self._zpos = value
 
-    @zpos.setter
-    def zpos(self, value):
-        self._zpos = value
-        
-    # Is the particle in the model domain? True or false.
-    @property
-    def in_domain(self):
-        return self._in_domain
-    
-    @in_domain.setter
-    def in_domain(self, value):
-        self._in_domain = value
-        
-    # Particle host horizontal element
-    # TODO how to do this on both structured and unstructured grids without
-    # changing Particle's interface?
-    @property
-    def host_horizontal_elem(self):
-        return self._host_horizontal_elem
+    # IS the particle in the domain?
+    property in_domain:
+        def __get__(self):
+            return self._in_domain
+        def __set__(self, DTYPE_INT_t value):
+            self._in_domain = value
 
-    @host_horizontal_elem.setter
-    def host_horizontal_elem(self, value):
-        self._host_horizontal_elem = value
+    # Host horizontal element
+    property host_horizontal_elem:
+        def __get__(self):
+            return self._host_horizontal_elem
+        def __set__(self, DTYPE_INT_t value):
+            self._host_horizontal_elem = value
 
-    # h - Water depth at the particle's current position
-    @property
-    def h(self):
-        return self._h
-    
-    @h.setter
-    def h(self, value):
-        self._h = value
-        
-    # zeta - Sea surface elevation at the particle's current position
-    @property
-    def zeta(self):
-        return self._zeta
-    
-    @zeta.setter
-    def zeta(self, value):
-        self._zeta = value
+    # Bathymetry at the particle's current position
+    property h:
+        def __get__(self):
+            return self._h
+        def __set__(self, DTYPE_FLOAT_t value):
+            self._h = value
+
+    # Sea surface elevation at the particle's current position
+    property zeta:
+        def __get__(self):
+            return self._zeta
+        def __set__(self, DTYPE_FLOAT_t value):
+            self._zeta = value
 
 def get_particle_seed(config=None):
     global _seed
