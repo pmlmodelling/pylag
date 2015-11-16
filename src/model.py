@@ -73,8 +73,9 @@ class FVCOMOPTModel(OPTModel):
         if not hasattr(self, "data_logger"):
             self.data_logger = NetCDFLogger(self.config, len(self.particle_set))
 
-        # Write particle initial positions to file
-        self.data_logger.write(time, self.particle_set)
+        # Write particle data to file
+        particle_data = create_lists(self.particle_set)
+        self.data_logger.write(time, particle_data)
         
     def shutdown(self):
         self.data_logger.close()
@@ -83,4 +84,14 @@ def get_model(config):
     if config.get("OCEAN_CIRCULATION_MODEL", "name") == "FVCOM":
         return FVCOMOPTModel(config)
     else:
-        raise ValueError('Unsupported ocean circulation model.')    
+        raise ValueError('Unsupported ocean circulation model.')
+    
+def create_lists(particle_array):
+    data = {'xpos': [], 'ypos': [], 'zpos': [], 'h': [], 'zeta': []}
+    for particle in particle_array:
+        data['xpos'].append(particle.xpos)
+        data['ypos'].append(particle.ypos)
+        data['zpos'].append(particle.zpos)
+        data['h'].append(particle.h)
+        data['zeta'].append(particle.zeta)
+    return data

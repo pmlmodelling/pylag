@@ -74,23 +74,20 @@ class NetCDFLogger(object):
         #self._indomain = self._ncfile.createVariable('indomain', 'i4', ('Time', 'Particles',))
         #self._inwater = self._ncfile.createVariable('inwater', 'i4', ('Time', 'Particles',))
 
-    def write(self, time, particle_set):
+    def write(self, time, particle_data):
         # Next time index
         tidx = self._time.shape[0]
         
         # Convert datetime object to int and write to file
         self._time[tidx] = time
         
-        # Write particle position data to file
-        for idx, particle in enumerate(particle_set):
-            self._xpos[tidx, idx] = particle.xpos
-            self._ypos[tidx, idx] = particle.ypos
-            self._zpos[tidx, idx] = particle.zpos
-            self._h[tidx, idx] = particle.h
-            self._zeta[tidx, idx] = particle.zeta
+        self._xpos[tidx, :] = particle_data['xpos']
+        self._ypos[tidx, :] = particle_data['ypos']
+        self._zpos[tidx, :] = particle_data['zpos']
+        self._h[tidx, :] = particle_data['h']
+        self._zeta[tidx, :] = particle_data['zeta']
         
     def close(self):
         logger = logging.getLogger(__name__)
         logger.info('Closing data logger.')
         self._ncfile.close()
-            
