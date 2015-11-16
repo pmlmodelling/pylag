@@ -1,6 +1,6 @@
 import logging
 
-from model_reader import FVCOMDataReader
+from fvcom_data_reader import FVCOMDataReader
 from particle import get_particle_seed
 from netcdf_logger import NetCDFLogger
 
