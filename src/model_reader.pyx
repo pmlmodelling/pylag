@@ -272,11 +272,11 @@ cdef class FVCOMModelReader(ModelReader):
         
     def _init_vars(self, datetime_start):
         """
-        Set up access to the NetCDF data file and initialise time.
+        Set up access to the NetCDF data file and initialise time vars/counters.
         """
         self._data_file = Dataset(self.data_file_name, 'r')
         
-        # Read in time and convert to a list of datetime object, then round to 
+        # Read in time and convert to a list of datetime objects, then round to 
         # the nearest hour (TODO pass in the rounding interval from the config file)
         time_raw = self._data_file.variables['time']
         datetime_raw = num2date(time_raw[:], units=time_raw.units)
@@ -286,6 +286,7 @@ cdef class FVCOMModelReader(ModelReader):
         time_seconds = []
         for time in datetime_rounded:
             time_seconds.append((time - datetime_start).total_seconds())
+        # TODO Not sure about type conversion here
         self._time = np.array(time_seconds, dtype=DTYPE_INT)
 
         # Set time indices for reading frames, and initialise time-dependent 
