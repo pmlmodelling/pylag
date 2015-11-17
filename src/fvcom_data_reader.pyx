@@ -165,7 +165,8 @@ cdef class FVCOMDataReader:
 
         # Interpolate in time
         time_fraction = self._get_time_fraction(time)
-        self._interpolate_in_time_at_tri_nodes(time_fraction, zeta_tri_t_last, zeta_tri_t_next, zeta_tri)
+        for i in xrange(n_vertices):
+            zeta_tri[i] = self._interpolate_in_time(time_fraction, zeta_tri_t_last[i], zeta_tri_t_next[i])
 
         # Interpolate in space
         zeta = self._interpolate_within_element(zeta_tri, phi)
@@ -495,16 +496,6 @@ cdef class FVCOMDataReader:
         phi[0] = (a11*(x - x_tri[0]) + a12*(y - y_tri[0]))/det
         phi[1] = (a21*(x - x_tri[0]) + a22*(y - y_tri[0]))/det
         phi[2] = 1.0 - phi[0] - phi[1]
-
-    cdef _interpolate_in_time_at_tri_nodes(self, DTYPE_FLOAT_t time_fraction, 
-            DTYPE_FLOAT_t[:] zeta_tri_t_last, DTYPE_FLOAT_t[:] zeta_tri_t_next, 
-            DTYPE_FLOAT_t[:] zeta_tri):
-
-        cdef DTYPE_INT_t i # Loop counter
-        cdef DTYPE_INT_t n_vertices = 3 # No. of vertices in a triangle
-        
-        for i in xrange(n_vertices):
-            zeta_tri[i] = self._interpolate_in_time(time_fraction, zeta_tri_t_last[i], zeta_tri_t_next[i])
 
     cdef DTYPE_FLOAT_t _interpolate_in_space(self, DTYPE_FLOAT_t x,
             DTYPE_FLOAT_t y, DTYPE_INT_t npts, DTYPE_FLOAT_t[:] xpts, 
