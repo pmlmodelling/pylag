@@ -268,7 +268,7 @@ cdef class FVCOMDataReader:
         self._data_file = Dataset(self.data_file_name, 'r')
         
         # Read in time and convert to a list of datetime objects, then round to 
-        # the nearest hour (TODO pass in the rounding interval from the config file)
+        # the nearest hour
         time_raw = self._data_file.variables['time']
         datetime_raw = num2date(time_raw[:], units=time_raw.units)
         rounding_interval = self.config.getint("OCEAN_CIRCULATION_MODEL", "rounding_interval")
