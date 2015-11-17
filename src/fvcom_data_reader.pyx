@@ -171,7 +171,7 @@ cdef class FVCOMDataReader:
 
         return zeta
 
-    def get_velocity(self, DTYPE_INT_t time, DTYPE_FLOAT_t xpos, 
+    def get_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_FLOAT_t[:] vel):
         pass
 
