@@ -12,7 +12,7 @@ class OPTModel(object):
     def initialise(self, time):
         pass
     
-    def advect(self, time, time_step):
+    def advect(self, time):
         pass
     
     def rand_walk(self):
@@ -65,7 +65,7 @@ class FVCOMOPTModel(OPTModel):
         logger = logging.getLogger(__name__)
         logger.info('{} of {} particles are located in the model domain.'.format(particles_in_domain, len(self.particle_set)))
 
-    def advect(self, time, time_step):
+    def advect(self, time):
         pass
         
     def record(self, time):

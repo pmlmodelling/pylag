@@ -28,7 +28,7 @@ class TraceSimulator(Simulator):
 
         # The main update loop
         while self.time_manager.time < self.time_manager.time_end:
-            model.advect(self.time_manager.time, self.time_manager.time_step)
+            model.advect(self.time_manager.time)
             self.time_manager.update_current_time()
             if self.time_manager.write_output_to_file() == 1:
                 model.record(self.time_manager.time)
