@@ -188,29 +188,32 @@ cdef class FVCOMDataReader:
         6) Interpolate in the vertical between the two sigma layers to the depth
         of the particle.
         """
+        # No. of points used for spatial interpolation
+        n_pts = 4
+        
         # x/y coordinates of element centres
-        cdef DTYPE_FLOAT_t[:] xc = np.empty(4, dtype=DTYPE_FLOAT)
-        cdef DTYPE_FLOAT_t[:] yc = np.empty(4, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] xc = np.empty(n_pts, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] yc = np.empty(n_pts, dtype=DTYPE_FLOAT)
 
         # Temporary array for vel at element centres at last time point
-        cdef DTYPE_FLOAT_t[:] uc_last = np.empty(4, dtype=DTYPE_FLOAT)
-        cdef DTYPE_FLOAT_t[:] vc_last = np.empty(4, dtype=DTYPE_FLOAT)
-        cdef DTYPE_FLOAT_t[:] wc_last = np.empty(4, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] uc_last = np.empty(n_pts, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] vc_last = np.empty(n_pts, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] wc_last = np.empty(n_pts, dtype=DTYPE_FLOAT)
         
         # Temporary array for vel at element centres at next time point
-        cdef DTYPE_FLOAT_t[:] uc_next = np.empty(4, dtype=DTYPE_FLOAT)
-        cdef DTYPE_FLOAT_t[:] vc_next = np.empty(4, dtype=DTYPE_FLOAT)
-        cdef DTYPE_FLOAT_t[:] wc_next = np.empty(4, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] uc_next = np.empty(n_pts, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] vc_next = np.empty(n_pts, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] wc_next = np.empty(n_pts, dtype=DTYPE_FLOAT)
 
         # Vel at element centres in overlying sigma layer
-        cdef DTYPE_FLOAT_t[:] uc1 = np.empty(4, dtype=DTYPE_FLOAT)
-        cdef DTYPE_FLOAT_t[:] vc1 = np.empty(4, dtype=DTYPE_FLOAT)
-        cdef DTYPE_FLOAT_t[:] wc1 = np.empty(4, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] uc1 = np.empty(n_pts, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] vc1 = np.empty(n_pts, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] wc1 = np.empty(n_pts, dtype=DTYPE_FLOAT)
 
         # Vel at element centres in underlying sigma layer
-        cdef DTYPE_FLOAT_t[:] uc2 = np.empty(4, dtype=DTYPE_FLOAT)
-        cdef DTYPE_FLOAT_t[:] vc2 = np.empty(4, dtype=DTYPE_FLOAT)
-        cdef DTYPE_FLOAT_t[:] wc2 = np.empty(4, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] uc2 = np.empty(n_pts, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] vc2 = np.empty(n_pts, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] wc2 = np.empty(n_pts, dtype=DTYPE_FLOAT)
 
         # Vel at the given location in the overlying sigma layer
         cdef DTYPE_FLOAT_t up1, vp1, wp1
@@ -255,8 +258,8 @@ cdef class FVCOMDataReader:
                 wc2[j] = 0.0 # TODO
         
             # Interpolate in space - overlying sigma layer
-            up1 = self._interpolate_in_space(xpos, ypos, 4, xc, yc, uc1)
-            vp1 = self._interpolate_in_space(xpos, ypos, 4, xc, yc, vc1)
+            up1 = self._interpolate_in_space(xpos, ypos, n_pts, xc, yc, uc1)
+            vp1 = self._interpolate_in_space(xpos, ypos, n_pts, xc, yc, vc1)
             wp1 = 0.0 # TODO
             
             # Interpolate in space - underlying sigma layer
