@@ -7,6 +7,7 @@ import logging
 # Cython imports
 cimport numpy as np
 np.import_array()
+from libc.math cimport sqrt as sqrt_c
 
 # Data types used for constructing C data structures
 from data_types_python import DTYPE_INT, DTYPE_FLOAT
@@ -172,8 +173,100 @@ cdef class FVCOMDataReader:
         return zeta
 
     def get_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
-            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_FLOAT_t[:] vel):
-        pass
+            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
+            DTYPE_FLOAT_t[:] vel):
+        """
+        Steps:
+        1) Determine coordinates of the host element's three neighbouring
+        elements.
+        2) Determine velocity at the coordinates of the host element and its
+        three neighbouring elements.
+        3) Interpolate in time in the overlying sigma layer
+        4) Interpolate in time in the underlying sigma layer
+        5) Interpolate in space in the over and underlying sigma layers
+        6) Interpolate in the vertical between the two sigma layers to the depth
+        of the particle.
+        """
+        # x/y coordinates of element centres
+        cdef DTYPE_FLOAT_t[:] xc = np.empty(4, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] yc = np.empty(4, dtype=DTYPE_FLOAT)
+
+        # Temporary array for vel at element centres at last time point
+        cdef DTYPE_FLOAT_t[:] uc_last = np.empty(4, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] vc_last = np.empty(4, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] wc_last = np.empty(4, dtype=DTYPE_FLOAT)
+        
+        # Temporary array for vel at element centres at next time point
+        cdef DTYPE_FLOAT_t[:] uc_next = np.empty(4, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] vc_next = np.empty(4, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] wc_next = np.empty(4, dtype=DTYPE_FLOAT)
+
+        # Vel at element centres in overlying sigma layer
+        cdef DTYPE_FLOAT_t[:] uc1 = np.empty(4, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] vc1 = np.empty(4, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] wc1 = np.empty(4, dtype=DTYPE_FLOAT)
+
+        # Vel at element centres in underlying sigma layer
+        cdef DTYPE_FLOAT_t[:] uc2 = np.empty(4, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] vc2 = np.empty(4, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t[:] wc2 = np.empty(4, dtype=DTYPE_FLOAT)
+
+        # Vel at the given location in the overlying sigma layer
+        cdef DTYPE_FLOAT_t up1, vp1, wp1
+        
+        # Vel at the given location in the underlying sigma layer
+        cdef DTYPE_FLOAT_t up2, vp2, wp2
+        
+        # Time fraction for interpolation in time
+        cdef DTYPE_FLOAT_t time_fraction
+
+        # Loop index
+        cdef DTYPE_INT_t i, j
+        
+        # Time fraction
+        time_fraction = self._get_time_fraction(time)
+        
+        if min(self._nbe[:,host]) < 0:
+            # Boundary element - temporal interpolation only
+            up1 = self._interpolate_in_time(time_fraction, self._u_last[0, host], self._u_next[0, host])
+            vp1 = self._interpolate_in_time(time_fraction, self._v_last[0, host], self._v_next[0, host])
+            wp1 = 0.0 # TODO
+            up2 = 0.0 # TODO
+            vp2 = 0.0 # TODO
+            wp2 = 0.0 # TODO
+        else:
+            # Non-boundary element - perform horizontal and temporal interpolation
+            xc[0] = self._xc[host]
+            yc[0] = self._yc[host]
+            uc1[0] = self._interpolate_in_time(time_fraction, self._u_last[0, host], self._u_next[0, host])
+            vc1[0] = self._interpolate_in_time(time_fraction, self._v_last[0, host], self._v_next[0, host])
+            wc1[0] = 0.0 # TODO
+            for i in xrange(3):
+                neighbour = self._nbe[i, host]
+                j = i+1 # +1 as host is 0
+                xc[j] = self._xc[neighbour] 
+                yc[j] = self._yc[neighbour]
+                uc1[j] = self._interpolate_in_time(time_fraction, self._u_last[0, neighbour], self._u_next[0, neighbour])
+                vc1[j] = self._interpolate_in_time(time_fraction, self._v_last[0, neighbour], self._v_next[0, neighbour])
+                wc1[j] = 0.0 # TODO
+                uc2[j] = 0.0 # TODO
+                vc2[j] = 0.0 # TODO
+                wc2[j] = 0.0 # TODO
+        
+            # Interpolate in space - overlying sigma layer
+            up1 = self._interpolate_in_space(xpos, ypos, 4, xc, yc, uc1)
+            vp1 = self._interpolate_in_space(xpos, ypos, 4, xc, yc, vc1)
+            wp1 = 0.0 # TODO
+            
+            # Interpolate in space - underlying sigma layer
+            up2 = 0.0 # TODO
+            vp2 = 0.0 # TODO
+            wp2 = 0.0 # TODO
+            
+        # Vertical interpolation
+        vel[0] = up1 # TODO
+        vel[1] = vp1 # TODO
+        vel[2] = wp1 # TODO
 
     def find_host(self, xpos, ypos, guess=None):
         if guess is not None:
@@ -411,9 +504,47 @@ cdef class FVCOMDataReader:
         cdef DTYPE_INT_t n_vertices = 3 # No. of vertices in a triangle
         
         for i in xrange(n_vertices):
-            zeta_tri[i] = (1.0 - time_fraction) * zeta_tri_t_last[i] + time_fraction * zeta_tri_t_next[i]
+            zeta_tri[i] = self._interpolate_in_time(time_fraction, zeta_tri_t_last[i], zeta_tri_t_next[i])
 
-    cdef DTYPE_FLOAT_t _interpolate_within_element(self, DTYPE_FLOAT_t[:] var, DTYPE_FLOAT_t[:] phi):
-        cdef DTYPE_FLOAT_t interpolated_var
-        interpolated_var = var[0] + phi[0] * (var[1] - var[0]) + phi[1] * (var[2] - var[0])
-        return interpolated_var
+    cdef DTYPE_FLOAT_t _interpolate_in_space(self, DTYPE_FLOAT_t x,
+            DTYPE_FLOAT_t y, DTYPE_INT_t npts, DTYPE_FLOAT_t[:] xpts, 
+            DTYPE_FLOAT_t[:] ypts, DTYPE_FLOAT_t[:] vals):
+        """
+        Shepard interpolation.
+        """
+        # Euclidian distance between the point and a reference point
+        cdef DTYPE_FLOAT_t r
+        
+        # Weighting applied to a given point
+        cdef DTYPE_FLOAT_t w
+        
+        # Summed quantities
+        cdef DTYPE_FLOAT_t sum
+        cdef DTYPE_FLOAT_t sumw
+        
+        # Loop index
+        cdef DTYPE_INT_t i
+        
+        # Loop over all reference points
+        sum = 0.0
+        sumw = 0.0
+        for i in xrange(npts):
+            r = self._get_euclidian_distance(x, y, xpts[i], ypts[i])
+            if r == 0.0: return vals[i]
+            w = 1.0/(r*r) # TODO hardoced p value of -2.0 for now.
+            sum = sum + w
+            sumw = sumw + w*vals[i]
+
+        return sumw/sum        
+
+    cdef inline DTYPE_FLOAT_t _get_euclidian_distance(self, DTYPE_FLOAT_t x1,
+            DTYPE_FLOAT_t y1, DTYPE_FLOAT_t x2, DTYPE_FLOAT_t y2):
+         return sqrt_c((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1))
+
+    cdef inline DTYPE_FLOAT_t _interpolate_in_time(self, DTYPE_FLOAT_t time_fraction,
+            DTYPE_FLOAT_t val_last, DTYPE_FLOAT_t val_next):
+        return (1.0 - time_fraction) * val_last + time_fraction * val_next
+
+    cdef inline DTYPE_FLOAT_t _interpolate_within_element(self,
+            DTYPE_FLOAT_t[:] var, DTYPE_FLOAT_t[:] phi):
+        return var[0] + phi[0] * (var[1] - var[0]) + phi[1] * (var[2] - var[0])
