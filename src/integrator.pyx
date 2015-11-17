@@ -38,7 +38,7 @@ class RK4Integrator(NumIntegrator):
         xpos = particle.xpos
         ypos = particle.ypos
         zpos = particle.zpos
-        host = particle.host
+        host = particle.host_horizontal_elem
         data_reader.get_velocity(t, xpos, ypos, zpos, host, vel) 
         for i in xrange(ndim):
             k1[i] = self._time_step * vel[i]
@@ -48,7 +48,7 @@ class RK4Integrator(NumIntegrator):
         xpos = particle.xpos + 0.5 * k1[0]
         ypos = particle.ypos + 0.5 * k1[1]
         zpos = particle.zpos + 0.5 * k1[2]
-        host = data_reader.get_host(xpos, ypos, host)
+        host = data_reader.find_host(xpos, ypos, host)
         if host == -1:
             particle.in_domain = -1
             return
@@ -61,7 +61,7 @@ class RK4Integrator(NumIntegrator):
         xpos = particle.xpos + 0.5 * k2[0]
         ypos = particle.ypos + 0.5 * k2[1]
         zpos = particle.zpos + 0.5 * k2[2]
-        host = data_reader.get_host(xpos, ypos, host)
+        host = data_reader.find_host(xpos, ypos, host)
         if host == -1:
             particle.in_domain = -1
             return
@@ -74,7 +74,7 @@ class RK4Integrator(NumIntegrator):
         xpos = particle.xpos + k3[0]
         ypos = particle.ypos + k3[1]
         zpos = particle.zpos + k3[2]
-        host = data_reader.get_host(xpos, ypos, host)
+        host = data_reader.find_host(xpos, ypos, host)
         if host == -1:
             particle.in_domain = -1
             return
@@ -86,8 +86,8 @@ class RK4Integrator(NumIntegrator):
         particle.xpos = particle.xpos + (k1[0] + 2.0*k2[0] + 2.0*k3[0] + k4[0])/6.0
         particle.ypos = particle.ypos + (k1[1] + 2.0*k2[1] + 2.0*k3[1] + k4[1])/6.0
         particle.zpos = particle.zpos + (k1[2] + 2.0*k2[2] + 2.0*k3[2] + k4[2])/6.0
-        particle.host = data_reader.get_host(particle.xpos, particle.ypos, particle.host)
-        if particle.host == -1:
+        particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos, particle.host_horizontal_elem)
+        if particle.host_horizontal_elem == -1:
             particle.in_domain = -1
             return
 
