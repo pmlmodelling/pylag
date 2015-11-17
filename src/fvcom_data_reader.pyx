@@ -15,6 +15,9 @@ from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 from unstruct_grid_tools import round_time, sort_adjacency_array
 
 cdef class FVCOMDataReader:
+    # Configurtion object
+    cdef object config
+
     # Name of file containing velocity field data
     cdef object data_file_name
 
@@ -57,38 +60,31 @@ cdef class FVCOMDataReader:
     cdef DTYPE_FLOAT_t[:,:] _omega_next
     
     # Time array
-    cdef DTYPE_INT_t[:] _time
+    cdef DTYPE_FLOAT_t[:] _time
     cdef DTYPE_INT_t _tidx_last
     cdef DTYPE_INT_t _tidx_next
     
-    def __init__(self, config, datetime_start):
+    def __init__(self, config):
+        self.config = config
+
         self.data_file_name = config.get("OCEAN_CIRCULATION_MODEL", "data_file")
         self.grid_file_name = config.get("OCEAN_CIRCULATION_MODEL", "grid_metrics_file")
 
         self._read_grid()
-        self._init_vars(datetime_start)     
-        
-    def find_host(self, xpos, ypos, guess=None):
-        if guess is not None:
-            try:
-                return self._find_host_using_local_search(xpos, ypos, guess)
-            except ValueError:
-                pass
+        self._init_time_dependent_vars()
 
-        return self._find_host_using_global_search(xpos, ypos)
-
-    def update_time_vars(self, time_ref):
+    def read_time_dependent_vars(self, time):
         # Find indices for times within time_array that bracket time_start
         tidx_last = None
         for idx, t_test in enumerate(self._time):
-            if time_ref >= t_test and idx < (len(self._time) - 1):
+            if time >= t_test and idx < (len(self._time) - 1):
                 tidx_last = idx
                 break
 
         if tidx_last is None:
             logger = logging.getLogger(__name__)
             logger.info('The provided time {} lies outside of the range for which '\
-            'there exists input data.'.format(time_ref))
+            'there exists input data.'.format(time))
             raise TypeError('Time out of range.')
 
         # Adjacent time index
@@ -109,11 +105,6 @@ cdef class FVCOMDataReader:
         self._v_next = self._data_file.variables['v'][self._tidx_next,:,:]
         self._omega_last = self._data_file.variables['omega'][self._tidx_last,:,:]
         self._omega_next = self._data_file.variables['omega'][self._tidx_next,:,:]
-
-    def get_time_fraction(self, time_ref):
-        # Calculate time fraction according to the formula (t - t1)/(t2 - t1)
-        time_fraction = float(time_ref - self._time[self._tidx_last]) / float(self._time[self._tidx_next] - self._time[self._tidx_last])
-        return time_fraction
 
     def get_bathymetry(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
         """
@@ -143,7 +134,7 @@ cdef class FVCOMDataReader:
 
         return h
     
-    def get_sea_sur_elev(self, DTYPE_FLOAT_t time_fraction, DTYPE_FLOAT_t xpos,
+    def get_sea_sur_elev(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
         """
         Return sea surface elevation at the supplied x/y coordinates.
@@ -172,6 +163,7 @@ cdef class FVCOMDataReader:
         self._get_barycentric_coords(xpos, ypos, x_tri, y_tri, phi)
 
         # Interpolate in time
+        time_fraction = self._get_time_fraction(time)
         self._interpolate_in_time_at_tri_nodes(time_fraction, zeta_tri_t_last, zeta_tri_t_next, zeta_tri)
 
         # Interpolate in space
@@ -182,6 +174,15 @@ cdef class FVCOMDataReader:
     def get_velocity(self, DTYPE_INT_t time, DTYPE_FLOAT_t xpos, 
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_FLOAT_t[:] vel):
         pass
+
+    def find_host(self, xpos, ypos, guess=None):
+        if guess is not None:
+            try:
+                return self._find_host_using_local_search(xpos, ypos, guess)
+            except ValueError:
+                pass
+
+        return self._find_host_using_global_search(xpos, ypos)
 
     def _read_grid(self):
         logger = logging.getLogger(__name__)
@@ -260,7 +261,7 @@ cdef class FVCOMDataReader:
         
         ncfile.close()
         
-    def _init_vars(self, datetime_start):
+    def _init_time_dependent_vars(self):
         """
         Set up access to the NetCDF data file and initialise time vars/counters.
         """
@@ -270,18 +271,25 @@ cdef class FVCOMDataReader:
         # the nearest hour (TODO pass in the rounding interval from the config file)
         time_raw = self._data_file.variables['time']
         datetime_raw = num2date(time_raw[:], units=time_raw.units)
-        datetime_rounded = round_time(datetime_raw)
+        rounding_interval = self.config.getint("OCEAN_CIRCULATION_MODEL", "rounding_interval")
+        datetime_rounded = round_time(datetime_raw, rounding_interval)
         
-        # Convert to seconds using time_start as a reference point
+        # Simulation start time
+        datetime_start = datetime.datetime.strptime(self.config.get("PARTICLES", "start_datetime"), "%Y-%m-%d %H:%M:%S")
+        
+        # Convert to seconds using datetime_start as a reference point
         time_seconds = []
         for time in datetime_rounded:
             time_seconds.append((time - datetime_start).total_seconds())
-        # TODO Not sure about type conversion here
-        self._time = np.array(time_seconds, dtype=DTYPE_INT)
+        self._time = np.array(time_seconds, dtype=DTYPE_FLOAT)
 
         # Set time indices for reading frames, and initialise time-dependent 
         # variable reading frames
-        self.update_time_vars(0) # 0s for simulation start
+        self.read_time_dependent_vars(0.0) # 0s as simulation start
+
+    cdef DTYPE_FLOAT_t _get_time_fraction(self, DTYPE_FLOAT_t time):
+        # Calculate time fraction according to the formula (t - t1)/(t2 - t1)
+        return (time - self._time[self._tidx_last]) / (self._time[self._tidx_next] - self._time[self._tidx_last])        
         
     cdef _find_host_using_local_search(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
         """

@@ -28,7 +28,7 @@ def create_fvcom_grid_metrics_file(ncin_file_name):
     ds_in.close()
     ds_out.close()
 
-def round_time(datetime_raw, round_to=3600):
+def round_time(datetime_raw, rounding_interval=3600):
     """
     Round given datetime object to the number of given seconds
     c
@@ -37,7 +37,7 @@ def round_time(datetime_raw, round_to=3600):
     dt: List, Datetime
         List of datetime objects to be rounded
         
-    round_to: int
+    rounding_interval: int
         No. of seconds to round to (default 3600, or one hour)
         
     Returns:
@@ -48,7 +48,7 @@ def round_time(datetime_raw, round_to=3600):
     datetime_rounded = []
     for dt in datetime_raw:
         seconds = (dt - dt.min).seconds
-        rounding = (seconds + round_to/2) // round_to * round_to
+        rounding = (seconds + rounding_interval/2) // rounding_interval * rounding_interval
         datetime_rounded.append(dt + datetime.timedelta(0,rounding-seconds,-dt.microsecond))
     return datetime_rounded
 

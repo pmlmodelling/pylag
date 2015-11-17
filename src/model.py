@@ -27,15 +27,12 @@ class FVCOMOPTModel(OPTModel):
     def __init__(self, *args, **kwargs):
         super(FVCOMOPTModel, self).__init__(*args, **kwargs)
 
-    def initialise(self, datetime_start, time):
+    def initialise(self, time):
         # Create FVCOM data reader
-        self.data_reader = FVCOMDataReader(self.config, datetime_start)
+        self.data_reader = FVCOMDataReader(self.config)
 
         # Create seed particle set
         self.particle_set = get_particle_seed(self.config)
-
-        # Time fraction used for interpolation
-        time_fraction = self.data_reader.get_time_fraction(time)
 
         # Find particle host elements within the model domain and initalise the
         # particle's local environment
@@ -50,7 +47,7 @@ class FVCOMOPTModel(OPTModel):
                 self.particle_set[idx].h = self.data_reader.get_bathymetry(particle.xpos, 
                         particle.ypos, particle.host_horizontal_elem)
 
-                self.particle_set[idx].zeta = self.data_reader.get_sea_sur_elev(time_fraction, particle.xpos, 
+                self.particle_set[idx].zeta = self.data_reader.get_sea_sur_elev(time, particle.xpos, 
                         particle.ypos, particle.host_horizontal_elem)
 
                 particles_in_domain += 1
