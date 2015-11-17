@@ -1,6 +1,7 @@
 import logging
 
 from fvcom_data_reader import FVCOMDataReader
+from integrator import get_num_integrator
 from particle import get_particle_seed
 from netcdf_logger import NetCDFLogger
 
@@ -30,6 +31,9 @@ class FVCOMOPTModel(OPTModel):
     def initialise(self, time):
         # Create FVCOM data reader
         self.data_reader = FVCOMDataReader(self.config)
+        
+        # Create numerical integrator
+        self.num_integrator = get_num_integrator(self.config)
 
         # Create seed particle set
         self.particle_set = get_particle_seed(self.config)
