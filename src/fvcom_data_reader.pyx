@@ -220,8 +220,8 @@ cdef class FVCOMDataReader:
         # Time fraction for interpolation in time
         cdef DTYPE_FLOAT_t time_fraction
 
-        # Loop index
-        cdef DTYPE_INT_t i, j
+        # Array and loop indices
+        cdef DTYPE_INT_t i, j, neighbour
         
         # Time fraction
         time_fraction = self._get_time_fraction(time)
