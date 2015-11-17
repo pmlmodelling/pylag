@@ -381,7 +381,7 @@ cdef class FVCOMDataReader:
         # variable reading frames
         self.read_time_dependent_vars(0.0) # 0s as simulation start
 
-    cdef DTYPE_FLOAT_t _get_time_fraction(self, DTYPE_FLOAT_t time):
+    cdef inline DTYPE_FLOAT_t _get_time_fraction(self, DTYPE_FLOAT_t time):
         # Calculate time fraction according to the formula (t - t1)/(t2 - t1)
         return (time - self._time[self._tidx_last]) / (self._time[self._tidx_next] - self._time[self._tidx_last])        
         
