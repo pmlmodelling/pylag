@@ -74,38 +74,10 @@ cdef class FVCOMDataReader:
         self._read_grid()
         self._init_time_dependent_vars()
 
-    def read_time_dependent_vars(self, time):
-        # Find indices for times within time_array that bracket time_start
-        tidx_last = None
-        for idx, t_test in enumerate(self._time):
-            if time >= t_test and idx < (len(self._time) - 1):
-                tidx_last = idx
-                break
-
-        if tidx_last is None:
-            logger = logging.getLogger(__name__)
-            logger.info('The provided time {} lies outside of the range for which '\
-            'there exists input data.'.format(time))
-            raise TypeError('Time out of range.')
-
-        # Adjacent time index
-        tidx_next = tidx_last + 1
-        
-        # Save time indices
-        self._tidx_last = tidx_last
-        self._tidx_next = tidx_next
-        
-        # Initialise memory views for zeta
-        self._zeta_last = self._data_file.variables['zeta'][self._tidx_last,:]
-        self._zeta_next = self._data_file.variables['zeta'][self._tidx_next,:]
-        
-        # Initialise memory views for u, v and w
-        self._u_last = self._data_file.variables['u'][self._tidx_last,:,:]
-        self._u_next = self._data_file.variables['u'][self._tidx_next,:,:]
-        self._v_last = self._data_file.variables['v'][self._tidx_last,:,:]
-        self._v_next = self._data_file.variables['v'][self._tidx_next,:,:]
-        self._omega_last = self._data_file.variables['omega'][self._tidx_last,:,:]
-        self._omega_next = self._data_file.variables['omega'][self._tidx_next,:,:]
+    def update_time_dependent_vars(self, time):
+        time_fraction = self._get_time_fraction(time)
+        if time_fraction < 0.0 or time_fraction > 1.0:
+            self._read_time_dependent_vars(time)
 
     def get_bathymetry(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
         """
@@ -382,7 +354,40 @@ cdef class FVCOMDataReader:
 
         # Set time indices for reading frames, and initialise time-dependent 
         # variable reading frames
-        self.read_time_dependent_vars(0.0) # 0s as simulation start
+        self._read_time_dependent_vars(0.0) # 0s as simulation start
+
+    def _read_time_dependent_vars(self, time):
+        # Find indices for times within time_array that bracket time_start
+        tidx_last = None
+        for idx, t_test in enumerate(self._time):
+            if time >= t_test and idx < (len(self._time) - 1):
+                tidx_last = idx
+                break
+
+        if tidx_last is None:
+            logger = logging.getLogger(__name__)
+            logger.info('The provided time {} lies outside of the range for which '\
+            'there exists input data.'.format(time))
+            raise TypeError('Time out of range.')
+
+        # Adjacent time index
+        tidx_next = tidx_last + 1
+        
+        # Save time indices
+        self._tidx_last = tidx_last
+        self._tidx_next = tidx_next
+        
+        # Initialise memory views for zeta
+        self._zeta_last = self._data_file.variables['zeta'][self._tidx_last,:]
+        self._zeta_next = self._data_file.variables['zeta'][self._tidx_next,:]
+        
+        # Initialise memory views for u, v and w
+        self._u_last = self._data_file.variables['u'][self._tidx_last,:,:]
+        self._u_next = self._data_file.variables['u'][self._tidx_next,:,:]
+        self._v_last = self._data_file.variables['v'][self._tidx_last,:,:]
+        self._v_next = self._data_file.variables['v'][self._tidx_next,:,:]
+        self._omega_last = self._data_file.variables['omega'][self._tidx_last,:,:]
+        self._omega_next = self._data_file.variables['omega'][self._tidx_next,:,:]
 
     cdef inline DTYPE_FLOAT_t _get_time_fraction(self, DTYPE_FLOAT_t time):
         # Calculate time fraction according to the formula (t - t1)/(t2 - t1)

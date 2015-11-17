@@ -32,6 +32,7 @@ class TraceSimulator(Simulator):
             self.time_manager.update_current_time()
             if self.time_manager.write_output_to_file() == 1:
                 model.record(self.time_manager.time)
+            model.update_reading_frame(self.time_manager.time)
 
         # Close output files
         model.shutdown()
