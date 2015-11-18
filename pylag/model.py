@@ -1,9 +1,9 @@
 import logging
 
-from fvcom_data_reader import FVCOMDataReader
-from integrator import get_num_integrator
-from particle import get_particle_seed
-from netcdf_logger import NetCDFLogger
+from pylag.fvcom_data_reader import FVCOMDataReader
+from pylag.integrator import get_num_integrator
+from pylag.particle import get_particle_seed
+from pylag.netcdf_logger import NetCDFLogger
 
 class OPTModel(object):
     def __init__(self, config):
