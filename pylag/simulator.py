@@ -1,5 +1,5 @@
-from model import get_model
-from time_manager import TimeManager
+from pylag.model import get_model
+from pylag.time_manager import TimeManager
 
 def get_simulator(config):
     if config.get("GENERAL", "simulation_type") == "trace":

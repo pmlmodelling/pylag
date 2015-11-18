@@ -3,8 +3,8 @@ import argparse
 import logging
 import subprocess
 
-from configuration import get_config
-from simulator import get_simulator
+from pylag.configuration import get_config
+from pylag.simulator import get_simulator
 
 def main():
     # Parse command line agruments
