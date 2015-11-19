@@ -13,9 +13,8 @@ class NumIntegrator(object):
         pass
     
 class RK4Integrator(NumIntegrator):
-    def __init__(self, config):
-        self._config = config
-        self._time_step = config.getfloat('PARTICLES', 'time_step')
+    def __init__(self, time_step):
+        self._time_step = time_step
     
     def advect(self, time, particle, data_reader):
         ndim = 3
