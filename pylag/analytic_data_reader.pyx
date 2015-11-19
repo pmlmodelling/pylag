@@ -12,16 +12,20 @@ class AnalyticDataReader(object):
     """
     Object passes back u/v/w velocity components for the system of ODEs:
 
-    dx/dt = x         (1)
-    dy/dt = 2y        (2)
-    dz/dt = 0.0       (3)
+    dx/dt = x           (1)
+    dy/dt = 1.5y        (2)
+    dz/dt = 0.0         (3)
     
     These eqns are uncoupled and can be solved analytically, giving:
     
-    x = x_0 * exp(t)  (4)
-    y = y_0 * exp(2t) (5)
-    z = 0.0           (6)
+    x = x_0 * exp(t)    (4)
+    y = y_0 * exp(1.5t) (5)
+    z = 0.0             (6)
     
+    The primary purpose of the analytic data reader if to test pylag
+    numerical integration schemes.
+    
+    Author: James Clark (PML)
     """
     
     def get_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
