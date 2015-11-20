@@ -14,7 +14,7 @@ from data_types_python import DTYPE_INT, DTYPE_FLOAT
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 import interpolation as interp
-cimport interpolation as interp
+#cimport interpolation as interp
 from unstruct_grid_tools import round_time, sort_adjacency_array
 
 cdef class FVCOMDataReader:
@@ -252,11 +252,11 @@ cdef class FVCOMDataReader:
     def find_host(self, xpos, ypos, guess=None):
         if guess is not None:
             try:
-                return self._find_host_using_local_search(xpos, ypos, guess)
+                return self.find_host_using_local_search(xpos, ypos, guess)
             except ValueError:
                 pass
 
-        return self._find_host_using_global_search(xpos, ypos)
+        return self.find_host_using_global_search(xpos, ypos)
 
     def _read_grid(self):
         logger = logging.getLogger(__name__)
@@ -394,7 +394,7 @@ cdef class FVCOMDataReader:
         self._omega_last = self._data_file.variables['omega'][self._tidx_last,:,:]
         self._omega_next = self._data_file.variables['omega'][self._tidx_next,:,:]      
         
-    cdef _find_host_using_local_search(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
+    cpdef find_host_using_local_search(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
         """
         Try to establish the host horizontal element for the particle.
         The algorithm adopted is as described in Shadden (2009), adapted for
@@ -458,7 +458,7 @@ cdef class FVCOMDataReader:
                 raise ValueError('Particle not found using local search.')
 
     #@cython.boundscheck(False)
-    cdef _find_host_using_global_search(self, DTYPE_FLOAT_t x, DTYPE_FLOAT_t y):
+    cpdef find_host_using_global_search(self, DTYPE_FLOAT_t x, DTYPE_FLOAT_t y):
 
         cdef int i, j # Loop counters
         cdef int vertex # Vertex identifier
