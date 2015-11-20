@@ -7,7 +7,7 @@ from libc.math cimport sqrt as sqrt_c
 from data_types_python import DTYPE_INT, DTYPE_FLOAT
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
-cdef get_barycentric_coords(DTYPE_FLOAT_t x, DTYPE_FLOAT_t y,
+cpdef get_barycentric_coords(DTYPE_FLOAT_t x, DTYPE_FLOAT_t y,
         DTYPE_FLOAT_t[:] x_tri, DTYPE_FLOAT_t[:] y_tri, DTYPE_FLOAT_t[:] phi):
 
     cdef DTYPE_FLOAT_t a11, a12, a21, a22, det
@@ -26,7 +26,7 @@ cdef get_barycentric_coords(DTYPE_FLOAT_t x, DTYPE_FLOAT_t y,
     phi[1] = (a21*(x - x_tri[0]) + a22*(y - y_tri[0]))/det
     phi[2] = 1.0 - phi[0] - phi[1]
 
-cdef DTYPE_FLOAT_t shephard_interpolation(DTYPE_FLOAT_t x,
+cpdef DTYPE_FLOAT_t shephard_interpolation(DTYPE_FLOAT_t x,
         DTYPE_FLOAT_t y, DTYPE_INT_t npts, DTYPE_FLOAT_t[:] xpts, 
         DTYPE_FLOAT_t[:] ypts, DTYPE_FLOAT_t[:] vals):
     """
@@ -51,7 +51,7 @@ cdef DTYPE_FLOAT_t shephard_interpolation(DTYPE_FLOAT_t x,
     for i in xrange(npts):
         r = get_euclidian_distance(x, y, xpts[i], ypts[i])
         if r == 0.0: return vals[i]
-        w = 1.0/(r*r) # TODO hardoced p value of -2.0 for now.
+        w = 1.0/(r) # TODO hardoced p value of -2.0 for now.
         sum = sum + w
         sumw = sumw + w*vals[i]
 
