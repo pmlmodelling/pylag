@@ -3,6 +3,7 @@ import numpy as np
 from netCDF4 import Dataset, num2date
 import datetime
 import logging
+import ConfigParser
 
 # Cython imports
 cimport numpy as np
@@ -70,7 +71,10 @@ cdef class FVCOMDataReader:
         self.config = config
 
         self.data_file_name = config.get("OCEAN_CIRCULATION_MODEL", "data_file")
-        self.grid_file_name = config.get("OCEAN_CIRCULATION_MODEL", "grid_metrics_file")
+        try:
+            self.grid_file_name = config.get("OCEAN_CIRCULATION_MODEL", "grid_metrics_file")
+        except ConfigParser.NoOptionError:
+            self.grid_file_name = None
 
         self._read_grid()
         self._init_time_dependent_vars()
