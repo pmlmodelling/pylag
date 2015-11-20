@@ -1,5 +1,5 @@
 import logging
-from netCDF4 import Dataset, date2num
+from netCDF4 import Dataset, date2num, num2date
 
 class NetCDFLogger(object):
     """
@@ -19,9 +19,11 @@ class NetCDFLogger(object):
     """
     def __init__(self, config, n_particles):
         
+        self.config = config
+        
         logger = logging.getLogger(__name__)
 
-        file_name = config.get('GENERAL', 'output_file') + '.nc'
+        file_name = self.config.get('GENERAL', 'output_file') + '.nc'
         try:
             logger.info('Creating output file: {}.'.format(file_name))
             self._ncfile = Dataset(file_name, mode='w', format='NETCDF4_CLASSIC')
@@ -78,8 +80,9 @@ class NetCDFLogger(object):
         # Next time index
         tidx = self._time.shape[0]
         
-        # Convert datetime object to int and write to file
-        self._time[tidx] = time
+        # Rebase time units and save
+        dt = num2date(time, units='seconds since {}'.format(self.config.get("PARTICLES", "start_datetime")))
+        self._time[tidx] = date2num(dt, units=self._time.units)
         
         self._xpos[tidx, :] = particle_data['xpos']
         self._ypos[tidx, :] = particle_data['ypos']
