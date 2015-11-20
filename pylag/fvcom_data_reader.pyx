@@ -7,12 +7,13 @@ import logging
 # Cython imports
 cimport numpy as np
 np.import_array()
-from libc.math cimport sqrt as sqrt_c
 
 # Data types used for constructing C data structures
 from data_types_python import DTYPE_INT, DTYPE_FLOAT
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
+import interpolation as interp
+cimport interpolation as interp
 from unstruct_grid_tools import round_time, sort_adjacency_array
 
 cdef class FVCOMDataReader:
@@ -75,7 +76,7 @@ cdef class FVCOMDataReader:
         self._init_time_dependent_vars()
 
     def update_time_dependent_vars(self, time):
-        time_fraction = self._get_time_fraction(time)
+        time_fraction = interp.get_time_fraction(time, self._time[self._tidx_last], self._time[self._tidx_next])
         if time_fraction < 0.0 or time_fraction > 1.0:
             self._read_time_dependent_vars(time)
 
@@ -101,9 +102,9 @@ cdef class FVCOMDataReader:
             h_tri[i] = self._h[vertex]
 
         # Calculate barycentric coordinates
-        self._get_barycentric_coords(xpos, ypos, x_tri, y_tri, phi)
+        interp.get_barycentric_coords(xpos, ypos, x_tri, y_tri, phi)
 
-        h = self._interpolate_within_element(h_tri, phi)
+        h = interp.interpolate_within_element(h_tri, phi)
 
         return h
     
@@ -133,15 +134,15 @@ cdef class FVCOMDataReader:
             zeta_tri_t_next[i] = self._zeta_next[vertex]
 
         # Calculate barycentric coordinates
-        self._get_barycentric_coords(xpos, ypos, x_tri, y_tri, phi)
+        interp.get_barycentric_coords(xpos, ypos, x_tri, y_tri, phi)
 
         # Interpolate in time
-        time_fraction = self._get_time_fraction(time)
+        time_fraction = interp.get_time_fraction(time, self._time[self._tidx_last], self._time[self._tidx_next])
         for i in xrange(n_vertices):
-            zeta_tri[i] = self._interpolate_in_time(time_fraction, zeta_tri_t_last[i], zeta_tri_t_next[i])
+            zeta_tri[i] = interp.interpolate_in_time(time_fraction, zeta_tri_t_last[i], zeta_tri_t_next[i])
 
         # Interpolate in space
-        zeta = self._interpolate_within_element(zeta_tri, phi)
+        zeta = interp.interpolate_within_element(zeta_tri, phi)
 
         return zeta
 
@@ -200,12 +201,12 @@ cdef class FVCOMDataReader:
         cdef DTYPE_INT_t i, j, neighbour
         
         # Time fraction
-        time_fraction = self._get_time_fraction(time)
+        time_fraction = interp.get_time_fraction(time, self._time[self._tidx_last], self._time[self._tidx_next])
         
         if min(self._nbe[:,host]) < 0:
             # Boundary element - temporal interpolation only
-            up1 = self._interpolate_in_time(time_fraction, self._u_last[0, host], self._u_next[0, host])
-            vp1 = self._interpolate_in_time(time_fraction, self._v_last[0, host], self._v_next[0, host])
+            up1 = interp.interpolate_in_time(time_fraction, self._u_last[0, host], self._u_next[0, host])
+            vp1 = interp.interpolate_in_time(time_fraction, self._v_last[0, host], self._v_next[0, host])
             wp1 = 0.0 # TODO
             up2 = 0.0 # TODO
             vp2 = 0.0 # TODO
@@ -214,24 +215,24 @@ cdef class FVCOMDataReader:
             # Non-boundary element - perform horizontal and temporal interpolation
             xc[0] = self._xc[host]
             yc[0] = self._yc[host]
-            uc1[0] = self._interpolate_in_time(time_fraction, self._u_last[0, host], self._u_next[0, host])
-            vc1[0] = self._interpolate_in_time(time_fraction, self._v_last[0, host], self._v_next[0, host])
+            uc1[0] = interp.interpolate_in_time(time_fraction, self._u_last[0, host], self._u_next[0, host])
+            vc1[0] = interp.interpolate_in_time(time_fraction, self._v_last[0, host], self._v_next[0, host])
             wc1[0] = 0.0 # TODO
             for i in xrange(3):
                 neighbour = self._nbe[i, host]
                 j = i+1 # +1 as host is 0
                 xc[j] = self._xc[neighbour] 
                 yc[j] = self._yc[neighbour]
-                uc1[j] = self._interpolate_in_time(time_fraction, self._u_last[0, neighbour], self._u_next[0, neighbour])
-                vc1[j] = self._interpolate_in_time(time_fraction, self._v_last[0, neighbour], self._v_next[0, neighbour])
+                uc1[j] = interp.interpolate_in_time(time_fraction, self._u_last[0, neighbour], self._u_next[0, neighbour])
+                vc1[j] = interp.interpolate_in_time(time_fraction, self._v_last[0, neighbour], self._v_next[0, neighbour])
                 wc1[j] = 0.0 # TODO
                 uc2[j] = 0.0 # TODO
                 vc2[j] = 0.0 # TODO
                 wc2[j] = 0.0 # TODO
         
             # Interpolate in space - overlying sigma layer
-            up1 = self._interpolate_in_space(xpos, ypos, n_pts, xc, yc, uc1)
-            vp1 = self._interpolate_in_space(xpos, ypos, n_pts, xc, yc, vc1)
+            up1 = interp.shephard_interpolation(xpos, ypos, n_pts, xc, yc, uc1)
+            vp1 = interp.shephard_interpolation(xpos, ypos, n_pts, xc, yc, vc1)
             wp1 = 0.0 # TODO
             
             # Interpolate in space - underlying sigma layer
@@ -387,11 +388,7 @@ cdef class FVCOMDataReader:
         self._v_last = self._data_file.variables['v'][self._tidx_last,:,:]
         self._v_next = self._data_file.variables['v'][self._tidx_next,:,:]
         self._omega_last = self._data_file.variables['omega'][self._tidx_last,:,:]
-        self._omega_next = self._data_file.variables['omega'][self._tidx_next,:,:]
-
-    cdef inline DTYPE_FLOAT_t _get_time_fraction(self, DTYPE_FLOAT_t time):
-        # Calculate time fraction according to the formula (t - t1)/(t2 - t1)
-        return (time - self._time[self._tidx_last]) / (self._time[self._tidx_next] - self._time[self._tidx_last])        
+        self._omega_next = self._data_file.variables['omega'][self._tidx_next,:,:]      
         
     cdef _find_host_using_local_search(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
         """
@@ -434,7 +431,7 @@ cdef class FVCOMDataReader:
                 y_tri[i] = self._y[vertex]
 
             # Transform to natural coordinates
-            self._get_barycentric_coords(xpos, ypos, x_tri, y_tri, phi)
+            interp.get_barycentric_coords(xpos, ypos, x_tri, y_tri, phi)
 
             # Check to see if the particle is in the current element
             phi_test = phi[0]
@@ -476,7 +473,7 @@ cdef class FVCOMDataReader:
                 y_tri[j] = self._y[vertex]
 
             # Transform to natural coordinates
-            self._get_barycentric_coords(x, y, x_tri, y_tri, phi)
+            interp.get_barycentric_coords(x, y, x_tri, y_tri, phi)
 
             # Check to see if the particle is in the current element
             phi_test = phi[0]
@@ -484,66 +481,3 @@ cdef class FVCOMDataReader:
             if phi[2] < phi_test: phi_test = phi[2]  
             if phi_test >= 0.0: return i
         return -1
-    
-    #@cython.boundscheck(False)
-    cdef _get_barycentric_coords(self, DTYPE_FLOAT_t x, DTYPE_FLOAT_t y,
-            DTYPE_FLOAT_t[:] x_tri, DTYPE_FLOAT_t[:] y_tri, DTYPE_FLOAT_t[:] phi):
-
-        cdef DTYPE_FLOAT_t a11, a12, a21, a22, det
-
-        # Array elements
-        a11 = y_tri[2] - y_tri[0]
-        a12 = x_tri[0] - x_tri[2]
-        a21 = y_tri[0] - y_tri[1]
-        a22 = x_tri[1] - x_tri[0]
-
-        # Determinant
-        det = a11 * a22 - a12 * a21
-
-        # Transformation to barycentric coordinates
-        phi[0] = (a11*(x - x_tri[0]) + a12*(y - y_tri[0]))/det
-        phi[1] = (a21*(x - x_tri[0]) + a22*(y - y_tri[0]))/det
-        phi[2] = 1.0 - phi[0] - phi[1]
-
-    cdef DTYPE_FLOAT_t _interpolate_in_space(self, DTYPE_FLOAT_t x,
-            DTYPE_FLOAT_t y, DTYPE_INT_t npts, DTYPE_FLOAT_t[:] xpts, 
-            DTYPE_FLOAT_t[:] ypts, DTYPE_FLOAT_t[:] vals):
-        """
-        Shepard interpolation.
-        """
-        # Euclidian distance between the point and a reference point
-        cdef DTYPE_FLOAT_t r
-        
-        # Weighting applied to a given point
-        cdef DTYPE_FLOAT_t w
-        
-        # Summed quantities
-        cdef DTYPE_FLOAT_t sum
-        cdef DTYPE_FLOAT_t sumw
-        
-        # Loop index
-        cdef DTYPE_INT_t i
-        
-        # Loop over all reference points
-        sum = 0.0
-        sumw = 0.0
-        for i in xrange(npts):
-            r = self._get_euclidian_distance(x, y, xpts[i], ypts[i])
-            if r == 0.0: return vals[i]
-            w = 1.0/(r*r) # TODO hardoced p value of -2.0 for now.
-            sum = sum + w
-            sumw = sumw + w*vals[i]
-
-        return sumw/sum        
-
-    cdef inline DTYPE_FLOAT_t _get_euclidian_distance(self, DTYPE_FLOAT_t x1,
-            DTYPE_FLOAT_t y1, DTYPE_FLOAT_t x2, DTYPE_FLOAT_t y2):
-         return sqrt_c((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1))
-
-    cdef inline DTYPE_FLOAT_t _interpolate_in_time(self, DTYPE_FLOAT_t time_fraction,
-            DTYPE_FLOAT_t val_last, DTYPE_FLOAT_t val_next):
-        return (1.0 - time_fraction) * val_last + time_fraction * val_next
-
-    cdef inline DTYPE_FLOAT_t _interpolate_within_element(self,
-            DTYPE_FLOAT_t[:] var, DTYPE_FLOAT_t[:] phi):
-        return var[0] + phi[0] * (var[1] - var[0]) + phi[1] * (var[2] - var[0])

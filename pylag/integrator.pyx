@@ -92,7 +92,7 @@ class RK4Integrator(NumIntegrator):
 
 def get_num_integrator(config):
     if config.get("PARTICLES", "num_integrator") == "RK4":
-        return RK4Integrator(config)
+        return RK4Integrator(config.getfloat('PARTICLES', 'time_step'))
     else:
         raise ValueError('Unsupported numerical integration scheme.')   
 

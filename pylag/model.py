@@ -36,7 +36,7 @@ class FVCOMOPTModel(OPTModel):
         self.data_reader = FVCOMDataReader(self.config)
         
         # Create numerical integrator
-        self.num_integrator = get_num_integrator(config.getfloat('PARTICLES', 'time_step'))
+        self.num_integrator = get_num_integrator(self.config)
 
         # Create seed particle set
         self.particle_set = get_particle_seed(self.config)
