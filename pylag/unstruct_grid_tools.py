@@ -74,7 +74,7 @@ def sort_adjacency_array(nv, nbe):
     n_elems = nv.shape[1]
 
     # Our new to-be-sorted nbe array
-    nbe_sorted = np.zeros([3,n_elems], dtype='int') - 1
+    nbe_sorted = np.zeros([3,n_elems], dtype=np.int32) - 1
 
     # Loop over all elems
     for i in range(n_elems):
