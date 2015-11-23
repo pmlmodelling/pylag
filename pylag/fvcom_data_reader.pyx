@@ -83,7 +83,7 @@ cdef class FVCOMDataReader:
 
     def update_time_dependent_vars(self, time):
         time_fraction = interp.get_time_fraction(time, self._time[self._tidx_last], self._time[self._tidx_next])
-        if time_fraction < 0.0 or time_fraction > 1.0:
+        if time_fraction < 0.0 or time_fraction >= 1.0:
             self._read_time_dependent_vars(time)
 
     def get_bathymetry(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
@@ -208,7 +208,11 @@ cdef class FVCOMDataReader:
         
         # Time fraction
         time_fraction = interp.get_time_fraction(time, self._time[self._tidx_last], self._time[self._tidx_next])
-        
+        if time_fraction < 0.0 or time_fraction > 1.0:
+            logger = logging.getLogger(__name__)
+            logger.info('Invalid time fraction computed at time {}s.'.format(time))
+            raise ValueError('Time out of range.')
+
         if min(self._nbe[:,host]) < 0:
             # Boundary element - temporal interpolation only
             up1 = interp.interpolate_in_time(time_fraction, self._u_last[0, host], self._u_next[0, host])
@@ -363,22 +367,27 @@ cdef class FVCOMDataReader:
         # variable reading frames
         self._read_time_dependent_vars(0.0) # 0s as simulation start
 
-    def _read_time_dependent_vars(self, time):
+    cdef _read_time_dependent_vars(self, time):
         # Find indices for times within time_array that bracket time_start
-        tidx_last = None
-        for idx, t_test in enumerate(self._time):
-            if time >= t_test and idx < (len(self._time) - 1):
-                tidx_last = idx
+        cdef DTYPE_INT_t tidx_last, tidx_next
+        cdef DTYPE_INT_t n_times
+        cdef DTYPE_INT_t i
+        
+        n_times = len(self._time)
+        
+        tidx_last = -1
+        tidx_next = -1
+        for i in xrange(0, n_times-1):
+            if time >= self._time[i] and time < self._time[i+1]:
+                tidx_last = i
+                tidx_next = tidx_last + 1
                 break
 
-        if tidx_last is None:
+        if tidx_last == -1:
             logger = logging.getLogger(__name__)
             logger.info('The provided time {} lies outside of the range for which '\
             'there exists input data.'.format(time))
             raise TypeError('Time out of range.')
-
-        # Adjacent time index
-        tidx_next = tidx_last + 1
         
         # Save time indices
         self._tidx_last = tidx_last
