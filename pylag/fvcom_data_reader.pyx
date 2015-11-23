@@ -1,4 +1,6 @@
-# # cython: profile=True
+# cython: profile=True
+# cython: linetrace=True
+
 import numpy as np
 from netCDF4 import Dataset, num2date
 import datetime
