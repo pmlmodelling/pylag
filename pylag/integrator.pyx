@@ -29,7 +29,7 @@ class RK4Integrator(NumIntegrator):
         cdef DTYPE_FLOAT_t[:] k4 = np.empty(3, dtype=DTYPE_FLOAT)
         
         # Temporary containers
-        cdef DTYPE_FLOAT_t xpos, ypos, zpos
+        cdef DTYPE_FLOAT_t t, xpos, ypos, zpos
         cdef DTYPE_INT_t host
         cdef DTYPE_FLOAT_t[:] vel
 
@@ -52,6 +52,7 @@ class RK4Integrator(NumIntegrator):
         zpos = particle.zpos + 0.5 * k1[2]
         host = data_reader.find_host(xpos, ypos, host)
         if host == -1:
+            particle.host_horizontal_elem = -1
             particle.in_domain = -1
             return
         data_reader.get_velocity(t, xpos, ypos, zpos, host, vel) 
@@ -65,6 +66,7 @@ class RK4Integrator(NumIntegrator):
         zpos = particle.zpos + 0.5 * k2[2]
         host = data_reader.find_host(xpos, ypos, host)
         if host == -1:
+            particle.host_horizontal_elem = -1
             particle.in_domain = -1
             return
         data_reader.get_velocity(t, xpos, ypos, zpos, host, vel) 
@@ -78,6 +80,7 @@ class RK4Integrator(NumIntegrator):
         zpos = particle.zpos + k3[2]
         host = data_reader.find_host(xpos, ypos, host)
         if host == -1:
+            particle.host_horizontal_elem = -1
             particle.in_domain = -1
             return
         data_reader.get_velocity(t, xpos, ypos, zpos, host, vel) 
