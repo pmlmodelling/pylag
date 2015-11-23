@@ -20,8 +20,6 @@ class RK4Integrator(NumIntegrator):
         self._time_step = time_step
     
     def advect(self, time, particle, data_reader):
-        ndim = 3
-        
         # Arrays for RK4 stages
         cdef DTYPE_FLOAT_t[:] k1 = np.empty(3, dtype=DTYPE_FLOAT)
         cdef DTYPE_FLOAT_t[:] k2 = np.empty(3, dtype=DTYPE_FLOAT)
@@ -32,6 +30,10 @@ class RK4Integrator(NumIntegrator):
         cdef DTYPE_FLOAT_t t, xpos, ypos, zpos
         cdef DTYPE_INT_t host
         cdef DTYPE_FLOAT_t[:] vel
+        
+        # Array indices/loop counters
+        cdef DTYPE_INT_t ndim = 3
+        cdef DTYPE_INT_t i
 
         vel = np.empty(ndim, dtype=DTYPE_FLOAT)
         
