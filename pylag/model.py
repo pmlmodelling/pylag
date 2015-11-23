@@ -73,7 +73,8 @@ class FVCOMOPTModel(OPTModel):
 
     def advect(self, time):
         for particle in self.particle_set:
-            self.num_integrator.advect(time, particle, self.data_reader)
+            if particle.in_domain != -1:
+                self.num_integrator.advect(time, particle, self.data_reader)
         
     def record(self, time):
         # Intialise data logger
