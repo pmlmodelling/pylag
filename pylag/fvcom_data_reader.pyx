@@ -15,11 +15,12 @@ np.import_array()
 from data_types_python import DTYPE_INT, DTYPE_FLOAT
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
+from data_reader cimport DataReader
 import interpolation as interp
 #cimport interpolation as interp
 from unstruct_grid_tools import round_time, sort_adjacency_array
 
-cdef class FVCOMDataReader:
+cdef class FVCOMDataReader(DataReader):
     # Configurtion object
     cdef object config
 
@@ -81,12 +82,12 @@ cdef class FVCOMDataReader:
         self._read_grid()
         self._init_time_dependent_vars()
 
-    def update_time_dependent_vars(self, time):
+    cpdef update_time_dependent_vars(self, DTYPE_FLOAT_t time):
         time_fraction = interp.get_time_fraction(time, self._time[self._tidx_last], self._time[self._tidx_next])
         if time_fraction < 0.0 or time_fraction >= 1.0:
             self._read_time_dependent_vars(time)
 
-    def get_bathymetry(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
+    cpdef get_bathymetry(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
         """
         Return bathymetry at the supplied x/y coordinates.
         """
@@ -114,7 +115,7 @@ cdef class FVCOMDataReader:
 
         return h
     
-    def get_sea_sur_elev(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
+    cpdef get_sea_sur_elev(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
         """
         Return sea surface elevation at the supplied x/y coordinates.
@@ -152,7 +153,7 @@ cdef class FVCOMDataReader:
 
         return zeta
 
-    def get_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
+    cdef get_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
             DTYPE_FLOAT_t[:] vel):
         """
@@ -255,7 +256,7 @@ cdef class FVCOMDataReader:
         vel[1] = vp1 # TODO
         vel[2] = wp1 # TODO
 
-    def find_host(self, xpos, ypos, guess=None):
+    cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, guess=None):
         if guess is not None:
             try:
                 return self.find_host_using_local_search(xpos, ypos, guess)
