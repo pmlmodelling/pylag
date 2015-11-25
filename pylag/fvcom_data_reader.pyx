@@ -18,6 +18,9 @@ from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 from data_reader cimport DataReader
 
 cimport interpolation as interp
+
+from math cimport int_min, float_min
+
 from unstruct_grid_tools import round_time, sort_adjacency_array
 
 cdef struct VelInterpArrays:
@@ -209,6 +212,8 @@ cdef class FVCOMDataReader(DataReader):
         # Array and loop indices
         cdef DTYPE_INT_t i, j, neighbour
         
+        cdef DTYPE_INT_t nbe_min
+        
         # Time fraction
         time_fraction = interp.get_time_fraction(time, self._time[self._tidx_last], self._time[self._tidx_next])
         if time_fraction < 0.0 or time_fraction > 1.0:
@@ -216,7 +221,8 @@ cdef class FVCOMDataReader(DataReader):
             logger.info('Invalid time fraction computed at time {}s.'.format(time))
             raise ValueError('Time out of range.')
 
-        if min(self._nbe[:,host]) < 0:
+        nbe_min = int_min(int_min(self._nbe[0, host], self._nbe[1, host]), self._nbe[2, host])
+        if nbe_min < 0:
             # Boundary element - temporal interpolation only
             up1 = interp.interpolate_in_time(time_fraction, self._u_last[0, host], self._u_next[0, host])
             vp1 = interp.interpolate_in_time(time_fraction, self._v_last[0, host], self._v_next[0, host])
@@ -481,9 +487,7 @@ cdef class FVCOMDataReader(DataReader):
             interp.get_barycentric_coords(xpos, ypos, x_tri, y_tri, phi)
 
             # Check to see if the particle is in the current element
-            phi_test = phi[0]
-            if phi[1] < phi_test: phi_test = phi[1]
-            if phi[2] < phi_test: phi_test = phi[2]  
+            phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
             if phi_test >= 0.0: return guess
 
             # If not, use phi to select the next element to be searched
