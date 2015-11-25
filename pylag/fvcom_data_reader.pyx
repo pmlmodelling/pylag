@@ -48,6 +48,12 @@ cdef struct VelInterpArrays:
     DTYPE_FLOAT_t[:] vc2
     DTYPE_FLOAT_t[:] wc2
 
+cdef struct HostElementSearchArrays:
+    # Temporary arrays used in host element searching
+    DTYPE_FLOAT_t[:] x_tri
+    DTYPE_FLOAT_t[:] y_tri
+    DTYPE_FLOAT_t[:] phi
+
 cdef class FVCOMDataReader(DataReader):
     # Configurtion object
     cdef object config
@@ -101,6 +107,9 @@ cdef class FVCOMDataReader(DataReader):
     # Struct of temporary arrays used in vel interpolation
     cdef DTYPE_INT_t _n_pts_vel_interp
     cdef VelInterpArrays vel_interp_arrs
+    
+    # Temporary arrays used in host element searching
+    cdef HostElementSearchArrays host_elem_search_arrs
     
     def __init__(self, config):
         self.config = config
@@ -404,6 +413,11 @@ cdef class FVCOMDataReader(DataReader):
         self.vel_interp_arrs.uc2 = np.empty(self._n_pts_vel_interp, dtype=DTYPE_FLOAT)
         self.vel_interp_arrs.vc2 = np.empty(self._n_pts_vel_interp, dtype=DTYPE_FLOAT)
         self.vel_interp_arrs.wc2 = np.empty(self._n_pts_vel_interp, dtype=DTYPE_FLOAT)
+        
+        # Temporary arays used in host element sarching
+        self.host_elem_search_arrs.x_tri = np.empty(3, dtype=DTYPE_FLOAT)
+        self.host_elem_search_arrs.y_tri = np.empty(3, dtype=DTYPE_FLOAT)
+        self.host_elem_search_arrs.phi = np.empty(3, dtype=DTYPE_FLOAT)
 
     cdef _read_time_dependent_vars(self, time):
         # Find indices for times within time_array that bracket time_start
@@ -472,30 +486,27 @@ cdef class FVCOMDataReader(DataReader):
         cdef int n_vertices = 3 # No. of vertices in a triangle
 
         # Intermediate arrays
-        cdef DTYPE_FLOAT_t[:] x_tri = np.empty(3, dtype=DTYPE_FLOAT)
-        cdef DTYPE_FLOAT_t[:] y_tri = np.empty(3, dtype=DTYPE_FLOAT)
-        cdef DTYPE_FLOAT_t[:] phi = np.empty(3, dtype=DTYPE_FLOAT)
         cdef DTYPE_FLOAT_t phi_test
 
         while True:
             for i in xrange(n_vertices):
                 vertex = self._nv[i,guess]
-                x_tri[i] = self._x[vertex]
-                y_tri[i] = self._y[vertex]
+                self.host_elem_search_arrs.x_tri[i] = self._x[vertex]
+                self.host_elem_search_arrs.y_tri[i] = self._y[vertex]
 
             # Transform to natural coordinates
-            interp.get_barycentric_coords(xpos, ypos, x_tri, y_tri, phi)
+            interp.get_barycentric_coords(xpos, ypos, self.host_elem_search_arrs.x_tri, self.host_elem_search_arrs.y_tri, self.host_elem_search_arrs.phi)
 
             # Check to see if the particle is in the current element
-            phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
+            phi_test = float_min(float_min(self.host_elem_search_arrs.phi[0], self.host_elem_search_arrs.phi[1]), self.host_elem_search_arrs.phi[2])
             if phi_test >= 0.0: return guess
 
             # If not, use phi to select the next element to be searched
-            if phi[0] < 0.0:
+            if self.host_elem_search_arrs.phi[0] < 0.0:
                 guess = self._nbe[0,guess]
-            elif phi[1] < 0.0:
+            elif self.host_elem_search_arrs.phi[1] < 0.0:
                 guess = self._nbe[1,guess]
-            elif phi[2] < 0.0:
+            elif self.host_elem_search_arrs.phi[2] < 0.0:
                 guess = self._nbe[2,guess]
             else:
                 raise RuntimeError('Host element search algorithm failed.')
@@ -512,23 +523,18 @@ cdef class FVCOMDataReader(DataReader):
         cdef int n_vertices = 3 # No. of vertices in a triangle
 
         # Intermediate arrays
-        cdef DTYPE_FLOAT_t[:] x_tri = np.empty(3, dtype=DTYPE_FLOAT)
-        cdef DTYPE_FLOAT_t[:] y_tri = np.empty(3, dtype=DTYPE_FLOAT)
-        cdef DTYPE_FLOAT_t[:] phi = np.empty(3, dtype=DTYPE_FLOAT)
         cdef DTYPE_FLOAT_t phi_test
         
         for i in xrange(self._n_elems):
             for j in xrange(n_vertices):
                 vertex = self._nv[j,i]
-                x_tri[j] = self._x[vertex]
-                y_tri[j] = self._y[vertex]
+                self.host_elem_search_arrs.x_tri[j] = self._x[vertex]
+                self.host_elem_search_arrs.y_tri[j] = self._y[vertex]
 
             # Transform to natural coordinates
-            interp.get_barycentric_coords(x, y, x_tri, y_tri, phi)
+            interp.get_barycentric_coords(x, y, self.host_elem_search_arrs.x_tri, self.host_elem_search_arrs.y_tri, self.host_elem_search_arrs.phi)
 
             # Check to see if the particle is in the current element
-            phi_test = phi[0]
-            if phi[1] < phi_test: phi_test = phi[1]
-            if phi[2] < phi_test: phi_test = phi[2]  
+            phi_test = float_min(float_min(self.host_elem_search_arrs.phi[0], self.host_elem_search_arrs.phi[1]), self.host_elem_search_arrs.phi[2])
             if phi_test >= 0.0: return i
         return -1
