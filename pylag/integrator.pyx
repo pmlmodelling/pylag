@@ -16,7 +16,7 @@ from particle cimport Particle
 from data_reader cimport DataReader
 
 cdef class NumIntegrator:
-    cdef advect(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader):
+    cpdef advect(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader):
         pass
     
 cdef class RK4Integrator(NumIntegrator):
@@ -33,7 +33,7 @@ cdef class RK4Integrator(NumIntegrator):
         # Calculated vel
         self.vel = np.empty(3, dtype=DTYPE_FLOAT)
     
-    cdef advect(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader):
+    cpdef advect(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader):
         # Temporary containers
         cdef DTYPE_FLOAT_t t, xpos, ypos, zpos
         cdef DTYPE_INT_t host

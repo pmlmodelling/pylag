@@ -11,7 +11,9 @@ np.import_array()
 from data_types_python import DTYPE_INT, DTYPE_FLOAT
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
-class AnalyticDataReader(object):
+from data_reader cimport DataReader
+
+cdef class AnalyticDataReader(DataReader):
     """
     Object passes back u/v/w velocity components for the system of ODEs:
 
@@ -31,7 +33,7 @@ class AnalyticDataReader(object):
     Author: James Clark (PML)
     """
     
-    def get_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
+    cdef get_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
             DTYPE_FLOAT_t[:] vel):
                 
@@ -39,7 +41,7 @@ class AnalyticDataReader(object):
         vel[1] = self._get_v_component(ypos)
         vel[2] = 0.0
 
-    def find_host(self, xpos, ypos, host=0):
+    cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, guess=None):
         return 0
     
     def get_velocity_analytic(self, xpos, ypos, zpos=0.0):
