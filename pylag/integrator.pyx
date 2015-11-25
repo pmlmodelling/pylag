@@ -11,15 +11,20 @@ np.import_array()
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
-class NumIntegrator(object):
-    def advect(self, time, particle, data_reader):
+# PyLag cimports
+from particle cimport Particle
+from data_reader cimport DataReader
+
+cdef class NumIntegrator:
+    cdef advect(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader):
         pass
     
-class RK4Integrator(NumIntegrator):
+cdef class RK4Integrator(NumIntegrator):
+
     def __init__(self, time_step):
         self._time_step = time_step
     
-    def advect(self, time, particle, data_reader):
+    cdef advect(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader):
         # Arrays for RK4 stages
         cdef DTYPE_FLOAT_t[:] k1 = np.empty(3, dtype=DTYPE_FLOAT)
         cdef DTYPE_FLOAT_t[:] k2 = np.empty(3, dtype=DTYPE_FLOAT)

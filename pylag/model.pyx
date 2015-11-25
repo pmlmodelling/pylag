@@ -1,11 +1,19 @@
 import logging
 
+# Data types used for constructing C data structures
+from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
+from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
+
 from pylag.fvcom_data_reader import FVCOMDataReader
 from pylag.integrator import get_num_integrator
 from pylag.particle import get_particle_seed
 from pylag.netcdf_logger import NetCDFLogger
 
-class OPTModel(object):
+from pylag.data_reader cimport DataReader
+from pylag.integrator cimport NumIntegrator
+
+cdef class OPTModel:
+    cdef object config
     def __init__(self, config):
         self.config = config
 
@@ -27,7 +35,12 @@ class OPTModel(object):
     def shutdown(self):
         pass
     
-class FVCOMOPTModel(OPTModel):
+cdef class FVCOMOPTModel(OPTModel):
+    cdef DataReader data_reader
+    cdef NumIntegrator num_integrator
+    cdef object particle_set
+    cdef object data_logger
+    
     def __init__(self, *args, **kwargs):
         super(FVCOMOPTModel, self).__init__(*args, **kwargs)
 
@@ -40,6 +53,9 @@ class FVCOMOPTModel(OPTModel):
 
         # Create seed particle set
         self.particle_set = get_particle_seed(self.config)
+
+        # Data logger
+        self.data_logger = NetCDFLogger(self.config, len(self.particle_set))
 
         # Find particle host elements within the model domain and initalise the
         # particle's local environment
@@ -71,16 +87,15 @@ class FVCOMOPTModel(OPTModel):
     def update_reading_frame(self, time):
         self.data_reader.update_time_dependent_vars(time)
 
-    def advect(self, time):
-        for particle in self.particle_set:
-            if particle.in_domain != -1:
-                self.num_integrator.advect(time, particle, self.data_reader)
+    def advect(self, DTYPE_FLOAT_t time):
+        cdef DTYPE_INT_t  i, n_particles
+        
+        n_particles = len(self.particle_set)
+        for i in xrange(n_particles):
+            if self.particle_set[i].in_domain != -1:
+                self.num_integrator.advect(time, self.particle_set[i], self.data_reader)
         
     def record(self, time):
-        # Intialise data logger
-        if not hasattr(self, "data_logger"):
-            self.data_logger = NetCDFLogger(self.config, len(self.particle_set))
-
         # Write particle data to file
         particle_data = create_lists(self.particle_set)
         self.data_logger.write(time, particle_data)

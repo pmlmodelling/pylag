@@ -12,20 +12,7 @@ np.import_array()
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
-cdef class Particle(object):
-    cdef DTYPE_INT_t _group_id
-    cdef DTYPE_FLOAT_t _xpos
-    cdef DTYPE_FLOAT_t _ypos
-    cdef DTYPE_FLOAT_t _zpos
-    
-    cdef DTYPE_INT_t _in_domain
-    
-    cdef DTYPE_FLOAT_t _host_horizontal_elem
-    
-    cdef DTYPE_FLOAT_t _h
-    
-    cdef DTYPE_FLOAT_t _zeta
-
+cdef class Particle:
     def __init__(self, DTYPE_INT_t group_id, DTYPE_FLOAT_t xpos, 
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host=-999, 
             DTYPE_FLOAT_t h=-999., DTYPE_FLOAT_t zeta=-999.):
