@@ -16,8 +16,8 @@ from data_types_python import DTYPE_INT, DTYPE_FLOAT
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 from data_reader cimport DataReader
-import interpolation as interp
-#cimport interpolation as interp
+
+cimport interpolation as interp
 from unstruct_grid_tools import round_time, sort_adjacency_array
 
 cdef class FVCOMDataReader(DataReader):
