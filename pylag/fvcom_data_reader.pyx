@@ -502,11 +502,12 @@ cdef class FVCOMDataReader(DataReader):
             if phi_test >= 0.0: return guess
 
             # If not, use phi to select the next element to be searched
-            if self.host_elem_search_arrs.phi[0] < 0.0:
+            # TODO epsilon for floating point comp
+            if self.host_elem_search_arrs.phi[0] - 1.0e-10 <= phi_test and phi_test <= self.host_elem_search_arrs.phi[0] + 1.0e-10:
                 guess = self._nbe[0,guess]
-            elif self.host_elem_search_arrs.phi[1] < 0.0:
+            elif self.host_elem_search_arrs.phi[1] - 1.0e-10 <= phi_test and phi_test <= self.host_elem_search_arrs.phi[1] + 1.0e-10:
                 guess = self._nbe[1,guess]
-            elif self.host_elem_search_arrs.phi[2] < 0.0:
+            elif self.host_elem_search_arrs.phi[2] - 1.0e-10 <= phi_test and phi_test <= self.host_elem_search_arrs.phi[2] + 1.0e-10:
                 guess = self._nbe[2,guess]
             else:
                 raise RuntimeError('Host element search algorithm failed.')
