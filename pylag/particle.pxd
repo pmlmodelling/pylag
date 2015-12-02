@@ -9,7 +9,7 @@ cdef class Particle:
     
     cdef DTYPE_INT_t _in_domain
     
-    cdef DTYPE_FLOAT_t _host_horizontal_elem
+    cdef DTYPE_INT_t _host_horizontal_elem
     
     cdef DTYPE_FLOAT_t _h
     
