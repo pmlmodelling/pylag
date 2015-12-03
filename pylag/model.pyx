@@ -62,7 +62,13 @@ cdef class FVCOMOPTModel(OPTModel):
         guess = None
         particles_in_domain = 0
         for idx, particle in enumerate(self.particle_set):
-            self.particle_set[idx].host_horizontal_elem = self.data_reader.find_host(particle.xpos, particle.ypos, guess)
+            if guess is not None:
+                # Try local search first, then global search if this fails
+                self.particle_set[idx].host_horizontal_elem = self.data_reader.find_host_using_local_search(particle.xpos, particle.ypos, guess)
+                if self.particle_set[idx].host_horizontal_elem == -1:
+                    self.particle_set[idx].host_horizontal_elem = self.data_reader.find_host_using_global_search(particle.xpos, particle.ypos)
+            else:
+                self.particle_set[idx].host_horizontal_elem = self.data_reader.find_host_using_global_search(particle.xpos, particle.ypos)
 
             if self.particle_set[idx].host_horizontal_elem != -1:
                 self.particle_set[idx].in_domain = True

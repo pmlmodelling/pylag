@@ -295,14 +295,8 @@ cdef class FVCOMDataReader(DataReader):
         vel[1] = vp1 # TODO
         vel[2] = wp1 # TODO
 
-    cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, guess=None):
-        if guess is not None:
-            try:
-                return self.find_host_using_local_search(xpos, ypos, guess)
-            except ValueError:
-                pass
-
-        return self.find_host_using_global_search(xpos, ypos)
+    cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
+        return self.find_host_using_local_search(xpos, ypos, guess)
 
     def _read_grid(self):
         logger = logging.getLogger(__name__)
@@ -538,7 +532,7 @@ cdef class FVCOMDataReader(DataReader):
             
             if guess == -1:
                 # Local search failed
-                raise ValueError('Particle not found using local search.')
+                return guess
 
     #@cython.boundscheck(False)
     cpdef find_host_using_global_search(self, DTYPE_FLOAT_t x, DTYPE_FLOAT_t y):

@@ -18,5 +18,5 @@ cdef class DataReader:
             DTYPE_FLOAT_t[:] vel):
         pass
     
-    cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, guess=None):
+    cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
         pass

@@ -1,6 +1,7 @@
 # cython: profile=True
 # cython: linetrace=True
 
+import logging
 import numpy as np
 
 # Cython imports
@@ -34,6 +35,17 @@ cdef class RK4Integrator(NumIntegrator):
         self.vel = np.empty(3, dtype=DTYPE_FLOAT)
     
     cpdef advect(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader):
+        """
+        Advect particles forward in time. If particles are advected outside of
+        the model domain, the particle's position is not updated. This mimics
+        the behaviour of FVCOM's particle tracking model at solid boundaries.
+        
+        TODO - this is not an ideal solution. Firstly, open boundaries are not
+        distinguished from solid boundaries, and it makes more sense for
+        particles to be lost from the model domain when they cross an open
+        boundary. And secondly, it seems like we should be able to do something
+        better at solid boundaries.
+        """
         # Temporary containers
         cdef DTYPE_FLOAT_t t, xpos, ypos, zpos
         cdef DTYPE_INT_t host
@@ -58,10 +70,7 @@ cdef class RK4Integrator(NumIntegrator):
         ypos = particle.ypos + 0.5 * self.k1[1]
         zpos = particle.zpos + 0.5 * self.k1[2]
         host = data_reader.find_host(xpos, ypos, host)
-        if host == -1:
-            particle.host_horizontal_elem = -1
-            particle.in_domain = -1
-            return
+        if host == -1: return
         data_reader.get_velocity(t, xpos, ypos, zpos, host, self.vel) 
         for i in xrange(ndim):
             self.k2[i] = self._time_step * self.vel[i]
@@ -72,10 +81,7 @@ cdef class RK4Integrator(NumIntegrator):
         ypos = particle.ypos + 0.5 * self.k2[1]
         zpos = particle.zpos + 0.5 * self.k2[2]
         host = data_reader.find_host(xpos, ypos, host)
-        if host == -1:
-            particle.host_horizontal_elem = -1
-            particle.in_domain = -1
-            return
+        if host == -1: return
         data_reader.get_velocity(t, xpos, ypos, zpos, host, self.vel) 
         for i in xrange(ndim):
             self.k3[i] = self._time_step * self.vel[i]
@@ -86,22 +92,23 @@ cdef class RK4Integrator(NumIntegrator):
         ypos = particle.ypos + self.k3[1]
         zpos = particle.zpos + self.k3[2]
         host = data_reader.find_host(xpos, ypos, host)
-        if host == -1:
-            particle.host_horizontal_elem = -1
-            particle.in_domain = -1
-            return
+        if host == -1: return
         data_reader.get_velocity(t, xpos, ypos, zpos, host, self.vel) 
         for i in xrange(ndim):
             self.k4[i] = self._time_step * self.vel[i]
 
+        # Calculate the new position
+        xpos = particle.xpos + (self.k1[0] + 2.0*self.k2[0] + 2.0*self.k3[0] + self.k4[0])/6.0
+        ypos = particle.ypos + (self.k1[1] + 2.0*self.k2[1] + 2.0*self.k3[1] + self.k4[1])/6.0
+        zpos = particle.zpos + (self.k1[2] + 2.0*self.k2[2] + 2.0*self.k3[2] + self.k4[2])/6.0
+        host = data_reader.find_host(xpos, ypos, host)
+        if host == -1: return
+
         # Update the particle's position
-        particle.xpos = particle.xpos + (self.k1[0] + 2.0*self.k2[0] + 2.0*self.k3[0] + self.k4[0])/6.0
-        particle.ypos = particle.ypos + (self.k1[1] + 2.0*self.k2[1] + 2.0*self.k3[1] + self.k4[1])/6.0
-        particle.zpos = particle.zpos + (self.k1[2] + 2.0*self.k2[2] + 2.0*self.k3[2] + self.k4[2])/6.0
-        particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos, particle.host_horizontal_elem)
-        if particle.host_horizontal_elem == -1:
-            particle.in_domain = -1
-            return
+        particle.xpos = xpos
+        particle.ypos = ypos
+        particle.zpos = zpos
+        particle.host_horizontal_elem = host
 
 def get_num_integrator(config):
     if config.get("PARTICLES", "num_integrator") == "RK4":

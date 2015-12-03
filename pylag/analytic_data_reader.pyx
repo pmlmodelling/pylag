@@ -41,7 +41,7 @@ cdef class AnalyticDataReader(DataReader):
         vel[1] = self._get_v_component(ypos)
         vel[2] = 0.0
 
-    cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, guess=None):
+    cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
         return 0
     
     def get_velocity_analytic(self, xpos, ypos, zpos=0.0):
