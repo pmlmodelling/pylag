@@ -82,7 +82,11 @@ cdef class FVCOMDataReader(DataReader):
 
     # Element centre coordinates
     cdef DTYPE_FLOAT_t[:] _xc
-    cdef DTYPE_FLOAT_t[:] _yc   
+    cdef DTYPE_FLOAT_t[:] _yc
+    
+    # Interpolation coefficients
+    cdef DTYPE_FLOAT_t[:,:] _a1u
+    cdef DTYPE_FLOAT_t[:,:] _a2u
     
     # Bathymetry
     cdef DTYPE_FLOAT_t[:] _h
@@ -215,6 +219,10 @@ cdef class FVCOMDataReader(DataReader):
         # Vel at the given location in the underlying sigma layer
         cdef DTYPE_FLOAT_t up2, vp2, wp2
         
+        cdef DTYPE_FLOAT_t dudx, dudy, dvdx, dvdy
+        
+        cdef DTYPE_FLOAT_t rx, ry
+        
         # Time fraction for interpolation in time
         cdef DTYPE_FLOAT_t time_fraction
 
@@ -259,8 +267,22 @@ cdef class FVCOMDataReader(DataReader):
                 self.vel_interp_arrs.wc2[j] = 0.0 # TODO
         
             # Interpolate in space - overlying sigma layer
-            up1 = interp.shephard_interpolation(xpos, ypos, self._n_pts_vel_interp, self.vel_interp_arrs.xc, self.vel_interp_arrs.yc, self.vel_interp_arrs.uc1)
-            vp1 = interp.shephard_interpolation(xpos, ypos, self._n_pts_vel_interp, self.vel_interp_arrs.xc, self.vel_interp_arrs.yc, self.vel_interp_arrs.vc1)
+            #up1 = interp.shephard_interpolation(xpos, ypos, self._n_pts_vel_interp, self.vel_interp_arrs.xc, self.vel_interp_arrs.yc, self.vel_interp_arrs.uc1)
+            #vp1 = interp.shephard_interpolation(xpos, ypos, self._n_pts_vel_interp, self.vel_interp_arrs.xc, self.vel_interp_arrs.yc, self.vel_interp_arrs.vc1)
+            dudx = 0.0
+            dudy = 0.0
+            dvdx = 0.0
+            dvdy = 0.0
+            for i in xrange(4):
+                dudx += self.vel_interp_arrs.uc1[i] * self._a1u[i, host]
+                dudy += self.vel_interp_arrs.uc1[i] * self._a2u[i, host]
+                dvdx += self.vel_interp_arrs.vc1[i] * self._a1u[i, host]
+                dvdy += self.vel_interp_arrs.vc1[i] * self._a2u[i, host]
+            
+            rx = xpos - self._xc[host]
+            ry = ypos - self._yc[host]
+            up1 = self.vel_interp_arrs.uc1[0] + dudx*rx + dudy*ry
+            vp1 = self.vel_interp_arrs.vc1[0] + dvdx*rx + dvdy*ry 
             wp1 = 0.0 # TODO
             
             # Interpolate in space - underlying sigma layer
@@ -347,8 +369,10 @@ cdef class FVCOMDataReader(DataReader):
         # TODO?
         
         # Interpolation parameters (a1u, a2u, aw0, awx, awy)
-        # TODO?
+        self._a1u = ncfile.variables['a1u'][:,:]
+        self._a2u = ncfile.variables['a2u'][:,:]
 
+        # Bathymetry
         self._h = ncfile.variables['h'][:]
 
         # Create upper right cartesian grid
