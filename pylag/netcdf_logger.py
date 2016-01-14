@@ -81,7 +81,7 @@ class NetCDFLogger(object):
         tidx = self._time.shape[0]
         
         # Rebase time units and save
-        dt = num2date(time, units='seconds since {}'.format(self.config.get("PARTICLES", "start_datetime")))
+        dt = num2date(time, units='seconds since {}'.format(self.config.get("SIMULATION", "start_datetime")))
         self._time[tidx] = date2num(dt, units=self._time.units)
         
         self._xpos[tidx, :] = particle_data['xpos']

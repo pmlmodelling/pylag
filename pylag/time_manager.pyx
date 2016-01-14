@@ -28,9 +28,9 @@ cdef class TimeManager(object):
         self._initialise_time_vars(config)
         
     def _initialise_time_vars(self, config):
-        datetime_start = config.get("PARTICLES", "start_datetime")
+        datetime_start = config.get("SIMULATION", "start_datetime")
         self._datetime_start = datetime.datetime.strptime(datetime_start, "%Y-%m-%d %H:%M:%S")
-        datetime_end = config.get("PARTICLES", "end_datetime")
+        datetime_end = config.get("SIMULATION", "end_datetime")
         self._datetime_end = datetime.datetime.strptime(datetime_end, "%Y-%m-%d %H:%M:%S")
         
         # Convert time counters to seconds (of type int)
@@ -40,8 +40,8 @@ cdef class TimeManager(object):
         # Initialise the current time
         self._time = self._time_start
         
-        self._time_step = config.getfloat("PARTICLES", "time_step")
-        self._output_frequency = config.getfloat("PARTICLES", "output_frequency")
+        self._time_step = config.getfloat("SIMULATION", "time_step")
+        self._output_frequency = config.getfloat("SIMULATION", "output_frequency")
 
     def update_current_time(self):
         self._time = self._time + self._time_step

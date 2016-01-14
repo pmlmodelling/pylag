@@ -391,7 +391,7 @@ cdef class FVCOMDataReader(DataReader):
         datetime_rounded = round_time(datetime_raw, rounding_interval)
         
         # Simulation start time
-        datetime_start = datetime.datetime.strptime(self.config.get("PARTICLES", "start_datetime"), "%Y-%m-%d %H:%M:%S")
+        datetime_start = datetime.datetime.strptime(self.config.get("SIMULATION", "start_datetime"), "%Y-%m-%d %H:%M:%S")
         
         # Convert to seconds using datetime_start as a reference point
         time_seconds = []

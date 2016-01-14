@@ -111,8 +111,8 @@ cdef class RK4Integrator(NumIntegrator):
         particle.host_horizontal_elem = host
 
 def get_num_integrator(config):
-    if config.get("PARTICLES", "num_integrator") == "RK4":
-        return RK4Integrator(config.getfloat('PARTICLES', 'time_step'))
+    if config.get("SIMULATION", "num_integrator") == "RK4":
+        return RK4Integrator(config.getfloat('SIMULATION', 'time_step'))
     else:
         raise ValueError('Unsupported numerical integration scheme.')   
 
