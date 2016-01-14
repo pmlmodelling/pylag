@@ -94,7 +94,7 @@ def get_particle_seed(config=None):
         return _seed
     
     # Input file containing particle initial positions
-    file_name = config.get('GENERAL', 'initial_positions_file')
+    file_name = config.get('SIMULATION', 'initial_positions_file')
     with open(file_name, 'r') as f:
         lines=f.readlines()
 

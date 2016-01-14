@@ -2,7 +2,7 @@ from pylag.model import get_model
 from pylag.time_manager import TimeManager
 
 def get_simulator(config):
-    if config.get("GENERAL", "simulation_type") == "trace":
+    if config.get("SIMULATION", "simulation_type") == "trace":
         return TraceSimulator(config)
     else:
         raise ValueError('Unsupported simulation type.')  
