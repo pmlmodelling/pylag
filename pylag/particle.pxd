@@ -7,10 +7,10 @@ cdef class Particle:
     cdef DTYPE_FLOAT_t _ypos
     cdef DTYPE_FLOAT_t _zpos
     
-    cdef DTYPE_INT_t _in_domain
-    
     cdef DTYPE_INT_t _host_horizontal_elem
     
     cdef DTYPE_FLOAT_t _h
     
     cdef DTYPE_FLOAT_t _zeta
+
+    cdef DTYPE_INT_t _in_domain

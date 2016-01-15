@@ -1,3 +1,4 @@
+import sys
 import logging
 
 # Data types used for constructing C data structures
@@ -6,7 +7,8 @@ from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 from pylag.fvcom_data_reader import FVCOMDataReader
 from pylag.integrator import get_num_integrator
-from pylag.particle import get_particle_seed
+from pylag.particle_positions_reader import read_particle_initial_positions
+from pylag.particle import Particle
 from pylag.netcdf_logger import NetCDFLogger
 
 from pylag.data_reader cimport DataReader
@@ -44,51 +46,77 @@ cdef class FVCOMOPTModel(OPTModel):
     def __init__(self, *args, **kwargs):
         super(FVCOMOPTModel, self).__init__(*args, **kwargs)
 
-    def initialise(self, time):
+    def initialise(self, time):     
         # Create FVCOM data reader
         self.data_reader = FVCOMDataReader(self.config)
         
         # Create numerical integrator
         self.num_integrator = get_num_integrator(self.config)
 
-        # Create seed particle set
-        self.particle_set = get_particle_seed(self.config)
+        # Create particle seed - particles stored in a list object
+        self.particle_set = []
 
-        # Data logger
-        self.data_logger = NetCDFLogger(self.config, len(self.particle_set))
+        # Read in particle initial positions from file - these will be used to
+        # create the initial particle set.
+        group_id, xpos, ypos, zpos_temp = read_particle_initial_positions(self.config.get('SIMULATION', 'initial_positions_file'))
 
-        # Find particle host elements within the model domain and initalise the
-        # particle's local environment
         guess = None
         particles_in_domain = 0
-        for idx, particle in enumerate(self.particle_set):
+        for group, x, y, z_temp in zip(group_id, xpos, ypos, zpos_temp):
+            # Find particle host element
             if guess is not None:
                 # Try local search first, then global search if this fails
-                self.particle_set[idx].host_horizontal_elem = self.data_reader.find_host_using_local_search(particle.xpos, particle.ypos, guess)
-                if self.particle_set[idx].host_horizontal_elem == -1:
-                    self.particle_set[idx].host_horizontal_elem = self.data_reader.find_host_using_global_search(particle.xpos, particle.ypos)
+                host_horizontal_elem = self.data_reader.find_host_using_local_search(x, y, guess)
+                if host_horizontal_elem == -1:
+                    host_horizontal_elem = self.data_reader.find_host_using_global_search(x, y)
             else:
-                self.particle_set[idx].host_horizontal_elem = self.data_reader.find_host_using_global_search(particle.xpos, particle.ypos)
+                host_horizontal_elem = self.data_reader.find_host_using_global_search(x, y)
 
-            if self.particle_set[idx].host_horizontal_elem != -1:
-                self.particle_set[idx].in_domain = True
+            if host_horizontal_elem != -1:
+                in_domain = 1
 
-                self.particle_set[idx].h = self.data_reader.get_bathymetry(particle.xpos, 
-                        particle.ypos, particle.host_horizontal_elem)
+                h = self.data_reader.get_bathymetry(x, y, host_horizontal_elem)
 
-                self.particle_set[idx].zeta = self.data_reader.get_sea_sur_elev(time, particle.xpos, 
-                        particle.ypos, particle.host_horizontal_elem)
+                zeta = self.data_reader.get_sea_sur_elev(time, x, y, host_horizontal_elem)
+
+                # Set z depending on the specified coordinate system
+                if self.config.get("SIMULATION", "depth_coordinates") == "cartesian":
+                    # z is given as the distance below the free surface. We use this,
+                    # h, and zeta to determine the distance below the mean free
+                    # surface
+                    z = z_temp + zeta
+                    
+                elif self.config.get("SIMULATION", "depth_coordinates") == "sigma":
+                    # sigma ranges from 0.0 at the sea surface to -1.0 at the 
+                    # sea floor.
+                    z = zeta + z_temp * (h + zeta)
+                
+                # Check that the given depth is valid
+                sigma = (z - zeta) / (h + zeta)
+                if sigma < (-1.0 - sys.float_info.epsilon):
+                    raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(z,h))
+                elif sigma > (0.0 + sys.float_info.epsilon):
+                    raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(z,zeta))
+
+                # Create particle
+                particle = Particle(group, x, y, z, host_horizontal_elem, h, zeta, in_domain)
+                self.particle_set.append(particle)
 
                 particles_in_domain += 1
 
                 # Use the location of the last particle to guide the search for the
                 # next. This should be fast if particle initial positions are colocated.
-                guess = self.particle_set[idx].host_horizontal_elem
+                guess = host_horizontal_elem
             else:
-                self.particle_set[idx].in_domain == False
+                in_domain = 0
+                particle = Particle(group, x, y, z, in_domain=in_domain)
+                self.particle_set.append(particle)
 
         logger = logging.getLogger(__name__)
         logger.info('{} of {} particles are located in the model domain.'.format(particles_in_domain, len(self.particle_set)))
+
+        # Data logger
+        self.data_logger = NetCDFLogger(self.config, len(self.particle_set))
 
     def update_reading_frame(self, time):
         self.data_reader.update_time_dependent_vars(time)
