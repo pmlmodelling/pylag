@@ -109,8 +109,7 @@ cdef class FVCOMOPTModel(OPTModel):
                 guess = host_horizontal_elem
             else:
                 in_domain = 0
-                sigma = 0.0
-                particle = Particle(group, x, y, sigma, in_domain=in_domain)
+                particle = Particle(in_domain=in_domain)
                 self.particle_set.append(particle)
 
         logger = logging.getLogger(__name__)
