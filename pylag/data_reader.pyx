@@ -20,3 +20,11 @@ cdef class DataReader:
     
     cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
         pass
+    
+    cpdef sigma_to_cartesian_coords(self, DTYPE_FLOAT_t sigma, DTYPE_FLOAT_t h,
+            DTYPE_FLOAT_t zeta):
+        pass
+
+    cpdef cartesian_to_sigma_coords(self, DTYPE_FLOAT_t z, DTYPE_FLOAT_t h,
+            DTYPE_FLOAT_t zeta):
+        pass

@@ -82,24 +82,24 @@ cdef class FVCOMOPTModel(OPTModel):
                 # Set z depending on the specified coordinate system
                 if self.config.get("SIMULATION", "depth_coordinates") == "cartesian":
                     # z is given as the distance below the free surface. We use this,
-                    # h, and zeta to determine the distance below the mean free
-                    # surface
+                    # and zeta to determine the distance below the mean free
+                    # surface, which is then used to calculate sigma
                     z = z_temp + zeta
+                    sigma = self.data_reader.cartesian_to_sigma_coords(z, h, zeta)
                     
                 elif self.config.get("SIMULATION", "depth_coordinates") == "sigma":
                     # sigma ranges from 0.0 at the sea surface to -1.0 at the 
                     # sea floor.
-                    z = zeta + z_temp * (h + zeta)
+                    sigma = z_temp
                 
                 # Check that the given depth is valid
-                sigma = (z - zeta) / (h + zeta)
                 if sigma < (-1.0 - sys.float_info.epsilon):
                     raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(z,h))
                 elif sigma > (0.0 + sys.float_info.epsilon):
                     raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(z,zeta))
 
                 # Create particle
-                particle = Particle(group, x, y, z, host_horizontal_elem, h, zeta, in_domain)
+                particle = Particle(group, x, y, sigma, host_horizontal_elem, h, zeta, in_domain)
                 self.particle_set.append(particle)
 
                 particles_in_domain += 1
@@ -109,7 +109,8 @@ cdef class FVCOMOPTModel(OPTModel):
                 guess = host_horizontal_elem
             else:
                 in_domain = 0
-                particle = Particle(group, x, y, z, in_domain=in_domain)
+                sigma = 0.0
+                particle = Particle(group, x, y, sigma, in_domain=in_domain)
                 self.particle_set.append(particle)
 
         logger = logging.getLogger(__name__)
