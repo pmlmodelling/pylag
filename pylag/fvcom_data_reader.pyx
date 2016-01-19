@@ -88,6 +88,10 @@ cdef class FVCOMDataReader(DataReader):
     cdef DTYPE_FLOAT_t[:,:] _a1u
     cdef DTYPE_FLOAT_t[:,:] _a2u
     
+    # Sigma layers and levels
+    cdef DTYPE_FLOAT_t[:,:] _siglev
+    cdef DTYPE_FLOAT_t[:,:] _siglay
+    
     # Bathymetry
     cdef DTYPE_FLOAT_t[:] _h
     
@@ -342,10 +346,10 @@ cdef class FVCOMDataReader(DataReader):
         self._yc = ncfile.variables['yc'][:]
 
         # Sigma levels at nodal coordinates
-        #self._siglev = ncfile.variables['siglev'][:]
+        self._siglev = ncfile.variables['siglev'][:]
         
         # Sigma layers at nodal coordinates
-        #self._siglay = ncfile.variables['siglay'][:]
+        self._siglay = ncfile.variables['siglay'][:]
         
         # TODO Does it make sense to precompute the following (relatively
         # expensive on large grids) or to simply compute on the fly? From 
