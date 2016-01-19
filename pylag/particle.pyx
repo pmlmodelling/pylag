@@ -58,11 +58,6 @@ cdef class Particle:
         def __set__(self, DTYPE_FLOAT_t value):
             self._zpos = value
 
-    # z position in sigma coordinates (0.0 surface, -1.0 sea floor)
-    property sigma_pos:
-        def __get__(self):
-            return (self._zpos - self._zeta) / (self._h + self._zeta)
-
     # Is the particle in the domain?
     property in_domain:
         def __get__(self):
