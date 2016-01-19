@@ -15,7 +15,7 @@ from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 cdef class Particle:
     def __init__(self, DTYPE_INT_t group_id=-999, DTYPE_FLOAT_t xpos=-999., 
             DTYPE_FLOAT_t ypos=-999., DTYPE_FLOAT_t zpos=-999., DTYPE_INT_t host=-999, 
-            DTYPE_FLOAT_t h=-999., DTYPE_FLOAT_t zeta=-999., DTYPE_INT_t in_domain=-999):
+            DTYPE_INT_t in_domain=-999):
         self._group_id = group_id
         
         self._xpos = xpos
@@ -23,10 +23,6 @@ cdef class Particle:
         self._zpos = zpos
         
         self._host_horizontal_elem = host
-        
-        self._h = h
-        
-        self._zeta = zeta
 
         self._in_domain = in_domain
 
@@ -58,13 +54,6 @@ cdef class Particle:
         def __set__(self, DTYPE_FLOAT_t value):
             self._zpos = value
 
-    # Is the particle in the domain?
-    property in_domain:
-        def __get__(self):
-            return self._in_domain
-        def __set__(self, DTYPE_INT_t value):
-            self._in_domain = value
-
     # Host horizontal element
     property host_horizontal_elem:
         def __get__(self):
@@ -72,16 +61,9 @@ cdef class Particle:
         def __set__(self, DTYPE_INT_t value):
             self._host_horizontal_elem = value
 
-    # Bathymetry at the particle's current position
-    property h:
+    # Is the particle in the domain?
+    property in_domain:
         def __get__(self):
-            return self._h
-        def __set__(self, DTYPE_FLOAT_t value):
-            self._h = value
-
-    # Sea surface elevation at the particle's current position
-    property zeta:
-        def __get__(self):
-            return self._zeta
-        def __set__(self, DTYPE_FLOAT_t value):
-            self._zeta = value
+            return self._in_domain
+        def __set__(self, DTYPE_INT_t value):
+            self._in_domain = value

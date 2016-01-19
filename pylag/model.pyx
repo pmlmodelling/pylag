@@ -99,7 +99,7 @@ cdef class FVCOMOPTModel(OPTModel):
                     raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(z,zeta))
 
                 # Create particle
-                particle = Particle(group, x, y, sigma, host_horizontal_elem, h, zeta, in_domain)
+                particle = Particle(group, x, y, sigma, host_horizontal_elem, in_domain)
                 self.particle_set.append(particle)
 
                 particles_in_domain += 1
@@ -135,11 +135,13 @@ cdef class FVCOMOPTModel(OPTModel):
         for particle in self.particle_set:
             data['xpos'].append(particle.xpos)
             data['ypos'].append(particle.ypos)
-            data['h'].append(particle.h)
-            data['zeta'].append(particle.zeta)
-
-            # First convert depth to cartesian coords
-            z = self.data_reader.sigma_to_cartesian_coords(particle.zpos, particle.h, particle.zeta)
+            
+            # Derived vars including depth, which is first converted to cartesian coords
+            h = self.data_reader.get_bathymetry(particle.xpos, particle.ypos, particle.host_horizontal_elem)
+            zeta = self.data_reader.get_sea_sur_elev(time, particle.xpos, particle.ypos, particle.host_horizontal_elem)
+            z = self.data_reader.sigma_to_cartesian_coords(particle.zpos, h, zeta)
+            data['h'].append(h)
+            data['zeta'].append(zeta)
             data['zpos'].append(z)
         self.data_logger.write(time, data)
         
