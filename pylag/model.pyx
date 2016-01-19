@@ -131,8 +131,17 @@ cdef class FVCOMOPTModel(OPTModel):
         
     def record(self, time):
         # Write particle data to file
-        particle_data = create_lists(self.particle_set)
-        self.data_logger.write(time, particle_data)
+        data = {'xpos': [], 'ypos': [], 'zpos': [], 'h': [], 'zeta': []}
+        for particle in self.particle_set:
+            data['xpos'].append(particle.xpos)
+            data['ypos'].append(particle.ypos)
+            data['h'].append(particle.h)
+            data['zeta'].append(particle.zeta)
+
+            # First convert depth to cartesian coords
+            z = self.data_reader.sigma_to_cartesian_coords(particle.zpos, particle.h, particle.zeta)
+            data['zpos'].append(z)
+        self.data_logger.write(time, data)
         
     def shutdown(self):
         self.data_logger.close()
@@ -142,13 +151,3 @@ def get_model(config):
         return FVCOMOPTModel(config)
     else:
         raise ValueError('Unsupported ocean circulation model.')
-    
-def create_lists(particle_array):
-    data = {'xpos': [], 'ypos': [], 'zpos': [], 'h': [], 'zeta': []}
-    for particle in particle_array:
-        data['xpos'].append(particle.xpos)
-        data['ypos'].append(particle.ypos)
-        data['zpos'].append(particle.zpos)
-        data['h'].append(particle.h)
-        data['zeta'].append(particle.zeta)
-    return data
