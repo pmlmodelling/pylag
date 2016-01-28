@@ -14,6 +14,7 @@ np.import_array()
 # Data types used for constructing C data structures
 from data_types_python import DTYPE_INT, DTYPE_FLOAT
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
+from cpython cimport bool
 
 from data_reader cimport DataReader
 
@@ -114,7 +115,7 @@ cdef class FVCOMDataReader(DataReader):
     
     # Temporary arrays used in host element searching
     cdef HostElementSearchArrays host_elem_search_arrs
-    
+
     def __init__(self, config):
         self.config = config
 
@@ -239,6 +240,17 @@ cdef class FVCOMDataReader(DataReader):
         
         cdef DTYPE_FLOAT_t rx, ry
         
+        # No. of vertices and a temporary object used for determining host 
+        # element barycentric coords
+        cdef DTYPE_INT_t n_vertices
+        cdef DTYPE_INT_t vertex
+        
+        # Variables used when determining indices for the sigma layers that
+        # bound the particle's position
+        cdef bool particle_is_at_surface
+        cdef bool particle_is_at_bottom
+        cdef DTYPE_FLOAT_t sigma_test
+        
         # Time fraction for interpolation in time
         cdef DTYPE_FLOAT_t time_fraction
 
@@ -246,7 +258,28 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_INT_t i, j, neighbour
         
         cdef DTYPE_INT_t nbe_min
+
+        # Determine barycentric coordinates of the host element
+        n_vertices = 3
+        for i in xrange(n_vertices):
+            vertex = self._nv[i,host]
+            self.host_elem_search_arrs.x_tri[i] = self._x[vertex]
+            self.host_elem_search_arrs.y_tri[i] = self._y[vertex]
+        interp.get_barycentric_coords(xpos, ypos, self.host_elem_search_arrs.x_tri,
+                self.host_elem_search_arrs.y_tri, self.host_elem_search_arrs.phi)
         
+        # Find the sigma layers bounding the particle's position. First check
+        # the upper and lower boundaries, then the centre of the water columnun.
+        particle_is_at_surface = False
+        
+        # The top-most sigma layer index
+        k = 0
+        sigma_test = self._interp_on_sigma_layer(self.host_elem_search_arrs.phi, host, k)
+        if zpos >= sigma_test:
+            particle_is_at_surface = True
+        else:
+            raise ValueError("Particle zpos (={} not at surface (sigma_layer = {}!".format(zpos, sigma_test))
+
         # Time fraction
         time_fraction = interp.get_time_fraction(time, self._time[self._tidx_last], self._time[self._tidx_next])
         if time_fraction < 0.0 or time_fraction > 1.0:
@@ -257,25 +290,27 @@ cdef class FVCOMDataReader(DataReader):
         nbe_min = int_min(int_min(self._nbe[0, host], self._nbe[1, host]), self._nbe[2, host])
         if nbe_min < 0:
             # Boundary element - temporal interpolation only
-            up1 = interp.interpolate_in_time(time_fraction, self._u_last[0, host], self._u_next[0, host])
-            vp1 = interp.interpolate_in_time(time_fraction, self._v_last[0, host], self._v_next[0, host])
-            up2 = 0.0 # TODO
-            vp2 = 0.0 # TODO
+            if particle_is_at_surface is True:
+                up1 = interp.interpolate_in_time(time_fraction, self._u_last[0, host], self._u_next[0, host])
+                vp1 = interp.interpolate_in_time(time_fraction, self._v_last[0, host], self._v_next[0, host])
+                up2 = 0.0 # TODO
+                vp2 = 0.0 # TODO
         else:
             # Non-boundary element - perform horizontal and temporal interpolation
-            self.vel_interp_arrs.xc[0] = self._xc[host]
-            self.vel_interp_arrs.yc[0] = self._yc[host]
-            self.vel_interp_arrs.uc1[0] = interp.interpolate_in_time(time_fraction, self._u_last[0, host], self._u_next[0, host])
-            self.vel_interp_arrs.vc1[0] = interp.interpolate_in_time(time_fraction, self._v_last[0, host], self._v_next[0, host])
-            for i in xrange(3):
-                neighbour = self._nbe[i, host]
-                j = i+1 # +1 as host is 0
-                self.vel_interp_arrs.xc[j] = self._xc[neighbour] 
-                self.vel_interp_arrs.yc[j] = self._yc[neighbour]
-                self.vel_interp_arrs.uc1[j] = interp.interpolate_in_time(time_fraction, self._u_last[0, neighbour], self._u_next[0, neighbour])
-                self.vel_interp_arrs.vc1[j] = interp.interpolate_in_time(time_fraction, self._v_last[0, neighbour], self._v_next[0, neighbour])
-                self.vel_interp_arrs.uc2[j] = 0.0 # TODO
-                self.vel_interp_arrs.vc2[j] = 0.0 # TODO
+            if particle_is_at_surface is True:
+                self.vel_interp_arrs.xc[0] = self._xc[host]
+                self.vel_interp_arrs.yc[0] = self._yc[host]
+                self.vel_interp_arrs.uc1[0] = interp.interpolate_in_time(time_fraction, self._u_last[0, host], self._u_next[0, host])
+                self.vel_interp_arrs.vc1[0] = interp.interpolate_in_time(time_fraction, self._v_last[0, host], self._v_next[0, host])
+                for i in xrange(3):
+                    neighbour = self._nbe[i, host]
+                    j = i+1 # +1 as host is 0
+                    self.vel_interp_arrs.xc[j] = self._xc[neighbour] 
+                    self.vel_interp_arrs.yc[j] = self._yc[neighbour]
+                    self.vel_interp_arrs.uc1[j] = interp.interpolate_in_time(time_fraction, self._u_last[0, neighbour], self._u_next[0, neighbour])
+                    self.vel_interp_arrs.vc1[j] = interp.interpolate_in_time(time_fraction, self._v_last[0, neighbour], self._v_next[0, neighbour])
+                    self.vel_interp_arrs.uc2[j] = 0.0 # TODO
+                    self.vel_interp_arrs.vc2[j] = 0.0 # TODO
         
             # Interpolate in space - overlying sigma layer
             #up1 = interp.shephard_interpolation(xpos, ypos, self._n_pts_vel_interp, self.vel_interp_arrs.xc, self.vel_interp_arrs.yc, self.vel_interp_arrs.uc1)
@@ -569,3 +604,35 @@ cdef class FVCOMDataReader(DataReader):
             phi_test = float_min(float_min(self.host_elem_search_arrs.phi[0], self.host_elem_search_arrs.phi[1]), self.host_elem_search_arrs.phi[2])
             if phi_test >= 0.0: return i
         return -1
+    
+    cdef _interp_on_sigma_layer(self, DTYPE_FLOAT_t[:] phi, DTYPE_INT_t host,
+            DTYPE_INT_t kidx):
+        """
+        Return the linearly interpolated value of sigma on the specified sigma
+        layer within the given host element.
+        
+        Parameters
+        ----------
+        phi: MemoryView, float
+            Array of length three giving the barycentric coordinates at which 
+            to interpolate
+        host: int
+            Host element index
+        kidx: int
+            Sigma layer on which to interpolate
+        Returns
+        -------
+        sigma: float
+            Interpolated value of sigma.
+        """
+        cdef int vertex # Vertex identifier
+        cdef int n_vertices = 3 # No. of vertices in a triangle
+        cdef DTYPE_FLOAT_t sigma_nodes[3]
+        cdef DTYPE_FLOAT_t sigma # Sigma
+
+        for i in xrange(n_vertices):
+            vertex = self._nv[i,host]
+            sigma_nodes[i] = self._siglay[kidx, vertex]                  
+
+        sigma = interp.interpolate_sigma_within_element(sigma_nodes, phi)
+        return sigma
