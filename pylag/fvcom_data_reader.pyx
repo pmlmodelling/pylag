@@ -206,6 +206,22 @@ cdef class FVCOMDataReader(DataReader):
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
             DTYPE_FLOAT_t[:] vel):
         """
+        Returns the velocity field u(t,x,y,z) through linear interpolation for a 
+        particle residing in the horizontal host element `host'. The actual 
+        computation is split into two separate parts - one for computing u and 
+        v, and one for computing omega. This reflects the fact that u and v are
+        defined are element centres on sigma layers, while omega is defined at
+        element nodes on sigma levels, which means the two must be handled
+        separately.
+        """
+        self._get_uv_velocity(time, xpos, ypos, zpos, host, vel)
+        vel[2] = 0 # TODO
+        return
+
+    cdef _get_uv_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
+            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
+            DTYPE_FLOAT_t[:] vel):
+        """
         Steps:
         1) Determine coordinates of the host element's three neighbouring
         elements.
