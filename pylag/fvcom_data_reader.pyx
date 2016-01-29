@@ -24,27 +24,6 @@ from math cimport int_min, float_min
 
 from unstruct_grid_tools import round_time, sort_adjacency_array
 
-cdef struct VelInterpArrays:
-    # x/y coordinates of element centres
-    DTYPE_FLOAT_t[:] xc
-    DTYPE_FLOAT_t[:] yc
-
-    # Temporary array for vel at element centres at last time point
-    DTYPE_FLOAT_t[:] uc_last
-    DTYPE_FLOAT_t[:] vc_last
-
-    # Temporary array for vel at element centres at next time point
-    DTYPE_FLOAT_t[:] uc_next
-    DTYPE_FLOAT_t[:] vc_next
-
-    # Vel at element centres in overlying sigma layer
-    DTYPE_FLOAT_t[:] uc1
-    DTYPE_FLOAT_t[:] vc1
-
-    # Vel at element centres in underlying sigma layer
-    DTYPE_FLOAT_t[:] uc2
-    DTYPE_FLOAT_t[:] vc2
-
 cdef struct HostElementSearchArrays:
     # Temporary arrays used in host element searching
     DTYPE_FLOAT_t[:] x_tri
@@ -108,10 +87,6 @@ cdef class FVCOMDataReader(DataReader):
     cdef DTYPE_FLOAT_t[:] _time
     cdef DTYPE_INT_t _tidx_last
     cdef DTYPE_INT_t _tidx_next
-    
-    # Struct of temporary arrays used in vel interpolation
-    cdef DTYPE_INT_t _n_pts_vel_interp
-    cdef VelInterpArrays vel_interp_arrs
     
     # Temporary arrays used in host element searching
     cdef HostElementSearchArrays host_elem_search_arrs
@@ -230,6 +205,26 @@ cdef class FVCOMDataReader(DataReader):
         6) Interpolate in the vertical between the two sigma layers to the depth
         of the particle.
         """
+        # x/y coordinates of element centres
+        cdef DTYPE_FLOAT_t xc[4]
+        cdef DTYPE_FLOAT_t yc[4]
+
+        # Temporary array for vel at element centres at last time point
+        cdef DTYPE_FLOAT_t uc_last[4]
+        cdef DTYPE_FLOAT_t vc_last[4]
+
+        # Temporary array for vel at element centres at next time point
+        cdef DTYPE_FLOAT_t uc_next[4]
+        cdef DTYPE_FLOAT_t vc_next[4]
+
+        # Vel at element centres in overlying sigma layer
+        cdef DTYPE_FLOAT_t uc1[4]
+        cdef DTYPE_FLOAT_t vc1[4]
+
+        # Vel at element centres in underlying sigma layer
+        cdef DTYPE_FLOAT_t uc2[4]
+        cdef DTYPE_FLOAT_t vc2[4]     
+        
         # Vel at the given location in the overlying sigma layer
         cdef DTYPE_FLOAT_t up1, vp1
         
@@ -298,37 +293,37 @@ cdef class FVCOMDataReader(DataReader):
         else:
             # Non-boundary element - perform horizontal and temporal interpolation
             if particle_is_at_surface is True:
-                self.vel_interp_arrs.xc[0] = self._xc[host]
-                self.vel_interp_arrs.yc[0] = self._yc[host]
-                self.vel_interp_arrs.uc1[0] = interp.interpolate_in_time(time_fraction, self._u_last[0, host], self._u_next[0, host])
-                self.vel_interp_arrs.vc1[0] = interp.interpolate_in_time(time_fraction, self._v_last[0, host], self._v_next[0, host])
+                xc[0] = self._xc[host]
+                yc[0] = self._yc[host]
+                uc1[0] = interp.interpolate_in_time(time_fraction, self._u_last[0, host], self._u_next[0, host])
+                vc1[0] = interp.interpolate_in_time(time_fraction, self._v_last[0, host], self._v_next[0, host])
                 for i in xrange(3):
                     neighbour = self._nbe[i, host]
                     j = i+1 # +1 as host is 0
-                    self.vel_interp_arrs.xc[j] = self._xc[neighbour] 
-                    self.vel_interp_arrs.yc[j] = self._yc[neighbour]
-                    self.vel_interp_arrs.uc1[j] = interp.interpolate_in_time(time_fraction, self._u_last[0, neighbour], self._u_next[0, neighbour])
-                    self.vel_interp_arrs.vc1[j] = interp.interpolate_in_time(time_fraction, self._v_last[0, neighbour], self._v_next[0, neighbour])
-                    self.vel_interp_arrs.uc2[j] = 0.0 # TODO
-                    self.vel_interp_arrs.vc2[j] = 0.0 # TODO
+                    xc[j] = self._xc[neighbour] 
+                    yc[j] = self._yc[neighbour]
+                    uc1[j] = interp.interpolate_in_time(time_fraction, self._u_last[0, neighbour], self._u_next[0, neighbour])
+                    vc1[j] = interp.interpolate_in_time(time_fraction, self._v_last[0, neighbour], self._v_next[0, neighbour])
+                    uc2[j] = 0.0 # TODO
+                    vc2[j] = 0.0 # TODO
         
             # Interpolate in space - overlying sigma layer
-            #up1 = interp.shephard_interpolation(xpos, ypos, self._n_pts_vel_interp, self.vel_interp_arrs.xc, self.vel_interp_arrs.yc, self.vel_interp_arrs.uc1)
-            #vp1 = interp.shephard_interpolation(xpos, ypos, self._n_pts_vel_interp, self.vel_interp_arrs.xc, self.vel_interp_arrs.yc, self.vel_interp_arrs.vc1)
+            #up1 = interp.shephard_interpolation(xpos, ypos, self._n_pts_vel_interp, xc, yc, uc1)
+            #vp1 = interp.shephard_interpolation(xpos, ypos, self._n_pts_vel_interp, xc, yc, vc1)
             dudx = 0.0
             dudy = 0.0
             dvdx = 0.0
             dvdy = 0.0
             for i in xrange(4):
-                dudx += self.vel_interp_arrs.uc1[i] * self._a1u[i, host]
-                dudy += self.vel_interp_arrs.uc1[i] * self._a2u[i, host]
-                dvdx += self.vel_interp_arrs.vc1[i] * self._a1u[i, host]
-                dvdy += self.vel_interp_arrs.vc1[i] * self._a2u[i, host]
+                dudx += uc1[i] * self._a1u[i, host]
+                dudy += uc1[i] * self._a2u[i, host]
+                dvdx += vc1[i] * self._a1u[i, host]
+                dvdy += vc1[i] * self._a2u[i, host]
             
             rx = xpos - self._xc[host]
             ry = ypos - self._yc[host]
-            up1 = self.vel_interp_arrs.uc1[0] + dudx*rx + dudy*ry
-            vp1 = self.vel_interp_arrs.vc1[0] + dvdx*rx + dvdy*ry 
+            up1 = uc1[0] + dudx*rx + dudy*ry
+            vp1 = vc1[0] + dvdx*rx + dvdy*ry 
             
             # Interpolate in space - underlying sigma layer
             up2 = 0.0 # TODO
@@ -453,32 +448,7 @@ cdef class FVCOMDataReader(DataReader):
         # Set time indices for reading frames, and initialise time-dependent 
         # variable reading frames
         self._read_time_dependent_vars(0.0) # 0s as simulation start
-        
-        # Initialise temporary array objects used for vel interpolation
-
-        # No. of points used for spatial interpolation
-        self._n_pts_vel_interp = 4
-    
-        # Temporary array for x/y coordinates of element centres
-        self.vel_interp_arrs.xc = np.empty(self._n_pts_vel_interp, dtype=DTYPE_FLOAT)
-        self.vel_interp_arrs.yc = np.empty(self._n_pts_vel_interp, dtype=DTYPE_FLOAT)
-
-        # Temporary array for vel at element centres at last time point
-        self.vel_interp_arrs.uc_last = np.empty(self._n_pts_vel_interp, dtype=DTYPE_FLOAT)
-        self.vel_interp_arrs.vc_last = np.empty(self._n_pts_vel_interp, dtype=DTYPE_FLOAT)
-
-        # Temporary array for vel at element centres at next time point
-        self.vel_interp_arrs.uc_next = np.empty(self._n_pts_vel_interp, dtype=DTYPE_FLOAT)
-        self.vel_interp_arrs.vc_next = np.empty(self._n_pts_vel_interp, dtype=DTYPE_FLOAT)
-
-        # Temporary array for vel at element centres in overlying sigma layer
-        self.vel_interp_arrs.uc1 = np.empty(self._n_pts_vel_interp, dtype=DTYPE_FLOAT)
-        self.vel_interp_arrs.vc1 = np.empty(self._n_pts_vel_interp, dtype=DTYPE_FLOAT)
-
-        # Temporary array for vel at element centres in underlying sigma layer
-        self.vel_interp_arrs.uc2 = np.empty(self._n_pts_vel_interp, dtype=DTYPE_FLOAT)
-        self.vel_interp_arrs.vc2 = np.empty(self._n_pts_vel_interp, dtype=DTYPE_FLOAT)
-        
+            
         # Temporary arays used in host element sarching
         self.host_elem_search_arrs.x_tri = np.empty(3, dtype=DTYPE_FLOAT)
         self.host_elem_search_arrs.y_tri = np.empty(3, dtype=DTYPE_FLOAT)
