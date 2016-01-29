@@ -242,15 +242,16 @@ cdef class FVCOMDataReader(DataReader):
         
         # Variables used when determining indices for the sigma layers that
         # bound the particle's position
-        cdef bool particle_is_at_surface
-        cdef bool particle_is_at_bottom
+        cdef bool particle_at_surface_or_bottom_boundary
         cdef DTYPE_FLOAT_t sigma_test
+        cdef DTYPE_FLOAT_t sigma_lower_layer, sigma_upper_layer
+        cdef DTYPE_INT_t k_boundary, k_lower_layer, k_upper_layer
         
         # Time fraction for interpolation in time
         cdef DTYPE_FLOAT_t time_fraction
 
         # Array and loop indices
-        cdef DTYPE_INT_t i, j, neighbour
+        cdef DTYPE_INT_t i, j, k, neighbour
         
         cdef DTYPE_INT_t nbe_min
 
@@ -265,15 +266,33 @@ cdef class FVCOMDataReader(DataReader):
         
         # Find the sigma layers bounding the particle's position. First check
         # the upper and lower boundaries, then the centre of the water columnun.
-        particle_is_at_surface = False
+        particle_at_surface_or_bottom_boundary = False
         
-        # The top-most sigma layer index
+        # Try the top sigma layer
         k = 0
         sigma_test = self._interp_on_sigma_layer(self.host_elem_search_arrs.phi, host, k)
         if zpos >= sigma_test:
-            particle_is_at_surface = True
+            particle_at_surface_or_bottom_boundary = True
+            k_boundary = k
         else:
-            raise ValueError("Particle zpos (={} not at surface (sigma_layer = {}!".format(zpos, sigma_test))
+            # ... the bottom sigma layer
+            k = self._n_siglay - 1
+            sigma_test = self._interp_on_sigma_layer(self.host_elem_search_arrs.phi, host, k)
+            if zpos <= sigma_test:
+                particle_at_surface_or_bottom_boundary = True
+                k_boundary = k
+            else:
+                # ... search the middle of the water column
+                for k in xrange(1, self._n_siglay):
+                    sigma_test = self._interp_on_sigma_layer(self.host_elem_search_arrs.phi, host, k)
+                    if zpos >= sigma_test:
+                        k_lower_layer = k
+                        k_upper_layer = k - 1
+
+                        sigma_lower_layer = self._interp_on_sigma_layer(self.host_elem_search_arrs.phi, host, k_lower_layer)
+                        sigma_upper_layer = self._interp_on_sigma_layer(self.host_elem_search_arrs.phi, host, k_upper_layer)
+                        break
+                raise ValueError("Particle zpos (={} not found!".format(zpos))
 
         # Time fraction
         time_fraction = interp.get_time_fraction(time, self._time[self._tidx_last], self._time[self._tidx_next])
@@ -284,19 +303,21 @@ cdef class FVCOMDataReader(DataReader):
 
         nbe_min = int_min(int_min(self._nbe[0, host], self._nbe[1, host]), self._nbe[2, host])
         if nbe_min < 0:
-            # Boundary element - temporal interpolation only
-            if particle_is_at_surface is True:
-                up1 = interp.interpolate_in_time(time_fraction, self._u_last[0, host], self._u_next[0, host])
-                vp1 = interp.interpolate_in_time(time_fraction, self._v_last[0, host], self._v_next[0, host])
-                up2 = 0.0 # TODO
-                vp2 = 0.0 # TODO
+            # Boundary element - no horizontal interpolation
+            if particle_at_surface_or_bottom_boundary is True:
+                vel[0] = interp.interpolate_in_time(time_fraction, self._u_last[k_boundary, host], self._u_next[k_boundary, host])
+                vel[1] = interp.interpolate_in_time(time_fraction, self._v_last[k_boundary, host], self._v_next[k_boundary, host])
+                return
+            else:
+                raise ValueError('TEMP ERROR: particle not at surface ...')
+
         else:
             # Non-boundary element - perform horizontal and temporal interpolation
-            if particle_is_at_surface is True:
+            if particle_at_surface_or_bottom_boundary is True:
                 xc[0] = self._xc[host]
                 yc[0] = self._yc[host]
-                uc1[0] = interp.interpolate_in_time(time_fraction, self._u_last[0, host], self._u_next[0, host])
-                vc1[0] = interp.interpolate_in_time(time_fraction, self._v_last[0, host], self._v_next[0, host])
+                uc1[0] = interp.interpolate_in_time(time_fraction, self._u_last[k_boundary, host], self._u_next[k_boundary, host])
+                vc1[0] = interp.interpolate_in_time(time_fraction, self._v_last[k_boundary, host], self._v_next[k_boundary, host])
                 for i in xrange(3):
                     neighbour = self._nbe[i, host]
                     j = i+1 # +1 as host is 0
@@ -304,8 +325,8 @@ cdef class FVCOMDataReader(DataReader):
                     yc[j] = self._yc[neighbour]
                     uc1[j] = interp.interpolate_in_time(time_fraction, self._u_last[0, neighbour], self._u_next[0, neighbour])
                     vc1[j] = interp.interpolate_in_time(time_fraction, self._v_last[0, neighbour], self._v_next[0, neighbour])
-                    uc2[j] = 0.0 # TODO
-                    vc2[j] = 0.0 # TODO
+            else:
+                raise ValueError('TEMP ERROR: particle not at surface ...')
         
             # Interpolate in space - overlying sigma layer
             #up1 = interp.shephard_interpolation(xpos, ypos, self._n_pts_vel_interp, xc, yc, uc1)
