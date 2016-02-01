@@ -21,6 +21,14 @@ cpdef inline DTYPE_FLOAT_t interpolate_in_time(DTYPE_FLOAT_t time_fraction,
         DTYPE_FLOAT_t val_last, DTYPE_FLOAT_t val_next):
     return (1.0 - time_fraction) * val_last + time_fraction * val_next
 
+cpdef inline DTYPE_FLOAT_t get_sigma_fraction(DTYPE_FLOAT_t sigma, 
+        DTYPE_FLOAT_t sigma1, DTYPE_FLOAT_t sigma2):
+    return (sigma - sigma1) / (sigma2 - sigma1)
+
+cpdef inline DTYPE_FLOAT_t interpolate_in_sigma(DTYPE_FLOAT_t sigma_fraction,
+        DTYPE_FLOAT_t val_last, DTYPE_FLOAT_t val_next):
+    return (1.0 - sigma_fraction) * val_last + sigma_fraction * val_next
+
 cpdef inline DTYPE_FLOAT_t interpolate_within_element(DTYPE_FLOAT_t[:] var, 
         DTYPE_FLOAT_t[:] phi):
     return var[0] + phi[0] * (var[1] - var[0]) + phi[1] * (var[2] - var[0])
