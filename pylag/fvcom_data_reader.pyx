@@ -323,11 +323,11 @@ cdef class FVCOMDataReader(DataReader):
                     j = i+1 # +1 as host is 0
                     xc[j] = self._xc[neighbour] 
                     yc[j] = self._yc[neighbour]
-                    uc1[j] = interp.interpolate_in_time(time_fraction, self._u_last[0, neighbour], self._u_next[0, neighbour])
-                    vc1[j] = interp.interpolate_in_time(time_fraction, self._v_last[0, neighbour], self._v_next[0, neighbour])
+                    uc1[j] = interp.interpolate_in_time(time_fraction, self._u_last[k_boundary, neighbour], self._u_next[k_boundary, neighbour])
+                    vc1[j] = interp.interpolate_in_time(time_fraction, self._v_last[k_boundary, neighbour], self._v_next[k_boundary, neighbour])
             else:
                 raise ValueError('TEMP ERROR: particle not at surface ...')
-        
+
             # Interpolate in space - overlying sigma layer
             #up1 = interp.shephard_interpolation(xpos, ypos, self._n_pts_vel_interp, xc, yc, uc1)
             #vp1 = interp.shephard_interpolation(xpos, ypos, self._n_pts_vel_interp, xc, yc, vc1)
