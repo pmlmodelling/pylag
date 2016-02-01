@@ -319,8 +319,10 @@ cdef class FVCOMDataReader(DataReader):
                 vel[1] = interp.interpolate_in_time(time_fraction, self._v_last[k_boundary, host], self._v_next[k_boundary, host])
                 return
             else:
-                raise ValueError('TEMP ERROR: particle not at surface ...')
-
+                up1 = interp.interpolate_in_time(time_fraction, self._u_last[k_lower_layer, host], self._u_next[k_lower_layer, host])
+                vp1 = interp.interpolate_in_time(time_fraction, self._v_last[k_lower_layer, host], self._v_next[k_lower_layer, host])
+                up2 = interp.interpolate_in_time(time_fraction, self._u_last[k_upper_layer, host], self._u_next[k_upper_layer, host])
+                vp2 = interp.interpolate_in_time(time_fraction, self._v_last[k_upper_layer, host], self._v_next[k_upper_layer, host])
         else:
             # Non-boundary element - perform horizontal and temporal interpolation
             if particle_at_surface_or_bottom_boundary is True:
@@ -336,11 +338,27 @@ cdef class FVCOMDataReader(DataReader):
                     uc1[j] = interp.interpolate_in_time(time_fraction, self._u_last[k_boundary, neighbour], self._u_next[k_boundary, neighbour])
                     vc1[j] = interp.interpolate_in_time(time_fraction, self._v_last[k_boundary, neighbour], self._v_next[k_boundary, neighbour])
             else:
-                raise ValueError('TEMP ERROR: particle not at surface ...')
+                xc[0] = self._xc[host]
+                yc[0] = self._yc[host]
+                uc1[0] = interp.interpolate_in_time(time_fraction, self._u_last[k_lower_layer, host], self._u_next[k_lower_layer, host])
+                vc1[0] = interp.interpolate_in_time(time_fraction, self._v_last[k_lower_layer, host], self._v_next[k_lower_layer, host])
+                uc2[0] = interp.interpolate_in_time(time_fraction, self._u_last[k_upper_layer, host], self._u_next[k_upper_layer, host])
+                vc2[0] = interp.interpolate_in_time(time_fraction, self._v_last[k_upper_layer, host], self._v_next[k_upper_layer, host])
+                for i in xrange(3):
+                    neighbour = self._nbe[i, host]
+                    j = i+1 # +1 as host is 0
+                    xc[j] = self._xc[neighbour] 
+                    yc[j] = self._yc[neighbour]
+                    uc1[j] = interp.interpolate_in_time(time_fraction, self._u_last[k_lower_layer, host], self._u_next[k_lower_layer, host])
+                    vc1[j] = interp.interpolate_in_time(time_fraction, self._v_last[k_lower_layer, host], self._v_next[k_lower_layer, host])    
+                    uc2[j] = interp.interpolate_in_time(time_fraction, self._u_last[k_upper_layer, host], self._u_next[k_upper_layer, host])
+                    vc2[j] = interp.interpolate_in_time(time_fraction, self._v_last[k_upper_layer, host], self._v_next[k_upper_layer, host])  
 
-            # Interpolate in space - overlying sigma layer
-            #up1 = interp.shephard_interpolation(xpos, ypos, self._n_pts_vel_interp, xc, yc, uc1)
-            #vp1 = interp.shephard_interpolation(xpos, ypos, self._n_pts_vel_interp, xc, yc, vc1)
+            # Interpolate horizontally
+            rx = xpos - self._xc[host]
+            ry = ypos - self._yc[host]
+            
+            # ... lower bounding sigma layer
             dudx = 0.0
             dudy = 0.0
             dvdx = 0.0
@@ -350,19 +368,37 @@ cdef class FVCOMDataReader(DataReader):
                 dudy += uc1[i] * self._a2u[i, host]
                 dvdx += vc1[i] * self._a1u[i, host]
                 dvdy += vc1[i] * self._a2u[i, host]
-            
-            rx = xpos - self._xc[host]
-            ry = ypos - self._yc[host]
             up1 = uc1[0] + dudx*rx + dudy*ry
-            vp1 = vc1[0] + dvdx*rx + dvdy*ry 
+            vp1 = vc1[0] + dvdx*rx + dvdy*ry
+
+            # No vertical interpolation for particles near to the surface or bottom
+            if particle_at_surface_or_bottom_boundary is True:
+                vel[0] = up1
+                vel[1] = vp1
+                return
             
-            # Interpolate in space - underlying sigma layer
-            up2 = 0.0 # TODO
-            vp2 = 0.0 # TODO
+            # ... upper bounding sigma layer
+            dudx = 0.0
+            dudy = 0.0
+            dvdx = 0.0
+            dvdy = 0.0
+            for i in xrange(4):
+                dudx += uc2[i] * self._a1u[i, host]
+                dudy += uc2[i] * self._a2u[i, host]
+                dvdx += vc2[i] * self._a1u[i, host]
+                dvdy += vc2[i] * self._a2u[i, host]
+            up2 = uc2[0] + dudx*rx + dudy*ry
+            vp2 = vc2[0] + dvdx*rx + dvdy*ry
             
         # Vertical interpolation
-        vel[0] = up1 # TODO
-        vel[1] = vp1 # TODO
+        sigma_fraction = interp.get_sigma_fraction(zpos, sigma_lower_layer, sigma_upper_layer)
+        if sigma_fraction < 0.0 or sigma_fraction > 1.0:
+            logger = logging.getLogger(__name__)
+            logger.info('Invalid sigma fraction (={}) computed for a sigma value of {}.'.format(sigma_fraction, zpos))
+            raise ValueError('Sigma out of range.')
+        vel[0] = interp.interpolate_in_sigma(sigma_fraction, up1, up2)
+        vel[1] = interp.interpolate_in_sigma(sigma_fraction, vp1, vp2)
+        return
 
     cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
         return self.find_host_using_local_search(xpos, ypos, guess)
