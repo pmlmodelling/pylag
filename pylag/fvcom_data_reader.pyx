@@ -244,6 +244,7 @@ cdef class FVCOMDataReader(DataReader):
         # bound the particle's position
         cdef bool particle_at_surface_or_bottom_boundary
         cdef DTYPE_FLOAT_t sigma_test
+        cdef bool particle_found
         cdef DTYPE_FLOAT_t sigma_lower_layer, sigma_upper_layer
         cdef DTYPE_INT_t k_boundary, k_lower_layer, k_upper_layer
         
@@ -266,6 +267,7 @@ cdef class FVCOMDataReader(DataReader):
         
         # Find the sigma layers bounding the particle's position. First check
         # the upper and lower boundaries, then the centre of the water columnun.
+        particle_found = False
         particle_at_surface_or_bottom_boundary = False
         
         # Try the top sigma layer
@@ -274,6 +276,8 @@ cdef class FVCOMDataReader(DataReader):
         if zpos >= sigma_test:
             particle_at_surface_or_bottom_boundary = True
             k_boundary = k
+            
+            particle_found = True
         else:
             # ... the bottom sigma layer
             k = self._n_siglay - 1
@@ -281,6 +285,8 @@ cdef class FVCOMDataReader(DataReader):
             if zpos <= sigma_test:
                 particle_at_surface_or_bottom_boundary = True
                 k_boundary = k
+                
+                particle_found = True
             else:
                 # ... search the middle of the water column
                 for k in xrange(1, self._n_siglay):
@@ -291,8 +297,12 @@ cdef class FVCOMDataReader(DataReader):
 
                         sigma_lower_layer = self._interp_on_sigma_layer(self.host_elem_search_arrs.phi, host, k_lower_layer)
                         sigma_upper_layer = self._interp_on_sigma_layer(self.host_elem_search_arrs.phi, host, k_upper_layer)
+
+                        particle_found = True
                         break
-                raise ValueError("Particle zpos (={} not found!".format(zpos))
+        
+        if particle_found is False:
+            raise ValueError("Particle zpos (={} not found!".format(zpos))
 
         # Time fraction
         time_fraction = interp.get_time_fraction(time, self._time[self._tidx_last], self._time[self._tidx_next])
