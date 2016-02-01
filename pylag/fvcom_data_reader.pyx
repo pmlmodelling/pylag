@@ -337,6 +337,10 @@ cdef class FVCOMDataReader(DataReader):
                     yc[j] = self._yc[neighbour]
                     uc1[j] = interp.interpolate_in_time(time_fraction, self._u_last[k_boundary, neighbour], self._u_next[k_boundary, neighbour])
                     vc1[j] = interp.interpolate_in_time(time_fraction, self._v_last[k_boundary, neighbour], self._v_next[k_boundary, neighbour])
+                
+                vel[0] = self._interpolate_vel_between_elements(xpos, ypos, host, uc1)
+                vel[1] = self._interpolate_vel_between_elements(xpos, ypos, host, vc1)
+                return  
             else:
                 xc[0] = self._xc[host]
                 yc[0] = self._yc[host]
@@ -352,43 +356,15 @@ cdef class FVCOMDataReader(DataReader):
                     uc1[j] = interp.interpolate_in_time(time_fraction, self._u_last[k_lower_layer, host], self._u_next[k_lower_layer, host])
                     vc1[j] = interp.interpolate_in_time(time_fraction, self._v_last[k_lower_layer, host], self._v_next[k_lower_layer, host])    
                     uc2[j] = interp.interpolate_in_time(time_fraction, self._u_last[k_upper_layer, host], self._u_next[k_upper_layer, host])
-                    vc2[j] = interp.interpolate_in_time(time_fraction, self._v_last[k_upper_layer, host], self._v_next[k_upper_layer, host])  
-
-            # Interpolate horizontally
-            rx = xpos - self._xc[host]
-            ry = ypos - self._yc[host]
+                    vc2[j] = interp.interpolate_in_time(time_fraction, self._v_last[k_upper_layer, host], self._v_next[k_upper_layer, host])
             
             # ... lower bounding sigma layer
-            dudx = 0.0
-            dudy = 0.0
-            dvdx = 0.0
-            dvdy = 0.0
-            for i in xrange(4):
-                dudx += uc1[i] * self._a1u[i, host]
-                dudy += uc1[i] * self._a2u[i, host]
-                dvdx += vc1[i] * self._a1u[i, host]
-                dvdy += vc1[i] * self._a2u[i, host]
-            up1 = uc1[0] + dudx*rx + dudy*ry
-            vp1 = vc1[0] + dvdx*rx + dvdy*ry
+            up1 = self._interpolate_vel_between_elements(xpos, ypos, host, uc1)
+            vp1 = self._interpolate_vel_between_elements(xpos, ypos, host, vc1)
 
-            # No vertical interpolation for particles near to the surface or bottom
-            if particle_at_surface_or_bottom_boundary is True:
-                vel[0] = up1
-                vel[1] = vp1
-                return
-            
             # ... upper bounding sigma layer
-            dudx = 0.0
-            dudy = 0.0
-            dvdx = 0.0
-            dvdy = 0.0
-            for i in xrange(4):
-                dudx += uc2[i] * self._a1u[i, host]
-                dudy += uc2[i] * self._a2u[i, host]
-                dvdx += vc2[i] * self._a1u[i, host]
-                dvdy += vc2[i] * self._a2u[i, host]
-            up2 = uc2[0] + dudx*rx + dudy*ry
-            vp2 = vc2[0] + dvdx*rx + dvdy*ry
+            up2 = self._interpolate_vel_between_elements(xpos, ypos, host, uc2)
+            vp2 = self._interpolate_vel_between_elements(xpos, ypos, host, vc2)
             
         # Vertical interpolation
         sigma_fraction = interp.get_sigma_fraction(zpos, sigma_lower_layer, sigma_upper_layer)
@@ -673,3 +649,20 @@ cdef class FVCOMDataReader(DataReader):
 
         sigma = interp.interpolate_sigma_within_element(sigma_nodes, phi)
         return sigma
+
+    cdef _interpolate_vel_between_elements(self, DTYPE_FLOAT_t xpos, 
+            DTYPE_FLOAT_t ypos, DTYPE_INT_t host, DTYPE_FLOAT_t vel_elem[4]):
+
+        cdef DTYPE_FLOAT_t rx, ry
+        cdef DTYPE_FLOAT_t dudx, dudy
+        
+        # Interpolate horizontally
+        rx = xpos - self._xc[host]
+        ry = ypos - self._yc[host]
+
+        dudx = 0.0
+        dudy = 0.0
+        for i in xrange(4):
+            dudx += vel_elem[i] * self._a1u[i, host]
+            dudy += vel_elem[i] * self._a2u[i, host]
+        return vel_elem[0] + dudx*rx + dudy*ry
