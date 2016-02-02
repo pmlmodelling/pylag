@@ -24,12 +24,6 @@ from math cimport int_min, float_min
 
 from unstruct_grid_tools import round_time, sort_adjacency_array
 
-cdef struct HostElementSearchArrays:
-    # Temporary arrays used in host element searching
-    DTYPE_FLOAT_t[:] x_tri
-    DTYPE_FLOAT_t[:] y_tri
-    DTYPE_FLOAT_t[:] phi
-
 cdef class FVCOMDataReader(DataReader):
     # Configurtion object
     cdef object config
@@ -87,9 +81,6 @@ cdef class FVCOMDataReader(DataReader):
     cdef DTYPE_FLOAT_t[:] _time
     cdef DTYPE_INT_t _tidx_last
     cdef DTYPE_INT_t _tidx_next
-    
-    # Temporary arrays used in host element searching
-    cdef HostElementSearchArrays host_elem_search_arrs
 
     def __init__(self, config):
         self.config = config
@@ -115,13 +106,14 @@ cdef class FVCOMDataReader(DataReader):
         cdef int i # Loop counters
         cdef int vertex # Vertex identifier
         cdef int n_vertices = 3 # No. of vertices in a triangle
-        cdef DTYPE_FLOAT_t h # Bathymetry at (xpos, ypos)
 
         # Intermediate arrays
-        cdef DTYPE_FLOAT_t[:] x_tri = np.empty(3, dtype=DTYPE_FLOAT)
-        cdef DTYPE_FLOAT_t[:] y_tri = np.empty(3, dtype=DTYPE_FLOAT)
-        cdef DTYPE_FLOAT_t[:] h_tri = np.empty(3, dtype=DTYPE_FLOAT)
-        cdef DTYPE_FLOAT_t[:] phi = np.empty(3, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t x_tri[3]
+        cdef DTYPE_FLOAT_t y_tri[3]
+        cdef DTYPE_FLOAT_t h_tri[3]
+        cdef DTYPE_FLOAT_t phi[3]
+
+        cdef DTYPE_FLOAT_t h # Bathymetry at (xpos, ypos)
 
         for i in xrange(n_vertices):
             vertex = self._nv[i,host]
@@ -147,12 +139,12 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_FLOAT_t zeta # Sea surface elevation at (t, xpos, ypos)
 
         # Intermediate arrays
-        cdef DTYPE_FLOAT_t[:] x_tri = np.empty(3, dtype=DTYPE_FLOAT)
-        cdef DTYPE_FLOAT_t[:] y_tri = np.empty(3, dtype=DTYPE_FLOAT)
-        cdef DTYPE_FLOAT_t[:] zeta_tri_t_last = np.empty(3, dtype=DTYPE_FLOAT)
-        cdef DTYPE_FLOAT_t[:] zeta_tri_t_next = np.empty(3, dtype=DTYPE_FLOAT)
-        cdef DTYPE_FLOAT_t[:] zeta_tri = np.empty(3, dtype=DTYPE_FLOAT)
-        cdef DTYPE_FLOAT_t[:] phi = np.empty(3, dtype=DTYPE_FLOAT)
+        cdef DTYPE_FLOAT_t x_tri[3]
+        cdef DTYPE_FLOAT_t y_tri[3]
+        cdef DTYPE_FLOAT_t zeta_tri_t_last[3]
+        cdef DTYPE_FLOAT_t zeta_tri_t_next[3]
+        cdef DTYPE_FLOAT_t zeta_tri[3]
+        cdef DTYPE_FLOAT_t phi[3]
 
         for i in xrange(n_vertices):
             vertex = self._nv[i,host]
@@ -235,10 +227,13 @@ cdef class FVCOMDataReader(DataReader):
         
         cdef DTYPE_FLOAT_t rx, ry
         
-        # No. of vertices and a temporary object used for determining host 
+        # No. of vertices and temporary objects used for determining host 
         # element barycentric coords
         cdef DTYPE_INT_t n_vertices
         cdef DTYPE_INT_t vertex
+        cdef DTYPE_FLOAT_t x_tri[3]
+        cdef DTYPE_FLOAT_t y_tri[3]
+        cdef DTYPE_FLOAT_t phi[3]
         
         # Variables used when determining indices for the sigma layers that
         # bound the particle's position
@@ -260,10 +255,9 @@ cdef class FVCOMDataReader(DataReader):
         n_vertices = 3
         for i in xrange(n_vertices):
             vertex = self._nv[i,host]
-            self.host_elem_search_arrs.x_tri[i] = self._x[vertex]
-            self.host_elem_search_arrs.y_tri[i] = self._y[vertex]
-        interp.get_barycentric_coords(xpos, ypos, self.host_elem_search_arrs.x_tri,
-                self.host_elem_search_arrs.y_tri, self.host_elem_search_arrs.phi)
+            x_tri[i] = self._x[vertex]
+            y_tri[i] = self._y[vertex]
+        interp.get_barycentric_coords(xpos, ypos, x_tri, y_tri, phi)
         
         # Find the sigma layers bounding the particle's position. First check
         # the upper and lower boundaries, then the centre of the water columnun.
@@ -272,7 +266,7 @@ cdef class FVCOMDataReader(DataReader):
         
         # Try the top sigma layer
         k = 0
-        sigma_test = self._interp_on_sigma_layer(self.host_elem_search_arrs.phi, host, k)
+        sigma_test = self._interp_on_sigma_layer(phi, host, k)
         if zpos >= sigma_test:
             particle_at_surface_or_bottom_boundary = True
             k_boundary = k
@@ -281,7 +275,7 @@ cdef class FVCOMDataReader(DataReader):
         else:
             # ... the bottom sigma layer
             k = self._n_siglay - 1
-            sigma_test = self._interp_on_sigma_layer(self.host_elem_search_arrs.phi, host, k)
+            sigma_test = self._interp_on_sigma_layer(phi, host, k)
             if zpos <= sigma_test:
                 particle_at_surface_or_bottom_boundary = True
                 k_boundary = k
@@ -290,13 +284,13 @@ cdef class FVCOMDataReader(DataReader):
             else:
                 # ... search the middle of the water column
                 for k in xrange(1, self._n_siglay):
-                    sigma_test = self._interp_on_sigma_layer(self.host_elem_search_arrs.phi, host, k)
+                    sigma_test = self._interp_on_sigma_layer(phi, host, k)
                     if zpos >= sigma_test:
                         k_lower_layer = k
                         k_upper_layer = k - 1
 
-                        sigma_lower_layer = self._interp_on_sigma_layer(self.host_elem_search_arrs.phi, host, k_lower_layer)
-                        sigma_upper_layer = self._interp_on_sigma_layer(self.host_elem_search_arrs.phi, host, k_upper_layer)
+                        sigma_lower_layer = self._interp_on_sigma_layer(phi, host, k_lower_layer)
+                        sigma_upper_layer = self._interp_on_sigma_layer(phi, host, k_upper_layer)
 
                         particle_found = True
                         break
@@ -428,18 +422,17 @@ cdef class FVCOMDataReader(DataReader):
         # Determine barycentric coordinates of the host elementd
         for i in xrange(n_vertices):
             vertex = self._nv[i,host]
-            self.host_elem_search_arrs.x_tri[i] = self._x[vertex]
-            self.host_elem_search_arrs.y_tri[i] = self._y[vertex]
-        interp.get_barycentric_coords(xpos, ypos, self.host_elem_search_arrs.x_tri,
-                self.host_elem_search_arrs.y_tri, self.host_elem_search_arrs.phi)
+            x_tri[i] = self._x[vertex]
+            y_tri[i] = self._y[vertex]
+        interp.get_barycentric_coords(xpos, ypos, x_tri, y_tri, phi)
 
         # Determine upper and lower bounding sigma levels
         particle_found = False
         for i in xrange(self._n_siglay):
             k_lower_level = i + 1
             k_upper_level = i
-            sigma_lower_level = self._interp_on_sigma_level(self.host_elem_search_arrs.phi, host, k_lower_level)
-            sigma_upper_level = self._interp_on_sigma_level(self.host_elem_search_arrs.phi, host, k_upper_level)
+            sigma_lower_level = self._interp_on_sigma_level(phi, host, k_lower_level)
+            sigma_upper_level = self._interp_on_sigma_level(phi, host, k_upper_level)
             
             if zpos <= sigma_upper_level and zpos >= sigma_lower_level:
                 particle_found = True
@@ -603,11 +596,6 @@ cdef class FVCOMDataReader(DataReader):
         # Set time indices for reading frames, and initialise time-dependent 
         # variable reading frames
         self._read_time_dependent_vars(0.0) # 0s as simulation start
-            
-        # Temporary arays used in host element sarching
-        self.host_elem_search_arrs.x_tri = np.empty(3, dtype=DTYPE_FLOAT)
-        self.host_elem_search_arrs.y_tri = np.empty(3, dtype=DTYPE_FLOAT)
-        self.host_elem_search_arrs.phi = np.empty(3, dtype=DTYPE_FLOAT)
 
     cdef _read_time_dependent_vars(self, time):
         # Find indices for times within time_array that bracket time_start
@@ -675,20 +663,23 @@ cdef class FVCOMDataReader(DataReader):
         cdef int vertex # Vertex identifier
         cdef int n_vertices = 3 # No. of vertices in a triangle
 
-        # Intermediate arrays
+        # Intermediate arrays/variables
+        cdef DTYPE_FLOAT_t x_tri[3]
+        cdef DTYPE_FLOAT_t y_tri[3]
+        cdef DTYPE_FLOAT_t phi[3]
         cdef DTYPE_FLOAT_t phi_test
 
         while True:
             for i in xrange(n_vertices):
                 vertex = self._nv[i,guess]
-                self.host_elem_search_arrs.x_tri[i] = self._x[vertex]
-                self.host_elem_search_arrs.y_tri[i] = self._y[vertex]
+                x_tri[i] = self._x[vertex]
+                y_tri[i] = self._y[vertex]
 
             # Transform to natural coordinates
-            interp.get_barycentric_coords(xpos, ypos, self.host_elem_search_arrs.x_tri, self.host_elem_search_arrs.y_tri, self.host_elem_search_arrs.phi)
+            interp.get_barycentric_coords(xpos, ypos, x_tri, y_tri, phi)
 
             # Check to see if the particle is in the current element
-            phi_test = float_min(float_min(self.host_elem_search_arrs.phi[0], self.host_elem_search_arrs.phi[1]), self.host_elem_search_arrs.phi[2])
+            phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
             if phi_test >= 0.0:
                 return guess
             elif phi_test >= -1.0e-7:
@@ -698,11 +689,11 @@ cdef class FVCOMDataReader(DataReader):
 
             # If not, use phi to select the next element to be searched
             # TODO epsilon for floating point comp
-            if self.host_elem_search_arrs.phi[0] == phi_test:
+            if phi[0] == phi_test:
                 guess = self._nbe[0,guess]
-            elif self.host_elem_search_arrs.phi[1] == phi_test:
+            elif phi[1] == phi_test:
                 guess = self._nbe[1,guess]
-            elif self.host_elem_search_arrs.phi[2] == phi_test:
+            elif phi[2] == phi_test:
                 guess = self._nbe[2,guess]
             else:
                 raise RuntimeError('Host element search algorithm failed.')
@@ -718,24 +709,27 @@ cdef class FVCOMDataReader(DataReader):
         cdef int vertex # Vertex identifier
         cdef int n_vertices = 3 # No. of vertices in a triangle
 
-        # Intermediate arrays
+        # Intermediate arrays/variables
+        cdef DTYPE_FLOAT_t x_tri[3]
+        cdef DTYPE_FLOAT_t y_tri[3]
+        cdef DTYPE_FLOAT_t phi[3]
         cdef DTYPE_FLOAT_t phi_test
         
         for i in xrange(self._n_elems):
             for j in xrange(n_vertices):
                 vertex = self._nv[j,i]
-                self.host_elem_search_arrs.x_tri[j] = self._x[vertex]
-                self.host_elem_search_arrs.y_tri[j] = self._y[vertex]
+                x_tri[j] = self._x[vertex]
+                y_tri[j] = self._y[vertex]
 
             # Transform to natural coordinates
-            interp.get_barycentric_coords(x, y, self.host_elem_search_arrs.x_tri, self.host_elem_search_arrs.y_tri, self.host_elem_search_arrs.phi)
+            interp.get_barycentric_coords(x, y, x_tri, y_tri, phi)
 
             # Check to see if the particle is in the current element
-            phi_test = float_min(float_min(self.host_elem_search_arrs.phi[0], self.host_elem_search_arrs.phi[1]), self.host_elem_search_arrs.phi[2])
+            phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
             if phi_test >= 0.0: return i
         return -1
     
-    cdef _interp_on_sigma_layer(self, DTYPE_FLOAT_t[:] phi, DTYPE_INT_t host,
+    cdef _interp_on_sigma_layer(self, DTYPE_FLOAT_t phi[3], DTYPE_INT_t host,
             DTYPE_INT_t kidx):
         """
         Return the linearly interpolated value of sigma on the specified sigma
@@ -767,7 +761,7 @@ cdef class FVCOMDataReader(DataReader):
         sigma = interp.interpolate_sigma_within_element(sigma_nodes, phi)
         return sigma
 
-    cdef _interp_on_sigma_level(self, DTYPE_FLOAT_t[:] phi, DTYPE_INT_t host,
+    cdef _interp_on_sigma_level(self, DTYPE_FLOAT_t phi[3], DTYPE_INT_t host,
             DTYPE_INT_t kidx):
         """
         Return the linearly interpolated value of sigma on the specified sigma
