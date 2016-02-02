@@ -463,8 +463,8 @@ cdef class FVCOMDataReader(DataReader):
 
         # Calculate natural coordinates and interpolate within the host
         # horizontal element on lower and upper bounding sigma levels
-        omega_lower_level = interp.interpolate_omega_within_element(omega_tri_lower_level, phi)
-        omega_upper_level = interp.interpolate_omega_within_element(omega_tri_upper_level, phi)
+        omega_lower_level = interp.interpolate_within_element(omega_tri_lower_level, phi)
+        omega_upper_level = interp.interpolate_within_element(omega_tri_upper_level, phi)
 
         # Interpolate between sigma levels
         sigma_fraction = interp.get_linear_fraction(zpos, sigma_lower_level, sigma_upper_level)
@@ -758,7 +758,7 @@ cdef class FVCOMDataReader(DataReader):
             vertex = self._nv[i,host]
             sigma_nodes[i] = self._siglay[kidx, vertex]                  
 
-        sigma = interp.interpolate_sigma_within_element(sigma_nodes, phi)
+        sigma = interp.interpolate_within_element(sigma_nodes, phi)
         return sigma
 
     cdef _interp_on_sigma_level(self, DTYPE_FLOAT_t phi[3], DTYPE_INT_t host,
@@ -790,7 +790,7 @@ cdef class FVCOMDataReader(DataReader):
             vertex = self._nv[i,host]
             sigma_nodes[i] = self._siglev[kidx, vertex]                  
 
-        sigma = interp.interpolate_sigma_within_element(sigma_nodes, phi)
+        sigma = interp.interpolate_within_element(sigma_nodes, phi)
         return sigma
 
     cdef _interpolate_vel_between_elements(self, DTYPE_FLOAT_t xpos, 
