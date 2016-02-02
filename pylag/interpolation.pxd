@@ -13,17 +13,13 @@ cpdef inline DTYPE_FLOAT_t get_euclidian_distance(DTYPE_FLOAT_t x1,
         DTYPE_FLOAT_t y1, DTYPE_FLOAT_t x2, DTYPE_FLOAT_t y2):
      return sqrt_c((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1))
 
-cpdef inline DTYPE_FLOAT_t get_time_fraction(DTYPE_FLOAT_t t, 
-        DTYPE_FLOAT_t t1, DTYPE_FLOAT_t t2):
-    return (t - t1) / (t2 - t1)
+cpdef inline DTYPE_FLOAT_t get_linear_fraction(DTYPE_FLOAT_t var, 
+        DTYPE_FLOAT_t var1, DTYPE_FLOAT_t var2):
+    return (var - var1) / (var2 - var1)
 
 cpdef inline DTYPE_FLOAT_t interpolate_in_time(DTYPE_FLOAT_t time_fraction,
         DTYPE_FLOAT_t val_last, DTYPE_FLOAT_t val_next):
     return (1.0 - time_fraction) * val_last + time_fraction * val_next
-
-cpdef inline DTYPE_FLOAT_t get_sigma_fraction(DTYPE_FLOAT_t sigma, 
-        DTYPE_FLOAT_t sigma1, DTYPE_FLOAT_t sigma2):
-    return (sigma - sigma1) / (sigma2 - sigma1)
 
 cpdef inline DTYPE_FLOAT_t interpolate_in_sigma(DTYPE_FLOAT_t sigma_fraction,
         DTYPE_FLOAT_t val_last, DTYPE_FLOAT_t val_next):

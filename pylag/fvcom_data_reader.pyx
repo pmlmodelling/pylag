@@ -104,7 +104,7 @@ cdef class FVCOMDataReader(DataReader):
         self._init_time_dependent_vars()
 
     cpdef update_time_dependent_vars(self, DTYPE_FLOAT_t time):
-        time_fraction = interp.get_time_fraction(time, self._time[self._tidx_last], self._time[self._tidx_next])
+        time_fraction = interp.get_linear_fraction(time, self._time[self._tidx_last], self._time[self._tidx_next])
         if time_fraction < 0.0 or time_fraction >= 1.0:
             self._read_time_dependent_vars(time)
 
@@ -165,7 +165,7 @@ cdef class FVCOMDataReader(DataReader):
         interp.get_barycentric_coords(xpos, ypos, x_tri, y_tri, phi)
 
         # Interpolate in time
-        time_fraction = interp.get_time_fraction(time, self._time[self._tidx_last], self._time[self._tidx_next])
+        time_fraction = interp.get_linear_fraction(time, self._time[self._tidx_last], self._time[self._tidx_next])
         for i in xrange(n_vertices):
             zeta_tri[i] = interp.interpolate_in_time(time_fraction, zeta_tri_t_last[i], zeta_tri_t_next[i])
 
@@ -305,7 +305,7 @@ cdef class FVCOMDataReader(DataReader):
             raise ValueError("Particle zpos (={} not found!".format(zpos))
 
         # Time fraction
-        time_fraction = interp.get_time_fraction(time, self._time[self._tidx_last], self._time[self._tidx_next])
+        time_fraction = interp.get_linear_fraction(time, self._time[self._tidx_last], self._time[self._tidx_next])
         if time_fraction < 0.0 or time_fraction > 1.0:
             logger = logging.getLogger(__name__)
             logger.info('Invalid time fraction computed at time {}s.'.format(time))
@@ -367,7 +367,7 @@ cdef class FVCOMDataReader(DataReader):
             vp2 = self._interpolate_vel_between_elements(xpos, ypos, host, vc2)
             
         # Vertical interpolation
-        sigma_fraction = interp.get_sigma_fraction(zpos, sigma_lower_layer, sigma_upper_layer)
+        sigma_fraction = interp.get_linear_fraction(zpos, sigma_lower_layer, sigma_upper_layer)
         if sigma_fraction < 0.0 or sigma_fraction > 1.0:
             logger = logging.getLogger(__name__)
             logger.info('Invalid sigma fraction (={}) computed for a sigma value of {}.'.format(sigma_fraction, zpos))
@@ -457,7 +457,7 @@ cdef class FVCOMDataReader(DataReader):
             omega_tri_t_next_upper_level[i] = self._omega_next[k_upper_level, vertex]
 
         # Interpolation in time on lower and upper bounding sigma levels
-        time_fraction = interp.get_time_fraction(time, 
+        time_fraction = interp.get_linear_fraction(time, 
                                 self._time[self._tidx_last],
                                 self._time[self._tidx_next])
         for i in xrange(n_vertices):
@@ -474,7 +474,7 @@ cdef class FVCOMDataReader(DataReader):
         omega_upper_level = interp.interpolate_omega_within_element(omega_tri_upper_level, phi)
 
         # Interpolate between sigma levels
-        sigma_fraction = interp.get_sigma_fraction(zpos, sigma_lower_level, sigma_upper_level)
+        sigma_fraction = interp.get_linear_fraction(zpos, sigma_lower_level, sigma_upper_level)
         if sigma_fraction < 0.0 or sigma_fraction > 1.0:
             logger = logging.getLogger(__name__)
             logger.info('Invalid sigma fraction (={}) computed for a sigma value of {}.'.format(sigma_fraction, zpos))
