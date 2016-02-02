@@ -105,24 +105,17 @@ cdef class FVCOMDataReader(DataReader):
         """
         cdef int i # Loop counters
         cdef int vertex # Vertex identifier
-        cdef int n_vertices = 3 # No. of vertices in a triangle
-
-        # Intermediate arrays
-        cdef DTYPE_FLOAT_t x_tri[3]
-        cdef DTYPE_FLOAT_t y_tri[3]
-        cdef DTYPE_FLOAT_t h_tri[3]
-        cdef DTYPE_FLOAT_t phi[3]
-
+        cdef int n_vertices = 3 # No. of vertices in a triangl       
+        cdef DTYPE_FLOAT_t phi[3] # Barycentric coordinates 
+        cdef DTYPE_FLOAT_t h_tri[3] # Bathymetry at nodes
         cdef DTYPE_FLOAT_t h # Bathymetry at (xpos, ypos)
+
+        # Barycentric coordinates
+        self._get_phi(xpos, ypos, host, phi)
 
         for i in xrange(n_vertices):
             vertex = self._nv[i,host]
-            x_tri[i] = self._x[vertex]
-            y_tri[i] = self._y[vertex]
             h_tri[i] = self._h[vertex]
-
-        # Calculate barycentric coordinates
-        interp.get_barycentric_coords(xpos, ypos, x_tri, y_tri, phi)
 
         h = interp.interpolate_within_element(h_tri, phi)
 
@@ -139,22 +132,18 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_FLOAT_t zeta # Sea surface elevation at (t, xpos, ypos)
 
         # Intermediate arrays
-        cdef DTYPE_FLOAT_t x_tri[3]
-        cdef DTYPE_FLOAT_t y_tri[3]
         cdef DTYPE_FLOAT_t zeta_tri_t_last[3]
         cdef DTYPE_FLOAT_t zeta_tri_t_next[3]
         cdef DTYPE_FLOAT_t zeta_tri[3]
         cdef DTYPE_FLOAT_t phi[3]
 
+        # Barycentric coordinates
+        self._get_phi(xpos, ypos, host, phi)
+
         for i in xrange(n_vertices):
             vertex = self._nv[i,host]
-            x_tri[i] = self._x[vertex]
-            y_tri[i] = self._y[vertex]
             zeta_tri_t_last[i] = self._zeta_last[vertex]
             zeta_tri_t_next[i] = self._zeta_next[vertex]
-
-        # Calculate barycentric coordinates
-        interp.get_barycentric_coords(xpos, ypos, x_tri, y_tri, phi)
 
         # Interpolate in time
         time_fraction = interp.get_linear_fraction(time, self._time[self._tidx_last], self._time[self._tidx_next])
@@ -227,12 +216,7 @@ cdef class FVCOMDataReader(DataReader):
         
         cdef DTYPE_FLOAT_t rx, ry
         
-        # No. of vertices and temporary objects used for determining host 
-        # element barycentric coords
-        cdef DTYPE_INT_t n_vertices
-        cdef DTYPE_INT_t vertex
-        cdef DTYPE_FLOAT_t x_tri[3]
-        cdef DTYPE_FLOAT_t y_tri[3]
+        # Barycentric coords
         cdef DTYPE_FLOAT_t phi[3]
         
         # Variables used when determining indices for the sigma layers that
@@ -251,13 +235,8 @@ cdef class FVCOMDataReader(DataReader):
         
         cdef DTYPE_INT_t nbe_min
 
-        # Determine barycentric coordinates of the host element
-        n_vertices = 3
-        for i in xrange(n_vertices):
-            vertex = self._nv[i,host]
-            x_tri[i] = self._x[vertex]
-            y_tri[i] = self._y[vertex]
-        interp.get_barycentric_coords(xpos, ypos, x_tri, y_tri, phi)
+        # Barycentric coordinates
+        self._get_phi(xpos, ypos, host, phi)
         
         # Find the sigma layers bounding the particle's position. First check
         # the upper and lower boundaries, then the centre of the water columnun.
@@ -390,22 +369,20 @@ cdef class FVCOMDataReader(DataReader):
         10) Perform vertical interpolation of omega between sigma levels at the
         particle's x/y position.
         """
+        # Barycentric coordinates
+        cdef DTYPE_FLOAT_t phi[3]
+
         # Variables used when determining indices for the sigma levels that
         # bound the particle's position
         cdef DTYPE_INT_t k_lower_level, k_upper_level
         cdef DTYPE_FLOAT_t sigma_lower_level, sigma_upper_level        
         cdef bool particle_found
 
-        # No. of vertices and a temporary object used for determining host 
-        # element barycentric coords
+        # No. of vertices and a temporary object used for determining variable
+        # values at the host element's nodes
         cdef int i # Loop counters
         cdef int vertex # Vertex identifier
         cdef int n_vertices = 3 # No. of vertices in a triangle
-
-        # Intermediate arrays - spatial coordinates
-        cdef DTYPE_FLOAT_t x_tri[3]
-        cdef DTYPE_FLOAT_t y_tri[3]
-        cdef DTYPE_FLOAT_t phi[3]
         
         # Intermediate arrays - omega
         cdef DTYPE_FLOAT_t omega_tri_t_last_lower_level[3]
@@ -419,12 +396,8 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_FLOAT_t omega_lower_level
         cdef DTYPE_FLOAT_t omega_upper_level
 
-        # Determine barycentric coordinates of the host elementd
-        for i in xrange(n_vertices):
-            vertex = self._nv[i,host]
-            x_tri[i] = self._x[vertex]
-            y_tri[i] = self._y[vertex]
-        interp.get_barycentric_coords(xpos, ypos, x_tri, y_tri, phi)
+        # Barycentric coordinates
+        self._get_phi(xpos, ypos, host, phi)
 
         # Determine upper and lower bounding sigma levels
         particle_found = False
@@ -658,25 +631,13 @@ cdef class FVCOMDataReader(DataReader):
         -----------
         Shadden, S. 2009 TODO
         """
-
-        cdef int i # Loop counters
-        cdef int vertex # Vertex identifier
-        cdef int n_vertices = 3 # No. of vertices in a triangle
-
         # Intermediate arrays/variables
-        cdef DTYPE_FLOAT_t x_tri[3]
-        cdef DTYPE_FLOAT_t y_tri[3]
         cdef DTYPE_FLOAT_t phi[3]
         cdef DTYPE_FLOAT_t phi_test
 
         while True:
-            for i in xrange(n_vertices):
-                vertex = self._nv[i,guess]
-                x_tri[i] = self._x[vertex]
-                y_tri[i] = self._y[vertex]
-
-            # Transform to natural coordinates
-            interp.get_barycentric_coords(xpos, ypos, x_tri, y_tri, phi)
+            # Barycentric coordinates
+            self._get_phi(xpos, ypos, guess, phi)
 
             # Check to see if the particle is in the current element
             phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
@@ -703,26 +664,17 @@ cdef class FVCOMDataReader(DataReader):
                 return guess
 
     #@cython.boundscheck(False)
-    cpdef find_host_using_global_search(self, DTYPE_FLOAT_t x, DTYPE_FLOAT_t y):
-
-        cdef int i, j # Loop counters
-        cdef int vertex # Vertex identifier
-        cdef int n_vertices = 3 # No. of vertices in a triangle
+    cpdef find_host_using_global_search(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos):
+        # Loop counter
+        cdef int i
 
         # Intermediate arrays/variables
-        cdef DTYPE_FLOAT_t x_tri[3]
-        cdef DTYPE_FLOAT_t y_tri[3]
         cdef DTYPE_FLOAT_t phi[3]
         cdef DTYPE_FLOAT_t phi_test
         
         for i in xrange(self._n_elems):
-            for j in xrange(n_vertices):
-                vertex = self._nv[j,i]
-                x_tri[j] = self._x[vertex]
-                y_tri[j] = self._y[vertex]
-
-            # Transform to natural coordinates
-            interp.get_barycentric_coords(x, y, x_tri, y_tri, phi)
+            # Barycentric coordinates
+            self._get_phi(xpos, ypos, i, phi)
 
             # Check to see if the particle is in the current element
             phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
@@ -809,3 +761,21 @@ cdef class FVCOMDataReader(DataReader):
             dudx += vel_elem[i] * self._a1u[i, host]
             dudy += vel_elem[i] * self._a2u[i, host]
         return vel_elem[0] + dudx*rx + dudy*ry
+    
+    cdef _get_phi(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t host,
+             DTYPE_FLOAT_t phi[3]):
+        cdef int i # Loop counters
+        cdef int vertex # Vertex identifier
+        cdef int n_vertices = 3 # No. of vertices in a triangle
+
+        # Intermediate arrays
+        cdef DTYPE_FLOAT_t x_tri[3]
+        cdef DTYPE_FLOAT_t y_tri[3]
+
+        for i in xrange(n_vertices):
+            vertex = self._nv[i,host]
+            x_tri[i] = self._x[vertex]
+            y_tri[i] = self._y[vertex]
+
+        # Calculate barycentric coordinates
+        interp.get_barycentric_coords(xpos, ypos, x_tri, y_tri, phi)
