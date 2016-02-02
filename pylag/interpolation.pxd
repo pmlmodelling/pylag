@@ -37,3 +37,6 @@ cdef inline DTYPE_FLOAT_t interpolate_sigma_within_element(DTYPE_FLOAT_t var[3],
         DTYPE_FLOAT_t[:] phi):
     return var[0] + phi[0] * (var[1] - var[0]) + phi[1] * (var[2] - var[0])
 
+cdef inline DTYPE_FLOAT_t interpolate_omega_within_element(DTYPE_FLOAT_t var[3], 
+        DTYPE_FLOAT_t[:] phi):
+    return var[0] + phi[0] * (var[1] - var[0]) + phi[1] * (var[2] - var[0])

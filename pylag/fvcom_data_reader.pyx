@@ -187,7 +187,7 @@ cdef class FVCOMDataReader(DataReader):
         separately.
         """
         self._get_uv_velocity(time, xpos, ypos, zpos, host, vel)
-        vel[2] = 0 # TODO
+        self._get_omega_velocity(time, xpos, ypos, zpos, host, vel)
         return
 
     cdef _get_uv_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
@@ -376,6 +376,112 @@ cdef class FVCOMDataReader(DataReader):
         vel[1] = interp.interpolate_in_sigma(sigma_fraction, vp1, vp2)
         return
 
+    cdef _get_omega_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
+            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
+            DTYPE_FLOAT_t[:] vel):
+        """
+        Steps:
+        1) Determine natural coordinates of the host element - these are used
+        in the computation of sigma on the upper and lower sigma
+        levels bounding the particle's position.
+        2) Determine indices for the upper and lower sigma levels
+        bounding the particle's position.
+        3) Determine the value of sigma on the upper and lower sigma
+        levels bounding the particle's position.
+        4) Calculate the time fraction used for interpolation in time.
+        6) Perform time interpolation of omega at nodes of the host element on
+        the upper and lower bounding sigma levels.
+        8) Interpolate omega within the host element on the upper and lower 
+        bounding sigma levels.
+        10) Perform vertical interpolation of omega between sigma levels at the
+        particle's x/y position.
+        """
+        # Variables used when determining indices for the sigma levels that
+        # bound the particle's position
+        cdef DTYPE_INT_t k_lower_level, k_upper_level
+        cdef DTYPE_FLOAT_t sigma_lower_level, sigma_upper_level        
+        cdef bool particle_found
+
+        # No. of vertices and a temporary object used for determining host 
+        # element barycentric coords
+        cdef int i # Loop counters
+        cdef int vertex # Vertex identifier
+        cdef int n_vertices = 3 # No. of vertices in a triangle
+
+        # Intermediate arrays - spatial coordinates
+        cdef DTYPE_FLOAT_t x_tri[3]
+        cdef DTYPE_FLOAT_t y_tri[3]
+        cdef DTYPE_FLOAT_t phi[3]
+        
+        # Intermediate arrays - omega
+        cdef DTYPE_FLOAT_t omega_tri_t_last_lower_level[3]
+        cdef DTYPE_FLOAT_t omega_tri_t_next_lower_level[3]
+        cdef DTYPE_FLOAT_t omega_tri_t_last_upper_level[3]
+        cdef DTYPE_FLOAT_t omega_tri_t_next_upper_level[3]
+        cdef DTYPE_FLOAT_t omega_tri_lower_level[3]
+        cdef DTYPE_FLOAT_t omega_tri_upper_level[3]
+        
+        # Interpolated omegas on lower and upper bounding sigma levels
+        cdef DTYPE_FLOAT_t omega_lower_level
+        cdef DTYPE_FLOAT_t omega_upper_level
+
+        # Determine barycentric coordinates of the host elementd
+        for i in xrange(n_vertices):
+            vertex = self._nv[i,host]
+            self.host_elem_search_arrs.x_tri[i] = self._x[vertex]
+            self.host_elem_search_arrs.y_tri[i] = self._y[vertex]
+        interp.get_barycentric_coords(xpos, ypos, self.host_elem_search_arrs.x_tri,
+                self.host_elem_search_arrs.y_tri, self.host_elem_search_arrs.phi)
+
+        # Determine upper and lower bounding sigma levels
+        particle_found = False
+        for i in xrange(self._n_siglay):
+            k_lower_level = i + 1
+            k_upper_level = i
+            sigma_lower_level = self._interp_on_sigma_level(self.host_elem_search_arrs.phi, host, k_lower_level)
+            sigma_upper_level = self._interp_on_sigma_level(self.host_elem_search_arrs.phi, host, k_upper_level)
+            
+            if zpos <= sigma_upper_level and zpos >= sigma_lower_level:
+                particle_found = True
+                break
+        
+        if particle_found is False:
+            raise ValueError("Particle zpos (={} not found!".format(zpos))
+
+        # Extract omega on the lower and upper bounding sigma levels
+        for i in xrange(n_vertices):
+            vertex = self._nv[i,host]
+            omega_tri_t_last_lower_level[i] = self._omega_last[k_lower_level, vertex]
+            omega_tri_t_next_lower_level[i] = self._omega_next[k_lower_level, vertex]
+            omega_tri_t_last_upper_level[i] = self._omega_last[k_upper_level, vertex]
+            omega_tri_t_next_upper_level[i] = self._omega_next[k_upper_level, vertex]
+
+        # Interpolation in time on lower and upper bounding sigma levels
+        time_fraction = interp.get_time_fraction(time, 
+                                self._time[self._tidx_last],
+                                self._time[self._tidx_next])
+        for i in xrange(n_vertices):
+            omega_tri_lower_level[i] = interp.interpolate_in_time(time_fraction, 
+                                                omega_tri_t_last_lower_level[i],
+                                                omega_tri_t_next_lower_level[i])
+            omega_tri_upper_level[i] = interp.interpolate_in_time(time_fraction, 
+                                                omega_tri_t_last_upper_level[i],
+                                                omega_tri_t_next_upper_level[i])
+
+        # Calculate natural coordinates and interpolate within the host
+        # horizontal element on lower and upper bounding sigma levels
+        omega_lower_level = interp.interpolate_omega_within_element(omega_tri_lower_level, phi)
+        omega_upper_level = interp.interpolate_omega_within_element(omega_tri_upper_level, phi)
+
+        # Interpolate between sigma levels
+        sigma_fraction = interp.get_sigma_fraction(zpos, sigma_lower_level, sigma_upper_level)
+        if sigma_fraction < 0.0 or sigma_fraction > 1.0:
+            logger = logging.getLogger(__name__)
+            logger.info('Invalid sigma fraction (={}) computed for a sigma value of {}.'.format(sigma_fraction, zpos))
+            raise ValueError('Sigma out of range.')
+        vel[2] = interp.interpolate_in_sigma(sigma_fraction, omega_lower_level, omega_upper_level)
+        return
+
     cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
         return self.find_host_using_local_search(xpos, ypos, guess)
     
@@ -386,6 +492,12 @@ cdef class FVCOMDataReader(DataReader):
     cpdef cartesian_to_sigma_coords(self, DTYPE_FLOAT_t z, DTYPE_FLOAT_t h,
             DTYPE_FLOAT_t zeta):
         return (z - zeta) / (h + zeta)
+
+    cpdef get_zmin(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos):
+        return -1.0
+    
+    cpdef get_zmax(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos):
+        return 0.0
 
     def _read_grid(self):
         logger = logging.getLogger(__name__)
@@ -577,15 +689,20 @@ cdef class FVCOMDataReader(DataReader):
 
             # Check to see if the particle is in the current element
             phi_test = float_min(float_min(self.host_elem_search_arrs.phi[0], self.host_elem_search_arrs.phi[1]), self.host_elem_search_arrs.phi[2])
-            if phi_test >= 0.0: return guess
+            if phi_test >= 0.0:
+                return guess
+            elif phi_test >= -1.0e-7:
+                logger = logging.getLogger(__name__)
+                logger.warning('Tolerance factor applied when locating host element {}.'.format(guess))
+                return guess
 
             # If not, use phi to select the next element to be searched
             # TODO epsilon for floating point comp
-            if self.host_elem_search_arrs.phi[0] - 1.0e-10 <= phi_test and phi_test <= self.host_elem_search_arrs.phi[0] + 1.0e-10:
+            if self.host_elem_search_arrs.phi[0] == phi_test:
                 guess = self._nbe[0,guess]
-            elif self.host_elem_search_arrs.phi[1] - 1.0e-10 <= phi_test and phi_test <= self.host_elem_search_arrs.phi[1] + 1.0e-10:
+            elif self.host_elem_search_arrs.phi[1] == phi_test:
                 guess = self._nbe[1,guess]
-            elif self.host_elem_search_arrs.phi[2] - 1.0e-10 <= phi_test and phi_test <= self.host_elem_search_arrs.phi[2] + 1.0e-10:
+            elif self.host_elem_search_arrs.phi[2] == phi_test:
                 guess = self._nbe[2,guess]
             else:
                 raise RuntimeError('Host element search algorithm failed.')
@@ -646,6 +763,38 @@ cdef class FVCOMDataReader(DataReader):
         for i in xrange(n_vertices):
             vertex = self._nv[i,host]
             sigma_nodes[i] = self._siglay[kidx, vertex]                  
+
+        sigma = interp.interpolate_sigma_within_element(sigma_nodes, phi)
+        return sigma
+
+    cdef _interp_on_sigma_level(self, DTYPE_FLOAT_t[:] phi, DTYPE_INT_t host,
+            DTYPE_INT_t kidx):
+        """
+        Return the linearly interpolated value of sigma on the specified sigma
+        level within the given host element.
+        
+        Parameters
+        ----------
+        phi: MemoryView, float
+            Array of length three giving the barycentric coordinates at which 
+            to interpolate
+        host: int
+            Host element index
+        kidx: int
+            Sigma layer on which to interpolate
+        Returns
+        -------
+        sigma: float
+            Interpolated value of sigma.
+        """
+        cdef int vertex # Vertex identifier
+        cdef int n_vertices = 3 # No. of vertices in a triangle
+        cdef DTYPE_FLOAT_t sigma_nodes[3]
+        cdef DTYPE_FLOAT_t sigma # Sigma
+
+        for i in xrange(n_vertices):
+            vertex = self._nv[i,host]
+            sigma_nodes[i] = self._siglev[kidx, vertex]                  
 
         sigma = interp.interpolate_sigma_within_element(sigma_nodes, phi)
         return sigma

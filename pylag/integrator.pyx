@@ -69,6 +69,15 @@ cdef class RK4Integrator(NumIntegrator):
         xpos = particle.xpos + 0.5 * self.k1[0]
         ypos = particle.ypos + 0.5 * self.k1[1]
         zpos = particle.zpos + 0.5 * self.k1[2]
+        
+        # Impose reflecting boundary condition in z
+        zmin = data_reader.get_zmin(xpos, ypos)
+        zmax = data_reader.get_zmax(xpos, ypos)
+        if zpos < zmin:
+            zpos = zmin + zmin - zpos
+        elif zpos > zmax:
+            zpos = zmax + zmax - zpos
+        
         host = data_reader.find_host(xpos, ypos, host)
         if host == -1: return
         data_reader.get_velocity(t, xpos, ypos, zpos, host, self.vel) 
@@ -80,6 +89,15 @@ cdef class RK4Integrator(NumIntegrator):
         xpos = particle.xpos + 0.5 * self.k2[0]
         ypos = particle.ypos + 0.5 * self.k2[1]
         zpos = particle.zpos + 0.5 * self.k2[2]
+        
+        # Impose reflecting boundary condition in z
+        zmin = data_reader.get_zmin(xpos, ypos)
+        zmax = data_reader.get_zmax(xpos, ypos)
+        if zpos < zmin:
+            zpos = zmin + zmin - zpos
+        elif zpos > zmax:
+            zpos = zmax + zmax - zpos
+        
         host = data_reader.find_host(xpos, ypos, host)
         if host == -1: return
         data_reader.get_velocity(t, xpos, ypos, zpos, host, self.vel) 
@@ -91,6 +109,15 @@ cdef class RK4Integrator(NumIntegrator):
         xpos = particle.xpos + self.k3[0]
         ypos = particle.ypos + self.k3[1]
         zpos = particle.zpos + self.k3[2]
+        
+        # Impose reflecting boundary condition in z
+        zmin = data_reader.get_zmin(xpos, ypos)
+        zmax = data_reader.get_zmax(xpos, ypos)
+        if zpos < zmin:
+            zpos = zmin + zmin - zpos
+        elif zpos > zmax:
+            zpos = zmax + zmax - zpos
+
         host = data_reader.find_host(xpos, ypos, host)
         if host == -1: return
         data_reader.get_velocity(t, xpos, ypos, zpos, host, self.vel) 
@@ -101,6 +128,15 @@ cdef class RK4Integrator(NumIntegrator):
         xpos = particle.xpos + (self.k1[0] + 2.0*self.k2[0] + 2.0*self.k3[0] + self.k4[0])/6.0
         ypos = particle.ypos + (self.k1[1] + 2.0*self.k2[1] + 2.0*self.k3[1] + self.k4[1])/6.0
         zpos = particle.zpos + (self.k1[2] + 2.0*self.k2[2] + 2.0*self.k3[2] + self.k4[2])/6.0
+
+        # Impose reflecting boundary condition in z
+        zmin = data_reader.get_zmin(xpos, ypos)
+        zmax = data_reader.get_zmax(xpos, ypos)
+        if zpos < zmin:
+            zpos = zmin + zmin - zpos
+        elif zpos > zmax:
+            zpos = zmax + zmax - zpos
+        
         host = data_reader.find_host(xpos, ypos, host)
         if host == -1: return
 

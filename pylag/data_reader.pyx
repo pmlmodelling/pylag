@@ -21,6 +21,12 @@ cdef class DataReader:
     cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
         pass
     
+    cpdef get_zmin(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos):
+        pass
+    
+    cpdef get_zmax(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos):
+        pass
+    
     cpdef sigma_to_cartesian_coords(self, DTYPE_FLOAT_t sigma, DTYPE_FLOAT_t h,
             DTYPE_FLOAT_t zeta):
         pass
