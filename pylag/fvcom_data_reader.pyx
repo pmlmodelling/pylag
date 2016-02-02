@@ -506,41 +506,12 @@ cdef class FVCOMDataReader(DataReader):
         # Sigma layers at nodal coordinates
         self._siglay = ncfile.variables['siglay'][:]
         
-        # TODO Does it make sense to precompute the following (relatively
-        # expensive on large grids) or to simply compute on the fly? From 
-        # what I can tell so far these values are only needed during 
-        # interpolation so maybe we just compute as we go?
-        
-        # Sigma level separation at nodal coordinates
-        # TODO?
-        
-        # Sigma layer separation at nodal coordinates
-        # TODO?
-        
-        # Sigma levels at element centre
-        # TODO?
-        
-        # Sigma layers at alement centre
-        # TODO?
-        
-        # Sigma level separation at element centre
-        # TODO?
-        
-        # Sigma layer separation at element centre
-        # TODO?
-        
         # Interpolation parameters (a1u, a2u, aw0, awx, awy)
         self._a1u = ncfile.variables['a1u'][:,:]
         self._a2u = ncfile.variables['a2u'][:,:]
 
         # Bathymetry
         self._h = ncfile.variables['h'][:]
-
-        # Create upper right cartesian grid
-        #self._vxmin = np.min(self._x)
-        #self._x_upper_right_cart = self._x - self._vxmin
-        #self._vymin = np.min(self._y)
-        #self._y_upper_right_cart = self._y - self._vymin
         
         ncfile.close()
         
