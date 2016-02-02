@@ -159,7 +159,7 @@ cdef class FVCOMDataReader(DataReader):
         # Interpolate in time
         time_fraction = interp.get_linear_fraction(time, self._time[self._tidx_last], self._time[self._tidx_next])
         for i in xrange(n_vertices):
-            zeta_tri[i] = interp.interpolate_in_time(time_fraction, zeta_tri_t_last[i], zeta_tri_t_next[i])
+            zeta_tri[i] = interp.linear_interp(time_fraction, zeta_tri_t_last[i], zeta_tri_t_next[i])
 
         # Interpolate in space
         zeta = interp.interpolate_within_element(zeta_tri, phi)
@@ -309,28 +309,28 @@ cdef class FVCOMDataReader(DataReader):
         if nbe_min < 0:
             # Boundary element - no horizontal interpolation
             if particle_at_surface_or_bottom_boundary is True:
-                vel[0] = interp.interpolate_in_time(time_fraction, self._u_last[k_boundary, host], self._u_next[k_boundary, host])
-                vel[1] = interp.interpolate_in_time(time_fraction, self._v_last[k_boundary, host], self._v_next[k_boundary, host])
+                vel[0] = interp.linear_interp(time_fraction, self._u_last[k_boundary, host], self._u_next[k_boundary, host])
+                vel[1] = interp.linear_interp(time_fraction, self._v_last[k_boundary, host], self._v_next[k_boundary, host])
                 return
             else:
-                up1 = interp.interpolate_in_time(time_fraction, self._u_last[k_lower_layer, host], self._u_next[k_lower_layer, host])
-                vp1 = interp.interpolate_in_time(time_fraction, self._v_last[k_lower_layer, host], self._v_next[k_lower_layer, host])
-                up2 = interp.interpolate_in_time(time_fraction, self._u_last[k_upper_layer, host], self._u_next[k_upper_layer, host])
-                vp2 = interp.interpolate_in_time(time_fraction, self._v_last[k_upper_layer, host], self._v_next[k_upper_layer, host])
+                up1 = interp.linear_interp(time_fraction, self._u_last[k_lower_layer, host], self._u_next[k_lower_layer, host])
+                vp1 = interp.linear_interp(time_fraction, self._v_last[k_lower_layer, host], self._v_next[k_lower_layer, host])
+                up2 = interp.linear_interp(time_fraction, self._u_last[k_upper_layer, host], self._u_next[k_upper_layer, host])
+                vp2 = interp.linear_interp(time_fraction, self._v_last[k_upper_layer, host], self._v_next[k_upper_layer, host])
         else:
             # Non-boundary element - perform horizontal and temporal interpolation
             if particle_at_surface_or_bottom_boundary is True:
                 xc[0] = self._xc[host]
                 yc[0] = self._yc[host]
-                uc1[0] = interp.interpolate_in_time(time_fraction, self._u_last[k_boundary, host], self._u_next[k_boundary, host])
-                vc1[0] = interp.interpolate_in_time(time_fraction, self._v_last[k_boundary, host], self._v_next[k_boundary, host])
+                uc1[0] = interp.linear_interp(time_fraction, self._u_last[k_boundary, host], self._u_next[k_boundary, host])
+                vc1[0] = interp.linear_interp(time_fraction, self._v_last[k_boundary, host], self._v_next[k_boundary, host])
                 for i in xrange(3):
                     neighbour = self._nbe[i, host]
                     j = i+1 # +1 as host is 0
                     xc[j] = self._xc[neighbour] 
                     yc[j] = self._yc[neighbour]
-                    uc1[j] = interp.interpolate_in_time(time_fraction, self._u_last[k_boundary, neighbour], self._u_next[k_boundary, neighbour])
-                    vc1[j] = interp.interpolate_in_time(time_fraction, self._v_last[k_boundary, neighbour], self._v_next[k_boundary, neighbour])
+                    uc1[j] = interp.linear_interp(time_fraction, self._u_last[k_boundary, neighbour], self._u_next[k_boundary, neighbour])
+                    vc1[j] = interp.linear_interp(time_fraction, self._v_last[k_boundary, neighbour], self._v_next[k_boundary, neighbour])
                 
                 vel[0] = self._interpolate_vel_between_elements(xpos, ypos, host, uc1)
                 vel[1] = self._interpolate_vel_between_elements(xpos, ypos, host, vc1)
@@ -338,19 +338,19 @@ cdef class FVCOMDataReader(DataReader):
             else:
                 xc[0] = self._xc[host]
                 yc[0] = self._yc[host]
-                uc1[0] = interp.interpolate_in_time(time_fraction, self._u_last[k_lower_layer, host], self._u_next[k_lower_layer, host])
-                vc1[0] = interp.interpolate_in_time(time_fraction, self._v_last[k_lower_layer, host], self._v_next[k_lower_layer, host])
-                uc2[0] = interp.interpolate_in_time(time_fraction, self._u_last[k_upper_layer, host], self._u_next[k_upper_layer, host])
-                vc2[0] = interp.interpolate_in_time(time_fraction, self._v_last[k_upper_layer, host], self._v_next[k_upper_layer, host])
+                uc1[0] = interp.linear_interp(time_fraction, self._u_last[k_lower_layer, host], self._u_next[k_lower_layer, host])
+                vc1[0] = interp.linear_interp(time_fraction, self._v_last[k_lower_layer, host], self._v_next[k_lower_layer, host])
+                uc2[0] = interp.linear_interp(time_fraction, self._u_last[k_upper_layer, host], self._u_next[k_upper_layer, host])
+                vc2[0] = interp.linear_interp(time_fraction, self._v_last[k_upper_layer, host], self._v_next[k_upper_layer, host])
                 for i in xrange(3):
                     neighbour = self._nbe[i, host]
                     j = i+1 # +1 as host is 0
                     xc[j] = self._xc[neighbour] 
                     yc[j] = self._yc[neighbour]
-                    uc1[j] = interp.interpolate_in_time(time_fraction, self._u_last[k_lower_layer, host], self._u_next[k_lower_layer, host])
-                    vc1[j] = interp.interpolate_in_time(time_fraction, self._v_last[k_lower_layer, host], self._v_next[k_lower_layer, host])    
-                    uc2[j] = interp.interpolate_in_time(time_fraction, self._u_last[k_upper_layer, host], self._u_next[k_upper_layer, host])
-                    vc2[j] = interp.interpolate_in_time(time_fraction, self._v_last[k_upper_layer, host], self._v_next[k_upper_layer, host])
+                    uc1[j] = interp.linear_interp(time_fraction, self._u_last[k_lower_layer, host], self._u_next[k_lower_layer, host])
+                    vc1[j] = interp.linear_interp(time_fraction, self._v_last[k_lower_layer, host], self._v_next[k_lower_layer, host])    
+                    uc2[j] = interp.linear_interp(time_fraction, self._u_last[k_upper_layer, host], self._u_next[k_upper_layer, host])
+                    vc2[j] = interp.linear_interp(time_fraction, self._v_last[k_upper_layer, host], self._v_next[k_upper_layer, host])
             
             # ... lower bounding sigma layer
             up1 = self._interpolate_vel_between_elements(xpos, ypos, host, uc1)
@@ -366,8 +366,8 @@ cdef class FVCOMDataReader(DataReader):
             logger = logging.getLogger(__name__)
             logger.info('Invalid sigma fraction (={}) computed for a sigma value of {}.'.format(sigma_fraction, zpos))
             raise ValueError('Sigma out of range.')
-        vel[0] = interp.interpolate_in_sigma(sigma_fraction, up1, up2)
-        vel[1] = interp.interpolate_in_sigma(sigma_fraction, vp1, vp2)
+        vel[0] = interp.linear_interp(sigma_fraction, up1, up2)
+        vel[1] = interp.linear_interp(sigma_fraction, vp1, vp2)
         return
 
     cdef _get_omega_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
@@ -454,10 +454,10 @@ cdef class FVCOMDataReader(DataReader):
                                 self._time[self._tidx_last],
                                 self._time[self._tidx_next])
         for i in xrange(n_vertices):
-            omega_tri_lower_level[i] = interp.interpolate_in_time(time_fraction, 
+            omega_tri_lower_level[i] = interp.linear_interp(time_fraction, 
                                                 omega_tri_t_last_lower_level[i],
                                                 omega_tri_t_next_lower_level[i])
-            omega_tri_upper_level[i] = interp.interpolate_in_time(time_fraction, 
+            omega_tri_upper_level[i] = interp.linear_interp(time_fraction, 
                                                 omega_tri_t_last_upper_level[i],
                                                 omega_tri_t_next_upper_level[i])
 
@@ -472,7 +472,7 @@ cdef class FVCOMDataReader(DataReader):
             logger = logging.getLogger(__name__)
             logger.info('Invalid sigma fraction (={}) computed for a sigma value of {}.'.format(sigma_fraction, zpos))
             raise ValueError('Sigma out of range.')
-        vel[2] = interp.interpolate_in_sigma(sigma_fraction, omega_lower_level, omega_upper_level)
+        vel[2] = interp.linear_interp(sigma_fraction, omega_lower_level, omega_upper_level)
         return
 
     cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):

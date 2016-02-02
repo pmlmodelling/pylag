@@ -17,13 +17,9 @@ cpdef inline DTYPE_FLOAT_t get_linear_fraction(DTYPE_FLOAT_t var,
         DTYPE_FLOAT_t var1, DTYPE_FLOAT_t var2):
     return (var - var1) / (var2 - var1)
 
-cpdef inline DTYPE_FLOAT_t interpolate_in_time(DTYPE_FLOAT_t time_fraction,
+cpdef inline DTYPE_FLOAT_t linear_interp(DTYPE_FLOAT_t fraction,
         DTYPE_FLOAT_t val_last, DTYPE_FLOAT_t val_next):
-    return (1.0 - time_fraction) * val_last + time_fraction * val_next
-
-cpdef inline DTYPE_FLOAT_t interpolate_in_sigma(DTYPE_FLOAT_t sigma_fraction,
-        DTYPE_FLOAT_t val_last, DTYPE_FLOAT_t val_next):
-    return (1.0 - sigma_fraction) * val_last + sigma_fraction * val_next
+    return (1.0 - fraction) * val_last + fraction * val_next
 
 cdef inline DTYPE_FLOAT_t interpolate_within_element(DTYPE_FLOAT_t var[3], 
         DTYPE_FLOAT_t phi[3]):
