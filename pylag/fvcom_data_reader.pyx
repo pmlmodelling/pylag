@@ -157,7 +157,7 @@ cdef class FVCOMDataReader(DataReader):
 
     cdef get_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
-            DTYPE_FLOAT_t[:] vel):
+            DTYPE_FLOAT_t vel[3]):
         """
         Returns the velocity field u(t,x,y,z) through linear interpolation for a 
         particle residing in the horizontal host element `host'. The actual 
@@ -173,7 +173,7 @@ cdef class FVCOMDataReader(DataReader):
 
     cdef _get_uv_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
-            DTYPE_FLOAT_t[:] vel):
+            DTYPE_FLOAT_t vel[3]):
         """
         Steps:
         1) Determine coordinates of the host element's three neighbouring
@@ -351,7 +351,7 @@ cdef class FVCOMDataReader(DataReader):
 
     cdef _get_omega_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
-            DTYPE_FLOAT_t[:] vel):
+            DTYPE_FLOAT_t vel[3]):
         """
         Steps:
         1) Determine natural coordinates of the host element - these are used

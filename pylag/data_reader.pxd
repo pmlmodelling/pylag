@@ -12,7 +12,7 @@ cdef class DataReader:
 
     cdef get_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host, 
-            DTYPE_FLOAT_t[:] vel)
+            DTYPE_FLOAT_t vel[3])
 
     cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess)
     

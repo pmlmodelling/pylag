@@ -25,15 +25,6 @@ cdef class RK4Integrator(NumIntegrator):
     def __init__(self, time_step):
         self._time_step = time_step
     
-        # Arrays for RK4 stages
-        self.k1 = np.empty(3, dtype=DTYPE_FLOAT)
-        self.k2 = np.empty(3, dtype=DTYPE_FLOAT)
-        self.k3 = np.empty(3, dtype=DTYPE_FLOAT)
-        self.k4 = np.empty(3, dtype=DTYPE_FLOAT)
-        
-        # Calculated vel
-        self.vel = np.empty(3, dtype=DTYPE_FLOAT)
-    
     cpdef advect(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader):
         """
         Advect particles forward in time. If particles are advected outside of
@@ -46,6 +37,15 @@ cdef class RK4Integrator(NumIntegrator):
         boundary. And secondly, it seems like we should be able to do something
         better at solid boundaries.
         """
+        # Arrays for RK4 stages
+        cdef DTYPE_FLOAT_t k1[3]
+        cdef DTYPE_FLOAT_t k2[3]
+        cdef DTYPE_FLOAT_t k3[3]
+        cdef DTYPE_FLOAT_t k4[3]
+
+        # Calculated vel
+        cdef DTYPE_FLOAT_t vel[3]
+        
         # Temporary containers
         cdef DTYPE_FLOAT_t t, xpos, ypos, zpos
         cdef DTYPE_INT_t host
@@ -60,15 +60,15 @@ cdef class RK4Integrator(NumIntegrator):
         ypos = particle.ypos
         zpos = particle.zpos
         host = particle.host_horizontal_elem
-        data_reader.get_velocity(t, xpos, ypos, zpos, host, self.vel) 
+        data_reader.get_velocity(t, xpos, ypos, zpos, host, vel) 
         for i in xrange(ndim):
-            self.k1[i] = self._time_step * self.vel[i]
+            k1[i] = self._time_step * vel[i]
         
         # Stage 2
         t = time + 0.5 * self._time_step
-        xpos = particle.xpos + 0.5 * self.k1[0]
-        ypos = particle.ypos + 0.5 * self.k1[1]
-        zpos = particle.zpos + 0.5 * self.k1[2]
+        xpos = particle.xpos + 0.5 * k1[0]
+        ypos = particle.ypos + 0.5 * k1[1]
+        zpos = particle.zpos + 0.5 * k1[2]
         
         # Impose reflecting boundary condition in z
         zmin = data_reader.get_zmin(xpos, ypos)
@@ -80,15 +80,15 @@ cdef class RK4Integrator(NumIntegrator):
         
         host = data_reader.find_host(xpos, ypos, host)
         if host == -1: return
-        data_reader.get_velocity(t, xpos, ypos, zpos, host, self.vel) 
+        data_reader.get_velocity(t, xpos, ypos, zpos, host, vel) 
         for i in xrange(ndim):
-            self.k2[i] = self._time_step * self.vel[i]
+            k2[i] = self._time_step * vel[i]
 
         # Stage 3
         t = time + 0.5 * self._time_step
-        xpos = particle.xpos + 0.5 * self.k2[0]
-        ypos = particle.ypos + 0.5 * self.k2[1]
-        zpos = particle.zpos + 0.5 * self.k2[2]
+        xpos = particle.xpos + 0.5 * k2[0]
+        ypos = particle.ypos + 0.5 * k2[1]
+        zpos = particle.zpos + 0.5 * k2[2]
         
         # Impose reflecting boundary condition in z
         zmin = data_reader.get_zmin(xpos, ypos)
@@ -100,15 +100,15 @@ cdef class RK4Integrator(NumIntegrator):
         
         host = data_reader.find_host(xpos, ypos, host)
         if host == -1: return
-        data_reader.get_velocity(t, xpos, ypos, zpos, host, self.vel) 
+        data_reader.get_velocity(t, xpos, ypos, zpos, host, vel) 
         for i in xrange(ndim):
-            self.k3[i] = self._time_step * self.vel[i]
+            k3[i] = self._time_step * vel[i]
 
         # Stage 4
         t = time + self._time_step
-        xpos = particle.xpos + self.k3[0]
-        ypos = particle.ypos + self.k3[1]
-        zpos = particle.zpos + self.k3[2]
+        xpos = particle.xpos + k3[0]
+        ypos = particle.ypos + k3[1]
+        zpos = particle.zpos + k3[2]
         
         # Impose reflecting boundary condition in z
         zmin = data_reader.get_zmin(xpos, ypos)
@@ -120,14 +120,14 @@ cdef class RK4Integrator(NumIntegrator):
 
         host = data_reader.find_host(xpos, ypos, host)
         if host == -1: return
-        data_reader.get_velocity(t, xpos, ypos, zpos, host, self.vel) 
+        data_reader.get_velocity(t, xpos, ypos, zpos, host, vel) 
         for i in xrange(ndim):
-            self.k4[i] = self._time_step * self.vel[i]
+            k4[i] = self._time_step * vel[i]
 
         # Calculate the new position
-        xpos = particle.xpos + (self.k1[0] + 2.0*self.k2[0] + 2.0*self.k3[0] + self.k4[0])/6.0
-        ypos = particle.ypos + (self.k1[1] + 2.0*self.k2[1] + 2.0*self.k3[1] + self.k4[1])/6.0
-        zpos = particle.zpos + (self.k1[2] + 2.0*self.k2[2] + 2.0*self.k3[2] + self.k4[2])/6.0
+        xpos = particle.xpos + (k1[0] + 2.0*k2[0] + 2.0*k3[0] + k4[0])/6.0
+        ypos = particle.ypos + (k1[1] + 2.0*k2[1] + 2.0*k3[1] + k4[1])/6.0
+        zpos = particle.zpos + (k1[2] + 2.0*k2[2] + 2.0*k3[2] + k4[2])/6.0
 
         # Impose reflecting boundary condition in z
         zmin = data_reader.get_zmin(xpos, ypos)
