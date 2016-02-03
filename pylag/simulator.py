@@ -1,3 +1,5 @@
+from progressbar import ProgressBar
+
 from pylag.model import get_model
 from pylag.time_manager import TimeManager
 
@@ -27,12 +29,17 @@ class TraceSimulator(Simulator):
         model.record(self.time_manager.time)
 
         # The main update loop
+        print 'Starting PyLag\n'
+        print 'Progress:'
+        pbar = ProgressBar(maxval=self.time_manager.time_end, term_width=50).start()
         while self.time_manager.time < self.time_manager.time_end:
             model.advect(self.time_manager.time)
             self.time_manager.update_current_time()
             if self.time_manager.write_output_to_file() == 1:
                 model.record(self.time_manager.time)
             model.update_reading_frame(self.time_manager.time)
+            pbar.update(self.time_manager.time)
+        pbar.finish()
 
         # Close output files
         model.shutdown()
