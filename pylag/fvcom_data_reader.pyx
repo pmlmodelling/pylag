@@ -231,8 +231,8 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_FLOAT_t sigma_lower_layer, sigma_upper_layer
         cdef DTYPE_INT_t k_boundary, k_lower_layer, k_upper_layer
         
-        # Time fraction for interpolation in time
-        cdef DTYPE_FLOAT_t time_fraction
+        # Time and sigma fractions for interpolation in time and sigma
+        cdef DTYPE_FLOAT_t time_fraction, sigma_fraction
 
         # Array and loop indices
         cdef DTYPE_INT_t i, j, k, neighbour
@@ -383,6 +383,9 @@ cdef class FVCOMDataReader(DataReader):
         # values at the host element's nodes
         cdef int i # Loop counters
         cdef int vertex # Vertex identifier
+        
+        # Time and sigma fractions for interpolation in time and sigma        
+        cdef DTYPE_FLOAT_t time_fraction, sigma_fraction
         
         # Intermediate arrays - omega
         cdef DTYPE_FLOAT_t omega_tri_t_last_lower_level[N_VERTICES]
