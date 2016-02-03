@@ -1,26 +1,37 @@
 import numpy as np
 from matplotlib import pyplot as plt
+from ConfigParser import SafeConfigParser
 
 from pylag.analytic_data_reader import AnalyticDataReader
 from pylag.particle import Particle
 from pylag.integrator import RK4Integrator
 
+# Create test particle
 group_id = 0
 x_0 = 0.1
 y_0 = 0.1
 z_0 = 0.0
-
 test_particle = Particle(group_id, x_0, y_0, z_0)
 
+# Create data reader
 data_reader = AnalyticDataReader()
 
+# Timings
 time_start = 0.0
 time_end = 3.0
 time_step = 0.01
-
 time = np.arange(time_start,time_end,time_step)
 
-rk4 = RK4Integrator(time_step)
+# Config - needed for creation of RK4Integrator
+config = SafeConfigParser()
+config.add_section("SIMULATION")
+config.add_section("OCEAN_CIRCULATION_MODEL")
+config.set("SIMULATION", "time_step", str(time_step))
+config.set("OCEAN_CIRCULATION_MODEL", "zmin", str(0.0))
+config.set("OCEAN_CIRCULATION_MODEL", "zmax", str(0.0))
+
+# Num integrator
+rk4 = RK4Integrator(config)
 
 xpos_analytic = []
 ypos_analytic = []
@@ -71,6 +82,6 @@ ax.set_xlim(xmin,xmax)
 ax.set_ylim(ymin,ymax)
 ax.set_xlabel('x')
 ax.set_ylabel('y')
-plt.title('RK4 test: particle position of a function of time.')
+plt.title('RK4 test: particle position as a function of time.')
 plt.legend()
 plt.savefig('rk4_test.eps')
