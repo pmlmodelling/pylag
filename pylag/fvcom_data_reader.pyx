@@ -167,13 +167,20 @@ cdef class FVCOMDataReader(DataReader):
         element nodes on sigma levels, which means the two must be handled
         separately.
         """
-        self._get_uv_velocity(time, xpos, ypos, zpos, host, vel)
-        self._get_omega_velocity(time, xpos, ypos, zpos, host, vel)
+        # Barycentric coordinates
+        cdef DTYPE_FLOAT_t phi[3]
+
+        # Barycentric coordinates - precomputed here as required for both u/v 
+        # and omega computations
+        self._get_phi(xpos, ypos, host, phi)
+        
+        self._get_uv_velocity(time, xpos, ypos, zpos, host, phi, vel)
+        self._get_omega_velocity(time, xpos, ypos, zpos, host, phi, vel)
         return
 
     cdef _get_uv_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
-            DTYPE_FLOAT_t vel[3]):
+            DTYPE_FLOAT_t phi[3], DTYPE_FLOAT_t vel[3]):
         """
         Steps:
         1) Determine coordinates of the host element's three neighbouring
@@ -216,14 +223,11 @@ cdef class FVCOMDataReader(DataReader):
         
         cdef DTYPE_FLOAT_t rx, ry
         
-        # Barycentric coords
-        cdef DTYPE_FLOAT_t phi[3]
-        
         # Variables used when determining indices for the sigma layers that
         # bound the particle's position
+        cdef bool particle_found
         cdef bool particle_at_surface_or_bottom_boundary
         cdef DTYPE_FLOAT_t sigma_test
-        cdef bool particle_found
         cdef DTYPE_FLOAT_t sigma_lower_layer, sigma_upper_layer
         cdef DTYPE_INT_t k_boundary, k_lower_layer, k_upper_layer
         
@@ -351,7 +355,7 @@ cdef class FVCOMDataReader(DataReader):
 
     cdef _get_omega_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
-            DTYPE_FLOAT_t vel[3]):
+            DTYPE_FLOAT_t phi[3], DTYPE_FLOAT_t vel[3]):
         """
         Steps:
         1) Determine natural coordinates of the host element - these are used
@@ -369,9 +373,6 @@ cdef class FVCOMDataReader(DataReader):
         10) Perform vertical interpolation of omega between sigma levels at the
         particle's x/y position.
         """
-        # Barycentric coordinates
-        cdef DTYPE_FLOAT_t phi[3]
-
         # Variables used when determining indices for the sigma levels that
         # bound the particle's position
         cdef DTYPE_INT_t k_lower_level, k_upper_level
@@ -395,9 +396,6 @@ cdef class FVCOMDataReader(DataReader):
         # Interpolated omegas on lower and upper bounding sigma levels
         cdef DTYPE_FLOAT_t omega_lower_level
         cdef DTYPE_FLOAT_t omega_upper_level
-
-        # Barycentric coordinates
-        self._get_phi(xpos, ypos, host, phi)
 
         # Determine upper and lower bounding sigma levels
         particle_found = False
