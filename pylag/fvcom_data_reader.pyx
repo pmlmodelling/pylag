@@ -600,9 +600,9 @@ cdef class FVCOMDataReader(DataReader):
             phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
             if phi_test >= 0.0:
                 return guess
-            elif phi_test >= -1.0e-7:
+            elif phi_test >= -EPSILON:
                 logger = logging.getLogger(__name__)
-                logger.warning('Tolerance factor applied when locating host element {}.'.format(guess))
+                logger.warning('EPSILON applied during local host element search.')
                 return guess
 
             # If not, use phi to select the next element to be searched
@@ -635,7 +635,12 @@ cdef class FVCOMDataReader(DataReader):
 
             # Check to see if the particle is in the current element
             phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
-            if phi_test >= 0.0: return i
+            if phi_test >= 0.0:
+                return i
+            elif phi_test >= -EPSILON:
+                logger = logging.getLogger(__name__)
+                logger.warning('EPSILON applied during global host element search.')
+                return i
         return -1
     
     cdef _interp_on_sigma_layer(self, DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_INT_t host,
