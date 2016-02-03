@@ -1,6 +1,8 @@
 # cython: profile=True
 # cython: linetrace=True
 
+include "constants.pxi"
+
 import numpy as np
 from netCDF4 import Dataset, num2date
 import datetime
@@ -104,16 +106,15 @@ cdef class FVCOMDataReader(DataReader):
         Return bathymetry at the supplied x/y coordinates.
         """
         cdef int i # Loop counters
-        cdef int vertex # Vertex identifier
-        cdef int n_vertices = 3 # No. of vertices in a triangl       
-        cdef DTYPE_FLOAT_t phi[3] # Barycentric coordinates 
-        cdef DTYPE_FLOAT_t h_tri[3] # Bathymetry at nodes
+        cdef int vertex # Vertex identifier  
+        cdef DTYPE_FLOAT_t phi[N_VERTICES] # Barycentric coordinates 
+        cdef DTYPE_FLOAT_t h_tri[N_VERTICES] # Bathymetry at nodes
         cdef DTYPE_FLOAT_t h # Bathymetry at (xpos, ypos)
 
         # Barycentric coordinates
         self._get_phi(xpos, ypos, host, phi)
 
-        for i in xrange(n_vertices):
+        for i in xrange(N_VERTICES):
             vertex = self._nv[i,host]
             h_tri[i] = self._h[vertex]
 
@@ -128,26 +129,25 @@ cdef class FVCOMDataReader(DataReader):
         """
         cdef int i # Loop counters
         cdef int vertex # Vertex identifier
-        cdef int n_vertices = 3 # No. of vertices in a triangle
         cdef DTYPE_FLOAT_t zeta # Sea surface elevation at (t, xpos, ypos)
 
         # Intermediate arrays
-        cdef DTYPE_FLOAT_t zeta_tri_t_last[3]
-        cdef DTYPE_FLOAT_t zeta_tri_t_next[3]
-        cdef DTYPE_FLOAT_t zeta_tri[3]
-        cdef DTYPE_FLOAT_t phi[3]
+        cdef DTYPE_FLOAT_t zeta_tri_t_last[N_VERTICES]
+        cdef DTYPE_FLOAT_t zeta_tri_t_next[N_VERTICES]
+        cdef DTYPE_FLOAT_t zeta_tri[N_VERTICES]
+        cdef DTYPE_FLOAT_t phi[N_VERTICES]
 
         # Barycentric coordinates
         self._get_phi(xpos, ypos, host, phi)
 
-        for i in xrange(n_vertices):
+        for i in xrange(N_VERTICES):
             vertex = self._nv[i,host]
             zeta_tri_t_last[i] = self._zeta_last[vertex]
             zeta_tri_t_next[i] = self._zeta_next[vertex]
 
         # Interpolate in time
         time_fraction = interp.get_linear_fraction(time, self._time[self._tidx_last], self._time[self._tidx_next])
-        for i in xrange(n_vertices):
+        for i in xrange(N_VERTICES):
             zeta_tri[i] = interp.linear_interp(time_fraction, zeta_tri_t_last[i], zeta_tri_t_next[i])
 
         # Interpolate in space
@@ -157,7 +157,7 @@ cdef class FVCOMDataReader(DataReader):
 
     cdef get_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
-            DTYPE_FLOAT_t vel[3]):
+            DTYPE_FLOAT_t vel[N_VERTICES]):
         """
         Returns the velocity field u(t,x,y,z) through linear interpolation for a 
         particle residing in the horizontal host element `host'. The actual 
@@ -168,7 +168,7 @@ cdef class FVCOMDataReader(DataReader):
         separately.
         """
         # Barycentric coordinates
-        cdef DTYPE_FLOAT_t phi[3]
+        cdef DTYPE_FLOAT_t phi[N_VERTICES]
 
         # Barycentric coordinates - precomputed here as required for both u/v 
         # and omega computations
@@ -180,7 +180,7 @@ cdef class FVCOMDataReader(DataReader):
 
     cdef _get_uv_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
-            DTYPE_FLOAT_t phi[3], DTYPE_FLOAT_t vel[3]):
+            DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_FLOAT_t vel[N_VERTICES]):
         """
         Steps:
         1) Determine coordinates of the host element's three neighbouring
@@ -355,7 +355,7 @@ cdef class FVCOMDataReader(DataReader):
 
     cdef _get_omega_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
-            DTYPE_FLOAT_t phi[3], DTYPE_FLOAT_t vel[3]):
+            DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_FLOAT_t vel[N_VERTICES]):
         """
         Steps:
         1) Determine natural coordinates of the host element - these are used
@@ -383,15 +383,14 @@ cdef class FVCOMDataReader(DataReader):
         # values at the host element's nodes
         cdef int i # Loop counters
         cdef int vertex # Vertex identifier
-        cdef int n_vertices = 3 # No. of vertices in a triangle
         
         # Intermediate arrays - omega
-        cdef DTYPE_FLOAT_t omega_tri_t_last_lower_level[3]
-        cdef DTYPE_FLOAT_t omega_tri_t_next_lower_level[3]
-        cdef DTYPE_FLOAT_t omega_tri_t_last_upper_level[3]
-        cdef DTYPE_FLOAT_t omega_tri_t_next_upper_level[3]
-        cdef DTYPE_FLOAT_t omega_tri_lower_level[3]
-        cdef DTYPE_FLOAT_t omega_tri_upper_level[3]
+        cdef DTYPE_FLOAT_t omega_tri_t_last_lower_level[N_VERTICES]
+        cdef DTYPE_FLOAT_t omega_tri_t_next_lower_level[N_VERTICES]
+        cdef DTYPE_FLOAT_t omega_tri_t_last_upper_level[N_VERTICES]
+        cdef DTYPE_FLOAT_t omega_tri_t_next_upper_level[N_VERTICES]
+        cdef DTYPE_FLOAT_t omega_tri_lower_level[N_VERTICES]
+        cdef DTYPE_FLOAT_t omega_tri_upper_level[N_VERTICES]
         
         # Interpolated omegas on lower and upper bounding sigma levels
         cdef DTYPE_FLOAT_t omega_lower_level
@@ -413,7 +412,7 @@ cdef class FVCOMDataReader(DataReader):
             raise ValueError("Particle zpos (={} not found!".format(zpos))
 
         # Extract omega on the lower and upper bounding sigma levels
-        for i in xrange(n_vertices):
+        for i in xrange(N_VERTICES):
             vertex = self._nv[i,host]
             omega_tri_t_last_lower_level[i] = self._omega_last[k_lower_level, vertex]
             omega_tri_t_next_lower_level[i] = self._omega_next[k_lower_level, vertex]
@@ -424,7 +423,7 @@ cdef class FVCOMDataReader(DataReader):
         time_fraction = interp.get_linear_fraction(time, 
                                 self._time[self._tidx_last],
                                 self._time[self._tidx_next])
-        for i in xrange(n_vertices):
+        for i in xrange(N_VERTICES):
             omega_tri_lower_level[i] = interp.linear_interp(time_fraction, 
                                                 omega_tri_t_last_lower_level[i],
                                                 omega_tri_t_next_lower_level[i])
@@ -593,7 +592,7 @@ cdef class FVCOMDataReader(DataReader):
         Shadden, S. 2009 TODO
         """
         # Intermediate arrays/variables
-        cdef DTYPE_FLOAT_t phi[3]
+        cdef DTYPE_FLOAT_t phi[N_VERTICES]
         cdef DTYPE_FLOAT_t phi_test
 
         while True:
@@ -630,7 +629,7 @@ cdef class FVCOMDataReader(DataReader):
         cdef int i
 
         # Intermediate arrays/variables
-        cdef DTYPE_FLOAT_t phi[3]
+        cdef DTYPE_FLOAT_t phi[N_VERTICES]
         cdef DTYPE_FLOAT_t phi_test
         
         for i in xrange(self._n_elems):
@@ -642,7 +641,7 @@ cdef class FVCOMDataReader(DataReader):
             if phi_test >= 0.0: return i
         return -1
     
-    cdef _interp_on_sigma_layer(self, DTYPE_FLOAT_t phi[3], DTYPE_INT_t host,
+    cdef _interp_on_sigma_layer(self, DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_INT_t host,
             DTYPE_INT_t kidx):
         """
         Return the linearly interpolated value of sigma on the specified sigma
@@ -663,18 +662,17 @@ cdef class FVCOMDataReader(DataReader):
             Interpolated value of sigma.
         """
         cdef int vertex # Vertex identifier
-        cdef int n_vertices = 3 # No. of vertices in a triangle
-        cdef DTYPE_FLOAT_t sigma_nodes[3]
+        cdef DTYPE_FLOAT_t sigma_nodes[N_VERTICES]
         cdef DTYPE_FLOAT_t sigma # Sigma
 
-        for i in xrange(n_vertices):
+        for i in xrange(N_VERTICES):
             vertex = self._nv[i,host]
             sigma_nodes[i] = self._siglay[kidx, vertex]                  
 
         sigma = interp.interpolate_within_element(sigma_nodes, phi)
         return sigma
 
-    cdef _interp_on_sigma_level(self, DTYPE_FLOAT_t phi[3], DTYPE_INT_t host,
+    cdef _interp_on_sigma_level(self, DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_INT_t host,
             DTYPE_INT_t kidx):
         """
         Return the linearly interpolated value of sigma on the specified sigma
@@ -695,11 +693,10 @@ cdef class FVCOMDataReader(DataReader):
             Interpolated value of sigma.
         """
         cdef int vertex # Vertex identifier
-        cdef int n_vertices = 3 # No. of vertices in a triangle
-        cdef DTYPE_FLOAT_t sigma_nodes[3]
+        cdef DTYPE_FLOAT_t sigma_nodes[N_VERTICES]
         cdef DTYPE_FLOAT_t sigma # Sigma
 
-        for i in xrange(n_vertices):
+        for i in xrange(N_VERTICES):
             vertex = self._nv[i,host]
             sigma_nodes[i] = self._siglev[kidx, vertex]                  
 
@@ -724,16 +721,15 @@ cdef class FVCOMDataReader(DataReader):
         return vel_elem[0] + dudx*rx + dudy*ry
     
     cdef _get_phi(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t host,
-             DTYPE_FLOAT_t phi[3]):
+             DTYPE_FLOAT_t phi[N_VERTICES]):
         cdef int i # Loop counters
         cdef int vertex # Vertex identifier
-        cdef int n_vertices = 3 # No. of vertices in a triangle
 
         # Intermediate arrays
-        cdef DTYPE_FLOAT_t x_tri[3]
-        cdef DTYPE_FLOAT_t y_tri[3]
+        cdef DTYPE_FLOAT_t x_tri[N_VERTICES]
+        cdef DTYPE_FLOAT_t y_tri[N_VERTICES]
 
-        for i in xrange(n_vertices):
+        for i in xrange(N_VERTICES):
             vertex = self._nv[i,host]
             x_tri[i] = self._x[vertex]
             y_tri[i] = self._y[vertex]

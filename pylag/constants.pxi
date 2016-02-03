@@ -1,0 +1,1 @@
+DEF N_VERTICES = 3
