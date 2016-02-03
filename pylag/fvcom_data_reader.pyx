@@ -194,24 +194,24 @@ cdef class FVCOMDataReader(DataReader):
         of the particle.
         """
         # x/y coordinates of element centres
-        cdef DTYPE_FLOAT_t xc[4]
-        cdef DTYPE_FLOAT_t yc[4]
+        cdef DTYPE_FLOAT_t xc[N_NEIGH_ELEMS]
+        cdef DTYPE_FLOAT_t yc[N_NEIGH_ELEMS]
 
         # Temporary array for vel at element centres at last time point
-        cdef DTYPE_FLOAT_t uc_last[4]
-        cdef DTYPE_FLOAT_t vc_last[4]
+        cdef DTYPE_FLOAT_t uc_last[N_NEIGH_ELEMS]
+        cdef DTYPE_FLOAT_t vc_last[N_NEIGH_ELEMS]
 
         # Temporary array for vel at element centres at next time point
-        cdef DTYPE_FLOAT_t uc_next[4]
-        cdef DTYPE_FLOAT_t vc_next[4]
+        cdef DTYPE_FLOAT_t uc_next[N_NEIGH_ELEMS]
+        cdef DTYPE_FLOAT_t vc_next[N_NEIGH_ELEMS]
 
         # Vel at element centres in overlying sigma layer
-        cdef DTYPE_FLOAT_t uc1[4]
-        cdef DTYPE_FLOAT_t vc1[4]
+        cdef DTYPE_FLOAT_t uc1[N_NEIGH_ELEMS]
+        cdef DTYPE_FLOAT_t vc1[N_NEIGH_ELEMS]
 
         # Vel at element centres in underlying sigma layer
-        cdef DTYPE_FLOAT_t uc2[4]
-        cdef DTYPE_FLOAT_t vc2[4]     
+        cdef DTYPE_FLOAT_t uc2[N_NEIGH_ELEMS]
+        cdef DTYPE_FLOAT_t vc2[N_NEIGH_ELEMS]     
         
         # Vel at the given location in the overlying sigma layer
         cdef DTYPE_FLOAT_t up1, vp1
@@ -704,7 +704,7 @@ cdef class FVCOMDataReader(DataReader):
         return sigma
 
     cdef _interpolate_vel_between_elements(self, DTYPE_FLOAT_t xpos, 
-            DTYPE_FLOAT_t ypos, DTYPE_INT_t host, DTYPE_FLOAT_t vel_elem[4]):
+            DTYPE_FLOAT_t ypos, DTYPE_INT_t host, DTYPE_FLOAT_t vel_elem[N_NEIGH_ELEMS]):
 
         cdef DTYPE_FLOAT_t rx, ry
         cdef DTYPE_FLOAT_t dudx, dudy
@@ -715,7 +715,7 @@ cdef class FVCOMDataReader(DataReader):
 
         dudx = 0.0
         dudy = 0.0
-        for i in xrange(4):
+        for i in xrange(N_NEIGH_ELEMS):
             dudx += vel_elem[i] * self._a1u[i, host]
             dudy += vel_elem[i] * self._a2u[i, host]
         return vel_elem[0] + dudx*rx + dudy*ry
