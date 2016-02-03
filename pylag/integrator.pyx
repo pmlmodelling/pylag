@@ -22,8 +22,10 @@ cdef class NumIntegrator:
     
 cdef class RK4Integrator(NumIntegrator):
 
-    def __init__(self, time_step):
-        self._time_step = time_step
+    def __init__(self, config):
+        self._time_step = config.getfloat('SIMULATION', 'time_step')
+        self._zmin = config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmin')
+        self._zmax = config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmax')
     
     cpdef advect(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader):
         """
@@ -71,12 +73,10 @@ cdef class RK4Integrator(NumIntegrator):
         zpos = particle.zpos + 0.5 * k1[2]
         
         # Impose reflecting boundary condition in z
-        zmin = data_reader.get_zmin(xpos, ypos)
-        zmax = data_reader.get_zmax(xpos, ypos)
-        if zpos < zmin:
-            zpos = zmin + zmin - zpos
-        elif zpos > zmax:
-            zpos = zmax + zmax - zpos
+        if zpos < self._zmin:
+            zpos = self._zmin + self._zmin - zpos
+        elif zpos > self._zmax:
+            zpos = self._zmax + self._zmax - zpos
         
         host = data_reader.find_host(xpos, ypos, host)
         if host == -1: return
@@ -91,12 +91,10 @@ cdef class RK4Integrator(NumIntegrator):
         zpos = particle.zpos + 0.5 * k2[2]
         
         # Impose reflecting boundary condition in z
-        zmin = data_reader.get_zmin(xpos, ypos)
-        zmax = data_reader.get_zmax(xpos, ypos)
-        if zpos < zmin:
-            zpos = zmin + zmin - zpos
-        elif zpos > zmax:
-            zpos = zmax + zmax - zpos
+        if zpos < self._zmin:
+            zpos = self._zmin + self._zmin - zpos
+        elif zpos > self._zmax:
+            zpos = self._zmax + self._zmax - zpos
         
         host = data_reader.find_host(xpos, ypos, host)
         if host == -1: return
@@ -111,12 +109,10 @@ cdef class RK4Integrator(NumIntegrator):
         zpos = particle.zpos + k3[2]
         
         # Impose reflecting boundary condition in z
-        zmin = data_reader.get_zmin(xpos, ypos)
-        zmax = data_reader.get_zmax(xpos, ypos)
-        if zpos < zmin:
-            zpos = zmin + zmin - zpos
-        elif zpos > zmax:
-            zpos = zmax + zmax - zpos
+        if zpos < self._zmin:
+            zpos = self._zmin + self._zmin - zpos
+        elif zpos > self._zmax:
+            zpos = self._zmax + self._zmax - zpos
 
         host = data_reader.find_host(xpos, ypos, host)
         if host == -1: return
@@ -130,12 +126,10 @@ cdef class RK4Integrator(NumIntegrator):
         zpos = particle.zpos + (k1[2] + 2.0*k2[2] + 2.0*k3[2] + k4[2])/6.0
 
         # Impose reflecting boundary condition in z
-        zmin = data_reader.get_zmin(xpos, ypos)
-        zmax = data_reader.get_zmax(xpos, ypos)
-        if zpos < zmin:
-            zpos = zmin + zmin - zpos
-        elif zpos > zmax:
-            zpos = zmax + zmax - zpos
+        if zpos < self._zmin:
+            zpos = self._zmin + self._zmin - zpos
+        elif zpos > self._zmax:
+            zpos = self._zmax + self._zmax - zpos
         
         host = data_reader.find_host(xpos, ypos, host)
         if host == -1: return
@@ -148,7 +142,7 @@ cdef class RK4Integrator(NumIntegrator):
 
 def get_num_integrator(config):
     if config.get("SIMULATION", "num_integrator") == "RK4":
-        return RK4Integrator(config.getfloat('SIMULATION', 'time_step'))
+        return RK4Integrator(config)
     else:
         raise ValueError('Unsupported numerical integration scheme.')   
 

@@ -15,7 +15,3 @@ cdef class DataReader:
             DTYPE_FLOAT_t vel[3])
 
     cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess)
-    
-    cpdef get_zmin(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos)
-    
-    cpdef get_zmax(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos)

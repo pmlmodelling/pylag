@@ -12,4 +12,8 @@ cdef class NumIntegrator:
 cdef class RK4Integrator(NumIntegrator):
     cdef DTYPE_FLOAT_t _time_step
 
+    # Grid boundary limits
+    cdef DTYPE_FLOAT_t _zmin
+    cdef DTYPE_FLOAT_t _zmax
+
     cpdef advect(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader)

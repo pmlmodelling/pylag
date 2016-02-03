@@ -451,12 +451,6 @@ cdef class FVCOMDataReader(DataReader):
     cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
         return self.find_host_using_local_search(xpos, ypos, guess)
 
-    cpdef get_zmin(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos):
-        return -1.0
-    
-    cpdef get_zmax(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos):
-        return 0.0
-
     def _read_grid(self):
         logger = logging.getLogger(__name__)
         logger.info('Reading FVCOM\'s grid')
