@@ -85,7 +85,7 @@ cdef class FVCOMOPTModel(OPTModel):
                     # and zeta to determine the distance below the mean free
                     # surface, which is then used to calculate sigma
                     z = z_temp + zeta
-                    sigma = self.data_reader.cartesian_to_sigma_coords(z, h, zeta)
+                    sigma = self._cartesian_to_sigma_coords(z, h, zeta)
                     
                 elif self.config.get("SIMULATION", "depth_coordinates") == "sigma":
                     # sigma ranges from 0.0 at the sea surface to -1.0 at the 
@@ -139,7 +139,7 @@ cdef class FVCOMOPTModel(OPTModel):
             # Derived vars including depth, which is first converted to cartesian coords
             h = self.data_reader.get_bathymetry(particle.xpos, particle.ypos, particle.host_horizontal_elem)
             zeta = self.data_reader.get_sea_sur_elev(time, particle.xpos, particle.ypos, particle.host_horizontal_elem)
-            z = self.data_reader.sigma_to_cartesian_coords(particle.zpos, h, zeta)
+            z = self._sigma_to_cartesian_coords(particle.zpos, h, zeta)
             data['h'].append(h)
             data['zeta'].append(zeta)
             data['zpos'].append(z)
@@ -147,6 +147,14 @@ cdef class FVCOMOPTModel(OPTModel):
         
     def shutdown(self):
         self.data_logger.close()
+        
+    def _sigma_to_cartesian_coords(self, DTYPE_FLOAT_t sigma, DTYPE_FLOAT_t h,
+            DTYPE_FLOAT_t zeta):
+        return zeta + sigma * (h + zeta)
+    
+    def _cartesian_to_sigma_coords(self, DTYPE_FLOAT_t z, DTYPE_FLOAT_t h,
+            DTYPE_FLOAT_t zeta):
+        return (z - zeta) / (h + zeta)
 
 def get_model(config):
     if config.get("OCEAN_CIRCULATION_MODEL", "name") == "FVCOM":
