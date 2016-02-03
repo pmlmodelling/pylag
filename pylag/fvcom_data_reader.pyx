@@ -4,7 +4,7 @@
 include "constants.pxi"
 
 import numpy as np
-from netCDF4 import Dataset, num2date
+from netCDF4 import MFDataset, Dataset, num2date
 import datetime
 import logging
 import ConfigParser
@@ -30,13 +30,16 @@ cdef class FVCOMDataReader(DataReader):
     # Configurtion object
     cdef object config
 
-    # Name of file containing velocity field data
-    cdef object data_file_name
+    # Name of the directory containing grid and field data
+    cdef object data_dir
 
     # Name of file containing grid data
     cdef object grid_file_name
     
-    # NetCDF4 data file giving access to time dependent fields
+    # File name stem common to all data files containing field data
+    cdef object data_file_name_stem
+    
+    # MFNetCDF4 data object giving access to time dependent fields
     cdef object _data_file
     
     # Grid dimensions
@@ -87,7 +90,8 @@ cdef class FVCOMDataReader(DataReader):
     def __init__(self, config):
         self.config = config
 
-        self.data_file_name = config.get("OCEAN_CIRCULATION_MODEL", "data_file")
+        self.data_dir = config.get("OCEAN_CIRCULATION_MODEL", "data_dir")
+        self.data_file_name_stem = config.get("OCEAN_CIRCULATION_MODEL", "data_file_stem")
         try:
             self.grid_file_name = config.get("OCEAN_CIRCULATION_MODEL", "grid_metrics_file")
         except ConfigParser.NoOptionError:
@@ -458,9 +462,9 @@ cdef class FVCOMDataReader(DataReader):
         # Try to read grid data from the grid metrics file, in which neighbour
         # element info (nbe) has been ordered to match node ordering in nv.
         if self.grid_file_name is not None:
-            ncfile = Dataset(self.grid_file_name, 'r')
+            ncfile = Dataset('{}/{}'.format(self.data_dir, self.grid_file_name), 'r')
         else:
-            ncfile = Dataset(self.data_file_name, 'r')
+            ncfile = MFDataset('{}/{}*.nc'.format(self.data_dir, self.data_file_name_stem), 'r')
         
         self._n_nodes = len(ncfile.dimensions['node'])
         self._n_elems = len(ncfile.dimensions['nele'])
@@ -505,7 +509,7 @@ cdef class FVCOMDataReader(DataReader):
         """
         Set up access to the NetCDF data file and initialise time vars/counters.
         """
-        self._data_file = Dataset(self.data_file_name, 'r')
+        self._data_file = MFDataset('{}/{}*.nc'.format(self.data_dir, self.data_file_name_stem), 'r')
         
         # Read in time and convert to a list of datetime objects, then round to 
         # the nearest hour
