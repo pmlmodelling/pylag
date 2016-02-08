@@ -455,6 +455,84 @@ cdef class FVCOMDataReader(DataReader):
     cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
         return self.find_host_using_local_search(xpos, ypos, guess)
 
+    cpdef find_host_using_local_search(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
+        """
+        Try to establish the host horizontal element for the particle.
+        The algorithm adopted is as described in Shadden (2009), adapted for
+        FVCOM's grid which is unstructured in the horizontal only.
+        
+        Parameters:
+        -----------
+        particle: Particle
+        
+        Returns:
+        --------
+        N/A
+        
+        Author(s):
+        ----------------
+        James Clark (PML) October 2015.
+            Implemented algorithm based on Shadden (2009).
+        
+        References:
+        -----------
+        Shadden, S. 2009 TODO
+        """
+        # Intermediate arrays/variables
+        cdef DTYPE_FLOAT_t phi[N_VERTICES]
+        cdef DTYPE_FLOAT_t phi_test
+
+        while True:
+            # Barycentric coordinates
+            self._get_phi(xpos, ypos, guess, phi)
+
+            # Check to see if the particle is in the current element
+            phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
+            if phi_test >= 0.0:
+                return guess
+            elif phi_test >= -EPSILON:
+                logger = logging.getLogger(__name__)
+                logger.warning('EPSILON applied during local host element search.')
+                return guess
+
+            # If not, use phi to select the next element to be searched
+            # TODO epsilon for floating point comp
+            if phi[0] == phi_test:
+                guess = self._nbe[0,guess]
+            elif phi[1] == phi_test:
+                guess = self._nbe[1,guess]
+            elif phi[2] == phi_test:
+                guess = self._nbe[2,guess]
+            else:
+                raise RuntimeError('Host element search algorithm failed.')
+            
+            if guess == -1:
+                # Local search failed
+                return guess
+
+    #@cython.boundscheck(False)
+    cpdef find_host_using_global_search(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos):
+        # Loop counter
+        cdef int i
+
+        # Intermediate arrays/variables
+        cdef DTYPE_FLOAT_t phi[N_VERTICES]
+        cdef DTYPE_FLOAT_t phi_test
+        
+        for i in xrange(self._n_elems):
+            # Barycentric coordinates
+            self._get_phi(xpos, ypos, i, phi)
+
+            # Check to see if the particle is in the current element
+            phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
+            if phi_test >= 0.0:
+                return i
+            elif phi_test >= -EPSILON:
+                logger = logging.getLogger(__name__)
+                logger.warning('EPSILON applied during global host element search.')
+                return i
+        return -1
+
     def _read_grid(self):
         logger = logging.getLogger(__name__)
         logger.info('Reading FVCOM\'s grid')
@@ -567,86 +645,25 @@ cdef class FVCOMDataReader(DataReader):
         self._v_last = self._data_file.variables['v'][self._tidx_last,:,:]
         self._v_next = self._data_file.variables['v'][self._tidx_next,:,:]
         self._omega_last = self._data_file.variables['omega'][self._tidx_last,:,:]
-        self._omega_next = self._data_file.variables['omega'][self._tidx_next,:,:]      
-        
-    cpdef find_host_using_local_search(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
-        """
-        Try to establish the host horizontal element for the particle.
-        The algorithm adopted is as described in Shadden (2009), adapted for
-        FVCOM's grid which is unstructured in the horizontal only.
-        
-        Parameters:
-        -----------
-        particle: Particle
-        
-        Returns:
-        --------
-        N/A
-        
-        Author(s):
-        ----------------
-        James Clark (PML) October 2015.
-            Implemented algorithm based on Shadden (2009).
-        
-        References:
-        -----------
-        Shadden, S. 2009 TODO
-        """
-        # Intermediate arrays/variables
-        cdef DTYPE_FLOAT_t phi[N_VERTICES]
-        cdef DTYPE_FLOAT_t phi_test
+        self._omega_next = self._data_file.variables['omega'][self._tidx_next,:,:]
 
-        while True:
-            # Barycentric coordinates
-            self._get_phi(xpos, ypos, guess, phi)
+    cdef _get_phi(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t host,
+             DTYPE_FLOAT_t phi[N_VERTICES]):
+        cdef int i # Loop counters
+        cdef int vertex # Vertex identifier
 
-            # Check to see if the particle is in the current element
-            phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
-            if phi_test >= 0.0:
-                return guess
-            elif phi_test >= -EPSILON:
-                logger = logging.getLogger(__name__)
-                logger.warning('EPSILON applied during local host element search.')
-                return guess
+        # Intermediate arrays
+        cdef DTYPE_FLOAT_t x_tri[N_VERTICES]
+        cdef DTYPE_FLOAT_t y_tri[N_VERTICES]
 
-            # If not, use phi to select the next element to be searched
-            # TODO epsilon for floating point comp
-            if phi[0] == phi_test:
-                guess = self._nbe[0,guess]
-            elif phi[1] == phi_test:
-                guess = self._nbe[1,guess]
-            elif phi[2] == phi_test:
-                guess = self._nbe[2,guess]
-            else:
-                raise RuntimeError('Host element search algorithm failed.')
-            
-            if guess == -1:
-                # Local search failed
-                return guess
+        for i in xrange(N_VERTICES):
+            vertex = self._nv[i,host]
+            x_tri[i] = self._x[vertex]
+            y_tri[i] = self._y[vertex]
 
-    #@cython.boundscheck(False)
-    cpdef find_host_using_global_search(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos):
-        # Loop counter
-        cdef int i
+        # Calculate barycentric coordinates
+        interp.get_barycentric_coords(xpos, ypos, x_tri, y_tri, phi)
 
-        # Intermediate arrays/variables
-        cdef DTYPE_FLOAT_t phi[N_VERTICES]
-        cdef DTYPE_FLOAT_t phi_test
-        
-        for i in xrange(self._n_elems):
-            # Barycentric coordinates
-            self._get_phi(xpos, ypos, i, phi)
-
-            # Check to see if the particle is in the current element
-            phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
-            if phi_test >= 0.0:
-                return i
-            elif phi_test >= -EPSILON:
-                logger = logging.getLogger(__name__)
-                logger.warning('EPSILON applied during global host element search.')
-                return i
-        return -1
-    
     cdef _interp_on_sigma_layer(self, DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_INT_t host,
             DTYPE_INT_t kidx):
         """
@@ -726,19 +743,3 @@ cdef class FVCOMDataReader(DataReader):
             dudy += vel_elem[i] * self._a2u[i, host]
         return vel_elem[0] + dudx*rx + dudy*ry
     
-    cdef _get_phi(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t host,
-             DTYPE_FLOAT_t phi[N_VERTICES]):
-        cdef int i # Loop counters
-        cdef int vertex # Vertex identifier
-
-        # Intermediate arrays
-        cdef DTYPE_FLOAT_t x_tri[N_VERTICES]
-        cdef DTYPE_FLOAT_t y_tri[N_VERTICES]
-
-        for i in xrange(N_VERTICES):
-            vertex = self._nv[i,host]
-            x_tri[i] = self._x[vertex]
-            y_tri[i] = self._y[vertex]
-
-        # Calculate barycentric coordinates
-        interp.get_barycentric_coords(xpos, ypos, x_tri, y_tri, phi)
