@@ -480,9 +480,19 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_FLOAT_t omega_tri_lower_level[N_VERTICES]
         cdef DTYPE_FLOAT_t omega_tri_upper_level[N_VERTICES]
         
+        # Intermediate arrays - zeta/h
+        cdef DTYPE_FLOAT_t zeta_tri_t_last[N_VERTICES]
+        cdef DTYPE_FLOAT_t zeta_tri_t_next[N_VERTICES]
+        cdef DTYPE_FLOAT_t zeta_tri[N_VERTICES]
+        cdef DTYPE_FLOAT_t h_tri[N_VERTICES]        
+        
         # Interpolated omegas on lower and upper bounding sigma levels
         cdef DTYPE_FLOAT_t omega_lower_level
         cdef DTYPE_FLOAT_t omega_upper_level
+
+        # Interpolated zeta/h
+        cdef DTYPE_FLOAT_t zeta
+        cdef DTYPE_FLOAT_t h
 
         # Determine upper and lower bounding sigma levels
         particle_found = False
@@ -499,15 +509,18 @@ cdef class FVCOMDataReader(DataReader):
         if particle_found is False:
             raise ValueError("Particle zpos (={} not found!".format(zpos))
 
-        # Extract omega on the lower and upper bounding sigma levels
+        # Extract omega on the lower and upper bounding sigma levels, h and zeta
         for i in xrange(N_VERTICES):
             vertex = self._nv[i,host]
             omega_tri_t_last_lower_level[i] = self._omega_last[k_lower_level, vertex]
             omega_tri_t_next_lower_level[i] = self._omega_next[k_lower_level, vertex]
             omega_tri_t_last_upper_level[i] = self._omega_last[k_upper_level, vertex]
             omega_tri_t_next_upper_level[i] = self._omega_next[k_upper_level, vertex]
+            zeta_tri_t_last[i] = self._zeta_last[vertex]
+            zeta_tri_t_next[i] = self._zeta_next[vertex]
+            h_tri[i] = self._h[vertex]
 
-        # Interpolation in time on lower and upper bounding sigma levels
+        # Interpolate omega and zeta in time
         time_fraction = interp.get_linear_fraction(time, 
                                 self._time[self._tidx_last],
                                 self._time[self._tidx_next])
@@ -518,11 +531,13 @@ cdef class FVCOMDataReader(DataReader):
             omega_tri_upper_level[i] = interp.linear_interp(time_fraction, 
                                                 omega_tri_t_last_upper_level[i],
                                                 omega_tri_t_next_upper_level[i])
+            zeta_tri[i] = interp.linear_interp(time_fraction, zeta_tri_t_last[i], zeta_tri_t_next[i])
 
-        # Calculate natural coordinates and interpolate within the host
-        # horizontal element on lower and upper bounding sigma levels
+        # Interpolate omega, zeta and h within the host
         omega_lower_level = interp.interpolate_within_element(omega_tri_lower_level, phi)
         omega_upper_level = interp.interpolate_within_element(omega_tri_upper_level, phi)
+        zeta = interp.interpolate_within_element(zeta_tri, phi)
+        h = interp.interpolate_within_element(h_tri, phi)
 
         # Interpolate between sigma levels
         sigma_fraction = interp.get_linear_fraction(zpos, sigma_lower_level, sigma_upper_level)
@@ -530,7 +545,7 @@ cdef class FVCOMDataReader(DataReader):
             logger = logging.getLogger(__name__)
             logger.info('Invalid sigma fraction (={}) computed for a sigma value of {}.'.format(sigma_fraction, zpos))
             raise ValueError('Sigma out of range.')
-        vel[2] = interp.linear_interp(sigma_fraction, omega_lower_level, omega_upper_level)
+        vel[2] = interp.linear_interp(sigma_fraction, omega_lower_level, omega_upper_level) / (h + zeta)
         return
 
     def _read_grid(self):
