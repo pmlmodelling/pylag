@@ -32,6 +32,9 @@ cdef class AnalyticDataReader(DataReader):
     
     Author: James Clark (PML)
     """
+
+    cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
+        return 0    
     
     cdef get_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
@@ -40,9 +43,10 @@ cdef class AnalyticDataReader(DataReader):
         vel[0] = self._get_u_component(xpos)
         vel[1] = self._get_v_component(ypos)
         vel[2] = 0.0
-
-    cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
-        return 0
+    
+    cdef get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
+            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host):
+        pass
     
     def get_velocity_analytic(self, xpos, ypos, zpos=0.0):
         u = self._get_u_component(xpos)

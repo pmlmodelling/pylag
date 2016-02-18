@@ -263,6 +263,10 @@ cdef class FVCOMDataReader(DataReader):
         self._get_omega_velocity(time, xpos, ypos, zpos, host, phi, vel)
         return
 
+    cdef get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
+            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host):
+        pass
+
     cdef _get_uv_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
             DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_FLOAT_t vel[N_VERTICES]):
