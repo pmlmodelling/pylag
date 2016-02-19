@@ -18,7 +18,6 @@ cdef class NaiveVerticalRandomWalk(VerticalRandomWalk):
         self._time_step = config.getfloat('SIMULATION', 'time_step')
         self._zmin = config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmin')
         self._zmax = config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmax')
-        self._vertical_coordinate_system = config.get('OCEAN_CIRCULATION_MODEL', 'vertical_coordinate_system')
 
     cpdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader):
         """
@@ -79,7 +78,6 @@ cdef class AR0VerticalRandomWalk(VerticalRandomWalk):
         self._time_step = config.getfloat('SIMULATION', 'time_step')
         self._zmin = config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmin')
         self._zmax = config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmax')
-        self._vertical_coordinate_system = config.get('OCEAN_CIRCULATION_MODEL', 'vertical_coordinate_system')
 
     cpdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader):
         """

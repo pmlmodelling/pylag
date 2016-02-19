@@ -18,7 +18,6 @@ cdef class VerticalRandomWalk(RandomWalk):
     # Grid boundary limits
     cdef DTYPE_FLOAT_t _zmin
     cdef DTYPE_FLOAT_t _zmax
-    cdef bytes _vertical_coordinate_system
     cpdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader)
 
 cdef class NaiveVerticalRandomWalk(VerticalRandomWalk):
