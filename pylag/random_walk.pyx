@@ -110,29 +110,17 @@ cdef class AR0VerticalRandomWalk(VerticalRandomWalk):
         cdef DTYPE_FLOAT_t t, xpos, ypos, zpos
         cdef DTYPE_INT_t host
         
-        # Temporary containers for z positions slightly offset from the current
-        # position - used in k and dk_dz calculations
-        cdef DTYPE_FLOAT_t zpos_incremented, zpos_offset
+        # Temporary containers for z position offset from the current position -
+        # used in dk_dz calculations
+        cdef DTYPE_FLOAT_t zpos_offset
         
         # The vertical eddy diffusiviy
-        #     k1 - at tha particle's location
-        #     k2 - at a small distance away from the particle's location
-        #     k3 - at the location the particle is advected too
-        #     dk_dz - gradient in k computed from D1 and D2
-        cdef DTYPE_FLOAT_t k1, k2, k3, dk_dz
+        #     k - at the location the particle is advected too
+        #     dk_dz - gradient in k
+        cdef DTYPE_FLOAT_t k, dk_dz
         
-        # Change in position (m)
+        # Change in position (units can be m, or sigma)
         cdef DTYPE_FLOAT_t dz_advection, dz_random, dz
-        
-        # Change in position (sigma)
-        cdef DTYPE_FLOAT_t ds_advection, ds_random, ds
-        
-        # Depth increment used in the computation of dk/dz
-        cdef DTYPE_FLOAT_t z_increment = (self._zmax - self._zmin)/1000.0
-        
-        # Use the negative of depth_increment at the top of the water column
-        if ((particle.zpos + z_increment) > self._zmax):
-            z_increment = -z_increment
 
         # Compute the vertical eddy diffusivity at the particle's current location
         t = time
@@ -140,16 +128,10 @@ cdef class AR0VerticalRandomWalk(VerticalRandomWalk):
         ypos = particle.ypos
         zpos = particle.zpos
         host = particle.host_horizontal_elem        
-        k1 = data_reader.get_vertical_eddy_diffusivity(t, xpos, ypos, zpos, host)
-        
-        # Compute the vertical eddy diffusiviy a small distance away from the particle's
-        # current location
-        zpos_incremented = zpos + z_increment
-        k2 = data_reader.get_vertical_eddy_diffusivity(t, xpos, ypos, zpos_incremented, host)
 
         # Compute an approximate value for the gradient in the vertical eddy
         # diffusivity at the particles current location.
-        dk_dz = (k2 - k1) / z_increment
+        dk_dz = data_reader.get_vertical_eddy_diffusivity_derivative(t, xpos, ypos, zpos, host)
 
         # Compute the advective component of the random walk
         dz_advection = dk_dz * self._time_step
@@ -160,12 +142,12 @@ cdef class AR0VerticalRandomWalk(VerticalRandomWalk):
         # increasing diffusivity, is there a chance this could walk us outside
         # of the domain?
         zpos_offset = zpos + 0.5 * dz_advection
-        k3 = data_reader.get_vertical_eddy_diffusivity(t, xpos, ypos, zpos_offset, host)
+        k = data_reader.get_vertical_eddy_diffusivity(t, xpos, ypos, zpos_offset, host)
 
         # Compute the random component of the particle's motion
-        dz_random = sqrt(2.0*k3*self._time_step) * random.gauss(1.0)
+        dz_random = sqrt(2.0*k*self._time_step) * random.gauss(1.0)
 
-        # Change in position (in meters)
+        # Change in position
         dz = dz_advection + dz_random
 
         # Apply reflecting boundary conditions

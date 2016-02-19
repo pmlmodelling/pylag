@@ -58,7 +58,7 @@ cdef class AnalyticDataReader(DataReader):
         y = self._get_y(y0, t)
         return x,y
 
-    cpdef get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
+    cdef get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host):
         """
         Object returns the vertical eddy diffusivity based on the profile:
@@ -66,6 +66,30 @@ cdef class AnalyticDataReader(DataReader):
                 8.65898e-6 * zpos**4 + 1.7623e-7 * zpos**5 - 1.40918e-9 * zpos**6
         """
         return self._get_diffusivity(zpos)
+
+    cdef get_vertical_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time, 
+            DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos,
+            DTYPE_INT_t host):
+        """
+        Returns the derivative of the vertical eddy diffusivity, approximated
+        numerically.
+        """
+        cdef DTYPE_FLOAT_t zmax = 40.0 # TODO this should be a config parameter
+        cdef DTYPE_FLOAT_t zpos_increment, zpos_incremented
+        cdef k1, k2
+
+        zpos_increment = 0.001 # TODO this should be computed from z lims
+        
+        # Use the negative of zpos_increment at the top of the water column
+        if ((zpos + zpos_increment) > zmax):
+            z_increment = -zpos_increment
+        
+        zpos_incremented = zpos + zpos_increment
+
+        k1 = self._get_diffusivity(zpos)
+        k2 = self._get_diffusivity(zpos_incremented)
+        
+        return (k2 - k1) / zpos_increment
 
     cpdef get_vertical_eddy_diffusivity_analytic(self, zpos):
         """
