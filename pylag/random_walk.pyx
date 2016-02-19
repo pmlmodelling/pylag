@@ -132,6 +132,9 @@ cdef class AR0VerticalRandomWalk(VerticalRandomWalk):
         # Change in position (m)
         cdef DTYPE_FLOAT_t dz_advection, dz_random, dz
         
+        # Change in position (sigma)
+        cdef DTYPE_FLOAT_t ds_advection, ds_random, ds
+        
         # Depth increment used in the computation of dk/dz
         cdef DTYPE_FLOAT_t z_increment = (self._zmax - self._zmin)/1000.0
         
@@ -151,30 +154,66 @@ cdef class AR0VerticalRandomWalk(VerticalRandomWalk):
         # current location
         zpos_incremented = zpos + z_increment
         k2 = data_reader.get_vertical_eddy_diffusivity(t, xpos, ypos, zpos_incremented, host)
-        
-        # Compute an approximate value for the gradient in the vertical eddy
-        # diffusivity at the particles current location.
-        dk_dz = (k2 - k1) / z_increment
-        
-        # Compute the advective component of the random walk
-        dz_advection = dk_dz * self._time_step
-        
-        # Compute the vertical eddy diffusivity at a position offset by a distance
-        # dz_advection/2. TODO Although the diffusivity will generally be
-        # lower at the boundaries, and this terms acts in the direction of 
-        # increasing diffusivity, is there a chance this could walk us outside
-        # of the domain?
-        zpos_offset = zpos + 0.5 * dz_advection
-        k3 = data_reader.get_vertical_eddy_diffusivity(t, xpos, ypos, zpos_offset, host)
-        
-        # Compute the random component of the particle's motion
-        dz_random = sqrt(2.0*k3*self._time_step) * random.gauss(1.0)
-        
-        # Change in position (in meters)
-        dz = dz_advection + dz_random
+
+        # The following calculations depend on the nature of the grid.
+        # TODO leave this as if logic, subclass, or look into using data_reader
+        # for coordinate transformations?
+        if self._vertical_coordinate_system == "cartesian":
+            # Compute an approximate value for the gradient in the vertical eddy
+            # diffusivity at the particles current location.
+            dk_dz = (k2 - k1) / z_increment
+
+            # Compute the advective component of the random walk
+            dz_advection = dk_dz * self._time_step
+
+            # Compute the vertical eddy diffusivity at a position offset by a distance
+            # dz_advection/2. TODO Although the diffusivity will generally be
+            # lower at the boundaries, and this terms acts in the direction of 
+            # increasing diffusivity, is there a chance this could walk us outside
+            # of the domain?
+            zpos_offset = zpos + 0.5 * dz_advection
+            k3 = data_reader.get_vertical_eddy_diffusivity(t, xpos, ypos, zpos_offset, host)
+
+            # Compute the random component of the particle's motion
+            dz_random = sqrt(2.0*k3*self._time_step) * random.gauss(1.0)
+
+            # Change in position (in meters)
+            dz = dz_advection + dz_random
+            
+            # New z (in m)
+            zpos = zpos + dz
+
+        elif self._vertical_coordinate_system == "sigma":
+            # Compute the water depth
+            h = data_reader.get_bathymetry(xpos, ypos, host)
+            zeta = data_reader.get_sea_sur_elev(t, xpos, ypos, host)
+            depth = h + zeta
+
+            # Compute an approximate value for the gradient in the vertical eddy
+            # diffusivity at the particle's current location.
+            dk_ds = (k2 - k1) / z_increment
+
+            # Compute the advective component of the random walk (carteisan coords)
+            dz_advection = dk_ds * self._time_step / depth
+
+            # Compute the advective component of the random walk (sigma coords)
+            ds_advection = dz_advection / depth
+
+            # Compute the vertical eddy diffusivity at a position offset by a distance
+            # ds_advection/2.
+            zpos_offset = zpos + 0.5 * ds_advection
+            k3 = data_reader.get_vertical_eddy_diffusivity(t, xpos, ypos, zpos_offset, host)
+
+            # Compute the random component of the particle's motion
+            ds_random = sqrt(2.0*k3*self._time_step) * random.gauss(1.0) / depth
+
+            # Change in position (in sigma)
+            ds = ds_advection + ds_random
+            
+            # New z (in sigma)
+            zpos = zpos + ds
         
         # Apply reflecting boundary conditions
-        zpos = zpos + dz
         if zpos < self._zmin:
             zpos = self._zmin + self._zmin - zpos
         elif zpos > self._zmax:
