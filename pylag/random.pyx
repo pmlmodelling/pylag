@@ -13,7 +13,7 @@ import time
 import logging
 
 cimport cython
-from cython_gsl cimport gsl_rng, gsl_rng_alloc, gsl_rng_set, gsl_rng_mt19937, gsl_ran_gaussian
+from cython_gsl cimport gsl_rng, gsl_rng_alloc, gsl_rng_set, gsl_rng_mt19937, gsl_ran_gaussian, gsl_ran_flat
 
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
@@ -44,13 +44,39 @@ def seed(seed=None):
         
 cpdef gauss(DTYPE_FLOAT_t std = 1.0):
     """
-    Generate a deviate from a Gaussian distribution with std 1.0 and mean 0.0.
+    Generate a random Gaussian variate. The Gaussian distribution has a standard
+    deviation of std, and a mean of 0.0.
     
     Parameters:
     -----------
     std: float, optional
         Standard deviation of the Gaussian distribution.
+        
+    Returns:
+    --------
+    variate: float
+        Random Gaussian variate
     """
-    cdef DTYPE_FLOAT_t deviate
-    deviate = gsl_ran_gaussian(r, std)
-    return deviate
+    cdef DTYPE_FLOAT_t variate
+    variate = gsl_ran_gaussian(r, std)
+    return variate
+
+cpdef uniform(DTYPE_FLOAT_t a = -1.0, DTYPE_FLOAT_t b = 1.0):
+    """
+    Generate a random variate within the range [a, b].
+    
+    Parameters:
+    -----------
+    a: float, optional
+        Lower limit
+    b: float, optional
+        Upper limit
+        
+    Returns:
+    --------
+    variate: float
+        Random variate
+    """
+    cdef DTYPE_FLOAT_t variate
+    variate = gsl_ran_flat(r, a, b)
+    return variate
