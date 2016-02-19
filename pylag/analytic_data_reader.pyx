@@ -21,6 +21,12 @@ cdef class AnalyticDataReader(DataReader):
     
     Author: James Clark (PML)
     """
+    cdef DTYPE_FLOAT_t _zmin
+    cdef DTYPE_FLOAT_t _zmax
+    
+    def __init__(self, config):
+        self._zmin = config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmin')
+        self._zmax = config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmax')
 
     cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
         return 0    
@@ -78,10 +84,10 @@ cdef class AnalyticDataReader(DataReader):
         cdef DTYPE_FLOAT_t zpos_increment, zpos_incremented
         cdef k1, k2
 
-        zpos_increment = 0.001 # TODO this should be computed from z lims
+        zpos_increment = (self._zmax - self._zmin) / 1000.0
         
         # Use the negative of zpos_increment at the top of the water column
-        if ((zpos + zpos_increment) > zmax):
+        if ((zpos + zpos_increment) > self._zmax):
             z_increment = -zpos_increment
         
         zpos_incremented = zpos + zpos_increment
