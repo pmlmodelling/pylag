@@ -109,7 +109,7 @@ cdef class FVCOMOPTModel(OPTModel):
                 guess = host_horizontal_elem
             else:
                 in_domain = 0
-                particle = Particle(in_domain=in_domain)
+                particle = Particle(group_id=group, in_domain=in_domain)
                 self.particle_set.append(particle)
 
         logger = logging.getLogger(__name__)
@@ -117,6 +117,9 @@ cdef class FVCOMOPTModel(OPTModel):
 
         # Data logger
         self.data_logger = NetCDFLogger(self.config, len(self.particle_set))
+        
+        # Write particle group ids to file
+        self.data_logger.write_group_ids(group_id)
 
     def update_reading_frame(self, time):
         self.data_reader.update_time_dependent_vars(time)

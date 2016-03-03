@@ -49,6 +49,10 @@ class NetCDFLogger(object):
         self._time.units = 'seconds since 1960-01-01 00:00:00'
         self._time.calendar = 'standard'
         self._time.long_name = 'Time'
+
+        # Add particle group ids
+        self._group_id = self._ncfile.createVariable('group_id','i4',('particles',))
+        self._group_id.long_name = 'Particle group ID'
         
         # Add position variables
         self._xpos = self._ncfile.createVariable('xpos', self._data_type, ('time', 'particles',))
@@ -75,6 +79,9 @@ class NetCDFLogger(object):
         # Add extra grid variables
         #self._indomain = self._ncfile.createVariable('indomain', 'i4', ('Time', 'Particles',))
         #self._inwater = self._ncfile.createVariable('inwater', 'i4', ('Time', 'Particles',))
+
+    def write_group_ids(self, group_ids):
+        self._group_id[:] = group_ids
 
     def write(self, time, particle_data):
         # Next time index
