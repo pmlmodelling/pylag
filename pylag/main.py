@@ -1,3 +1,4 @@
+import os
 import sys
 import argparse
 import logging
@@ -14,6 +15,10 @@ def main():
 
     # Read in run config
     config = get_config(config_filename=parsed_args.config)
+
+    # Create output directory if it does not exist already
+    if not os.path.isdir('{}'.format(config.get('GENERAL', 'out_dir'))):
+        os.mkdir('{}'.format(config.get('GENERAL', 'out_dir')))
     
     # Initiate logging
     logging.basicConfig(filename="{}/pylag_out.log".format(config.get('GENERAL', 'out_dir')),
