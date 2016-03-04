@@ -5,6 +5,7 @@ include "constants.pxi"
 
 import numpy as np
 from netCDF4 import MFDataset, Dataset, num2date
+import glob
 import datetime
 import logging
 import ConfigParser
@@ -24,7 +25,7 @@ cimport interpolation as interp
 
 from math cimport int_min, float_min
 
-from unstruct_grid_tools import round_time, sort_adjacency_array
+from unstruct_grid_tools import round_time, create_fvcom_grid_metrics_file
 
 cdef class FVCOMDataReader(DataReader):
     # Configurtion object
@@ -558,29 +559,34 @@ cdef class FVCOMDataReader(DataReader):
         
         # Try to read grid data from the grid metrics file, in which neighbour
         # element info (nbe) has been ordered to match node ordering in nv.
+        ncfile = None
         if self.grid_file_name is not None:
-            ncfile = Dataset('{}/{}'.format(self.data_dir, self.grid_file_name), 'r')
-        else:
-            ncfile = MFDataset('{}/{}*.nc'.format(self.data_dir, self.data_file_name_stem), 'r')
+            try:
+                ncfile = Dataset('{}'.format(self.grid_file_name), 'r')
+            except RuntimeError:
+                logger.warning('Failed to read grid metrics file {}.'.format(self.grid_file_name))
+        
+        if not ncfile:
+            print 'WARNING: Creating a new grid metrics file. See log file for '\
+                'more information.'
+            logger.info('Either no grid metrics file was given, or it could '\
+                    'not be read. A new grid metrics file will now be created. '\
+                    'For future simulations using the same model grid, please '\
+                    'provide this file in the config -- it will save you time!')
+            file_name_in = glob.glob('{}/{}*.nc'.format(self.data_dir, self.data_file_name_stem))[0]
+            file_name_out = '{}/grid_metrics.nc'.format(self.config.get('GENERAL', 'out_dir'))
+            create_fvcom_grid_metrics_file(file_name_in, file_name_out)
+            logger.info('Created grid metrics file {}.'.format(file_name_out))
+            ncfile = Dataset(file_name_out, 'r')
         
         self._n_nodes = len(ncfile.dimensions['node'])
         self._n_elems = len(ncfile.dimensions['nele'])
         self._n_siglev = len(ncfile.dimensions['siglev'])
         self._n_siglay = len(ncfile.dimensions['siglay'])
         
-        # Grid connectivity/adjacency. If a separate grid metrics file has been
-        # supplied "assume" that nv and nbe have been preprocessed
-        if self.grid_file_name is not None:
-            self._nv = ncfile.variables['nv'][:]
-            self._nbe = ncfile.variables['nbe'][:]
-        else:
-            self._nv = ncfile.variables['nv'][:] - 1
-            
-            logger.info('NO GRID METRICS FILE GIVEN. Grid adjacency will be ' \
-            'computed in run. To save time, this should be precomputed using' \
-            ' unstruct_grid_tools and saved in a separate grid metrics file.')
-            nbe = ncfile.variables['nbe'][:] - 1
-            self._nbe = sort_adjacency_array(self._nv, nbe)
+        # Grid connectivity/adjacency
+        self._nv = ncfile.variables['nv'][:]
+        self._nbe = ncfile.variables['nbe'][:]
 
         self._x = ncfile.variables['x'][:]
         self._y = ncfile.variables['y'][:]

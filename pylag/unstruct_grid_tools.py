@@ -3,10 +3,7 @@ import os
 from netCDF4 import Dataset
 import datetime
 
-def create_fvcom_grid_metrics_file(ncin_file_name):
-    # Name of grid file to be created
-    ncout_file_name = 'grid_metrics.nc'
-
+def create_fvcom_grid_metrics_file(ncin_file_name, ncout_file_name):
     # Make new file with global attributes and copied variables
     var_to_copy = ['nv', 'nbe', 'x', 'y', 'xc', 'yc', 'siglev', 'siglay', 'h', 'a1u', 'a2u']
     os.system("ncks -O -v "+",".join(var_to_copy)+" "+ncin_file_name+" "+ncout_file_name)
