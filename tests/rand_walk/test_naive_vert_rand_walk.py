@@ -11,9 +11,20 @@ from matplotlib import pyplot as plt
 from ConfigParser import SafeConfigParser
 
 from pylag.particle import Particle
-from pylag.analytic_data_reader import AnalyticDataReader
-from pylag.random_walk import NaiveVerticalRandomWalk
+from pylag.analytic_data_reader import TestDiffusivityDataReader
+from pylag.random_walk import NaiveVerticalRandomWalk, AR0VerticalRandomWalk
 import pylag.random as random
+
+def get_vertical_random_walk_model(model_name, config):
+    if model_name == "naive":
+        return NaiveVerticalRandomWalk(config)
+    elif model_name == "ar0":
+        return AR0VerticalRandomWalk(config)
+    else:
+        raise ValueError('Unrecognised vertical random walk model: {}.'.format(model_name))
+
+# Name of model to test
+model_name = "ar0"
 
 # Define a range of z values (measured as height above the sea bed)
 zmin = 0.0
@@ -37,10 +48,7 @@ for i in xrange(n_particles):
     z_0 = random.uniform(zmin, zmax) # Particles uniformly distributed in the first instance
     test_particles.append(Particle(group_id, x_0, y_0, z_0))
 
-# Create data reader
-data_reader = AnalyticDataReader()
-
-# Config - needed for creation of NaiveVerticalRandomWalk
+# Config - needed for creation of data reader and random walk objects
 config = SafeConfigParser()
 config.add_section("SIMULATION")
 config.add_section("OCEAN_CIRCULATION_MODEL")
@@ -49,8 +57,11 @@ config.set("OCEAN_CIRCULATION_MODEL", "vertical_coordinate_system", 'cartesian')
 config.set("OCEAN_CIRCULATION_MODEL", "zmin", str(zmin))
 config.set("OCEAN_CIRCULATION_MODEL", "zmax", str(zmax))
 
-# Random walk
-nvrw = NaiveVerticalRandomWalk(config)
+# Create data reader
+data_reader = TestDiffusivityDataReader(config)
+
+# Vertical random walk model
+vrwm = get_vertical_random_walk_model(model_name, config)
 
 # Depth array
 particle_depths = np.empty((n_particles, n_times), dtype=float)
@@ -59,7 +70,7 @@ particle_depths = np.empty((n_particles, n_times), dtype=float)
 for p_idx, particle in enumerate(test_particles):
     print 'Updating particle {}'.format(p_idx)
     for t_idx, time in enumerate(times):
-        nvrw.random_walk(time, particle, data_reader)
+        vrwm.random_walk(time, particle, data_reader)
         particle_depths[p_idx, t_idx] = particle.zpos
 
 # Bin edges used for concentration calculation
