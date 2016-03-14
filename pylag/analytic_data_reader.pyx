@@ -80,7 +80,6 @@ cdef class AnalyticDataReader(DataReader):
         Returns the derivative of the vertical eddy diffusivity, approximated
         numerically.
         """
-        cdef DTYPE_FLOAT_t zmax = 40.0 # TODO this should be a config parameter
         cdef DTYPE_FLOAT_t zpos_increment, zpos_incremented
         cdef k1, k2
 
