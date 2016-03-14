@@ -41,7 +41,24 @@ cdef class TestVelocityDataReader(DataReader):
         """  
         vel[0] = self._get_u_component(xpos)
         vel[1] = self._get_v_component(ypos)
-        vel[2] = 0.0
+        vel[2] = self._get_w_component(zpos)
+        
+    cdef get_horizontal_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
+            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
+            DTYPE_FLOAT_t vel[2]):
+        """
+        Return horizontal velocity field array for the given space/time 
+        coordinates.
+        """  
+        vel[0] = self._get_u_component(xpos)
+        vel[1] = self._get_v_component(ypos)
+
+    cdef get_vertical_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
+            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host):
+        """
+        Return vertical velocity field for the given space/time coordinates.
+        """  
+        return self._get_w_component(zpos)
 
     def get_velocity_analytic(self, xpos, ypos, zpos=0.0):
         """
@@ -49,7 +66,7 @@ cdef class TestVelocityDataReader(DataReader):
         """  
         u = self._get_u_component(xpos)
         v = self._get_v_component(ypos)
-        w = 0.0
+        w = self._get_w_component(zpos)
         return u,v,w
 
     def get_position_analytic(self, x0, y0, t):
@@ -71,6 +88,9 @@ cdef class TestVelocityDataReader(DataReader):
 
     def _get_v_component(self, DTYPE_FLOAT_t ypos):
         return 1.5 * ypos
+
+    def _get_w_component(self, DTYPE_FLOAT_t zpos):
+        return 0.0
 
 cdef class TestDiffusivityDataReader(DataReader):
     """
