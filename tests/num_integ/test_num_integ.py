@@ -2,7 +2,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from ConfigParser import SafeConfigParser
 
-from pylag.analytic_data_reader import AnalyticDataReader
+from pylag.analytic_data_reader import TestVelocityDataReader
 from pylag.particle import Particle
 from pylag.integrator import RK4Integrator
 
@@ -14,7 +14,7 @@ z_0 = 0.0
 test_particle = Particle(group_id, x_0, y_0, z_0)
 
 # Create data reader
-data_reader = AnalyticDataReader()
+data_reader = TestVelocityDataReader()
 
 # Timings
 time_start = 0.0
