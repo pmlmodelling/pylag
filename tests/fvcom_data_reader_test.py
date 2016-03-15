@@ -72,7 +72,7 @@ class FVCOMDataReader_test(TestCase):
         zpos = -0.1
         time = 0.0
         vel = cwrappers.get_velocity(self.data_reader, time, xpos, ypos, zpos, host)
-        test.assert_array_almost_equal(vel, [2.0, 2.0, 0.5])
+        test.assert_array_almost_equal(vel, [2.0, 2.0, 0.041666667])
 
     def test_get_velocity_in_middle_layer(self):
         xpos = 365751.7
@@ -82,12 +82,12 @@ class FVCOMDataReader_test(TestCase):
         zpos = -0.3
         time = 0.0
         vel = cwrappers.get_velocity(self.data_reader, time, xpos, ypos, zpos, host)
-        test.assert_array_almost_equal(vel, [1.5, 1.5, 1.0])
+        test.assert_array_almost_equal(vel, [1.5, 1.5, 0.083333333])
 
         zpos = -0.3
         time = 1800.0
         vel = cwrappers.get_velocity(self.data_reader, time, xpos, ypos, zpos, host)
-        test.assert_array_almost_equal(vel, [2.25, 2.25, 1.5])
+        test.assert_array_almost_equal(vel, [2.25, 2.25, 0.12])
 
     def test_get_velocity_in_bottom_layer(self):
         xpos = 365751.7
@@ -107,4 +107,34 @@ class FVCOMDataReader_test(TestCase):
         zpos = -0.9
         time = 0.0
         vel = cwrappers.get_velocity(self.data_reader, time, xpos, ypos, zpos, host)
-        test.assert_array_almost_equal(vel, [0.0, 0.0, 0.5])
+        test.assert_array_almost_equal(vel, [0.0, 0.0, 0.041666667])
+
+    def test_get_vertical_eddy_diffusivity(self):
+        xpos = 365751.7
+        ypos = 5323568.0
+        host = 0
+
+        zpos = -0.1
+        time = 0.0
+
+        diffusivity = self.data_reader.get_vertical_eddy_diffusivity(time, xpos, ypos, zpos, host)
+        
+        # Should be 0.5*(0.0 + 0.01)/12 = 0.00041666666 at a position half 
+        # way between the top two sigma levels (-0.1) at t=0.0s, with a water 
+        # depth of (11.0 + 1.0)m. Units are s^{-1}.
+        test.assert_almost_equal(diffusivity, 0.0004166666667)
+
+    def test_get_vertical_eddy_diffusivity_derivative(self):
+        xpos = 365751.7
+        ypos = 5323568.0
+        host = 0
+
+        zpos = -0.1
+        time = 0.0
+
+        diffusivity_gradient = self.data_reader.get_vertical_eddy_diffusivity_derivative(time, xpos, ypos, zpos, host)
+        
+        # Should be (0.0 - 0.01)/(0.0 - (-0.2))/(12*12) = -0.000347222 at a position 
+        # half way between the top two sigma levels (-0.1) at t=0.0s, with a 
+        # water depth of (11.0 + 1.0)m. Units are s^{-1}.
+        test.assert_almost_equal(diffusivity_gradient, -0.00034722222)
