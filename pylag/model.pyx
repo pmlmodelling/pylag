@@ -25,10 +25,7 @@ cdef class OPTModel:
     def update_reading_frame(self, time):
         pass
     
-    def advect(self, time):
-        pass
-    
-    def rand_walk(self, time):
+    def update(self, time):
         pass
     
     def record(self, time):
@@ -121,7 +118,7 @@ cdef class FVCOMOPTModel(OPTModel):
     def update_reading_frame(self, time):
         self.data_reader.update_time_dependent_vars(time)
 
-    def advect(self, DTYPE_FLOAT_t time):
+    def update(self, DTYPE_FLOAT_t time):
         cdef DTYPE_INT_t  i, n_particles
         
         n_particles = len(self.particle_set)

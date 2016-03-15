@@ -33,7 +33,7 @@ class TraceSimulator(Simulator):
         print 'Progress:'
         pbar = ProgressBar(maxval=self.time_manager.time_end, term_width=50).start()
         while self.time_manager.time < self.time_manager.time_end:
-            model.advect(self.time_manager.time)
+            model.update(self.time_manager.time)
             self.time_manager.update_current_time()
             if self.time_manager.write_output_to_file() == 1:
                 model.record(self.time_manager.time)
