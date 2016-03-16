@@ -5,6 +5,7 @@ from ConfigParser import SafeConfigParser
 from pylag.analytic_data_reader import TestVelocityDataReader
 from pylag.particle import Particle
 from pylag.integrator import RK4Integrator
+from pylag.delta import Delta
 
 # Create test particle
 group_id = 0
@@ -38,6 +39,7 @@ ypos_analytic = []
 xpos_numeric = []
 ypos_numeric = []
 
+delta_X = Delta()
 for t in time:
     xpos, ypos = data_reader.get_position_analytic(x_0, y_0, t)
     xpos_analytic.append(xpos)
@@ -46,7 +48,11 @@ for t in time:
     xpos_numeric.append(test_particle.xpos)
     ypos_numeric.append(test_particle.ypos)
     
-    rk4.advect(t, test_particle, data_reader)
+    delta_X.reset()
+    rk4.advect(t, test_particle, data_reader, delta_X)
+    
+    test_particle.xpos += delta_X.x
+    test_particle.ypos += delta_X.y
     
 xmin = np.min(xpos_analytic)
 xmax = np.max(xpos_analytic)
