@@ -15,9 +15,10 @@ from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 # PyLag cimports
 from particle cimport Particle
 from data_reader cimport DataReader
+from delta cimport Delta
 
 cdef class NumIntegrator:
-    cpdef advect(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader):
+    cpdef advect(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader, Delta delta_X):
         pass
     
 cdef class RK4Integrator(NumIntegrator):
@@ -27,7 +28,7 @@ cdef class RK4Integrator(NumIntegrator):
         self._zmin = config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmin')
         self._zmax = config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmax')
     
-    cpdef advect(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader):
+    cpdef advect(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader, Delta delta_X):
         """
         Advect particles forward in time. If particles are advected outside of
         the model domain, the particle's position is not updated. This mimics
@@ -120,25 +121,10 @@ cdef class RK4Integrator(NumIntegrator):
         for i in xrange(ndim):
             k4[i] = self._time_step * vel[i]
 
-        # Calculate the new position
-        xpos = particle.xpos + (k1[0] + 2.0*k2[0] + 2.0*k3[0] + k4[0])/6.0
-        ypos = particle.ypos + (k1[1] + 2.0*k2[1] + 2.0*k3[1] + k4[1])/6.0
-        zpos = particle.zpos + (k1[2] + 2.0*k2[2] + 2.0*k3[2] + k4[2])/6.0
-
-        # Impose reflecting boundary condition in z
-        if zpos < self._zmin:
-            zpos = self._zmin + self._zmin - zpos
-        elif zpos > self._zmax:
-            zpos = self._zmax + self._zmax - zpos
-        
-        host = data_reader.find_host(xpos, ypos, host)
-        if host == -1: return
-
-        # Update the particle's position
-        particle.xpos = xpos
-        particle.ypos = ypos
-        particle.zpos = zpos
-        particle.host_horizontal_elem = host
+        # Sum changes and save
+        delta_X.x = (k1[0] + 2.0*k2[0] + 2.0*k3[0] + k4[0])/6.0
+        delta_X.y = (k1[1] + 2.0*k2[1] + 2.0*k3[1] + k4[1])/6.0
+        delta_X.z = (k1[2] + 2.0*k2[2] + 2.0*k3[2] + k4[2])/6.0
 
 def get_num_integrator(config):
     if config.get("SIMULATION", "num_integrator") == "RK4":

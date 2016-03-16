@@ -9,6 +9,7 @@ from pylag.fvcom_data_reader import FVCOMDataReader
 from pylag.integrator import get_num_integrator
 from pylag.particle_positions_reader import read_particle_initial_positions
 from pylag.particle import Particle
+from pylag.delta import Delta
 from pylag.netcdf_logger import NetCDFLogger
 
 from pylag.data_reader cimport DataReader
@@ -39,9 +40,15 @@ cdef class FVCOMOPTModel(OPTModel):
     cdef NumIntegrator num_integrator
     cdef object particle_set
     cdef object data_logger
-    
+
+    # Grid boundary limits
+    cdef DTYPE_FLOAT_t _zmin
+    cdef DTYPE_FLOAT_t _zmax    
+
     def __init__(self, *args, **kwargs):
         super(FVCOMOPTModel, self).__init__(*args, **kwargs)
+        self._zmin = self.config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmin')
+        self._zmax = self.config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmax')
 
     def initialise(self, time):     
         # Create FVCOM data reader
@@ -119,13 +126,55 @@ cdef class FVCOMOPTModel(OPTModel):
         self.data_reader.update_time_dependent_vars(time)
 
     def update(self, DTYPE_FLOAT_t time):
-        cdef DTYPE_INT_t  i, n_particles
+        """
+        Compute the net effect of resolved and unresolved processes on particle
+        motion in the interval t -> t + dt. Resolved velocities are used to
+        advect particles. A random displacement model is used to model the
+        effect of unresolved (subgrid scale) processes. Particle displacements
+        are first stored and accumulated in an object of type Delta before
+        then being used to update a given particle's position. For now, if a
+        particle crosses a lateral boundary its motion is temporarily arreseted.
+        Reflecting boundary conditions are applied at the bottom and surface
+        boundaries.
+        """
+        cdef DTYPE_FLOAT_t xpos, ypos, zpos
+        cdef DTYPE_INT_t host
+        cdef DTYPE_INT_t i, n_particles
+
+        # Object for storing position deltas resulting from advection and random
+        # displacement in the interval t -> t + dt
+        delta_X = Delta()
         
+        # Cycle over the particle set, updating the position of only those
+        # particles that remain in the model domain
         n_particles = len(self.particle_set)
         for i in xrange(n_particles):
             if self.particle_set[i].in_domain != -1:
-                self.num_integrator.advect(time, self.particle_set[i], self.data_reader)
-        
+                delta_X.reset()
+                self.num_integrator.advect(time, self.particle_set[i], 
+                        self.data_reader, delta_X)
+                
+                # Check for boundary crossings. TODO Particle has left the 
+                # domain. For now, arrest particle motion.
+                xpos = self.particle_set[i].xpos + delta_X.x
+                ypos = self.particle_set[i].ypos + delta_X.y
+                zpos = self.particle_set[i].zpos + delta_X.z
+                host = self.particle_set[i].host_horizontal_elem
+                host = self.data_reader.find_host(xpos, ypos, host)
+                if host == -1: continue
+                    
+                # Apply reflecting surface/bottom boundary conditions
+                if zpos < self._zmin:
+                    zpos = self._zmin + self._zmin - zpos
+                elif zpos > self._zmax:
+                    zpos = self._zmax + self._zmax - zpos
+                
+                # Update the particle's position
+                self.particle_set[i].xpos = xpos
+                self.particle_set[i].ypos = ypos
+                self.particle_set[i].zpos = zpos
+                self.particle_set[i].host_horizontal_elem = host
+
     def record(self, time):
         # Write particle data to file
         data = {'xpos': [], 'ypos': [], 'zpos': [], 'h': [], 'zeta': []}
