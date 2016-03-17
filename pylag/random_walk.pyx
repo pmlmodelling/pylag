@@ -3,14 +3,14 @@ from libc.math cimport sqrt
 cimport pylag.random as random
 
 cdef class RandomWalk:
-    cpdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader):
+    cpdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader, Delta delta_X):
         pass
 
  # Vertical Random Walks
  # ---------------------
  
 cdef class VerticalRandomWalk(RandomWalk):
-    cpdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader):
+    cpdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader, Delta delta_X):
         pass    
 
 cdef class NaiveVerticalRandomWalk(VerticalRandomWalk):
@@ -19,7 +19,7 @@ cdef class NaiveVerticalRandomWalk(VerticalRandomWalk):
         self._zmin = config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmin')
         self._zmax = config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmax')
 
-    cpdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader):
+    cpdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader, Delta delta_X):
         """
         Naive vertical random walk. This method should only be used when
         the vertical eddy diffusivity is homogenous. When it is not, particles
@@ -34,6 +34,8 @@ cdef class NaiveVerticalRandomWalk(VerticalRandomWalk):
             A Particle object. The object's z position will be updated.
         data_reader: object of type DataReader
             A DataReader object. Used for reading the vertical eddy diffusivity.
+        delta_X: object of type Delta
+            A Delta object. Used for storing position deltas.
             
         Returns:
         --------
@@ -60,18 +62,8 @@ cdef class NaiveVerticalRandomWalk(VerticalRandomWalk):
         host = particle.host_horizontal_elem        
         D = data_reader.get_vertical_eddy_diffusivity(t, xpos, ypos, zpos, host)
         
-        # Change in position (in meters)
-        dz = sqrt(2.0*D*self._time_step) * random.gauss(1.0)
-        
-        # Apply reflecting boundary conditions
-        zpos = zpos + dz
-        if zpos < self._zmin:
-            zpos = self._zmin + self._zmin - zpos
-        elif zpos > self._zmax:
-            zpos = self._zmax + self._zmax - zpos
-        
-        # Update the particle's position
-        particle.zpos = zpos
+        # Change in position
+        delta_X.z = sqrt(2.0*D*self._time_step) * random.gauss(1.0)
 
 cdef class AR0VerticalRandomWalk(VerticalRandomWalk):
     def __init__(self, config):
@@ -79,7 +71,7 @@ cdef class AR0VerticalRandomWalk(VerticalRandomWalk):
         self._zmin = config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmin')
         self._zmax = config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmax')
 
-    cpdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader):
+    cpdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader, Delta delta_X):
         """
         AR0 vertical random walk. This method is an extension of the
         NaiveVerticalRandomWalk model to situations in which the eddy diffusivity
@@ -146,23 +138,13 @@ cdef class AR0VerticalRandomWalk(VerticalRandomWalk):
         dz_random = sqrt(2.0*k*self._time_step) * random.gauss(1.0)
 
         # Change in position
-        dz = dz_advection + dz_random
-
-        # Apply reflecting boundary conditions
-        zpos = zpos + dz
-        if zpos < self._zmin:
-            zpos = self._zmin + self._zmin - zpos
-        elif zpos > self._zmax:
-            zpos = self._zmax + self._zmax - zpos
-        
-        # Update the particle's position
-        particle.zpos = zpos
+        delta_X.z = dz_advection + dz_random
 
 cdef class AR0VerticalRandomWalkWithSpline(VerticalRandomWalk):
     def __init__(self, config):
         pass
 
-    cpdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader):
+    cpdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader, Delta delta_X):
         pass
 
 
@@ -170,14 +152,14 @@ cdef class AR0VerticalRandomWalkWithSpline(VerticalRandomWalk):
 # -----------------------
  
 cdef class HorizontalRandomWalk(RandomWalk):
-    cpdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader):
+    cpdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader, Delta delta_X):
         pass  
 
 cdef class NaiveVHorizontalRandomWalk(HorizontalRandomWalk):
     def __init__(self, config):
         pass
 
-    cpdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader):
+    cpdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader, Delta delta_X):
         """
         Naive horizontal random walk. This method should only be used when
         the horizontal eddy diffusivity is both homogenous and isotropic in x
@@ -202,5 +184,5 @@ cdef class AR0HorizontalRandomWalk(HorizontalRandomWalk):
     def __init__(self, config):
         pass
 
-    cpdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader):
+    cpdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader, Delta delta_X):
         pass

@@ -13,6 +13,7 @@ from ConfigParser import SafeConfigParser
 from pylag.particle import Particle
 from pylag.analytic_data_reader import TestDiffusivityDataReader
 from pylag.random_walk import NaiveVerticalRandomWalk, AR0VerticalRandomWalk
+from pylag.delta import Delta
 import pylag.random as random
 
 def get_vertical_random_walk_model(model_name, config):
@@ -24,7 +25,7 @@ def get_vertical_random_walk_model(model_name, config):
         raise ValueError('Unrecognised vertical random walk model: {}.'.format(model_name))
 
 # Name of model to test
-model_name = "ar0"
+model_name = "naive"
 
 # Define a range of z values (measured as height above the sea bed)
 zmin = 0.0
@@ -63,6 +64,9 @@ data_reader = TestDiffusivityDataReader(config)
 # Vertical random walk model
 vrwm = get_vertical_random_walk_model(model_name, config)
 
+# Object for storing position deltas
+delta_X = Delta()
+
 # Depth array
 particle_depths = np.empty((n_particles, n_times), dtype=float)
 
@@ -70,7 +74,19 @@ particle_depths = np.empty((n_particles, n_times), dtype=float)
 for p_idx, particle in enumerate(test_particles):
     print 'Updating particle {}'.format(p_idx)
     for t_idx, time in enumerate(times):
-        vrwm.random_walk(time, particle, data_reader)
+        delta_X.reset()
+
+        vrwm.random_walk(time, particle, data_reader, delta_X)
+        
+        # Apply reflecting boundary conditions
+        zpos = particle.zpos + delta_X.z
+        if zpos < zmin:
+            zpos = zmin + zmin - zpos
+        elif zpos > zmax:
+            zpos = zmax + zmax - zpos
+        
+        particle.zpos = zpos
+        
         particle_depths[p_idx, t_idx] = particle.zpos
 
 # Bin edges used for concentration calculation
