@@ -133,7 +133,7 @@ cdef class FVCOMOPTModel(OPTModel):
         effect of unresolved (subgrid scale) processes. Particle displacements
         are first stored and accumulated in an object of type Delta before
         then being used to update a given particle's position. For now, if a
-        particle crosses a lateral boundary its motion is temporarily arreseted.
+        particle crosses a lateral boundary its motion is temporarily arrested.
         Reflecting boundary conditions are applied at the bottom and surface
         boundaries.
         """
@@ -154,8 +154,8 @@ cdef class FVCOMOPTModel(OPTModel):
                 self.num_integrator.advect(time, self.particle_set[i], 
                         self.data_reader, delta_X)
                 
-                # Check for boundary crossings. TODO Particle has left the 
-                # domain. For now, arrest particle motion.
+                # Check for boundary crossings. TODO For now, arrest particle 
+                # motion.
                 xpos = self.particle_set[i].xpos + delta_X.x
                 ypos = self.particle_set[i].ypos + delta_X.y
                 zpos = self.particle_set[i].zpos + delta_X.z
