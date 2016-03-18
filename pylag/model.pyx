@@ -103,9 +103,9 @@ cdef class FVCOMOPTModel(OPTModel):
                     sigma = z_temp
                 
                 # Check that the given depth is valid
-                if sigma < (-1.0 - sys.float_info.epsilon):
+                if sigma < (self._zmin - sys.float_info.epsilon):
                     raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(z,h))
-                elif sigma > (0.0 + sys.float_info.epsilon):
+                elif sigma > (self._zmax + sys.float_info.epsilon):
                     raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(z,zeta))
 
                 # Create particle
