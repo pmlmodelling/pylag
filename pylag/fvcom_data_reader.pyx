@@ -367,7 +367,7 @@ cdef class FVCOMDataReader(DataReader):
             logger.info('Invalid sigma fraction (={}) computed for a sigma value of {}.'.format(sigma_fraction, zpos))
             raise ValueError('Sigma out of range.')
         
-        return interp.linear_interp(sigma_fraction, kh_lower_level, kh_upper_level) / (h + zeta)
+        return interp.linear_interp(sigma_fraction, kh_lower_level, kh_upper_level) / (h + zeta)**2
 
     cpdef get_vertical_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, 
@@ -381,9 +381,6 @@ cdef class FVCOMDataReader(DataReader):
         
         # Diffusivity gradient
         cdef DTYPE_FLOAT_t k_prime
-        
-        # Bathymetry and sea surface elevation
-        cdef DTYPE_FLOAT_t h, zeta
         
         # Z coordinate vars for the gradient calculation
         cdef DTYPE_FLOAT_t zpos_increment, zpos_incremented
@@ -403,13 +400,8 @@ cdef class FVCOMDataReader(DataReader):
         k1 = self.get_vertical_eddy_diffusivity(time, xpos, ypos, zpos, host)
         k2 = self.get_vertical_eddy_diffusivity(time, xpos, ypos, zpos_incremented, host)
         k_prime = (k2 - k1) / zpos_increment
-        
-        # Normalise by the water depth in order to return the diffusivity 
-        # gradient in sigma space (i.e. units s^{-1})
-        h = self.get_bathymetry(xpos, ypos, host)
-        zeta = self.get_sea_sur_elev(time, xpos, ypos, host)
-        
-        return k_prime / (h + zeta)
+
+        return k_prime
 
     cdef _get_uv_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
