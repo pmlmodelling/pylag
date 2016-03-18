@@ -120,18 +120,20 @@ cdef class AR0VerticalRandomWalk(VerticalRandomWalk):
         host = particle.host_horizontal_elem        
 
         # Compute an approximate value for the gradient in the vertical eddy
-        # diffusivity at the particles current location.
+        # diffusivity at the particle's current location.
         dk_dz = data_reader.get_vertical_eddy_diffusivity_derivative(t, xpos, ypos, zpos, host)
 
         # Compute the advective component of the random walk
         dz_advection = dk_dz * self._time_step
-
+        
         # Compute the vertical eddy diffusivity at a position offset by a distance
-        # dz_advection/2. TODO Although the diffusivity will generally be
-        # lower at the boundaries, and this term acts in the direction of 
-        # increasing diffusivity, is there a chance this could walk us outside
-        # of the domain?
+        # dz_advection/2. Apply reflecting boundary condition if the computed
+        # offset falls outside of the model domain
         zpos_offset = zpos + 0.5 * dz_advection
+        if zpos_offset < self._zmin:
+            zpos_offset = self._zmin + self._zmin - zpos_offset
+        elif zpos_offset > self._zmax:
+            zpos_offset = self._zmax + self._zmax - zpos_offset
         k = data_reader.get_vertical_eddy_diffusivity(t, xpos, ypos, zpos_offset, host)
 
         # Compute the random component of the particle's motion
