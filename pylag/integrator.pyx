@@ -124,8 +124,17 @@ cdef class RK4Integrator(NumIntegrator):
         delta_X.z += (k1[2] + 2.0*k2[2] + 2.0*k3[2] + k4[2])/6.0
 
 def get_num_integrator(config):
+    if not config.has_option("SIMULATION", "num_integrator"):
+        logger = logging.getLogger(__name__)
+        logger.info('Configuation option num_integrator not found. The model '\
+            'will run without advection.')
+        return None
+    
+    # Return the specified numerical integrator.
     if config.get("SIMULATION", "num_integrator") == "RK4":
         return RK4Integrator(config)
+    elif config.get("SIMULATION", "num_integrator") == "None":
+        return None
     else:
         raise ValueError('Unsupported numerical integration scheme.')   
 

@@ -162,8 +162,9 @@ cdef class FVCOMOPTModel(OPTModel):
                 delta_X.reset()
                 
                 # Advection
-                self.num_integrator.advect(time, self.particle_set[i], 
-                        self.data_reader, delta_X)
+                if self.num_integrator is not None:
+                    self.num_integrator.advect(time, self.particle_set[i], 
+                            self.data_reader, delta_X)
                 
                 # Vertical random walk
                 self.vert_rand_walk_model.random_walk(time, self.particle_set[i], 
