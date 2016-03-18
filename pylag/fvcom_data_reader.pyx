@@ -1,6 +1,3 @@
-# cython: profile=True
-# cython: linetrace=True
-
 include "constants.pxi"
 
 import numpy as np
@@ -163,7 +160,6 @@ cdef class FVCOMDataReader(DataReader):
                 # Local search failed
                 return guess
 
-    #@cython.boundscheck(False)
     cpdef find_host_using_global_search(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos):
         # Loop counter
         cdef int i

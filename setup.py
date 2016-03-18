@@ -20,4 +20,8 @@ setup(name="PyLag",
       url="gitlab.ecosystem-modelling.pml.ac.uk:jimc/PyLag.git",
       packages=["pylag"],
       ext_modules=cythonize(extensions, include_path=['include']),
+      #ext_modules=cythonize(extensions, include_path=['include'],
+      #    compiler_directives={'profile': True, 
+      #    'linetrace': True, 'boundscheck': True,
+      #    'cdivision_warnings': True, 'initializedcheck': True}),
 )

@@ -1,6 +1,3 @@
-# cython: profile=True
-# cython: linetrace=True
-
 import numpy as np
 
 # Cython imports

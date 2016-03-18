@@ -1,6 +1,3 @@
-# cython: profile=True
-# cython: linetrace=True
-
 # Cython imports
 cimport numpy as np
 np.import_array()
