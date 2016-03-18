@@ -1,3 +1,5 @@
+import logging
+
 from libc.math cimport sqrt
 
 cimport pylag.random as random
@@ -190,9 +192,18 @@ cdef class AR0HorizontalRandomWalk(HorizontalRandomWalk):
         pass
 
 def get_vertical_random_walk_model(config):
+    if not config.has_option("SIMULATION", "vertical_random_walk_model"):
+        logger = logging.getLogger(__name__)
+        logger.info('Configuation option vertical_random_walk_model not found. '\
+        'The model will run without vertical random walk.')
+        return None
+
+    # Return the specified vertical random walk model.
     if config.get("SIMULATION", "vertical_random_walk_model") == "naive":
         return NaiveVerticalRandomWalk(config)
     elif config.get("SIMULATION", "vertical_random_walk_model") == "AR0":
         return AR0VerticalRandomWalk(config)
+    elif config.get("SIMULATION", "vertical_random_walk_model") == "None":
+        return None
     else:
-        raise ValueError('Unrecognised vertical random walk model: {}.'.format(config.get("SIMULATION", "vertical_random_walk_model")))
+        raise ValueError('Unrecognised vertical random walk model.')
