@@ -9,7 +9,7 @@ extensions = [
         ["pylag/*.pyx"],
         libraries = cython_gsl.get_libraries(),
         library_dirs = [cython_gsl.get_library_dir()],
-        include_dirs = ["./include", cython_gsl.get_cython_include_dir()])      
+        include_dirs = [cython_gsl.get_cython_include_dir()])      
 ]
 
 setup(name="PyLag",
@@ -19,5 +19,5 @@ setup(name="PyLag",
       author_email="jcl@pml.ac.uk",
       url="gitlab.ecosystem-modelling.pml.ac.uk:jimc/PyLag.git",
       packages=["pylag"],
-      ext_modules=cythonize(extensions),
+      ext_modules=cythonize(extensions, include_path=['include']),
 )
