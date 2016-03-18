@@ -1,3 +1,6 @@
 *.log
 *.pyc
 *~
+*.c
+*.html
+*.nc
