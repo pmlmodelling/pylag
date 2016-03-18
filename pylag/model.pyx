@@ -60,7 +60,7 @@ cdef class FVCOMOPTModel(OPTModel):
         # Create numerical integrator
         self.num_integrator = get_num_integrator(self.config)
 
-        # Create numerical integrator
+        # Create vertical random walk model
         self.vert_rand_walk_model = get_vertical_random_walk_model(self.config)
 
         # Create particle seed - particles stored in a list object
