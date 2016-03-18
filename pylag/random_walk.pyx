@@ -188,3 +188,11 @@ cdef class AR0HorizontalRandomWalk(HorizontalRandomWalk):
 
     cpdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader, Delta delta_X):
         pass
+
+def get_vertical_random_walk_model(config):
+    if config.get("SIMULATION", "vertical_random_walk_model") == "naive":
+        return NaiveVerticalRandomWalk(config)
+    elif config.get("SIMULATION", "vertical_random_walk_model") == "AR0":
+        return AR0VerticalRandomWalk(config)
+    else:
+        raise ValueError('Unrecognised vertical random walk model: {}.'.format(config.get("SIMULATION", "vertical_random_walk_model")))
