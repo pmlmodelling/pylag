@@ -7,6 +7,7 @@ from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 from pylag.fvcom_data_reader import FVCOMDataReader
 from pylag.integrator import get_num_integrator
+from pylag.random_walk import get_vertical_random_walk_model
 from pylag.particle_positions_reader import read_particle_initial_positions
 from pylag.particle import Particle
 from pylag.delta import Delta
@@ -14,6 +15,7 @@ from pylag.netcdf_logger import NetCDFLogger
 
 from pylag.data_reader cimport DataReader
 from pylag.integrator cimport NumIntegrator
+from pylag.random_walk cimport VerticalRandomWalk
 
 cdef class OPTModel:
     cdef object config
@@ -38,6 +40,7 @@ cdef class OPTModel:
 cdef class FVCOMOPTModel(OPTModel):
     cdef DataReader data_reader
     cdef NumIntegrator num_integrator
+    cdef VerticalRandomWalk vert_rand_walk_model 
     cdef object particle_set
     cdef object data_logger
 
@@ -56,6 +59,9 @@ cdef class FVCOMOPTModel(OPTModel):
         
         # Create numerical integrator
         self.num_integrator = get_num_integrator(self.config)
+
+        # Create numerical integrator
+        self.vert_rand_walk_model = get_vertical_random_walk_model(self.config)
 
         # Create particle seed - particles stored in a list object
         self.particle_set = []
@@ -151,16 +157,21 @@ cdef class FVCOMOPTModel(OPTModel):
         for i in xrange(n_particles):
             if self.particle_set[i].in_domain != -1:
                 delta_X.reset()
+                
+                # Advection
                 self.num_integrator.advect(time, self.particle_set[i], 
                         self.data_reader, delta_X)
+                
+                # Vertical random walk
+                self.vert_rand_walk_model.random_walk(time, self.particle_set[i], 
+                        self.data_reader, delta_X)                
                 
                 # Check for boundary crossings. TODO For now, arrest particle 
                 # motion.
                 xpos = self.particle_set[i].xpos + delta_X.x
                 ypos = self.particle_set[i].ypos + delta_X.y
                 zpos = self.particle_set[i].zpos + delta_X.z
-                host = self.particle_set[i].host_horizontal_elem
-                host = self.data_reader.find_host(xpos, ypos, host)
+                host = self.data_reader.find_host(xpos, ypos, self.particle_set[i].host_horizontal_elem)
                 if host == -1: continue
                     
                 # Apply reflecting surface/bottom boundary conditions

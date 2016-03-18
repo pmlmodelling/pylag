@@ -122,9 +122,9 @@ cdef class RK4Integrator(NumIntegrator):
             k4[i] = self._time_step * vel[i]
 
         # Sum changes and save
-        delta_X.x = (k1[0] + 2.0*k2[0] + 2.0*k3[0] + k4[0])/6.0
-        delta_X.y = (k1[1] + 2.0*k2[1] + 2.0*k3[1] + k4[1])/6.0
-        delta_X.z = (k1[2] + 2.0*k2[2] + 2.0*k3[2] + k4[2])/6.0
+        delta_X.x += (k1[0] + 2.0*k2[0] + 2.0*k3[0] + k4[0])/6.0
+        delta_X.y += (k1[1] + 2.0*k2[1] + 2.0*k3[1] + k4[1])/6.0
+        delta_X.z += (k1[2] + 2.0*k2[2] + 2.0*k3[2] + k4[2])/6.0
 
 def get_num_integrator(config):
     if config.get("SIMULATION", "num_integrator") == "RK4":

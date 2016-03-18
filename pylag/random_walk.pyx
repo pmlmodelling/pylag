@@ -63,7 +63,7 @@ cdef class NaiveVerticalRandomWalk(VerticalRandomWalk):
         D = data_reader.get_vertical_eddy_diffusivity(t, xpos, ypos, zpos, host)
         
         # Change in position
-        delta_X.z = sqrt(2.0*D*self._time_step) * random.gauss(1.0)
+        delta_X.z += sqrt(2.0*D*self._time_step) * random.gauss(1.0)
 
 cdef class AR0VerticalRandomWalk(VerticalRandomWalk):
     def __init__(self, config):
