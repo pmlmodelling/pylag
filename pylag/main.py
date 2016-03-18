@@ -6,6 +6,7 @@ import subprocess
 
 from pylag.configuration import get_config
 from pylag.simulator import get_simulator
+import pylag.random as random
 
 def main():
     # Parse command line agruments
@@ -37,6 +38,9 @@ def main():
     with open("{}/pylag_out.cfg".format(config.get('GENERAL', 'out_dir')), 'wb') as config_out:
         logger.info('Writing run config to file')
         config.write(config_out)
+    
+    # Initialise the RNG
+    random.seed()
     
     # Run the simulation
     simulator = get_simulator(config)

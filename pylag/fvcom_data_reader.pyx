@@ -75,13 +75,17 @@ cdef class FVCOMDataReader(DataReader):
     cdef DTYPE_FLOAT_t[:] _zeta_last
     cdef DTYPE_FLOAT_t[:] _zeta_next
     
-    # u/v velocity components
+    # u/v/w velocity components
     cdef DTYPE_FLOAT_t[:,:] _u_last
     cdef DTYPE_FLOAT_t[:,:] _u_next
     cdef DTYPE_FLOAT_t[:,:] _v_last
     cdef DTYPE_FLOAT_t[:,:] _v_next
     cdef DTYPE_FLOAT_t[:,:] _omega_last
     cdef DTYPE_FLOAT_t[:,:] _omega_next
+    
+    # Diffusivities
+    cdef DTYPE_FLOAT_t[:,:] _kh_last
+    cdef DTYPE_FLOAT_t[:,:] _kh_next
     
     # Time array
     cdef DTYPE_FLOAT_t[:] _time
@@ -264,9 +268,141 @@ cdef class FVCOMDataReader(DataReader):
         self._get_omega_velocity(time, xpos, ypos, zpos, host, phi, vel)
         return
 
-    cdef get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
+    cpdef get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host):
-        pass
+        """
+        Returns the vertical eddy diffusivity k(t,x,y,z) through linear
+        interpolation.
+        """
+        # Barycentric coordinates
+        cdef DTYPE_FLOAT_t phi[N_VERTICES]
+        
+        # Variables used when determining indices for the sigma levels that
+        # bound the particle's position
+        cdef DTYPE_INT_t k_lower_level, k_upper_level
+        cdef DTYPE_FLOAT_t sigma_lower_level, sigma_upper_level        
+        cdef bool particle_found
+
+        # No. of vertices and a temporary object used for determining variable
+        # values at the host element's nodes
+        cdef int i # Loop counters
+        cdef int vertex # Vertex identifier
+        
+        # Time and sigma fractions for interpolation in time and sigma        
+        cdef DTYPE_FLOAT_t time_fraction, sigma_fraction
+        
+        # Intermediate arrays - kh
+        cdef DTYPE_FLOAT_t kh_tri_t_last_lower_level[N_VERTICES]
+        cdef DTYPE_FLOAT_t kh_tri_t_next_lower_level[N_VERTICES]
+        cdef DTYPE_FLOAT_t kh_tri_t_last_upper_level[N_VERTICES]
+        cdef DTYPE_FLOAT_t kh_tri_t_next_upper_level[N_VERTICES]
+        cdef DTYPE_FLOAT_t kh_tri_lower_level[N_VERTICES]
+        cdef DTYPE_FLOAT_t kh_tri_upper_level[N_VERTICES]
+        
+        # Intermediate arrays - zeta/h
+        cdef DTYPE_FLOAT_t zeta_tri_t_last[N_VERTICES]
+        cdef DTYPE_FLOAT_t zeta_tri_t_next[N_VERTICES]
+        cdef DTYPE_FLOAT_t zeta_tri[N_VERTICES]
+        cdef DTYPE_FLOAT_t h_tri[N_VERTICES]        
+        
+        # Interpolated diffusivities on lower and upper bounding sigma levels
+        cdef DTYPE_FLOAT_t kh_lower_level
+        cdef DTYPE_FLOAT_t kh_upper_level
+
+        # Interpolated zeta/h
+        cdef DTYPE_FLOAT_t zeta
+        cdef DTYPE_FLOAT_t h
+
+        # Compute barycentric coordinates for the given x/y coordinates
+        self._get_phi(xpos, ypos, host, phi)
+
+        # Determine upper and lower bounding sigma levels
+        particle_found = False
+        for i in xrange(self._n_siglay):
+            k_lower_level = i + 1
+            k_upper_level = i
+            sigma_lower_level = self._interp_on_sigma_level(phi, host, k_lower_level)
+            sigma_upper_level = self._interp_on_sigma_level(phi, host, k_upper_level)
+            
+            if zpos <= sigma_upper_level and zpos >= sigma_lower_level:
+                particle_found = True
+                break
+        
+        if particle_found is False:
+            raise ValueError("Particle zpos (={} not found!".format(zpos))
+
+        # Extract kh on the lower and upper bounding sigma levels, h and zeta
+        for i in xrange(N_VERTICES):
+            vertex = self._nv[i,host]
+            kh_tri_t_last_lower_level[i] = self._kh_last[k_lower_level, vertex]
+            kh_tri_t_next_lower_level[i] = self._kh_next[k_lower_level, vertex]
+            kh_tri_t_last_upper_level[i] = self._kh_last[k_upper_level, vertex]
+            kh_tri_t_next_upper_level[i] = self._kh_next[k_upper_level, vertex]
+            zeta_tri_t_last[i] = self._zeta_last[vertex]
+            zeta_tri_t_next[i] = self._zeta_next[vertex]
+            h_tri[i] = self._h[vertex]
+
+        # Interpolate kh and zeta in time
+        time_fraction = interp.get_linear_fraction(time, 
+                                self._time[self._tidx_last],
+                                self._time[self._tidx_next])
+        for i in xrange(N_VERTICES):
+            kh_tri_lower_level[i] = interp.linear_interp(time_fraction, 
+                                                kh_tri_t_last_lower_level[i],
+                                                kh_tri_t_next_lower_level[i])
+            kh_tri_upper_level[i] = interp.linear_interp(time_fraction, 
+                                                kh_tri_t_last_upper_level[i],
+                                                kh_tri_t_next_upper_level[i])
+            zeta_tri[i] = interp.linear_interp(time_fraction, zeta_tri_t_last[i], zeta_tri_t_next[i])
+
+        # Interpolate kh, zeta and h within the host
+        kh_lower_level = interp.interpolate_within_element(kh_tri_lower_level, phi)
+        kh_upper_level = interp.interpolate_within_element(kh_tri_upper_level, phi)
+        zeta = interp.interpolate_within_element(zeta_tri, phi)
+        h = interp.interpolate_within_element(h_tri, phi)
+
+        # Interpolate between sigma levels
+        sigma_fraction = interp.get_linear_fraction(zpos, sigma_lower_level, sigma_upper_level)
+        if sigma_fraction < 0.0 or sigma_fraction > 1.0:
+            logger = logging.getLogger(__name__)
+            logger.info('Invalid sigma fraction (={}) computed for a sigma value of {}.'.format(sigma_fraction, zpos))
+            raise ValueError('Sigma out of range.')
+        
+        return interp.linear_interp(sigma_fraction, kh_lower_level, kh_upper_level) / (h + zeta)**2
+
+    cpdef get_vertical_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
+            DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, 
+            DTYPE_INT_t host):
+        """
+        Return a numerical approximation of the gradient in the vertical eddy 
+        diffusivity at (t,x,y,z).
+        """
+        # Diffusivities
+        cdef DTYPE_FLOAT_t kh1, kh2
+        
+        # Diffusivity gradient
+        cdef DTYPE_FLOAT_t k_prime
+        
+        # Z coordinate vars for the gradient calculation
+        cdef DTYPE_FLOAT_t zpos_increment, zpos_incremented
+        
+        # Use a point arbitrarily close to zpos (in sigma coordinates) for the 
+        # gradient calculation
+        zpos_increment = 1.0e-3
+        
+        # Use the negative of zpos_increment at the top of the water column
+        if ((zpos + zpos_increment) > 0.0):
+            zpos_increment = -zpos_increment
+            
+        # A point close to zpos
+        zpos_incremented = zpos + zpos_increment
+
+        # Compute the gradient
+        k1 = self.get_vertical_eddy_diffusivity(time, xpos, ypos, zpos, host)
+        k2 = self.get_vertical_eddy_diffusivity(time, xpos, ypos, zpos_incremented, host)
+        k_prime = (k2 - k1) / zpos_increment
+
+        return k_prime
 
     cdef _get_uv_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
@@ -660,17 +796,21 @@ cdef class FVCOMDataReader(DataReader):
         self._tidx_last = tidx_last
         self._tidx_next = tidx_next
         
-        # Initialise memory views for zeta
+        # Update memory views for zeta
         self._zeta_last = self._data_file.variables['zeta'][self._tidx_last,:]
         self._zeta_next = self._data_file.variables['zeta'][self._tidx_next,:]
         
-        # Initialise memory views for u, v and w
+        # Update memory views for u, v and w
         self._u_last = self._data_file.variables['u'][self._tidx_last,:,:]
         self._u_next = self._data_file.variables['u'][self._tidx_next,:,:]
         self._v_last = self._data_file.variables['v'][self._tidx_last,:,:]
         self._v_next = self._data_file.variables['v'][self._tidx_next,:,:]
         self._omega_last = self._data_file.variables['omega'][self._tidx_last,:,:]
         self._omega_next = self._data_file.variables['omega'][self._tidx_next,:,:]
+        
+        # Update memory views for kh
+        self._kh_last = self._data_file.variables['kh'][self._tidx_last,:,:]
+        self._kh_next = self._data_file.variables['kh'][self._tidx_next,:,:]
 
     cdef _get_phi(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t host,
              DTYPE_FLOAT_t phi[N_VERTICES]):
