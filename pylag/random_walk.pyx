@@ -48,13 +48,7 @@ cdef class NaiveVerticalRandomWalk(VerticalRandomWalk):
         cdef DTYPE_INT_t host
         
         # The vertical eddy diffusiviy
-        cdef DTYPE_FLOAT_t D        
-        
-        # Change in position (m)
-        cdef DTYPE_FLOAT_t dz
-        
-        # Water depth and sea surface elevation (only used for sigma coordinates)
-        cdef DTYPE_FLOAT_t h, zeta
+        cdef DTYPE_FLOAT_t D
 
         # The vertical eddy diffusivity at the particle's current location
         t = time
@@ -183,7 +177,7 @@ cdef class NaiveVHorizontalRandomWalk(HorizontalRandomWalk):
         N/A
         """
         pass
-
+        
 cdef class AR0HorizontalRandomWalk(HorizontalRandomWalk):
     def __init__(self, config):
         pass
