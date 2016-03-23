@@ -20,6 +20,8 @@ from data_reader cimport DataReader
 
 cimport interpolation as interp
 
+from pylag.velocity cimport Velocity
+
 from math cimport int_min, float_min
 
 from unstruct_grid_tools import round_time, create_fvcom_grid_metrics_file
@@ -243,7 +245,7 @@ cdef class FVCOMDataReader(DataReader):
 
     cdef get_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
-            DTYPE_FLOAT_t vel[N_VERTICES]):
+            DTYPE_FLOAT_t vel[3]):
         """
         Returns the velocity field u(t,x,y,z) through linear interpolation for a 
         particle residing in the horizontal host element `host'. The actual 
@@ -255,14 +257,42 @@ cdef class FVCOMDataReader(DataReader):
         """
         # Barycentric coordinates
         cdef DTYPE_FLOAT_t phi[N_VERTICES]
+        
+        # u/v velocity array
+        cdef DTYPE_FLOAT_t vel_uv[2]
+        
+        cdef DTYPE_INT_t i
 
         # Barycentric coordinates - precomputed here as required for both u/v 
         # and omega computations
         self._get_phi(xpos, ypos, host, phi)
         
-        self._get_uv_velocity(time, xpos, ypos, zpos, host, phi, vel)
-        self._get_omega_velocity(time, xpos, ypos, zpos, host, phi, vel)
+        # Compute u/v velocities and save
+        self._get_uv_velocity(time, xpos, ypos, zpos, host, phi, vel_uv)
+        for i in xrange(2):
+            vel[i] = vel_uv[i]
+        
+        # Compute omega velocity and save
+        vel[2] = self._get_omega_velocity(time, xpos, ypos, zpos, host, phi)
         return
+
+    cdef get_horizontal_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
+            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host, 
+            DTYPE_FLOAT_t vel[2]):
+        # Barycentric coordinates
+        cdef DTYPE_FLOAT_t phi[N_VERTICES]
+
+        self._get_phi(xpos, ypos, host, phi)        
+        self._get_uv_velocity(time, xpos, ypos, zpos, host, phi, vel)
+        return
+    
+    cdef get_vertical_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
+            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host):
+        # Barycentric coordinates
+        cdef DTYPE_FLOAT_t phi[N_VERTICES]
+
+        self._get_phi(xpos, ypos, host, phi)
+        return self._get_omega_velocity(time, xpos, ypos, zpos, host, phi)
 
     cpdef get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host):
@@ -402,7 +432,7 @@ cdef class FVCOMDataReader(DataReader):
 
     cdef _get_uv_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
-            DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_FLOAT_t vel[N_VERTICES]):
+            DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_FLOAT_t vel[2]):
         """
         Steps:
         1) Determine coordinates of the host element's three neighbouring
@@ -576,8 +606,8 @@ cdef class FVCOMDataReader(DataReader):
         return
 
     cdef _get_omega_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
-            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
-            DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_FLOAT_t vel[N_VERTICES]):
+            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host, 
+            DTYPE_FLOAT_t phi[N_VERTICES]):
         """
         Steps:
         1) Determine natural coordinates of the host element - these are used
@@ -682,8 +712,7 @@ cdef class FVCOMDataReader(DataReader):
             logger = logging.getLogger(__name__)
             logger.info('Invalid sigma fraction (={}) computed for a sigma value of {}.'.format(sigma_fraction, zpos))
             raise ValueError('Sigma out of range.')
-        vel[2] = interp.linear_interp(sigma_fraction, omega_lower_level, omega_upper_level) / (h + zeta)
-        return
+        return interp.linear_interp(sigma_fraction, omega_lower_level, omega_upper_level) / (h + zeta)
 
     def _read_grid(self):
         logger = logging.getLogger(__name__)
