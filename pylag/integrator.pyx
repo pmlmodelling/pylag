@@ -208,7 +208,7 @@ def get_num_integrator(config):
     # Return the specified numerical integrator.
     if config.get("SIMULATION", "num_integrator") == "RK4_2D":
         return RK4Integrator2D(config)
-    if config.get("SIMULATION", "num_integrator") == "RK4_3D":
+    elif config.get("SIMULATION", "num_integrator") == "RK4_3D":
         return RK4Integrator3D(config)
     elif config.get("SIMULATION", "num_integrator") == "None":
         return None
