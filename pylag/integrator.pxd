@@ -10,8 +10,13 @@ from delta cimport Delta
 
 cdef class NumIntegrator:
     cpdef advect(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader, Delta delta_X)
+
+cdef class RK4Integrator2D(NumIntegrator):
+    cdef DTYPE_FLOAT_t _time_step
+
+    cpdef advect(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader, Delta delta_X)
     
-cdef class RK4Integrator(NumIntegrator):
+cdef class RK4Integrator3D(NumIntegrator):
     cdef DTYPE_FLOAT_t _time_step
 
     # Grid boundary limits
