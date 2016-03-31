@@ -7,7 +7,7 @@ from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 from pylag.fvcom_data_reader import FVCOMDataReader
 from pylag.integrator import get_num_integrator
-from pylag.random_walk import get_vertical_random_walk_model
+from pylag.random_walk import get_vertical_random_walk_model, get_horizontal_random_walk_model
 from pylag.particle_positions_reader import read_particle_initial_positions
 from pylag.particle import Particle
 from pylag.delta import Delta
@@ -15,7 +15,7 @@ from pylag.netcdf_logger import NetCDFLogger
 
 from pylag.data_reader cimport DataReader
 from pylag.integrator cimport NumIntegrator
-from pylag.random_walk cimport VerticalRandomWalk
+from pylag.random_walk cimport VerticalRandomWalk, HorizontalRandomWalk
 
 cdef class OPTModel:
     cdef object config
@@ -40,7 +40,8 @@ cdef class OPTModel:
 cdef class FVCOMOPTModel(OPTModel):
     cdef DataReader data_reader
     cdef NumIntegrator num_integrator
-    cdef VerticalRandomWalk vert_rand_walk_model 
+    cdef VerticalRandomWalk vert_rand_walk_model
+    cdef HorizontalRandomWalk horiz_rand_walk_model 
     cdef object particle_set
     cdef object data_logger
 
@@ -62,6 +63,9 @@ cdef class FVCOMOPTModel(OPTModel):
 
         # Create vertical random walk model
         self.vert_rand_walk_model = get_vertical_random_walk_model(self.config)
+
+        # Create horizontal random walk model
+        self.horiz_rand_walk_model = get_horizontal_random_walk_model(self.config)
 
         # Create particle seed - particles stored in a list object
         self.particle_set = []
@@ -169,7 +173,12 @@ cdef class FVCOMOPTModel(OPTModel):
                 # Vertical random walk
                 if self.vert_rand_walk_model is not None:
                     self.vert_rand_walk_model.random_walk(time, self.particle_set[i], 
-                            self.data_reader, delta_X)                
+                            self.data_reader, delta_X)
+
+#                # Horizontal random walk
+#                if self.horiz_rand_walk_model is not None:
+#                    self.horiz_rand_walk_model.random_walk(time, self.particle_set[i], 
+#                            self.data_reader, delta_X)  
                 
                 # Check for boundary crossings. TODO For now, arrest particle 
                 # motion.
@@ -178,7 +187,7 @@ cdef class FVCOMOPTModel(OPTModel):
                 zpos = self.particle_set[i].zpos + delta_X.z
                 host = self.data_reader.find_host(xpos, ypos, self.particle_set[i].host_horizontal_elem)
                 if host == -1: continue
-                    
+
                 # Apply reflecting surface/bottom boundary conditions
                 if zpos < self._zmin:
                     zpos = self._zmin + self._zmin - zpos
