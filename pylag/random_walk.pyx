@@ -153,7 +153,7 @@ cdef class HorizontalRandomWalk(RandomWalk):
     cpdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader, Delta delta_X):
         pass  
 
-cdef class NaiveVHorizontalRandomWalk(HorizontalRandomWalk):
+cdef class NaiveHorizontalRandomWalk(HorizontalRandomWalk):
     def __init__(self, config):
         pass
 
