@@ -224,7 +224,24 @@ def get_vertical_random_walk_model(config):
         return NaiveVerticalRandomWalk(config)
     elif config.get("SIMULATION", "vertical_random_walk_model") == "AR0":
         return AR0VerticalRandomWalk(config)
-    elif config.get("SIMULATION", "vertical_random_walk_model") == "None":
+    elif config.get("SIMULATION", "vertical_random_walk_model") == "none":
         return None
     else:
         raise ValueError('Unrecognised vertical random walk model.')
+    
+def get_horizontal_random_walk_model(config):
+    if not config.has_option("SIMULATION", "horizontal_random_walk_model"):
+        logger = logging.getLogger(__name__)
+        logger.info('Configuation option horizontal_random_walk_model not found. '\
+        'The model will run without horizontal random walk.')
+        return None
+
+    # Return the specified horizontal random walk model.
+    if config.get("SIMULATION", "horizontal_random_walk_model") == "constant":
+        return ConstantHorizontalRandomWalk(config)
+    elif config.get("SIMULATION", "horizontal_random_walk_model") == "naive":
+        return NaiveHorizontalRandomWalk(config)
+    elif config.get("SIMULATION", "horizontal_random_walk_model") == "none":
+        return None
+    else:
+        raise ValueError('Unrecognised horizontal random walk model.')
