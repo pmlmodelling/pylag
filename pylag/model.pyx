@@ -175,10 +175,10 @@ cdef class FVCOMOPTModel(OPTModel):
                     self.vert_rand_walk_model.random_walk(time, self.particle_set[i], 
                             self.data_reader, delta_X)
 
-#                # Horizontal random walk
-#                if self.horiz_rand_walk_model is not None:
-#                    self.horiz_rand_walk_model.random_walk(time, self.particle_set[i], 
-#                            self.data_reader, delta_X)  
+                # Horizontal random walk
+                if self.horiz_rand_walk_model is not None:
+                    self.horiz_rand_walk_model.random_walk(time, self.particle_set[i], 
+                            self.data_reader, delta_X)  
                 
                 # Check for boundary crossings. TODO For now, arrest particle 
                 # motion.
