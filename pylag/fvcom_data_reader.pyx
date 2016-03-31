@@ -294,6 +294,22 @@ cdef class FVCOMDataReader(DataReader):
         self._get_phi(xpos, ypos, host, phi)
         return self._get_omega_velocity(time, xpos, ypos, zpos, host, phi)
 
+    cpdef get_horizontal_eddy_diffusivity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
+            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host):
+        """
+        Returns the horizontal eddy diffusivity fiscofh(t,x,y,z) through ...?
+        """
+        pass
+
+    cpdef get_horizontal_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
+            DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, 
+            DTYPE_INT_t host):
+        """
+        Returns the spatial derivative of the horizontal eddy diffusivity 
+        fiscofh(t,x,y,z) through ...?
+        """
+        pass
+
     cpdef get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host):
         """
@@ -932,4 +948,3 @@ cdef class FVCOMDataReader(DataReader):
             dudx += vel_elem[i] * self._a1u[i, host]
             dudy += vel_elem[i] * self._a2u[i, host]
         return vel_elem[0] + dudx*rx + dudy*ry
-    
