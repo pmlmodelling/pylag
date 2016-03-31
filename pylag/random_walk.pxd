@@ -20,6 +20,7 @@ cdef class VerticalRandomWalk(RandomWalk):
     # Grid boundary limits
     cdef DTYPE_FLOAT_t _zmin
     cdef DTYPE_FLOAT_t _zmax
+
     cpdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader, Delta dalta_X)
 
 cdef class NaiveVerticalRandomWalk(VerticalRandomWalk):
@@ -34,6 +35,11 @@ cdef class AR0VerticalRandomWalkWithSpline(VerticalRandomWalk):
 
 # Horizontal random walks
 cdef class HorizontalRandomWalk(RandomWalk):
+    cpdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader, Delta dalta_X)
+
+cdef class ConstantHorizontalRandomWalk(HorizontalRandomWalk):
+    cdef DTYPE_FLOAT_t _kh
+
     cpdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader, Delta dalta_X)
     
 cdef class NaiveHorizontalRandomWalk(HorizontalRandomWalk):

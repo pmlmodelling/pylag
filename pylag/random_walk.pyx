@@ -153,6 +153,33 @@ cdef class HorizontalRandomWalk(RandomWalk):
     cpdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader, Delta delta_X):
         pass  
 
+cdef class ConstantHorizontalRandomWalk(HorizontalRandomWalk):
+    def __init__(self, config):
+        self._time_step = config.getfloat('SIMULATION', 'time_step')
+        self._kh = config.getfloat("OCEAN_CIRCULATION_MODEL", "horizontal_eddy_diffusivity")
+
+    cpdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader, Delta delta_X):
+        """
+        Horizontal random walk using a constant value for the horizontal eddy 
+        diffusivity that is provided as a parameter value.
+        
+        Parameters:
+        -----------
+        time: float
+            The current time.
+        particle: object of type Particle
+            A Particle object. The object's z position will be updated.
+        data_reader: object of type DataReader
+            A DataReader object. Used for reading the vertical eddy diffusivity.
+            
+        Returns:
+        --------
+        N/A
+        """
+        # Change in position
+        delta_X.x += sqrt(2.0*self._kh*self._time_step) * random.gauss(1.0)
+        delta_X.y += sqrt(2.0*self._kh*self._time_step) * random.gauss(1.0)
+
 cdef class NaiveHorizontalRandomWalk(HorizontalRandomWalk):
     def __init__(self, config):
         pass
@@ -177,7 +204,7 @@ cdef class NaiveHorizontalRandomWalk(HorizontalRandomWalk):
         N/A
         """
         pass
-        
+
 cdef class AR0HorizontalRandomWalk(HorizontalRandomWalk):
     def __init__(self, config):
         pass
