@@ -156,7 +156,7 @@ cdef class HorizontalRandomWalk(RandomWalk):
 cdef class ConstantHorizontalRandomWalk(HorizontalRandomWalk):
     def __init__(self, config):
         self._time_step = config.getfloat('SIMULATION', 'time_step')
-        self._kh = config.getfloat("OCEAN_CIRCULATION_MODEL", "horizontal_eddy_diffusivity")
+        self._kh = config.getfloat("SIMULATION", "horizontal_eddy_diffusivity_constant")
 
     cpdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader, Delta delta_X):
         """
