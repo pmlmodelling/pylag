@@ -82,9 +82,13 @@ cdef class FVCOMDataReader(DataReader):
     cdef DTYPE_FLOAT_t[:,:] _omega_last
     cdef DTYPE_FLOAT_t[:,:] _omega_next
     
-    # Diffusivities
+    # Vertical eddy diffusivities
     cdef DTYPE_FLOAT_t[:,:] _kh_last
     cdef DTYPE_FLOAT_t[:,:] _kh_next
+    
+    # Horizontal eddy diffusivities
+    cdef DTYPE_FLOAT_t[:,:] _viscofh_last
+    cdef DTYPE_FLOAT_t[:,:] _viscofh_next
     
     # Time array
     cdef DTYPE_FLOAT_t[:] _time
@@ -297,9 +301,145 @@ cdef class FVCOMDataReader(DataReader):
     cpdef get_horizontal_eddy_diffusivity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host):
         """
-        Returns the horizontal eddy diffusivity fiscofh(t,x,y,z) through ...?
+        Returns the horizontal eddy diffusivity fiscofh(t,x,y,z) through linear
+        interpolation. viscofh is defined at element nodes on sigma layers.
+        Above and below the top and bottom sigma layers respectivey viscofh is
+        extrapolated, taking a value equal to that on the layer. Linear
+        interpolation in the vertical is used for z positions lying between the
+        top and bottom sigma layers.
+        
+        TODO
+        - Create tests.
+        - Minimise code duplication?
         """
-        pass
+        # Barycentric coordinates
+        cdef DTYPE_FLOAT_t phi[N_VERTICES]
+
+        # Variables used when determining indices for the sigma layers that
+        # bound the particle's position
+        cdef bool particle_found
+        cdef bool particle_at_surface_or_bottom_boundary
+        cdef DTYPE_FLOAT_t sigma_test
+        cdef DTYPE_FLOAT_t sigma_lower_layer, sigma_upper_layer
+        cdef DTYPE_INT_t k_boundary, k_lower_layer, k_upper_layer
+
+        # No. of vertices and a temporary object used for determining variable
+        # values at the host element's nodes
+        cdef int i # Loop counters
+        cdef int vertex # Vertex identifier
+        
+        # Time and sigma fractions for interpolation in time and sigma        
+        cdef DTYPE_FLOAT_t time_fraction, sigma_fraction
+        
+        # Intermediate arrays - viscofh
+        cdef DTYPE_FLOAT_t viscofh_tri_t_last_layer_1[N_VERTICES]
+        cdef DTYPE_FLOAT_t viscofh_tri_t_next_layer_1[N_VERTICES]
+        cdef DTYPE_FLOAT_t viscofh_tri_t_last_layer_2[N_VERTICES]
+        cdef DTYPE_FLOAT_t viscofh_tri_t_next_layer_2[N_VERTICES]
+        cdef DTYPE_FLOAT_t viscofh_tri_layer_1[N_VERTICES]
+        cdef DTYPE_FLOAT_t viscofh_tri_layer_2[N_VERTICES]     
+        
+        # Interpolated diffusivities on lower and upper bounding sigma layers
+        cdef DTYPE_FLOAT_t viscofh_layer_1
+        cdef DTYPE_FLOAT_t viscofh_layer_2
+
+        # Barycentric coordinates
+        self._get_phi(xpos, ypos, host, phi)
+        
+        # Find the sigma layers bounding the particle's position. First check
+        # the upper and lower boundaries, then the centre of the water columnun.
+        particle_found = False
+        particle_at_surface_or_bottom_boundary = False
+        
+        # Try the top sigma layer
+        k = 0
+        sigma_test = self._interp_on_sigma_layer(phi, host, k)
+        if zpos >= sigma_test:
+            particle_at_surface_or_bottom_boundary = True
+            k_boundary = k
+            
+            particle_found = True
+        else:
+            # ... the bottom sigma layer
+            k = self._n_siglay - 1
+            sigma_test = self._interp_on_sigma_layer(phi, host, k)
+            if zpos <= sigma_test:
+                particle_at_surface_or_bottom_boundary = True
+                k_boundary = k
+                
+                particle_found = True
+            else:
+                # ... search the middle of the water column
+                for k in xrange(1, self._n_siglay):
+                    sigma_test = self._interp_on_sigma_layer(phi, host, k)
+                    if zpos >= sigma_test:
+                        k_lower_layer = k
+                        k_upper_layer = k - 1
+
+                        sigma_lower_layer = self._interp_on_sigma_layer(phi, host, k_lower_layer)
+                        sigma_upper_layer = self._interp_on_sigma_layer(phi, host, k_upper_layer)
+
+                        particle_found = True
+                        break
+        
+        if particle_found is False:
+            raise ValueError("Particle zpos (={}) not found!".format(zpos))
+
+        # Time fraction
+        time_fraction = interp.get_linear_fraction(time, self._time[self._tidx_last], self._time[self._tidx_next])
+        if time_fraction < 0.0 or time_fraction > 1.0:
+            logger = logging.getLogger(__name__)
+            logger.info('Invalid time fraction computed at time {}s.'.format(time))
+            raise ValueError('Time out of range.')
+
+        # No vertical interpolation for particles near to the surface or bottom, 
+        # i.e. above or below the top or bottom sigma layer depths respectively.
+        if particle_at_surface_or_bottom_boundary is True:
+            # Extract viscofh near to the boundary
+            for i in xrange(N_VERTICES):
+                vertex = self._nv[i,host]
+                viscofh_tri_t_last_layer_1[i] = self._viscofh_last[k_boundary, vertex]
+                viscofh_tri_t_next_layer_1[i] = self._viscofh_next[k_boundary, vertex]
+
+            # Interpolate in time
+            for i in xrange(N_VERTICES):
+                viscofh_tri_layer_1[i] = interp.linear_interp(time_fraction, 
+                                            viscofh_tri_t_last_layer_1[i],
+                                            viscofh_tri_t_next_layer_1[i])
+
+            # Interpolate viscofh within the host element
+            return interp.interpolate_within_element(viscofh_tri_layer_1, phi)
+
+        else:
+            # Extract viscofh on the lower and upper bounding sigma layers
+            for i in xrange(N_VERTICES):
+                vertex = self._nv[i,host]
+                viscofh_tri_t_last_layer_1[i] = self._viscofh_last[k_lower_layer, vertex]
+                viscofh_tri_t_next_layer_1[i] = self._viscofh_next[k_lower_layer, vertex]
+                viscofh_tri_t_last_layer_2[i] = self._viscofh_last[k_upper_layer, vertex]
+                viscofh_tri_t_next_layer_2[i] = self._viscofh_next[k_upper_layer, vertex]
+
+            # Interpolate in time
+            for i in xrange(N_VERTICES):
+                viscofh_tri_layer_1[i] = interp.linear_interp(time_fraction, 
+                                            viscofh_tri_t_last_layer_1[i],
+                                            viscofh_tri_t_next_layer_1[i])
+                viscofh_tri_layer_2[i] = interp.linear_interp(time_fraction, 
+                                            viscofh_tri_t_last_layer_2[i],
+                                            viscofh_tri_t_next_layer_2[i])
+
+            # Interpolate viscofh within the host element on the upper and lower
+            # bounding sigma layers
+            viscofh_layer_1 = interp.interpolate_within_element(viscofh_tri_layer_1, phi)
+            viscofh_layer_2 = interp.interpolate_within_element(viscofh_tri_layer_2, phi)
+
+            # Vertical interpolation
+            sigma_fraction = interp.get_linear_fraction(zpos, sigma_lower_layer, sigma_upper_layer)
+            if sigma_fraction < 0.0 or sigma_fraction > 1.0:
+                logger = logging.getLogger(__name__)
+                logger.info('Invalid sigma fraction (={}) computed for a sigma value of {}.'.format(sigma_fraction, zpos))
+                raise ValueError('Sigma out of range.')
+            return interp.linear_interp(sigma_fraction, viscofh_layer_1, viscofh_layer_2)
 
     cpdef get_horizontal_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, 
@@ -852,6 +992,10 @@ cdef class FVCOMDataReader(DataReader):
         # Update memory views for kh
         self._kh_last = self._data_file.variables['kh'][self._tidx_last,:,:]
         self._kh_next = self._data_file.variables['kh'][self._tidx_next,:,:]
+        
+        # Update memory views for viscofh
+        self._viscofh_last = self._data_file.variables['viscofh'][self._tidx_last,:,:]
+        self._viscofh_next = self._data_file.variables['viscofh'][self._tidx_next,:,:]
 
     cdef _get_phi(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t host,
              DTYPE_FLOAT_t phi[N_VERTICES]):
