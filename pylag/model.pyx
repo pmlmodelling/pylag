@@ -193,6 +193,12 @@ cdef class FVCOMOPTModel(OPTModel):
                     zpos = self._zmin + self._zmin - zpos
                 elif zpos > self._zmax:
                     zpos = self._zmax + self._zmax - zpos
+
+                # Check for valid zpos
+                if zpos < (self._zmin - sys.float_info.epsilon):
+                    raise ValueError("New zpos (= {}) lies below the sea floor.".format(zpos))
+                elif zpos > (self._zmax + sys.float_info.epsilon):
+                    raise ValueError("New zpos (= {}) lies above the free surface.".format(zpos))                
                 
                 # Update the particle's position
                 self.particle_set[i].xpos = xpos
