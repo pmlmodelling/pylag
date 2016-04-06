@@ -6,12 +6,18 @@
 Welcome to PyLag's documentation!
 =================================
 
-Contents:
+PyLag is a particle tracking tool tailored for marine applications. It has been
+written in a mixture of `Python <http://www.python.org>`_ and 
+`Cython <http://www.cython.org>`_.
 
 .. toctree::
+   :caption: Table of Contents
    :maxdepth: 2
-
-
+   
+   getting_started
+   modules
+   examples
+   acknowledgements
 
 Indices and tables
 ==================
