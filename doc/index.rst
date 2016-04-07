@@ -15,8 +15,9 @@ written in a mixture of `Python <http://www.python.org>`_ and
    :maxdepth: 2
    
    getting_started
-   modules
    examples
+   documentation/index
+   licensing
    acknowledgements
 
 Indices and tables

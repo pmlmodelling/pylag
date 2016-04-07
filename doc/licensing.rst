@@ -1,0 +1,5 @@
+.. _licensing:
+
+*********
+Licensing
+*********
