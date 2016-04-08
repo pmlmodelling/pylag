@@ -7,4 +7,4 @@ Documentation
 .. toctree::
    :maxdepth: 1
    
-   overview/index
+   overview
