@@ -8,3 +8,4 @@ Documentation
    :maxdepth: 1
    
    overview
+   setup
