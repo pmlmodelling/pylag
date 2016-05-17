@@ -5,7 +5,8 @@ import datetime
 
 def create_fvcom_grid_metrics_file(ncin_file_name, ncout_file_name):
     # Make new file with global attributes and copied variables
-    var_to_copy = ['nv', 'nbe', 'x', 'y', 'xc', 'yc', 'siglev', 'siglay', 'h', 'a1u', 'a2u']
+    var_to_copy = ['nv', 'nbe', 'x', 'y', 'xc', 'yc', 'lat', 'lon', 'latc', 
+            'lonc', 'siglev', 'siglay', 'h', 'a1u', 'a2u']
     os.system("ncks -O -v "+",".join(var_to_copy)+" "+ncin_file_name+" "+ncout_file_name)
     
     # Update nv, nbe, a1u and a2u
