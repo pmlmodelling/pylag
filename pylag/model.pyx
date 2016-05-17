@@ -208,10 +208,11 @@ cdef class FVCOMOPTModel(OPTModel):
 
     def record(self, time):
         # Write particle data to file
-        data = {'xpos': [], 'ypos': [], 'zpos': [], 'h': [], 'zeta': []}
+        data = {'xpos': [], 'ypos': [], 'zpos': [], 'host_horizontal_elem': [], 'h': [], 'zeta': []}
         for particle in self.particle_set:
             data['xpos'].append(particle.xpos)
             data['ypos'].append(particle.ypos)
+            data['host_horizontal_elem'].append(particle.host_horizontal_elem)            
             
             # Derived vars including depth, which is first converted to cartesian coords
             h = self.data_reader.get_bathymetry(particle.xpos, particle.ypos, particle.host_horizontal_elem)
