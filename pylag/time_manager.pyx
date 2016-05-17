@@ -1,6 +1,7 @@
 import numpy as np
 import copy
 import datetime
+import ConfigParser
 
 # Cython imports
 cimport numpy as np
@@ -27,9 +28,16 @@ cdef class TimeManager(object):
     def _initialise_time_vars(self, config):
         datetime_start = config.get("SIMULATION", "start_datetime")
         self._datetime_start = datetime.datetime.strptime(datetime_start, "%Y-%m-%d %H:%M:%S")
-        datetime_end = config.get("SIMULATION", "end_datetime")
-        self._datetime_end = datetime.datetime.strptime(datetime_end, "%Y-%m-%d %H:%M:%S")
         
+        # If an explicit end datetime is given, use this. If not, check if a
+        # run duration has been given instead.
+        try:
+            datetime_end = config.get("SIMULATION", "end_datetime")
+            self._datetime_end = datetime.datetime.strptime(datetime_end, "%Y-%m-%d %H:%M:%S")
+        except ConfigParser.NoOptionError:
+            duration_in_days = config.getfloat("SIMULATION", "duration")
+            self._datetime_end = self._datetime_start + datetime.timedelta(duration_in_days)
+
         # Convert time counters to seconds (of type int)
         self._time_start = 0.0
         self._time_end = (self._datetime_end - self._datetime_start).total_seconds()
