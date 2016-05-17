@@ -66,6 +66,10 @@ class NetCDFLogger(object):
         self._zpos = self._ncfile.createVariable('zpos', self._data_type, ('time', 'particles',))
         self._zpos.units = 'meters (m)'
         self._zpos.long_name = 'Particle z position'
+
+        self._host = self._ncfile.createVariable('host', 'i4', ('time', 'particles',))
+        self._host.units = 'None'
+        self._host.long_name = 'Host horizontal element'
         
         # Add local environmental variables
         self._h = self._ncfile.createVariable('h', self._data_type, ('time', 'particles',))
@@ -94,6 +98,7 @@ class NetCDFLogger(object):
         self._xpos[tidx, :] = particle_data['xpos']
         self._ypos[tidx, :] = particle_data['ypos']
         self._zpos[tidx, :] = particle_data['zpos']
+        self._host[tidx, :] = particle_data['host_horizontal_elem']
         self._h[tidx, :] = particle_data['h']
         self._zeta[tidx, :] = particle_data['zeta']
         
