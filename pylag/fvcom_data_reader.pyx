@@ -20,8 +20,6 @@ from data_reader cimport DataReader
 
 cimport interpolation as interp
 
-from pylag.velocity cimport Velocity
-
 from math cimport int_min, float_min
 
 from unstruct_grid_tools import round_time, create_fvcom_grid_metrics_file
