@@ -969,7 +969,7 @@ cdef class FVCOMDataReader(DataReader):
             logger = logging.getLogger(__name__)
             logger.info('The provided time {}s lies outside of the range for which '\
             'there exists input data: {} to {}s'.format(time, self._time[0], self._time[-1]))
-            raise TypeError('Time out of range.')
+            raise ValueError('Time out of range.')
         
         # Save time indices
         self._tidx_last = tidx_last
