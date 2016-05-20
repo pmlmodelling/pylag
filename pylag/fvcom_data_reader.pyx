@@ -197,7 +197,7 @@ cdef class FVCOMDataReader(DataReader):
         time_fraction = interp.get_linear_fraction(time, self._time[self._tidx_last], self._time[self._tidx_next])
         if time_fraction < 0.0 or time_fraction >= 1.0:
             # Load the next data file if necessary
-            if (time > self._time[-1]):
+            if (time >= self._time[-1]):
                 idx = self._data_file_names.index(self._current_data_file_name) + 1
                 try:
                     self._current_data_file_name = self._data_file_names[idx]
