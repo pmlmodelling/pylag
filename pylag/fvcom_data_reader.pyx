@@ -3,6 +3,7 @@ include "constants.pxi"
 import numpy as np
 from netCDF4 import MFDataset, Dataset, num2date
 import glob
+import natsort
 import datetime
 import logging
 import ConfigParser
@@ -36,9 +37,15 @@ cdef class FVCOMDataReader(DataReader):
     
     # File name stem common to all data files containing field data
     cdef object data_file_name_stem
+
+    # List of input data file names
+    cdef object _data_file_names
+
+    # Name of the current input data file
+    cdef object _current_data_file_name
     
-    # MFNetCDF4 data object giving access to time dependent fields
-    cdef object _data_file
+    # NetCDF4 data object giving access to time dependent fields
+    cdef object _current_data_file
     
     # Grid dimensions
     cdef DTYPE_INT_t _n_elems, _n_nodes, _n_siglay, _n_siglev
@@ -189,6 +196,18 @@ cdef class FVCOMDataReader(DataReader):
     cpdef update_time_dependent_vars(self, DTYPE_FLOAT_t time):
         time_fraction = interp.get_linear_fraction(time, self._time[self._tidx_last], self._time[self._tidx_next])
         if time_fraction < 0.0 or time_fraction >= 1.0:
+            # Load the next data file if necessary
+            if (time > self._time[-1]):
+                idx = self._data_file_names.index(self._current_data_file_name) + 1
+                try:
+                    self._current_data_file_name = self._data_file_names[idx]
+                except IndexError:
+                    logger = logging.getLogger(__name__)
+                    logger.error('Failed to find the next required input data file.')
+                    raise
+                self._open_data_file_for_reading()
+
+            # Update reading frames
             self._read_time_dependent_vars(time)
 
     cpdef get_bathymetry(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
@@ -927,27 +946,99 @@ cdef class FVCOMDataReader(DataReader):
         """
         Set up access to the NetCDF data file and initialise time vars/counters.
         """
-        self._data_file = MFDataset('{}/{}*.nc'.format(self.data_dir, self.data_file_name_stem), 'r')
+        logger = logging.getLogger(__name__)
+        logger.info('Initialising time dependent variables.')
         
-        # Read in time and convert to a list of datetime objects, then round to 
-        # the nearest hour
-        time_raw = self._data_file.variables['time']
-        datetime_raw = num2date(time_raw[:], units=time_raw.units)
+        # First save output file names into a list
+        self._data_file_names = natsort.natsorted(glob.glob('{}/{}*.nc'.format(self.data_dir, 
+                self.data_file_name_stem)))
+                
+        # Ensure files were found in the specified directory.
+        if not self._data_file_names:
+            raise RuntimeError('No input files found in location {}.'.format(self.data_dir))
+        
+        # Determine which data file holds data covering the simulation start time
         rounding_interval = self.config.getint("OCEAN_CIRCULATION_MODEL", "rounding_interval")
-        datetime_rounded = round_time(datetime_raw, rounding_interval)
+        sim_datetime_s = datetime.datetime.strptime(self.config.get("SIMULATION", "start_datetime"), "%Y-%m-%d %H:%M:%S")
+        self._current_data_file_name = None
+        for data_file_name in self._data_file_names:
+            ds = Dataset(data_file_name, 'r')
+            time = ds.variables['time']
+            
+            # Start and end time points for this file 
+            data_datetime_s = round_time([num2date(time[0], units=time.units)], rounding_interval)[0]
+            data_datetime_e = round_time([num2date(time[-1], units=time.units)], rounding_interval)[0]
+            if (sim_datetime_s >= data_datetime_s) and (sim_datetime_s < data_datetime_e):
+                self._current_data_file_name = data_file_name
+                logger.info('Found initial data file {}.'.format(self._current_data_file_name))
+            
+            # Close the data file
+            ds.close()
+
+        # Ensure the start time is covered by the available data
+        if self._current_data_file_name is None:
+            raise RuntimeError('Could not find an input data file spanning the '\
+                    'specified start time: {}.'.format(sim_datetime_s))
+                
+        # Check that the simulation end time is covered by the available data
+        try:
+            sim_datetime_e = datetime.datetime.strptime(self.config.get("SIMULATION",
+                    "end_datetime"), "%Y-%m-%d %H:%M:%S")
+        except ConfigParser.NoOptionError:
+            duration_in_days = self.config.getfloat("SIMULATION", "duration")
+            sim_datetime_e = sim_datetime_s + datetime.timedelta(duration_in_days)
+        ds = Dataset(self._data_file_names[-1], 'r')
+        data_datetime_e = num2date(ds.variables['time'][-1], units = ds.variables['time'].units)
+        ds.close()
         
-        # Simulation start time
-        datetime_start = datetime.datetime.strptime(self.config.get("SIMULATION", "start_datetime"), "%Y-%m-%d %H:%M:%S")
+        # If the specified run time extends beyond the time period for which
+        # there exists input data, raise this.
+        if sim_datetime_e > data_datetime_e:
+            raise ValueError('The specified simulation endtime {} lies '\
+                    'outside of the time period for which input data is '\
+                    'available. Input data is available out to '\
+                    '{}.'.format(sim_datetime_s, data_datetime_e))
+
+        # Open the current data file for reading and initialise the time array
+        self._open_data_file_for_reading()
+
+        # Set time indices for reading frames, and initialise time-dependent 
+        # variables
+        self._read_time_dependent_vars(0.0) # 0s as simulation start
+
+    def _open_data_file_for_reading(self):
+        """Open the current data file for reading and update time array.
+        
+        """
+        logger = logging.getLogger(__name__)
+        
+        # Close the current data file, if one has been opened previously
+        if self._current_data_file:
+            self._current_data_file.close()
+
+        # Open the current data file
+        try:
+            self._current_data_file = Dataset(self._current_data_file_name, 'r')
+            logger.info('Opened data file {} for reading.'.format(self._current_data_file_name))
+        except RuntimeError:
+            logger.error('Could not open data file {}.'.format(self._current_data_file_name))
+            raise
+
+        # Rounding interval and the simulation start time
+        rounding_interval = self.config.getint("OCEAN_CIRCULATION_MODEL", "rounding_interval")
+        sim_datetime_s = datetime.datetime.strptime(self.config.get("SIMULATION", "start_datetime"), "%Y-%m-%d %H:%M:%S")
+
+        # Read in time from the current data file and convert to a list of 
+        # datetime objects. Apply rounding as specified.
+        time_raw = self._current_data_file.variables['time']
+        datetime_raw = num2date(time_raw[:], units=time_raw.units)
+        datetime_rounded = round_time(datetime_raw, rounding_interval)
         
         # Convert to seconds using datetime_start as a reference point
         time_seconds = []
         for time in datetime_rounded:
-            time_seconds.append((time - datetime_start).total_seconds())
+            time_seconds.append((time - sim_datetime_s).total_seconds())
         self._time = np.array(time_seconds, dtype=DTYPE_FLOAT)
-
-        # Set time indices for reading frames, and initialise time-dependent 
-        # variable reading frames
-        self._read_time_dependent_vars(0.0) # 0s as simulation start
 
     cdef _read_time_dependent_vars(self, time):
         # Find indices for times within time_array that bracket time_start
@@ -976,24 +1067,24 @@ cdef class FVCOMDataReader(DataReader):
         self._tidx_next = tidx_next
         
         # Update memory views for zeta
-        self._zeta_last = self._data_file.variables['zeta'][self._tidx_last,:]
-        self._zeta_next = self._data_file.variables['zeta'][self._tidx_next,:]
+        self._zeta_last = self._current_data_file.variables['zeta'][self._tidx_last,:]
+        self._zeta_next = self._current_data_file.variables['zeta'][self._tidx_next,:]
         
         # Update memory views for u, v and w
-        self._u_last = self._data_file.variables['u'][self._tidx_last,:,:]
-        self._u_next = self._data_file.variables['u'][self._tidx_next,:,:]
-        self._v_last = self._data_file.variables['v'][self._tidx_last,:,:]
-        self._v_next = self._data_file.variables['v'][self._tidx_next,:,:]
-        self._omega_last = self._data_file.variables['omega'][self._tidx_last,:,:]
-        self._omega_next = self._data_file.variables['omega'][self._tidx_next,:,:]
+        self._u_last = self._current_data_file.variables['u'][self._tidx_last,:,:]
+        self._u_next = self._current_data_file.variables['u'][self._tidx_next,:,:]
+        self._v_last = self._current_data_file.variables['v'][self._tidx_last,:,:]
+        self._v_next = self._current_data_file.variables['v'][self._tidx_next,:,:]
+        self._omega_last = self._current_data_file.variables['omega'][self._tidx_last,:,:]
+        self._omega_next = self._current_data_file.variables['omega'][self._tidx_next,:,:]
         
         # Update memory views for kh
-        self._kh_last = self._data_file.variables['kh'][self._tidx_last,:,:]
-        self._kh_next = self._data_file.variables['kh'][self._tidx_next,:,:]
+        self._kh_last = self._current_data_file.variables['kh'][self._tidx_last,:,:]
+        self._kh_next = self._current_data_file.variables['kh'][self._tidx_next,:,:]
         
         # Update memory views for viscofh
-        self._viscofh_last = self._data_file.variables['viscofh'][self._tidx_last,:,:]
-        self._viscofh_next = self._data_file.variables['viscofh'][self._tidx_next,:,:]
+        self._viscofh_last = self._current_data_file.variables['viscofh'][self._tidx_last,:,:]
+        self._viscofh_next = self._current_data_file.variables['viscofh'][self._tidx_next,:,:]
 
     cdef _get_phi(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t host,
              DTYPE_FLOAT_t phi[N_VERTICES]):
