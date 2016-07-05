@@ -11,9 +11,8 @@ written in a mixture of `Python <http://www.python.org>`_ and
 `Cython <http://www.cython.org>`_.
 
 .. toctree::
-   :caption: Table of Contents
-   :maxdepth: 2
-   
+   :titlesonly:
+
    getting_started
    examples
    documentation/index
