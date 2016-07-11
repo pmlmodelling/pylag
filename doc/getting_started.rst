@@ -41,8 +41,17 @@ Many of these may be already installed on your system. If not, you will need
 to install these using your package manager. For example, running the following
 command on Fedora with root privliges will install GSL and GSL-devel::
 
-    $ sudo yum install GSL GSL-devel
+    $ sudo dnf install GSL GSL-devel
 
+To build PyLag's documentation several other dependencies must be satisfied:
+
+* python-sphinx - Python documentation generator
+* python-sphinx_rtd_theme - Spinx theme for readthedocs.org
+* python-sphinx-latex - For latex dependcies
+
+On fedora these can be install using the command::
+
+    $ sudo dnf install python-sphinx python-sphinx_rtd_theme python-sphinx-latex
 
 .. _download:
 
