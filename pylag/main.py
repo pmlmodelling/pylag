@@ -2,11 +2,11 @@ import os
 import sys
 import argparse
 import logging
-import subprocess
 
 from pylag.configuration import get_config
 from pylag.simulator import get_simulator
 import pylag.random as random
+from pylag import version
 
 def main():
     # Parse command line agruments
@@ -31,8 +31,7 @@ def main():
     
     # Save the version of the code used (current commit + status)
     logger.info('Starting PyLag')
-    logger.info('git log -n -1:\n' + subprocess.check_output(["git", "log", "-n", "1"]))
-    logger.info('git status:\n' + subprocess.check_output(["git", "status"]))
+    logger.info('Using PyLag version: {}'.format(version.version))
     
     # Record configuration to file
     with open("{}/pylag_out.cfg".format(config.get('GENERAL', 'out_dir')), 'wb') as config_out:
