@@ -1,0 +1,18 @@
+# Template requirements file
+# --------------------------
+#
+# TODO Need to establish version restrictions.
+
+# For running PyLag
+numpy
+matplotlib
+netCDF4
+natsort
+progressbar
+
+# For running unit tests
+nose
+
+# For building PyLag's documentation
+sphinx-rtd-theme
+
