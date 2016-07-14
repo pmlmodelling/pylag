@@ -5,7 +5,6 @@
 
 # For running PyLag
 numpy
-matplotlib
 netCDF4
 natsort
 progressbar
