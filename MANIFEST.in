@@ -1,0 +1,9 @@
+include MANIFEST.in
+include setup.py setup.cfg requirements.txt
+include *.md
+recursive-include pylag *.py *.c
+recursive-include tests *
+recursive-include resources *
+recursive-include doc *
+prune doc/_build
+global-exclude *.pyc *~ *.bak *.swp *.pyo
