@@ -13,3 +13,6 @@ Conact:
 James Clark (Plymouth Marine Laboratory). Email: jcl@pml.ac.uk
 """
 
+from main import main
+
+
