@@ -20,38 +20,70 @@ patient if you don't receive an email with you login details straight away!
 Requirements
 ============
 
-PyLag is tailored to work on computers running Linux. A small number of
+PyLag is tailored to work in a UNIX/Linux environment. A small number of
 libraries and packages must be installed before PyLag itself can be installed 
 and run. These include the following system libraries and packages:
 
-* Python 2.7 - The python 2.7 interpreter
-* GSL - The GNU Scientific Library for numerical analysis
-* GSL-devel - Libraries and header files for GSL development
-* Cython - A language for writing python extension modules
-* CythonGSL - Cython wrappers for GSL
+* `Python 2.7 <https://www.python.org/download/releases/2.7>`_ - The python 2.7 interpreter
+* `GSL <https://www.gnu.org/software/gsl/>`_ - The GNU Scientific Library for numerical analysis
+* `GSL-devel <https://www.gnu.org/software/gsl/>`_ - Libraries and header files for GSL development
 
-and the Python packages:
+and the Cython/Python packages:
 
-* NumPy - Numerical Python for fast array operations
-* NetCDF4-python - Python/NumPy interface to netCDF
-* Matplotlib - Python plotting library
-* ProgressBar - Progress bar for tracking run progress
+* `Cython <http://cython.org/>`_ - A language for writing python extension modules
+* `CythonGSL <https://pypi.python.org/pypi/CythonGSL>`_ - Cython wrappers for GSL
+* `NumPy <http://www.numpy.org/>`_ - Numerical Python for fast array operations
+* `NetCDF4 <http://unidata.github.io/netcdf4-python/>`_ - Python/NumPy interface to netCDF
+* `ProgressBar <https://pypi.python.org/pypi/progressbar>`_ - Progress bar for tracking run progress
+* `Natsort <https://pypi.python.org/pypi/natsort>`_ - Python sorting algorithm.
+* `PyFVCOM <https://pypi.python.org/pypi/PyFVCOM>`_ - FVCOM utilities
 
-Many of these may be already installed on your system. If not, you will need
-to install these using your package manager. For example, running the following
-command on Fedora with root privliges will install GSL and GSL-devel::
+These can either be installed using your package manager or, in the case or python
+packages, using `pip <https://pip.pypa.io/en/stable/>`_. Different operating 
+systems use different package managers, and package names may be slightly 
+different. Recent releases of `Fedora <https://getfedora.org/>`_ use the 
+`dnf package manager <https://fedoraproject.org/wiki/Dnf>`_ which is the successor
+to `yum <https://fedoraproject.org/wiki/Yum>`_. `ubuntu <http://www.ubuntu.com/>`_ uses
+the `apt package manager <https://wiki.debian.org/Apt>`_.
+
+Using dnf, GSL and GSL-devel can be installed with the command:
 
     $ sudo dnf install GSL GSL-devel
 
+Note that you must have administrator privileges to install new software using 
+dnf. dnf will automatically work out any dependencies and install these for you.
+
+Before installing PyLag, `Cython <http://cython.org/>`_ and 
+`CythonGSL <https://pypi.python.org/pypi/CythonGSL>`_ must be installed. Both can be installed
+using `pip <https://pip.pypa.io/en/stable/>`_ If pip is not installed on your system, install
+it using your linux package manager (e.g. dnf). With pip installed, run:
+
+    $ pip install --user Cython
+
+    $ pip install --user CythonGSL
+
+pip searches `PyPi <https://pypi.python.org/pypi>`_ for the named packages and installs them
+along with any dependencies. The --user flag tells pip to install these packages locally,
+meaning administrator privliges are not required.
+
+Many of the python packages required by PyLag can also be installed using your package manager.
+Note these tend to be out of date relative to the newest releases. As some of PyLag's dependencies
+include binary extensions (e.g. `NumPy <http://www.numpy.org/>`_), it is often faster
+to install these using your package manager as they come pre-compiled. If you don't do 
+this, pip will attempt to install these package before installing PyLag, although the
+installation will take more time.
+
 To build PyLag's documentation several other dependencies must be satisfied:
 
-* python-sphinx - Python documentation generator
-* python-sphinx_rtd_theme - Spinx theme for readthedocs.org
-* python-sphinx-latex - For latex dependcies
+* `sphinx <http://www.sphinx-doc.org/en/stable/>`_ - Python documentation generator
+* `sphinx_rtd_theme <https://pypi.python.org/pypi/sphinx_rtd_theme>`_ - Spinx theme for readthedocs.org
 
-On fedora these can be install using the command::
+On fedora 23 these can be install using the command::
 
     $ sudo dnf install python-sphinx python-sphinx_rtd_theme python-sphinx-latex
+
+Here, python-sphinx-latex is a useful package that satisfies many latex dependencies 
+required to build a pdf of the documentation.
 
 .. _download:
 
@@ -115,19 +147,25 @@ downloading and unpacking tarballs of the two repositories.
 Installation
 ============
 
-Once you have a obtained a copy of the code, simply run the setup.py scripts for
-the two projects in order to install them. For example, to perform a local 
+Once you have a obtained a copy of the code, install
+PyLag and PyLag-tools using the python package manager 
+`pip <https://pip.pypa.io/en/stable/>`_. For example, to perform a local 
 installation given the above directory structure run::
 
     $ cd $HOME/code/git/PyLag/PyLag
-    $ python setup.py install --user
+    $ pip install -r requirements.txt
+    $ pip install -e .
     $ cd $HOME/code/git/PyLag/PyLag-tools
-    $ python setup.py install --user
+    $ pip install -e .
+
+pip will automatically search through PyLag's python dependencies and try to install these
+if they are not found. All of this will be done locally, meaning root privileges are not required.
     
-You can check that PyLag has been successfully installed by running the
+You can check that PyLag and PyLag-tools have been successfully installed by running the
 commands::
 
     $ python -c "import pylag"
     $ python -c "import pylagtools"
 
 which should exit without error.
+
