@@ -45,8 +45,16 @@ cdef class TimeManager(object):
         # Initialise the current time
         self._time = self._time_start
         
+        # Simulation time step
         self._time_step = config.getfloat("SIMULATION", "time_step")
+        
+        # Period at which data is written to file
         self._output_frequency = config.getfloat("SIMULATION", "output_frequency")
+        
+        # Check that the time step is an exact divisor of the output frequency
+        if <int>self._output_frequency % <int>self._time_step != 0:
+            raise RuntimeError('The simulation time step should be an exact divisor of the '\
+                  'output frequency.')
 
     def update_current_time(self):
         self._time = self._time + self._time_step
