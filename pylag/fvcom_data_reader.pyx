@@ -944,7 +944,7 @@ cdef class FVCOMDataReader(DataReader):
         
     def _init_time_dependent_vars(self):
         """
-        Set up access to the NetCDF data file and initialise time vars/counters.
+        Set up access to the NetCDF data file(s) and initialise time vars/counters.
         """
         logger = logging.getLogger(__name__)
         logger.info('Initialising time dependent variables.')
@@ -956,24 +956,34 @@ cdef class FVCOMDataReader(DataReader):
         # Ensure files were found in the specified directory.
         if not self._data_file_names:
             raise RuntimeError('No input files found in location {}.'.format(self.data_dir))
+
+        # Log file names
+        logger.info("Found {} input data files in directory `{}'.".format(len(self._data_file_names), self.data_dir))
         
-        # Determine which data file holds data covering the simulation start time
+        # Simulation start time
         rounding_interval = self.config.getint("OCEAN_CIRCULATION_MODEL", "rounding_interval")
         sim_datetime_s = datetime.datetime.strptime(self.config.get("SIMULATION", "start_datetime"), "%Y-%m-%d %H:%M:%S")
+
+        # Determine which data file holds data covering the simulation start time        
+        logger.info('Beginning search for the input data file spanning the specified simulation start point.')
         self._current_data_file_name = None
         for data_file_name in self._data_file_names:
+            logger.info("Trying file `{}'".format(data_file_name))
             ds = Dataset(data_file_name, 'r')
             time = ds.variables['time']
             
             # Start and end time points for this file 
             data_datetime_s = round_time([num2date(time[0], units=time.units)], rounding_interval)[0]
             data_datetime_e = round_time([num2date(time[-1], units=time.units)], rounding_interval)[0]
+            ds.close()
+            
             if (sim_datetime_s >= data_datetime_s) and (sim_datetime_s < data_datetime_e):
                 self._current_data_file_name = data_file_name
                 logger.info('Found initial data file {}.'.format(self._current_data_file_name))
-            
-            # Close the data file
-            ds.close()
+                break
+            else:
+                logger.info('Start point not found in file covering the period'\
+                ' {} to {}'.format(data_datetime_s, data_datetime_e))
 
         # Ensure the start time is covered by the available data
         if self._current_data_file_name is None:
