@@ -4,7 +4,7 @@ from ConfigParser import SafeConfigParser
 
 from pylag.analytic_data_reader import TestVelocityDataReader
 from pylag.particle import Particle
-from pylag.integrator import RK4Integrator
+from pylag.integrator import RK4Integrator3D
 from pylag.delta import Delta
 
 # Create test particle
@@ -23,7 +23,7 @@ time_end = 3.0
 time_step = 0.01
 time = np.arange(time_start,time_end,time_step)
 
-# Config - needed for creation of RK4Integrator
+# Config - needed for creation of RK4Integrator3D
 config = SafeConfigParser()
 config.add_section("SIMULATION")
 config.add_section("OCEAN_CIRCULATION_MODEL")
@@ -32,7 +32,7 @@ config.set("OCEAN_CIRCULATION_MODEL", "zmin", str(0.0))
 config.set("OCEAN_CIRCULATION_MODEL", "zmax", str(0.0))
 
 # Num integrator
-rk4 = RK4Integrator(config)
+rk4 = RK4Integrator3D(config)
 
 xpos_analytic = []
 ypos_analytic = []
