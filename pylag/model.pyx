@@ -22,7 +22,7 @@ cdef class OPTModel:
     def __init__(self, config):
         self.config = config
 
-    def initialise(self, time):
+    def initialise(self, time, group_ids, x_positions, y_positions, z_positions):
         pass
     
     def update_reading_frame(self, time):
@@ -54,7 +54,7 @@ cdef class FVCOMOPTModel(OPTModel):
         self._zmin = self.config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmin')
         self._zmax = self.config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmax')
 
-    def initialise(self, time):     
+    def initialise(self, time, group_ids, x_positions, y_positions, z_positions):     
         # Create FVCOM data reader
         self.data_reader = FVCOMDataReader(self.config)
         
@@ -69,12 +69,6 @@ cdef class FVCOMOPTModel(OPTModel):
 
         # Create particle seed - particles stored in a list object
         self.particle_set = []
-
-        # Read in particle initial positions from file - these will be used to
-        # create the initial particle set.
-        file_name = self.config.get('SIMULATION', 'initial_positions_file')
-        n_particles, group_ids, x_positions, y_positions, z_positions = \
-            read_particle_initial_positions(file_name)
 
         guess = None
         particles_in_domain = 0
