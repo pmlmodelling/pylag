@@ -6,9 +6,10 @@ import logging
 from mpi4py import MPI
 
 from pylag.configuration import get_config
-from pylag.simulator import get_simulator
 import pylag.random as random
 from pylag import version
+
+from pylag.parallel.simulator import get_simulator
 
 def main():
     comm = MPI.COMM_WORLD
@@ -58,8 +59,8 @@ def main():
         print 'Random seed for pocessor with rank {} is {}'.format(rank, random.get_seed())
     
     # Run the simulation
-    #simulator = get_simulator(config)
-    #simulator.run(config)
+    simulator = get_simulator(config)
+    simulator.run(config)
     
     # End logging and exit
     if rank == 0:

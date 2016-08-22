@@ -72,11 +72,13 @@ cdef class FVCOMOPTModel(OPTModel):
 
         # Read in particle initial positions from file - these will be used to
         # create the initial particle set.
-        group_id, xpos, ypos, zpos_temp = read_particle_initial_positions(self.config.get('SIMULATION', 'initial_positions_file'))
+        file_name = self.config.get('SIMULATION', 'initial_positions_file')
+        n_particles, group_ids, x_positions, y_positions, z_positions = \
+            read_particle_initial_positions(file_name)
 
         guess = None
         particles_in_domain = 0
-        for group, x, y, z_temp in zip(group_id, xpos, ypos, zpos_temp):
+        for group, x, y, z_temp in zip(group_ids, x_positions, y_positions, z_positions):
             # Find particle host element
             if guess is not None:
                 # Try local search first, then global search if this fails
@@ -133,7 +135,7 @@ cdef class FVCOMOPTModel(OPTModel):
         self.data_logger = NetCDFLogger(self.config, len(self.particle_set))
         
         # Write particle group ids to file
-        self.data_logger.write_group_ids(group_id)
+        self.data_logger.write_group_ids(group_ids)
 
     def update_reading_frame(self, time):
         self.data_reader.update_time_dependent_vars(time)

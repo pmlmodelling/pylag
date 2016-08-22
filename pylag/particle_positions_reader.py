@@ -1,4 +1,4 @@
-import logging
+import numpy as np
 
 def read_particle_initial_positions(file_name):
     """
@@ -30,29 +30,25 @@ def read_particle_initial_positions(file_name):
         data.append(line.rstrip('\r\n').split(' '))    
         
     # The first entry is the number of particles
-    n_particles = _get_entry(data.pop(0)[0], int)
+    n_particles = _get_entry(data.pop(0)[0], np.int32)
 
     # Create seed particle set
-    group_id = []
-    xpos = []
-    ypos = []
-    zpos = []
+    group_ids = []
+    x_positions = []
+    y_positions = []
+    z_positions = []
     for row in data:
-        group_id.append(_get_entry(row[0], int))
-        xpos.append(_get_entry(row[1], float))
-        ypos.append(_get_entry(row[2], float))
-        zpos.append(_get_entry(row[3], float))
-
-    logger = logging.getLogger(__name__)
-    if n_particles == len(group_id):
-        logger.info('Particle seed contains {} particles.'.format(n_particles))
-        return group_id, xpos, ypos, zpos
-    else:
-        logger.warning('Error reading particle initial positions from file. '\
-            'The number of particles specified in the file is {}. The actual number found '\
-            'while parsing the file was {}.'.format(n_particles, len(_seed)))
-        raise ValueError('Error reading particle initial positions file. See log ' \
-            'file for more information.')
+        group_ids.append(_get_entry(row[0], np.int32))
+        x_positions.append(_get_entry(row[1], np.float32))
+        y_positions.append(_get_entry(row[2], np.float32))
+        z_positions.append(_get_entry(row[3], np.float32))
+    
+    group_ids = np.array(group_ids)
+    x_positions = np.array(x_positions)
+    y_positions = np.array(y_positions)
+    z_positions = np.array(z_positions)
+    
+    return n_particles, group_ids, x_positions, y_positions, z_positions
 
 def _get_entry(value, type):
     return type(value)
