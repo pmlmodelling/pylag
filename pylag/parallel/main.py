@@ -2,7 +2,6 @@ import os
 import sys
 import argparse
 import logging
-import time
 
 from mpi4py import MPI
 
@@ -41,7 +40,7 @@ def main():
         logger.info('Starting PyLag-MPI')
         logger.info('Using PyLag version: {}'.format(version.version))
         logger.info('Using {} processors'.format(comm.Get_size()))
-    
+
         # Record configuration to file
         with open("{}/pylag_out.cfg".format(config.get('GENERAL', 'out_dir')), 'wb') as config_out:
             logger.info('Writing run config to file')
@@ -52,11 +51,8 @@ def main():
     # Copy the run config to all workers
     config = comm.bcast(config, root=0)
 
-    # Initialise the PRNG. Use the pid to ensure each worker uses a unique seed
-    pid = os.getpid()
-    s = time.time() * 256
-    seed = abs(((s*181)*((pid-83)*359))%104729)
-    random.seed(seed)
+    # Seed the random number generator
+    random.seed()
     
     # Run the simulation
     #simulator = get_simulator(config)

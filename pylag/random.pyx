@@ -8,9 +8,8 @@ wrappers for GSL - this cost is avoided. For the Mersenne Twister pseudo RNG,
 tests indicate CythonGSL yeilds a ~ 5X speedup compared with Python's random 
 module.
 """
-
+import os
 import time
-import logging
 
 cimport cython
 from cython_gsl cimport gsl_rng, gsl_rng_alloc, gsl_rng_set, gsl_rng_mt19937, gsl_ran_gaussian, gsl_ran_flat
@@ -20,27 +19,39 @@ from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 # gsl_rng_mt19937 is the Mersenne Twister pseudo random number generator
 cdef gsl_rng *r = gsl_rng_alloc(gsl_rng_mt19937)
 
+# Seed for the PRNG
+_seed = None
+
+def get_seed():
+    """Return the value of the seed used with the PRNG.
+
+    """
+    return _seed
+
 def seed(seed=None):
     """
-    Seed the random number generator. If seed is None, use the system clock 
-    time.
+    Seed the random number generator. If seed is None, use a combination of the
+    system time and processor ID to set the random seed. The approach ensures
+    each worker uses a unique seed during parallel simulations. Algorithm
+    adapted from http://goo.gl/BVxgFl.
     
     Parameters:
     -----------
     seed: long, optional
         The seed to be used.
     """
+    global _seed
+    
     if seed is None:
-        seed = long(time.time() * 256) # Mimics seed generation method in random.py
+        # Initialise the PRNG. Use the pid to ensure each worker uses a unique seed
+        pid = os.getpid()
+        s = time.time() * 256
+        _seed = long(abs(((s*181)*((pid-83)*359))%104729))
     else:
-        seed = long(seed)
+        _seed = long(seed)
 
     # Set the seed for the RNG
-    gsl_rng_set(r, seed)
-
-    # Log this value
-    logger = logging.getLogger(__name__)
-    logger.info('Random number seeded with seed {}'.format(seed))
+    gsl_rng_set(r, _seed)
         
 cpdef gauss(DTYPE_FLOAT_t std = 1.0):
     """
