@@ -89,7 +89,7 @@ def scandir(dir, file_type, files=[]):
         if os.path.isfile(path) and path.endswith(file_type):
             files.append(path.replace(os.path.sep, ".")[:-4])
         elif os.path.isdir(path):
-            scandir(path, files)
+            scandir(path, file_type, files)
     return files
 
 
