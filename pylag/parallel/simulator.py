@@ -5,6 +5,7 @@ from mpi4py import MPI
 
 from pylag.time_manager import TimeManager
 from pylag.particle_positions_reader import read_particle_initial_positions
+from pylag.netcdf_logger import NetCDFLogger
 
 from pylag.parallel.model_factory import get_model
 
@@ -61,6 +62,12 @@ class TraceSimulator(Simulator):
                     'number of particles = {}. The total number of workers = '\
                     '{}.'.format(n_particles,size))
                 comm.Abort()
+                
+            # Data logger
+            data_logger = NetCDFLogger(config, n_particles)
+
+            # Write particle group ids to file
+            data_logger.write_group_ids(group_ids)
         else:
             group_ids = None
             x_positions = None

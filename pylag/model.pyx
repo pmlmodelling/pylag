@@ -127,12 +127,6 @@ cdef class FVCOMOPTModel(OPTModel):
         #logger = logging.getLogger(__name__)
         #logger.info('{} of {} particles are located in the model domain.'.format(particles_in_domain, len(self.particle_set)))
 
-        # Data logger
-        # self.data_logger = NetCDFLogger(self.config, len(self.particle_set))
-        
-        # Write particle group ids to file
-        # self.data_logger.write_group_ids(group_ids)
-
     def update_reading_frame(self, time):
         self.data_reader.update_time_dependent_vars(time)
 

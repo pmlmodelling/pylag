@@ -3,6 +3,7 @@ from progressbar import ProgressBar
 
 from pylag.time_manager import TimeManager
 from pylag.particle_positions_reader import read_particle_initial_positions
+from pylag.netcdf_logger import NetCDFLogger
 
 from pylag.model_factory import get_model
 
@@ -49,6 +50,12 @@ class TraceSimulator(Simulator):
         # Initialise time counters, create particle seed
         model.initialise(self.time_manager.time, group_ids, x_positions, \
             y_positions, z_positions)
+            
+        # Data logger
+        data_logger = NetCDFLogger(config, n_particles)
+        
+        # Write particle group ids to file
+        data_logger.write_group_ids(group_ids)
 
         # Write initial state to file
         #model.record(self.time_manager.time)
