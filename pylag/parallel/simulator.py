@@ -105,12 +105,13 @@ class TraceSimulator(Simulator):
         self._record(self.time_manager.time, particle_diagnostics)
 
         # The main update loop
-        #while self.time_manager.time < self.time_manager.time_end:
-        #    model.update(self.time_manager.time)
-        #    self.time_manager.update_current_time()
-        #    if self.time_manager.write_output_to_file() == 1:
-        #        model.record(self.time_manager.time)
-        #    model.update_reading_frame(self.time_manager.time)
+        while self.time_manager.time < self.time_manager.time_end:
+            self.model.update(self.time_manager.time)
+            self.time_manager.update_current_time()
+            if self.time_manager.write_output_to_file() == 1:
+                particle_diagnostics = self.model.get_diagnostics(self.time_manager.time)
+                self._record(self.time_manager.time, particle_diagnostics)
+            self.model.update_reading_frame(self.time_manager.time)
 
         # Close output files
         #model.shutdown()
