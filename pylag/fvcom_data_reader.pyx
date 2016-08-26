@@ -23,29 +23,14 @@ cimport interpolation as interp
 
 from math cimport int_min, float_min
 
-from unstruct_grid_tools import round_time, create_fvcom_grid_metrics_file
+from pylag.unstruct_grid_tools import round_time
 
 cdef class FVCOMDataReader(DataReader):
     # Configurtion object
     cdef object config
 
-    # Name of the directory containing grid and field data
-    cdef object data_dir
-
-    # Name of file containing grid data
-    cdef object grid_file_name
-    
-    # File name stem common to all data files containing field data
-    cdef object data_file_name_stem
-
-    # List of input data file names
-    cdef object _data_file_names
-
-    # Name of the current input data file
-    cdef object _current_data_file_name
-    
-    # NetCDF4 data object giving access to time dependent fields
-    cdef object _current_data_file
+    # Mediator for accessing FVCOM model data read in from file
+    cdef object mediator
     
     # Grid dimensions
     cdef DTYPE_INT_t _n_elems, _n_nodes, _n_siglay, _n_siglev
@@ -96,22 +81,15 @@ cdef class FVCOMDataReader(DataReader):
     cdef DTYPE_FLOAT_t[:,:] _viscofh_next
     
     # Time array
-    cdef DTYPE_FLOAT_t[:] _time
-    cdef DTYPE_INT_t _tidx_last
-    cdef DTYPE_INT_t _tidx_next
+    cdef DTYPE_FLOAT_t _time_last
+    cdef DTYPE_FLOAT_t _time_next
 
-    def __init__(self, config):
+    def __init__(self, config, mediator):
         self.config = config
-
-        self.data_dir = config.get("OCEAN_CIRCULATION_MODEL", "data_dir")
-        self.data_file_name_stem = config.get("OCEAN_CIRCULATION_MODEL", "data_file_stem")
-        try:
-            self.grid_file_name = config.get("OCEAN_CIRCULATION_MODEL", "grid_metrics_file")
-        except ConfigParser.NoOptionError:
-            self.grid_file_name = None
+        self.mediator = mediator
 
         self._read_grid()
-        self._init_time_dependent_vars()
+        self._read_time_dependent_vars()
 
     cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
         return self.find_host_using_local_search(xpos, ypos, guess)
@@ -194,21 +172,13 @@ cdef class FVCOMDataReader(DataReader):
         return -1
 
     cpdef update_time_dependent_vars(self, DTYPE_FLOAT_t time):
-        time_fraction = interp.get_linear_fraction(time, self._time[self._tidx_last], self._time[self._tidx_next])
+        """ Update local time dependent variables as required.
+        
+        """
+        time_fraction = interp.get_linear_fraction(time, self._time_last, self._time_next)
         if time_fraction < 0.0 or time_fraction >= 1.0:
-            # Load the next data file if necessary
-            if (time >= self._time[-1]):
-                idx = self._data_file_names.index(self._current_data_file_name) + 1
-                try:
-                    self._current_data_file_name = self._data_file_names[idx]
-                except IndexError:
-                    logger = logging.getLogger(__name__)
-                    logger.error('Failed to find the next required input data file.')
-                    raise
-                self._open_data_file_for_reading()
-
-            # Update reading frames
-            self._read_time_dependent_vars(time)
+            self.mediator.update_reading_frames(time)
+            self._read_time_dependent_vars()
 
     cpdef get_bathymetry(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
         """
@@ -255,7 +225,7 @@ cdef class FVCOMDataReader(DataReader):
             zeta_tri_t_next[i] = self._zeta_next[vertex]
 
         # Interpolate in time
-        time_fraction = interp.get_linear_fraction(time, self._time[self._tidx_last], self._time[self._tidx_next])
+        time_fraction = interp.get_linear_fraction(time, self._time_last, self._time_next)
         for i in xrange(N_VERTICES):
             zeta_tri[i] = interp.linear_interp(time_fraction, zeta_tri_t_last[i], zeta_tri_t_next[i])
 
@@ -403,7 +373,7 @@ cdef class FVCOMDataReader(DataReader):
             raise ValueError("Particle zpos (={}) not found!".format(zpos))
 
         # Time fraction
-        time_fraction = interp.get_linear_fraction(time, self._time[self._tidx_last], self._time[self._tidx_next])
+        time_fraction = interp.get_linear_fraction(time, self._time_last, self._time_next)
         if time_fraction < 0.0 or time_fraction > 1.0:
             logger = logging.getLogger(__name__)
             logger.info('Invalid time fraction computed at time {}s.'.format(time))
@@ -542,9 +512,7 @@ cdef class FVCOMDataReader(DataReader):
             h_tri[i] = self._h[vertex]
 
         # Interpolate kh and zeta in time
-        time_fraction = interp.get_linear_fraction(time, 
-                                self._time[self._tidx_last],
-                                self._time[self._tidx_next])
+        time_fraction = interp.get_linear_fraction(time, self._time_last, self._time_next)
         for i in xrange(N_VERTICES):
             kh_tri_lower_level[i] = interp.linear_interp(time_fraction, 
                                                 kh_tri_t_last_lower_level[i],
@@ -707,7 +675,7 @@ cdef class FVCOMDataReader(DataReader):
             raise ValueError("Particle zpos (={} not found!".format(zpos))
 
         # Time fraction
-        time_fraction = interp.get_linear_fraction(time, self._time[self._tidx_last], self._time[self._tidx_next])
+        time_fraction = interp.get_linear_fraction(time, self._time_last, self._time_next)
         if time_fraction < 0.0 or time_fraction > 1.0:
             logger = logging.getLogger(__name__)
             logger.info('Invalid time fraction computed at time {}s.'.format(time))
@@ -861,9 +829,7 @@ cdef class FVCOMDataReader(DataReader):
             h_tri[i] = self._h[vertex]
 
         # Interpolate omega and zeta in time
-        time_fraction = interp.get_linear_fraction(time, 
-                                self._time[self._tidx_last],
-                                self._time[self._tidx_next])
+        time_fraction = interp.get_linear_fraction(time, self._time_last, self._time_next)
         for i in xrange(N_VERTICES):
             omega_tri_lower_level[i] = interp.linear_interp(time_fraction, 
                                                 omega_tri_t_last_lower_level[i],
@@ -888,213 +854,73 @@ cdef class FVCOMDataReader(DataReader):
         return interp.linear_interp(sigma_fraction, omega_lower_level, omega_upper_level) / (h + zeta)
 
     def _read_grid(self):
-        logger = logging.getLogger(__name__)
-        logger.info('Reading FVCOM\'s grid')
+        """ Set grid and coordinate variables.
         
-        # Try to read grid data from the grid metrics file, in which neighbour
-        # element info (nbe) has been ordered to match node ordering in nv.
-        ncfile = None
-        if self.grid_file_name is not None:
-            try:
-                ncfile = Dataset('{}'.format(self.grid_file_name), 'r')
-            except RuntimeError:
-                logger.warning('Failed to read grid metrics file {}.'.format(self.grid_file_name))
-        
-        if not ncfile:
-            print 'WARNING: Creating a new grid metrics file. See log file for '\
-                'more information.'
-            logger.info('Either no grid metrics file was given, or it could '\
-                    'not be read. A new grid metrics file will now be created. '\
-                    'For future simulations using the same model grid, please '\
-                    'provide this file in the config -- it will save you time!')
-            file_name_in = glob.glob('{}/{}*.nc'.format(self.data_dir, self.data_file_name_stem))[0]
-            file_name_out = '{}/grid_metrics.nc'.format(self.config.get('GENERAL', 'out_dir'))
-            create_fvcom_grid_metrics_file(file_name_in, file_name_out)
-            logger.info('Created grid metrics file {}.'.format(file_name_out))
-            ncfile = Dataset(file_name_out, 'r')
-        
-        self._n_nodes = len(ncfile.dimensions['node'])
-        self._n_elems = len(ncfile.dimensions['nele'])
-        self._n_siglev = len(ncfile.dimensions['siglev'])
-        self._n_siglay = len(ncfile.dimensions['siglay'])
+        All communications go via the mediator in order to guarentee support for
+        both serial and parallel simulations.
+        """
+        # Read in the grid's dimensions
+        self._n_nodes = self.mediator.get_dimension_variable('node')
+        self._n_elems = self.mediator.get_dimension_variable('nele')
+        self._n_siglev = self.mediator.get_dimension_variable('siglev')
+        self._n_siglay = self.mediator.get_dimension_variable('siglay')
         
         # Grid connectivity/adjacency
-        self._nv = ncfile.variables['nv'][:]
-        self._nbe = ncfile.variables['nbe'][:]
+        self._nv = self.mediator.get_grid_variable('nv', (3, self._n_elems), DTYPE_INT)
+        self._nbe = self.mediator.get_grid_variable('nbe', (3, self._n_elems), DTYPE_INT)
 
-        self._x = ncfile.variables['x'][:]
-        self._y = ncfile.variables['y'][:]
-        self._xc = ncfile.variables['xc'][:]
-        self._yc = ncfile.variables['yc'][:]
+        # Cartesian coordinates
+        self._x = self.mediator.get_grid_variable('x', (self._n_nodes), DTYPE_FLOAT)
+        self._y = self.mediator.get_grid_variable('y', (self._n_nodes), DTYPE_FLOAT)
+        self._xc = self.mediator.get_grid_variable('xc', (self._n_elems), DTYPE_FLOAT)
+        self._yc = self.mediator.get_grid_variable('yc', (self._n_elems), DTYPE_FLOAT)
 
         # Sigma levels at nodal coordinates
-        self._siglev = ncfile.variables['siglev'][:]
+        self._siglev = self.mediator.get_grid_variable('siglev', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)
         
         # Sigma layers at nodal coordinates
-        self._siglay = ncfile.variables['siglay'][:]
-        
-        # Interpolation parameters (a1u, a2u, aw0, awx, awy)
-        self._a1u = ncfile.variables['a1u'][:,:]
-        self._a2u = ncfile.variables['a2u'][:,:]
+        self._siglay = self.mediator.get_grid_variable('siglay', (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
 
         # Bathymetry
-        self._h = ncfile.variables['h'][:]
+        self._h = self.mediator.get_grid_variable('h', (self._n_nodes), DTYPE_FLOAT)
+
+        # Interpolation parameters (a1u, a2u, aw0, awx, awy)
+        self._a1u = self.mediator.get_grid_variable('a1u', (4, self._n_elems), DTYPE_FLOAT)
+        self._a2u = self.mediator.get_grid_variable('a2u', (4, self._n_elems), DTYPE_FLOAT)
+
+    cdef _read_time_dependent_vars(self):
+        """ Set time references and update memory views for FVCOM data fields.
         
-        ncfile.close()
+        For each FVCOM time-dependent variable needed by PyLag two references
+        are stored. These correspond to the last and next time points at which
+        FVCOM data was saved. Together these bound PyLag's current time point.
         
-    def _init_time_dependent_vars(self):
+        All communications go via the mediator in order to guarentee support for
+        both serial and parallel simulations.
         """
-        Set up access to the NetCDF data file(s) and initialise time vars/counters.
-        """
-        logger = logging.getLogger(__name__)
-        logger.info('Initialising time dependent variables.')
-        
-        # First save output file names into a list
-        self._data_file_names = natsort.natsorted(glob.glob('{}/{}*.nc'.format(self.data_dir, 
-                self.data_file_name_stem)))
-                
-        # Ensure files were found in the specified directory.
-        if not self._data_file_names:
-            raise RuntimeError('No input files found in location {}.'.format(self.data_dir))
-
-        # Log file names
-        logger.info("Found {} input data files in directory `{}'.".format(len(self._data_file_names), self.data_dir))
-        
-        # Simulation start time
-        rounding_interval = self.config.getint("OCEAN_CIRCULATION_MODEL", "rounding_interval")
-        sim_datetime_s = datetime.datetime.strptime(self.config.get("SIMULATION", "start_datetime"), "%Y-%m-%d %H:%M:%S")
-
-        # Determine which data file holds data covering the simulation start time        
-        logger.info('Beginning search for the input data file spanning the specified simulation start point.')
-        self._current_data_file_name = None
-        for data_file_name in self._data_file_names:
-            logger.info("Trying file `{}'".format(data_file_name))
-            ds = Dataset(data_file_name, 'r')
-            time = ds.variables['time']
-            
-            # Start and end time points for this file 
-            data_datetime_s = round_time([num2date(time[0], units=time.units)], rounding_interval)[0]
-            data_datetime_e = round_time([num2date(time[-1], units=time.units)], rounding_interval)[0]
-            ds.close()
-            
-            if (sim_datetime_s >= data_datetime_s) and (sim_datetime_s < data_datetime_e):
-                self._current_data_file_name = data_file_name
-                logger.info('Found initial data file {}.'.format(self._current_data_file_name))
-                break
-            else:
-                logger.info('Start point not found in file covering the period'\
-                ' {} to {}'.format(data_datetime_s, data_datetime_e))
-
-        # Ensure the start time is covered by the available data
-        if self._current_data_file_name is None:
-            raise RuntimeError('Could not find an input data file spanning the '\
-                    'specified start time: {}.'.format(sim_datetime_s))
-                
-        # Check that the simulation end time is covered by the available data
-        try:
-            sim_datetime_e = datetime.datetime.strptime(self.config.get("SIMULATION",
-                    "end_datetime"), "%Y-%m-%d %H:%M:%S")
-        except ConfigParser.NoOptionError:
-            duration_in_days = self.config.getfloat("SIMULATION", "duration")
-            sim_datetime_e = sim_datetime_s + datetime.timedelta(duration_in_days)
-        ds = Dataset(self._data_file_names[-1], 'r')
-        data_datetime_e = num2date(ds.variables['time'][-1], units = ds.variables['time'].units)
-        ds.close()
-        
-        # If the specified run time extends beyond the time period for which
-        # there exists input data, raise this.
-        if sim_datetime_e > data_datetime_e:
-            raise ValueError('The specified simulation endtime {} lies '\
-                    'outside of the time period for which input data is '\
-                    'available. Input data is available out to '\
-                    '{}.'.format(sim_datetime_s, data_datetime_e))
-
-        # Open the current data file for reading and initialise the time array
-        self._open_data_file_for_reading()
-
-        # Set time indices for reading frames, and initialise time-dependent 
-        # variables
-        self._read_time_dependent_vars(0.0) # 0s as simulation start
-
-    def _open_data_file_for_reading(self):
-        """Open the current data file for reading and update time array.
-        
-        """
-        logger = logging.getLogger(__name__)
-        
-        # Close the current data file, if one has been opened previously
-        if self._current_data_file:
-            self._current_data_file.close()
-
-        # Open the current data file
-        try:
-            self._current_data_file = Dataset(self._current_data_file_name, 'r')
-            logger.info('Opened data file {} for reading.'.format(self._current_data_file_name))
-        except RuntimeError:
-            logger.error('Could not open data file {}.'.format(self._current_data_file_name))
-            raise
-
-        # Rounding interval and the simulation start time
-        rounding_interval = self.config.getint("OCEAN_CIRCULATION_MODEL", "rounding_interval")
-        sim_datetime_s = datetime.datetime.strptime(self.config.get("SIMULATION", "start_datetime"), "%Y-%m-%d %H:%M:%S")
-
-        # Read in time from the current data file and convert to a list of 
-        # datetime objects. Apply rounding as specified.
-        time_raw = self._current_data_file.variables['time']
-        datetime_raw = num2date(time_raw[:], units=time_raw.units)
-        datetime_rounded = round_time(datetime_raw, rounding_interval)
-        
-        # Convert to seconds using datetime_start as a reference point
-        time_seconds = []
-        for time in datetime_rounded:
-            time_seconds.append((time - sim_datetime_s).total_seconds())
-        self._time = np.array(time_seconds, dtype=DTYPE_FLOAT)
-
-    cdef _read_time_dependent_vars(self, time):
-        # Find indices for times within time_array that bracket time_start
-        cdef DTYPE_INT_t tidx_last, tidx_next
-        cdef DTYPE_INT_t n_times
-        cdef DTYPE_INT_t i
-        
-        n_times = len(self._time)
-        
-        tidx_last = -1
-        tidx_next = -1
-        for i in xrange(0, n_times-1):
-            if time >= self._time[i] and time < self._time[i+1]:
-                tidx_last = i
-                tidx_next = tidx_last + 1
-                break
-
-        if tidx_last == -1:
-            logger = logging.getLogger(__name__)
-            logger.info('The provided time {}s lies outside of the range for which '\
-            'there exists input data: {} to {}s'.format(time, self._time[0], self._time[-1]))
-            raise ValueError('Time out of range.')
-        
-        # Save time indices
-        self._tidx_last = tidx_last
-        self._tidx_next = tidx_next
+        # Update time references
+        self._time_last = self.mediator.get_time_at_last_time_index()
+        self._time_next = self.mediator.get_time_at_next_time_index()
         
         # Update memory views for zeta
-        self._zeta_last = self._current_data_file.variables['zeta'][self._tidx_last,:]
-        self._zeta_next = self._current_data_file.variables['zeta'][self._tidx_next,:]
+        self._zeta_last = self.mediator.get_time_dependent_variable_at_last_time_index('zeta', (self._n_nodes), DTYPE_FLOAT)
+        self._zeta_next = self.mediator.get_time_dependent_variable_at_next_time_index('zeta', (self._n_nodes), DTYPE_FLOAT)
         
         # Update memory views for u, v and w
-        self._u_last = self._current_data_file.variables['u'][self._tidx_last,:,:]
-        self._u_next = self._current_data_file.variables['u'][self._tidx_next,:,:]
-        self._v_last = self._current_data_file.variables['v'][self._tidx_last,:,:]
-        self._v_next = self._current_data_file.variables['v'][self._tidx_next,:,:]
-        self._omega_last = self._current_data_file.variables['omega'][self._tidx_last,:,:]
-        self._omega_next = self._current_data_file.variables['omega'][self._tidx_next,:,:]
+        self._u_last = self.mediator.get_time_dependent_variable_at_last_time_index('u', (self._n_siglay, self._n_elems), DTYPE_FLOAT)
+        self._u_next = self.mediator.get_time_dependent_variable_at_next_time_index('u', (self._n_siglay, self._n_elems), DTYPE_FLOAT)
+        self._v_last = self.mediator.get_time_dependent_variable_at_last_time_index('v', (self._n_siglay, self._n_elems), DTYPE_FLOAT)
+        self._v_next = self.mediator.get_time_dependent_variable_at_next_time_index('v', (self._n_siglay, self._n_elems), DTYPE_FLOAT)
+        self._omega_last = self.mediator.get_time_dependent_variable_at_last_time_index('omega', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)
+        self._omega_next = self.mediator.get_time_dependent_variable_at_next_time_index('omega', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)
         
         # Update memory views for kh
-        self._kh_last = self._current_data_file.variables['kh'][self._tidx_last,:,:]
-        self._kh_next = self._current_data_file.variables['kh'][self._tidx_next,:,:]
+        self._kh_last = self.mediator.get_time_dependent_variable_at_last_time_index('kh', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)
+        self._kh_next = self.mediator.get_time_dependent_variable_at_next_time_index('kh', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)
         
         # Update memory views for viscofh
-        self._viscofh_last = self._current_data_file.variables['viscofh'][self._tidx_last,:,:]
-        self._viscofh_next = self._current_data_file.variables['viscofh'][self._tidx_next,:,:]
+        self._viscofh_last = self.mediator.get_time_dependent_variable_at_last_time_index('viscofh', (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
+        self._viscofh_next = self.mediator.get_time_dependent_variable_at_next_time_index('viscofh', (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
 
     cdef _get_phi(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t host,
              DTYPE_FLOAT_t phi[N_VERTICES]):

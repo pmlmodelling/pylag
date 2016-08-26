@@ -18,10 +18,6 @@ from pylag.integrator cimport NumIntegrator
 from pylag.random_walk cimport VerticalRandomWalk, HorizontalRandomWalk
 
 cdef class OPTModel:
-    cdef object config
-    def __init__(self, config):
-        self.config = config
-
     def initialise(self, time, group_ids, x_positions, y_positions, z_positions):
         pass
     
@@ -38,6 +34,7 @@ cdef class OPTModel:
         pass
     
 cdef class FVCOMOPTModel(OPTModel):
+    cdef object config
     cdef DataReader data_reader
     cdef NumIntegrator num_integrator
     cdef VerticalRandomWalk vert_rand_walk_model
@@ -49,14 +46,14 @@ cdef class FVCOMOPTModel(OPTModel):
     cdef DTYPE_FLOAT_t _zmin
     cdef DTYPE_FLOAT_t _zmax    
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, config, data_reader, *args, **kwargs):
         super(FVCOMOPTModel, self).__init__(*args, **kwargs)
-        self._zmin = self.config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmin')
-        self._zmax = self.config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmax')
 
-    def initialise(self, time, group_ids, x_positions, y_positions, z_positions):     
-        # Create FVCOM data reader
-        self.data_reader = FVCOMDataReader(self.config)
+        # Initialise config
+        self.config = config
+
+        # Initialise model data reader
+        self.data_reader = data_reader
         
         # Create numerical integrator
         self.num_integrator = get_num_integrator(self.config)
@@ -66,7 +63,12 @@ cdef class FVCOMOPTModel(OPTModel):
 
         # Create horizontal random walk model
         self.horiz_rand_walk_model = get_horizontal_random_walk_model(self.config)
+        
+        # Vertical min and max values - used to check for boundary crossings
+        self._zmin = self.config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmin')
+        self._zmax = self.config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmax')
 
+    def initialise(self, time, group_ids, x_positions, y_positions, z_positions):
         # Create particle seed - particles stored in a list object
         self.particle_set = []
 
@@ -122,14 +124,14 @@ cdef class FVCOMOPTModel(OPTModel):
                 particle = Particle(group_id=group, in_domain=in_domain)
                 self.particle_set.append(particle)
 
-        logger = logging.getLogger(__name__)
-        logger.info('{} of {} particles are located in the model domain.'.format(particles_in_domain, len(self.particle_set)))
+        #logger = logging.getLogger(__name__)
+        #logger.info('{} of {} particles are located in the model domain.'.format(particles_in_domain, len(self.particle_set)))
 
         # Data logger
-        self.data_logger = NetCDFLogger(self.config, len(self.particle_set))
+        # self.data_logger = NetCDFLogger(self.config, len(self.particle_set))
         
         # Write particle group ids to file
-        self.data_logger.write_group_ids(group_ids)
+        # self.data_logger.write_group_ids(group_ids)
 
     def update_reading_frame(self, time):
         self.data_reader.update_time_dependent_vars(time)
@@ -229,9 +231,3 @@ cdef class FVCOMOPTModel(OPTModel):
     def _cartesian_to_sigma_coords(self, DTYPE_FLOAT_t z, DTYPE_FLOAT_t h,
             DTYPE_FLOAT_t zeta):
         return (z - zeta) / (h + zeta)
-
-def get_model(config):
-    if config.get("OCEAN_CIRCULATION_MODEL", "name") == "FVCOM":
-        return FVCOMOPTModel(config)
-    else:
-        raise ValueError('Unsupported ocean circulation model.')

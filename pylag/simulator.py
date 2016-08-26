@@ -1,9 +1,10 @@
 import logging
 from progressbar import ProgressBar
 
-from pylag.model import get_model
 from pylag.time_manager import TimeManager
 from pylag.particle_positions_reader import read_particle_initial_positions
+
+from pylag.model_factory import get_model
 
 def get_simulator(config):
     if config.get("SIMULATION", "simulation_type") == "trace":
@@ -50,20 +51,24 @@ class TraceSimulator(Simulator):
             y_positions, z_positions)
 
         # Write initial state to file
-        model.record(self.time_manager.time)
+        #model.record(self.time_manager.time)
 
         # The main update loop
-        print 'Starting PyLag\n'
-        print 'Progress:'
-        pbar = ProgressBar(maxval=self.time_manager.time_end, term_width=50).start()
-        while self.time_manager.time < self.time_manager.time_end:
-            model.update(self.time_manager.time)
-            self.time_manager.update_current_time()
-            if self.time_manager.write_output_to_file() == 1:
-                model.record(self.time_manager.time)
-            model.update_reading_frame(self.time_manager.time)
-            pbar.update(self.time_manager.time)
-        pbar.finish()
+        #print 'Starting PyLag\n'
+        #print 'Progress:'
+        #pbar = ProgressBar(maxval=self.time_manager.time_end, term_width=50).start()
+        #while self.time_manager.time < self.time_manager.time_end:
+        #    model.update(self.time_manager.time)
+        #    self.time_manager.update_current_time()
+        #    if self.time_manager.write_output_to_file() == 1:
+        #        model.record(self.time_manager.time)
+            
+            # Check on status of reading frames and update if necessary
+            # Communicate updated arrays to the data reader if these are out of
+            # date.
+            #model.update_reading_frame(self.time_manager.time)
+        #    pbar.update(self.time_manager.time)
+        #pbar.finish()
 
         # Close output files
-        model.shutdown()
+        #model.shutdown()

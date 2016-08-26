@@ -3,9 +3,10 @@ import numpy as np
 
 from mpi4py import MPI
 
-from pylag.model import get_model
 from pylag.time_manager import TimeManager
 from pylag.particle_positions_reader import read_particle_initial_positions
+
+from pylag.parallel.model_factory import get_model
 
 def get_simulator(config):
     if config.get("SIMULATION", "simulation_type") == "trace":
@@ -23,19 +24,19 @@ class TraceSimulator(Simulator):
         self.time_manager = TimeManager(config)
     
     def run(self, config):
+        # Model object
+        model = get_model(config)
+        
         # MPI objects and variables
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
         size = comm.Get_size()
         
-        # For logging
-        logger = logging.getLogger(__name__)
-        
-        # Model object
-        model = get_model(config)
-        
         # Read in particle initial positions from file
         if rank == 0:
+            # For logging
+            logger = logging.getLogger(__name__)
+            
             file_name = config.get('SIMULATION', 'initial_positions_file')
 
             n_particles, group_ids, x_positions, y_positions, z_positions = \
@@ -88,8 +89,8 @@ class TraceSimulator(Simulator):
             print 'Pocessor with rank {} is managing {} particles.'.format(rank, my_n_particles)
 
         # Initialise time counters, create particle seed
-        #model.initialise(self.time_manager.time, my_group_ids, my_x_positions,
-        #        my_y_positions, my_z_positions)
+        model.initialise(self.time_manager.time, my_group_ids, my_x_positions,
+                my_y_positions, my_z_positions)
 
         # Write initial state to file
         #model.record(self.time_manager.time)
