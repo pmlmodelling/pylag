@@ -27,7 +27,7 @@ class TraceSimulator(Simulator):
         logger = logging.getLogger(__name__)
         
         # Model object
-        model = get_model(config)
+        self.model = get_model(config)
 
         # Read in particle initial positions from file - these will be used to
         # create the initial particle set.
@@ -48,17 +48,18 @@ class TraceSimulator(Simulator):
                 'initial positions file {}.'.format(file_name))
 
         # Initialise time counters, create particle seed
-        model.initialise(self.time_manager.time, group_ids, x_positions, \
+        self.model.initialise(self.time_manager.time, group_ids, x_positions, \
             y_positions, z_positions)
             
         # Data logger
-        data_logger = NetCDFLogger(config, n_particles)
+        self.data_logger = NetCDFLogger(config, n_particles)
         
         # Write particle group ids to file
-        data_logger.write_group_ids(group_ids)
+        self.data_logger.write_group_ids(group_ids)
 
         # Write initial state to file
-        #model.record(self.time_manager.time)
+        particle_diagnostics = self.model.get_diagnostics(self.time_manager.time)
+        self.data_logger.write(self.time_manager.time, particle_diagnostics)
 
         # The main update loop
         #print 'Starting PyLag\n'

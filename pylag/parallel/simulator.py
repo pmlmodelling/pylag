@@ -26,7 +26,7 @@ class TraceSimulator(Simulator):
     
     def run(self, config):
         # Model object
-        model = get_model(config)
+        self.model = get_model(config)
         
         # MPI objects and variables
         comm = MPI.COMM_WORLD
@@ -44,30 +44,31 @@ class TraceSimulator(Simulator):
                     read_particle_initial_positions(file_name)
 
             if n_particles == len(group_ids):
+                self.n_particles = n_particles
                 logger.info('Particle seed contains {} '\
-                    'particles.'.format(n_particles))
+                    'particles.'.format(self.n_particles))
             else:
                 logger.error('Error reading particle initial positions from '\
                     'file. The number of particles specified in the file is '\
                     '{}. The actual number found while parsing the file was '\
-                    '{}.'.format(n_particles, len(group_ids)))
+                    '{}.'.format(self.n_particles, len(group_ids)))
                 comm.Abort()
                     
             # Insist on the even distribution of particles
-            if n_particles % size == 0:
-                my_n_particles = n_particles/size
+            if self.n_particles % size == 0:
+                my_n_particles = self.n_particles/size
             else:
                 logger.error('For now the total number of particles must '\
                     'divide equally among the set of workers. The total '\
                     'number of particles = {}. The total number of workers = '\
-                    '{}.'.format(n_particles,size))
+                    '{}.'.format(self.n_particles,size))
                 comm.Abort()
                 
             # Data logger
-            data_logger = NetCDFLogger(config, n_particles)
+            self.data_logger = NetCDFLogger(config, self.n_particles)
 
             # Write particle group ids to file
-            data_logger.write_group_ids(group_ids)
+            self.data_logger.write_group_ids(group_ids)
         else:
             group_ids = None
             x_positions = None
@@ -96,11 +97,12 @@ class TraceSimulator(Simulator):
             print 'Pocessor with rank {} is managing {} particles.'.format(rank, my_n_particles)
 
         # Initialise time counters, create particle seed
-        model.initialise(self.time_manager.time, my_group_ids, my_x_positions,
+        self.model.initialise(self.time_manager.time, my_group_ids, my_x_positions,
                 my_y_positions, my_z_positions)
 
         # Write initial state to file
-        #model.record(self.time_manager.time)
+        particle_diagnostics = self.model.get_diagnostics(self.time_manager.time)
+        self._record(self.time_manager.time, particle_diagnostics)
 
         # The main update loop
         #while self.time_manager.time < self.time_manager.time_end:
@@ -112,3 +114,23 @@ class TraceSimulator(Simulator):
 
         # Close output files
         #model.shutdown()
+
+    def _record(self, time, diags):
+        # MPI objects and variables
+        comm = MPI.COMM_WORLD
+        rank = comm.Get_rank()
+        
+        global_diags = {}
+        for diag in diags.keys():
+            if rank == 0:
+                global_diags[diag] = np.empty(self.n_particles, dtype=type(diags[diag][0]))
+            else:
+                global_diags[diag] = None
+        
+        # Pool diagnostics
+        for diag in diags.keys():
+            comm.Gather(np.array(diags[diag]), global_diags[diag], root=0)
+
+        # Write to file
+        if rank == 0:
+            self.data_logger.write(time, global_diags)

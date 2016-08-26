@@ -27,7 +27,7 @@ cdef class OPTModel:
     def update(self, time):
         pass
     
-    def record(self, time):
+    def get_diagnostics(self, time):
         pass
     
     def shutdown(self):
@@ -198,22 +198,21 @@ cdef class FVCOMOPTModel(OPTModel):
                 self.particle_set[i].zpos = zpos
                 self.particle_set[i].host_horizontal_elem = host
 
-    def record(self, time):
-        # Write particle data to file
-        data = {'xpos': [], 'ypos': [], 'zpos': [], 'host_horizontal_elem': [], 'h': [], 'zeta': []}
+    def get_diagnostics(self, time):
+        diags = {'xpos': [], 'ypos': [], 'zpos': [], 'host_horizontal_elem': [], 'h': [], 'zeta': []}
         for particle in self.particle_set:
-            data['xpos'].append(particle.xpos)
-            data['ypos'].append(particle.ypos)
-            data['host_horizontal_elem'].append(particle.host_horizontal_elem)            
+            diags['xpos'].append(particle.xpos)
+            diags['ypos'].append(particle.ypos)
+            diags['host_horizontal_elem'].append(particle.host_horizontal_elem)            
             
             # Derived vars including depth, which is first converted to cartesian coords
             h = self.data_reader.get_bathymetry(particle.xpos, particle.ypos, particle.host_horizontal_elem)
             zeta = self.data_reader.get_sea_sur_elev(time, particle.xpos, particle.ypos, particle.host_horizontal_elem)
             z = self._sigma_to_cartesian_coords(particle.zpos, h, zeta)
-            data['h'].append(h)
-            data['zeta'].append(zeta)
-            data['zpos'].append(z)
-        self.data_logger.write(time, data)
+            diags['h'].append(h)
+            diags['zeta'].append(zeta)
+            diags['zpos'].append(z)
+        return diags
         
     def shutdown(self):
         self.data_logger.close()
