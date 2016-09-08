@@ -23,8 +23,14 @@ def main():
         parsed_args = parser.parse_args(sys.argv[1:])
 
         # Read in run config
-        config = get_config(config_filename=parsed_args.config)
-        
+        try:
+            config = get_config(config_filename=parsed_args.config)
+        except RuntimeError:
+            print 'Failed to create run config. Please make sure a config '\
+                'file iss given using the -c or --config command line '\
+                'arguments.'
+            comm.Abort()
+            
         # Create output directory if it does not exist already
         if not os.path.isdir('{}'.format(config.get('GENERAL', 'out_dir'))):
             os.mkdir('{}'.format(config.get('GENERAL', 'out_dir')))
