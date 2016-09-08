@@ -23,6 +23,9 @@ def main():
             'arguments.'
         raise RuntimeError(re.message)
 
+    # Enable full logging in serial mode
+    config.set('GENERAL', 'full_logging', 'True')
+
     # Create output directory if it does not exist already
     if not os.path.isdir('{}'.format(config.get('GENERAL', 'out_dir'))):
         os.mkdir('{}'.format(config.get('GENERAL', 'out_dir')))

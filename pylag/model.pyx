@@ -124,8 +124,9 @@ cdef class FVCOMOPTModel(OPTModel):
                 particle = Particle(group_id=group, in_domain=in_domain)
                 self.particle_set.append(particle)
 
-        #logger = logging.getLogger(__name__)
-        #logger.info('{} of {} particles are located in the model domain.'.format(particles_in_domain, len(self.particle_set)))
+        if self.config.getboolean('GENERAL', 'full_logging'):
+            logger = logging.getLogger(__name__)
+            logger.info('{} of {} particles are located in the model domain.'.format(particles_in_domain, len(self.particle_set)))
 
     def update_reading_frame(self, time):
         self.data_reader.update_time_dependent_vars(time)

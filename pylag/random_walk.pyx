@@ -231,9 +231,10 @@ cdef class AR0HorizontalRandomWalk(HorizontalRandomWalk):
 
 def get_vertical_random_walk_model(config):
     if not config.has_option("SIMULATION", "vertical_random_walk_model"):
-        logger = logging.getLogger(__name__)
-        logger.info('Configuation option vertical_random_walk_model not found. '\
-        'The model will run without vertical random walk.')
+        if config.getboolean('GENERAL', 'full_logging'):
+            logger = logging.getLogger(__name__)
+            logger.info('Configuation option vertical_random_walk_model not found. '\
+            'The model will run without vertical random walk.')
         return None
 
     # Return the specified vertical random walk model.
@@ -248,9 +249,10 @@ def get_vertical_random_walk_model(config):
     
 def get_horizontal_random_walk_model(config):
     if not config.has_option("SIMULATION", "horizontal_random_walk_model"):
-        logger = logging.getLogger(__name__)
-        logger.info('Configuation option horizontal_random_walk_model not found. '\
-        'The model will run without horizontal random walk.')
+        if config.getboolean('GENERAL', 'full_logging'):
+            logger = logging.getLogger(__name__)
+            logger.info('Configuation option horizontal_random_walk_model not found. '\
+                'The model will run without horizontal random walk.')
         return None
 
     # Return the specified horizontal random walk model.
