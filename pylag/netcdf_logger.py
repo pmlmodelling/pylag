@@ -35,8 +35,8 @@ class NetCDFLogger(object):
         except:
             raise RuntimeError('Failed to create output file {}.'.format(self.file_name))
 
-        # Simulation start datetime
-        self.start_datetime = start_datetime
+        # Time units
+        self._simulation_time_units = 'seconds since {}'.format(start_datetime)
 
         # Variable data type
         self._data_type='f4'
@@ -100,7 +100,7 @@ class NetCDFLogger(object):
         tidx = self._time.shape[0]
         
         # Rebase time units and save
-        dt = num2date(time, units='seconds since {}'.format(self.start_datetime))
+        dt = num2date(time, units=self._simulation_time_units)
         self._time[tidx] = date2num(dt, units=self._time.units)
         
         self._xpos[tidx, :] = particle_data['xpos']
