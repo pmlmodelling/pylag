@@ -52,7 +52,9 @@ class TraceSimulator(Simulator):
             y_positions, z_positions)
             
         # Data logger
-        self.data_logger = NetCDFLogger(config, n_particles)
+        file_name = config.get('GENERAL', 'output_file')
+        start_datetime = config.get("SIMULATION", "start_datetime")
+        self.data_logger = NetCDFLogger(file_name, start_datetime, n_particles)
         
         # Write particle group ids to file
         self.data_logger.write_group_ids(group_ids)

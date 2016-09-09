@@ -2,33 +2,41 @@ import logging
 from netCDF4 import Dataset, date2num, num2date
 
 class NetCDFLogger(object):
-    """
-    NetCDFLogger
+    """NetCDFLogger
 
     Parameters:
     -----------
-    file_name: str
-        Name of the *nc output file to be generated.
+    file_name : str
+        Name of the *.nc output file to be generated. If the `.nc' extension
+        is not present it is automatically added.
 
-    data_type: str
-        Output variable type (e.g. 'f4' for 32-bit floating point)
+    start_datetime : str
+        String giving the simulation start date and time.
+    
+    n_partilces : int
+        The number of particles.
 
     Original author:
     ----------------
     James Clark (PML)
     """
-    def __init__(self, config, n_particles):
-        
-        self.config = config
+    def __init__(self, file_name, start_datetime, n_particles):
         
         logger = logging.getLogger(__name__)
 
-        file_name = self.config.get('GENERAL', 'output_file') + '.nc'
+        if file_name[-3:] == '.nc':
+            self.file_name = file_name
+        else:
+            self.file_name = ''.join([file_name, '.nc'])
+
         try:
-            logger.info('Creating output file: {}.'.format(file_name))
-            self._ncfile = Dataset(file_name, mode='w', format='NETCDF4_CLASSIC')
+            logger.info('Creating output file: {}.'.format(self.file_name))
+            self._ncfile = Dataset(self.file_name, mode='w', format='NETCDF4_CLASSIC')
         except:
-            raise RuntimeError('Failed to create output file {}.'.format(file_name))
+            raise RuntimeError('Failed to create output file {}.'.format(self.file_name))
+
+        # Simulation start datetime
+        self.start_datetime = start_datetime
 
         # Variable data type
         self._data_type='f4'
@@ -92,7 +100,7 @@ class NetCDFLogger(object):
         tidx = self._time.shape[0]
         
         # Rebase time units and save
-        dt = num2date(time, units='seconds since {}'.format(self.config.get("SIMULATION", "start_datetime")))
+        dt = num2date(time, units='seconds since {}'.format(self.start_datetime))
         self._time[tidx] = date2num(dt, units=self._time.units)
         
         self._xpos[tidx, :] = particle_data['xpos']
