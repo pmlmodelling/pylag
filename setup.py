@@ -116,7 +116,10 @@ extensions = [makeExtension(name, file_type) for name in extNames]
 
 # Cythonize if working with pyx files
 if file_type == '.pyx':
-    ext_modules = cythonize(extensions, include_path=['include'])
+    ext_modules = cythonize(extensions, include_path=['include'])#,
+          #compiler_directives={'profile': True, 
+          #'linetrace': True, 'boundscheck': True,
+          #'cdivision_warnings': True, 'initializedcheck': True})
 elif file_type == '.c':
     ext_modules = extensions
 
@@ -140,8 +143,4 @@ setup(name="PyLag",
       ],
       packages=["pylag", "pylag.parallel"],
       ext_modules=extensions,
-      #ext_modules=cythonize(extensions, include_path=['include'],
-      #    compiler_directives={'profile': True, 
-      #    'linetrace': True, 'boundscheck': True,
-      #    'cdivision_warnings': True, 'initializedcheck': True}),
 )
