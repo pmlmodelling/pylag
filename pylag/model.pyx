@@ -1,5 +1,6 @@
 import sys
 import logging
+import copy
 
 # Data types used for constructing C data structures
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
@@ -21,6 +22,9 @@ cdef class OPTModel:
     def initialise(self, time, group_ids, x_positions, y_positions, z_positions):
         pass
     
+    def seed(self):
+        pass
+
     def update_reading_frame(self, time):
         pass
     
@@ -38,7 +42,8 @@ cdef class FVCOMOPTModel(OPTModel):
     cdef DataReader data_reader
     cdef NumIntegrator num_integrator
     cdef VerticalRandomWalk vert_rand_walk_model
-    cdef HorizontalRandomWalk horiz_rand_walk_model 
+    cdef HorizontalRandomWalk horiz_rand_walk_model
+    cdef object particle_seed
     cdef object particle_set
     cdef object data_logger
 
@@ -70,7 +75,7 @@ cdef class FVCOMOPTModel(OPTModel):
 
     def initialise(self, time, group_ids, x_positions, y_positions, z_positions):
         # Create particle seed - particles stored in a list object
-        self.particle_set = []
+        self.particle_seed = []
 
         guess = None
         particles_in_domain = 0
@@ -112,7 +117,7 @@ cdef class FVCOMOPTModel(OPTModel):
 
                 # Create particle
                 particle = Particle(group, x, y, sigma, host_horizontal_elem, in_domain)
-                self.particle_set.append(particle)
+                self.particle_seed.append(particle)
 
                 particles_in_domain += 1
 
@@ -122,11 +127,20 @@ cdef class FVCOMOPTModel(OPTModel):
             else:
                 in_domain = 0
                 particle = Particle(group_id=group, in_domain=in_domain)
-                self.particle_set.append(particle)
+                self.particle_seed.append(particle)
 
         if self.config.getboolean('GENERAL', 'full_logging'):
             logger = logging.getLogger(__name__)
-            logger.info('{} of {} particles are located in the model domain.'.format(particles_in_domain, len(self.particle_set)))
+            logger.info('{} of {} particles are located in the model domain.'.format(particles_in_domain, len(self.particle_seed)))
+        
+        # Seed the model
+        self.seed()
+
+    def seed(self):
+        """Make an `active' copy of the particle seed
+        
+        """
+        self.particle_set = copy.deepcopy(self.particle_seed)
 
     def update_reading_frame(self, time):
         self.data_reader.update_time_dependent_vars(time)
