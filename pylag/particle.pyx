@@ -23,6 +23,10 @@ cdef class Particle:
 
         self._in_domain = in_domain
 
+    def __reduce__(self):
+        return (self.__class__, (self._group_id, self._xpos, self._ypos, self._zpos,
+            self._host_horizontal_elem, self._in_domain))
+
     # Group ID
     property group_id:
         def __get__(self):
