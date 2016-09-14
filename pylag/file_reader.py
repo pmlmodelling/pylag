@@ -186,7 +186,7 @@ class FVCOMFileReader(FileReader):
             raise ValueError('The specified simulation endtime {} lies '\
                     'outside of the time period for which input data is '\
                     'available. Input data is available out to '\
-                    '{}.'.format(self._sim_datetime_s, self._data_datetime_e))
+                    '{}.'.format(self._sim_datetime_e, data_datetime_e))
 
         # Open the current data file for reading and initialise the time array
         self._open_data_file_for_reading()
