@@ -52,7 +52,7 @@ class FVCOMFileReader(FileReader):
             self._grid_metrics_file_name = None
 
         # Set up grid and data access
-        self._setup_grid_access()
+        self._setup_file_access()
         self._setup_data_access()
 
     def update_reading_frames(self, time):
@@ -88,9 +88,25 @@ class FVCOMFileReader(FileReader):
     def get_time_dependent_variable_at_next_time_index(self, var_name):
         return self._current_data_file.variables[var_name][self._tidx_next,:]
 
-    def _setup_grid_access(self):
+    def _setup_file_access(self):
         logger = logging.getLogger(__name__)
-        logger.info('Reading FVCOM\'s grid')
+        
+        # First save output file names into a list
+        logger.info('Searching for input data files.')
+        self._data_file_names = natsort.natsorted(glob.glob('{}/{}*.nc'.format(self._data_dir, 
+                self._data_file_name_stem)))
+                
+        # Ensure files were found in the specified directory.
+        if not self._data_file_names:
+            raise RuntimeError('No input files found in location {}.'.format(self._data_dir))
+
+        # Log file names
+        logger.info("Found {} input data files in directory "\
+            "`{}'.".format(len(self._data_file_names), self._data_dir))
+        logger.info('Input data file names are: ' + ', '.join(self._data_file_names))
+        
+        # Open grid metrics file for reading
+        logger.info('Opening grid metrics file for reading.')
         
         # Try to read grid data from the grid metrics file, in which neighbour
         # element info (nbe) has been ordered to match node ordering in nv.
@@ -98,6 +114,7 @@ class FVCOMFileReader(FileReader):
         if self._grid_metrics_file_name is not None:
             try:
                 self._grid_file = Dataset('{}'.format(self._grid_metrics_file_name), 'r')
+                logger.info('Openend grid metrics file {}.'.format(self._grid_metrics_file_name))
             except RuntimeError:
                 logger.warning('Failed to read grid metrics file {}.'.format(self._grid_metrics_file_name))
         
@@ -108,11 +125,8 @@ class FVCOMFileReader(FileReader):
                     'not be read. A new grid metrics file will now be created. '\
                     'For future simulations using the same model grid, please '\
                     'provide this file in the config -- it will save you time!')
-            print self._data_file_name_stem
-            print self._data_dir
-            file_name_in = glob.glob('{}/{}*.nc'.format(self._data_dir, self._data_file_name_stem))[0]
             file_name_out = '{}/grid_metrics.nc'.format(self.config.get('GENERAL', 'out_dir'))
-            create_fvcom_grid_metrics_file(file_name_in, file_name_out)
+            create_fvcom_grid_metrics_file(self._data_file_names[0], file_name_out)
             logger.info('Created grid metrics file {}.'.format(file_name_out))
             self._grid_file = Dataset(file_name_out, 'r')
         
@@ -122,17 +136,6 @@ class FVCOMFileReader(FileReader):
         """
         logger = logging.getLogger(__name__)
         logger.info('Initialising time dependent variables.')
-
-        # First save output file names into a list
-        self._data_file_names = natsort.natsorted(glob.glob('{}/{}*.nc'.format(self._data_dir, 
-                self._data_file_name_stem)))
-                
-        # Ensure files were found in the specified directory.
-        if not self._data_file_names:
-            raise RuntimeError('No input files found in location {}.'.format(self._data_dir))
-
-        # Log file names
-        logger.info("Found {} input data files in directory `{}'.".format(len(self._data_file_names), self._data_dir))
         
         # Simulation start time
         rounding_interval = self._config.getint("OCEAN_CIRCULATION_MODEL", "rounding_interval")
