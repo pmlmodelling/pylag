@@ -80,6 +80,3 @@ class TraceSimulator(Simulator):
             self.model.update_reading_frame(self.time_manager.time)
             pbar.update(self.time_manager.time)
         pbar.finish()
-
-        # Close output files
-        #model.shutdown()

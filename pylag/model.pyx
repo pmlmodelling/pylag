@@ -34,9 +34,6 @@ cdef class OPTModel:
     def get_diagnostics(self, time):
         pass
     
-    def shutdown(self):
-        pass
-    
 cdef class FVCOMOPTModel(OPTModel):
     cdef object config
     cdef DataReader data_reader
@@ -45,7 +42,6 @@ cdef class FVCOMOPTModel(OPTModel):
     cdef HorizontalRandomWalk horiz_rand_walk_model
     cdef object particle_seed
     cdef object particle_set
-    cdef object data_logger
 
     # Grid boundary limits
     cdef DTYPE_FLOAT_t _zmin
@@ -239,9 +235,6 @@ cdef class FVCOMOPTModel(OPTModel):
             diags['zeta'].append(zeta)
             diags['zpos'].append(z)
         return diags
-        
-    def shutdown(self):
-        self.data_logger.close()
         
     def _sigma_to_cartesian_coords(self, DTYPE_FLOAT_t sigma, DTYPE_FLOAT_t h,
             DTYPE_FLOAT_t zeta):

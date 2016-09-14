@@ -115,9 +115,6 @@ class TraceSimulator(Simulator):
                 self._record(self.time_manager.time, particle_diagnostics)
             self.model.update_reading_frame(self.time_manager.time)
 
-        # Close output files
-        #model.shutdown()
-
     def _record(self, time, diags):
         # MPI objects and variables
         comm = MPI.COMM_WORLD
