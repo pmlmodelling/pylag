@@ -19,10 +19,10 @@ from pylag.integrator cimport NumIntegrator
 from pylag.random_walk cimport VerticalRandomWalk, HorizontalRandomWalk
 
 cdef class OPTModel:
-    def initialise(self, time, group_ids, x_positions, y_positions, z_positions):
+    def seed(self, time, group_ids, x_positions, y_positions, z_positions):
         pass
     
-    def seed(self):
+    def reset(self):
         pass
 
     def update_reading_frame(self, time):
@@ -73,7 +73,14 @@ cdef class FVCOMOPTModel(OPTModel):
         self._zmin = self.config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmin')
         self._zmax = self.config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmax')
 
-    def initialise(self, time, group_ids, x_positions, y_positions, z_positions):
+    def seed(self, time, group_ids, x_positions, y_positions, z_positions):
+        """Create the particle seed.
+        
+        Create the particle seed using the supplied arguments. Initialise
+        `particle_set' using `particle_seed'. A separate copy of the particle
+        seed is stored so that the model can be reseeded at a later time, as
+        required.
+        """
         # Create particle seed - particles stored in a list object
         self.particle_seed = []
 
@@ -134,13 +141,17 @@ cdef class FVCOMOPTModel(OPTModel):
             logger.info('{} of {} particles are located in the model domain.'.format(particles_in_domain, len(self.particle_seed)))
         
         # Seed the model
-        self.seed()
+        self.reset()
 
-    def seed(self):
-        """Make an `active' copy of the particle seed
+    def reset(self):
+        """Set particle positions equal to those of the particle seed.
         
+        Make an `active' copy of the particle seed.
         """
-        self.particle_set = copy.deepcopy(self.particle_seed)
+        if self.particle_seed is not None:
+            self.particle_set = copy.deepcopy(self.particle_seed)
+        else:
+            raise RuntimeError('Particle seed has yet to be created.')
 
     def update_reading_frame(self, time):
         self.data_reader.update_time_dependent_vars(time)

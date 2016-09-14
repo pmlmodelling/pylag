@@ -48,7 +48,7 @@ class TraceSimulator(Simulator):
                 'initial positions file {}.'.format(file_name))
 
         # Initialise time counters, create particle seed
-        self.model.initialise(self.time_manager.time, group_ids, x_positions, \
+        self.model.seed(self.time_manager.time, group_ids, x_positions, \
             y_positions, z_positions)
             
         # Data logger
