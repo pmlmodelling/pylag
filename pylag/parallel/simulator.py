@@ -103,7 +103,7 @@ class TraceSimulator(Simulator):
             print 'Pocessor with rank {} is managing {} particles.'.format(rank, my_n_particles)
 
         # Initialise time counters, create particle seed
-        self.model.seed(self.time_manager.time, my_group_ids, my_x_positions,
+        self.model.create_seed(self.time_manager.time, my_group_ids, my_x_positions,
                 my_y_positions, my_z_positions)
 
         # Write initial state to file
@@ -117,7 +117,7 @@ class TraceSimulator(Simulator):
             if self.time_manager.write_output_to_file() == 1:
                 particle_diagnostics = self.model.get_diagnostics(self.time_manager.time)
                 self._record(self.time_manager.time, particle_diagnostics)
-            self.model.update_reading_frame(self.time_manager.time)
+            self.model.update_reading_frames(self.time_manager.time)
 
     def _record(self, time, diags):
         # MPI objects and variables

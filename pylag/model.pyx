@@ -22,13 +22,13 @@ cdef class OPTModel:
     def read_data(self, start_datetime, end_datetime):
         pass
 
-    def seed(self, time, group_ids, x_positions, y_positions, z_positions):
+    def create_seed(self, time, group_ids, x_positions, y_positions, z_positions):
         pass
     
-    def reset(self):
+    def seed(self):
         pass
 
-    def update_reading_frame(self, time):
+    def update_reading_frames(self, time):
         pass
     
     def update(self, time):
@@ -78,7 +78,7 @@ cdef class FVCOMOPTModel(OPTModel):
         """
         self.data_reader.read_data(start_datetime, end_datetime)
 
-    def seed(self, time, group_ids, x_positions, y_positions, z_positions):
+    def create_seed(self, time, group_ids, x_positions, y_positions, z_positions):
         """Create the particle seed.
         
         Create the particle seed using the supplied arguments. Initialise
@@ -146,9 +146,9 @@ cdef class FVCOMOPTModel(OPTModel):
             logger.info('{} of {} particles are located in the model domain.'.format(particles_in_domain, len(self.particle_seed)))
         
         # Seed the model
-        self.reset()
+        self.seed()
 
-    def reset(self):
+    def seed(self):
         """Set particle positions equal to those of the particle seed.
         
         Make an `active' copy of the particle seed.
@@ -158,7 +158,7 @@ cdef class FVCOMOPTModel(OPTModel):
         else:
             raise RuntimeError('Particle seed has yet to be created.')
 
-    def update_reading_frame(self, time):
+    def update_reading_frames(self, time):
         self.data_reader.update_time_dependent_vars(time)
 
     def update(self, DTYPE_FLOAT_t time):

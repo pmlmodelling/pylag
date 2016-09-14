@@ -52,7 +52,7 @@ class TraceSimulator(Simulator):
                 'initial positions file {}.'.format(file_name))
 
         # Initialise time counters, create particle seed
-        self.model.seed(self.time_manager.time, group_ids, x_positions, \
+        self.model.create_seed(self.time_manager.time, group_ids, x_positions, \
             y_positions, z_positions)
             
         # Data logger
@@ -81,6 +81,6 @@ class TraceSimulator(Simulator):
             # Check on status of reading frames and update if necessary
             # Communicate updated arrays to the data reader if these are out of
             # date.
-            self.model.update_reading_frame(self.time_manager.time)
+            self.model.update_reading_frames(self.time_manager.time)
             pbar.update(self.time_manager.time)
         pbar.finish()
