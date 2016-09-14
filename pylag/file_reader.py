@@ -132,8 +132,8 @@ class FVCOMFileReader(FileReader):
             logger.info('Created grid metrics file {}.'.format(file_name_out))
             self._grid_file = Dataset(file_name_out, 'r')
         
-    def set_time_counters(self, start_datetime, end_datetime):
-        """Initalise all time variables and counters.
+    def setup_data_access(self, start_datetime, end_datetime):
+        """Open data file for reading and initalise time variables.
         
         """
         

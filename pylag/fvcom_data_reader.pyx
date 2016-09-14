@@ -90,8 +90,8 @@ cdef class FVCOMDataReader(DataReader):
 
         self._read_grid()
 
-    cpdef configure(self, start_datetime, end_datetime):
-        self.mediator.set_time_counters(start_datetime, end_datetime)
+    cpdef read_data(self, start_datetime, end_datetime):
+        self.mediator.setup_data_access(start_datetime, end_datetime)
 
         self._read_time_dependent_vars()
 

@@ -30,8 +30,8 @@ class TraceSimulator(Simulator):
         self.model = get_model(config)
         
         # Set up data access for the simulation start and end times
-        self.model.setup_data_access(self.time_manager.datetime_start,
-                                     self.time_manager.datetime_end)
+        self.model.read_data(self.time_manager.datetime_start,
+                             self.time_manager.datetime_end)
 
         # Read in particle initial positions from file - these will be used to
         # create the initial particle set.

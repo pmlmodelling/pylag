@@ -10,7 +10,7 @@ class Mediator(object):
     preferable for just a single process to access the file system.
     
     """
-    def set_time_counters(self, start_datetime, end_datetime):
+    def setup_data_access(self, start_datetime, end_datetime):
         pass
 
     def update_reading_frames(self, time):
@@ -39,8 +39,8 @@ class FVCOMMediator(Mediator):
         self.config = config
         self.file_reader = FVCOMFileReader(config)
 
-    def set_time_counters(self, start_datetime, end_datetime):
-        self.file_reader.set_time_counters(start_datetime, end_datetime)
+    def setup_data_access(self, start_datetime, end_datetime):
+        self.file_reader.setup_data_access(start_datetime, end_datetime)
 
     def update_reading_frames(self, time):
         return self.file_reader.update_reading_frames(time)

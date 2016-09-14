@@ -28,9 +28,9 @@ class TraceSimulator(Simulator):
         # Model object
         self.model = get_model(config)
 
-        # Set up data access for the simulation start and end times
-        self.model.setup_data_access(self.time_manager.datetime_start,
-                                     self.time_manager.datetime_end)
+        # Set up data access using the simulation start and end times
+        self.model.read_data(self.time_manager.datetime_start,
+                             self.time_manager.datetime_end)
 
         # MPI objects and variables
         comm = MPI.COMM_WORLD

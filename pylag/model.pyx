@@ -19,7 +19,7 @@ from pylag.integrator cimport NumIntegrator
 from pylag.random_walk cimport VerticalRandomWalk, HorizontalRandomWalk
 
 cdef class OPTModel:
-    def setup_data_access(self, start_datetime, end_datetime):
+    def read_data(self, start_datetime, end_datetime):
         pass
 
     def seed(self, time, group_ids, x_positions, y_positions, z_positions):
@@ -72,11 +72,11 @@ cdef class FVCOMOPTModel(OPTModel):
         self._zmin = self.config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmin')
         self._zmax = self.config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmax')
 
-    def setup_data_access(self, start_datetime, end_datetime):
+    def read_data(self, start_datetime, end_datetime):
         """Setup access to time dependent variables.
 
         """
-        self.data_reader.configure(start_datetime, end_datetime)
+        self.data_reader.read_data(start_datetime, end_datetime)
 
     def seed(self, time, group_ids, x_positions, y_positions, z_positions):
         """Create the particle seed.

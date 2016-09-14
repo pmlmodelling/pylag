@@ -2,7 +2,7 @@
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 cdef class DataReader:
-    cpdef configure(self, start_datetime, end_datetime)
+    cpdef read_data(self, start_datetime, end_datetime)
 
     cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess)
 
