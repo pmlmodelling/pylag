@@ -20,6 +20,14 @@ class FVCOMMediator(Mediator):
         else:
             self.file_reader = None
 
+    def set_time_counters(self, start_datetime, end_datetime):
+        # MPI objects and variables
+        comm = MPI.COMM_WORLD
+        rank = comm.Get_rank()
+
+        if rank == 0:
+            self.file_reader.set_time_counters(start_datetime, end_datetime)
+
     def update_reading_frames(self, time):
         # MPI objects and variables
         comm = MPI.COMM_WORLD

@@ -89,6 +89,10 @@ cdef class FVCOMDataReader(DataReader):
         self.mediator = mediator
 
         self._read_grid()
+
+    cpdef configure(self, start_datetime, end_datetime):
+        self.mediator.set_time_counters(start_datetime, end_datetime)
+
         self._read_time_dependent_vars()
 
     cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):

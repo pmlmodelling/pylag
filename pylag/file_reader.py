@@ -13,6 +13,9 @@ class FileReader(object):
     def __init__(self):
         pass
     
+    def set_time_counters(self, start_datetime, end_datetime):
+        pass
+
     def update_reading_frames(self):
         pass
     
@@ -53,7 +56,6 @@ class FVCOMFileReader(FileReader):
 
         # Set up grid and data access
         self._setup_file_access()
-        self._setup_data_access()
 
     def update_reading_frames(self, time):
         # Load the next data file, if necessary
@@ -130,21 +132,26 @@ class FVCOMFileReader(FileReader):
             logger.info('Created grid metrics file {}.'.format(file_name_out))
             self._grid_file = Dataset(file_name_out, 'r')
         
-    def _setup_data_access(self):
-        """
-        Set up access to the NetCDF data file(s) and initialise time vars/counters.
-        """
-        logger = logging.getLogger(__name__)
-        logger.info('Initialising time dependent variables.')
+    def set_time_counters(self, start_datetime, end_datetime):
+        """Initalise all time variables and counters.
         
+        """
+        
+        logger = logging.getLogger(__name__)
+        logger.info('Initialising all time variables and counters.')      
+
+        # Save a reference to the new simulation start and end times for time
+        # rebasing
+        self._sim_datetime_s = start_datetime
+        self._sim_datetime_e = end_datetime
+
         # Simulation start time
         rounding_interval = self._config.getint("OCEAN_CIRCULATION_MODEL", "rounding_interval")
-        sim_datetime_s = datetime.datetime.strptime(self._config.get("SIMULATION", "start_datetime"), "%Y-%m-%d %H:%M:%S")
 
-        # Determine which data file holds data covering the simulation start time        
-        logger.info('Beginning search for the input data file spanning the specified simulation start point.')
+        # Determine which data file holds data covering the simulation start time
+        logger.info('Beginning search for the input data file spanning the '\
+            'specified simulation start point.')  
         self._current_data_file_name = None
-        self._current_data_file = None
         for data_file_name in self._data_file_names:
             logger.info("Trying file `{}'".format(data_file_name))
             ds = Dataset(data_file_name, 'r')
@@ -155,7 +162,7 @@ class FVCOMFileReader(FileReader):
             data_datetime_e = round_time([num2date(time[-1], units=time.units)], rounding_interval)[0]
             ds.close()
             
-            if (sim_datetime_s >= data_datetime_s) and (sim_datetime_s < data_datetime_e):
+            if (self._sim_datetime_s >= data_datetime_s) and (self._sim_datetime_s < data_datetime_e):
                 self._current_data_file_name = data_file_name
                 logger.info('Found initial data file {}.'.format(self._current_data_file_name))
                 break
@@ -166,26 +173,20 @@ class FVCOMFileReader(FileReader):
         # Ensure the start time is covered by the available data
         if self._current_data_file_name is None:
             raise RuntimeError('Could not find an input data file spanning the '\
-                    'specified start time: {}.'.format(sim_datetime_s))
+                    'specified start time: {}.'.format(self._sim_datetime_s))
                 
         # Check that the simulation end time is covered by the available data
-        try:
-            sim_datetime_e = datetime.datetime.strptime(self._config.get("SIMULATION",
-                    "end_datetime"), "%Y-%m-%d %H:%M:%S")
-        except ConfigParser.NoOptionError:
-            duration_in_days = self._config.getfloat("SIMULATION", "duration")
-            sim_datetime_e = sim_datetime_s + datetime.timedelta(duration_in_days)
         ds = Dataset(self._data_file_names[-1], 'r')
         data_datetime_e = num2date(ds.variables['time'][-1], units = ds.variables['time'].units)
         ds.close()
         
         # If the specified run time extends beyond the time period for which
         # there exists input data, raise this.
-        if sim_datetime_e > data_datetime_e:
+        if self._sim_datetime_e > data_datetime_e:
             raise ValueError('The specified simulation endtime {} lies '\
                     'outside of the time period for which input data is '\
                     'available. Input data is available out to '\
-                    '{}.'.format(sim_datetime_s, data_datetime_e))
+                    '{}.'.format(self._sim_datetime_s, self._data_datetime_e))
 
         # Open the current data file for reading and initialise the time array
         self._open_data_file_for_reading()
@@ -198,9 +199,9 @@ class FVCOMFileReader(FileReader):
         
         """
         logger = logging.getLogger(__name__)
-        
+
         # Close the current data file if one has been opened previously
-        if self._current_data_file:
+        if hasattr(self, '_current_data_file'):
             self._current_data_file.close()
 
         # Open the current data file
@@ -213,7 +214,6 @@ class FVCOMFileReader(FileReader):
 
         # Rounding interval and the simulation start time
         rounding_interval = self._config.getint("OCEAN_CIRCULATION_MODEL", "rounding_interval")
-        sim_datetime_s = datetime.datetime.strptime(self._config.get("SIMULATION", "start_datetime"), "%Y-%m-%d %H:%M:%S")
 
         # Read in time from the current data file and convert to a list of 
         # datetime objects. Apply rounding as specified.
@@ -224,7 +224,7 @@ class FVCOMFileReader(FileReader):
         # Convert to seconds using datetime_start as a reference point
         time_seconds = []
         for time in datetime_rounded:
-            time_seconds.append((time - sim_datetime_s).total_seconds())
+            time_seconds.append((time - self._sim_datetime_s).total_seconds())
         self._time = np.array(time_seconds, dtype=DTYPE_FLOAT)
 
     def _set_time_indices(self, time):
