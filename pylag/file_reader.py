@@ -52,7 +52,14 @@ class FVCOMFileReader(FileReader):
         try:
             self._grid_metrics_file_name = self._config.get("OCEAN_CIRCULATION_MODEL", "grid_metrics_file")
         except ConfigParser.NoOptionError:
-            self._grid_metrics_file_name = None
+            logger = logging.getLogger(__name__)
+            logger.error('A grid metrics file was not given. Please provide '\
+                'one an try again. If one needs to be generated, please '\
+                'have a look at the tools provided in pylag.utils, which '\
+                'provides several functions to help with the creation '\
+                'of grid metrics files.')
+            raise RuntimeError('A grid metrics file was not listed in the run '\
+                'configuration file. See the log file for more details.')
 
         # Set up grid and data access
         self._setup_file_access()
@@ -112,25 +119,12 @@ class FVCOMFileReader(FileReader):
         
         # Try to read grid data from the grid metrics file, in which neighbour
         # element info (nbe) has been ordered to match node ordering in nv.
-        self._grid_file = None
-        if self._grid_metrics_file_name is not None:
-            try:
-                self._grid_file = Dataset('{}'.format(self._grid_metrics_file_name), 'r')
-                logger.info('Openend grid metrics file {}.'.format(self._grid_metrics_file_name))
-            except RuntimeError:
-                logger.warning('Failed to read grid metrics file {}.'.format(self._grid_metrics_file_name))
-        
-        if not self._grid_file:
-            print 'WARNING: Creating a new grid metrics file. See log file for '\
-                'more information.'
-            logger.info('Either no grid metrics file was given, or it could '\
-                    'not be read. A new grid metrics file will now be created. '\
-                    'For future simulations using the same model grid, please '\
-                    'provide this file in the config -- it will save you time!')
-            file_name_out = '{}/grid_metrics.nc'.format(self.config.get('GENERAL', 'out_dir'))
-            create_fvcom_grid_metrics_file(self._data_file_names[0], file_name_out)
-            logger.info('Created grid metrics file {}.'.format(file_name_out))
-            self._grid_file = Dataset(file_name_out, 'r')
+        try:
+            self._grid_file = Dataset('{}'.format(self._grid_metrics_file_name), 'r')
+            logger.info('Openend grid metrics file {}.'.format(self._grid_metrics_file_name))
+        except RuntimeError:
+            logger.error('Failed to read grid metrics file {}.'.format(self._grid_metrics_file_name))
+            raise ValueError('Failed to read the grid metrics file.')
         
     def setup_data_access(self, start_datetime, end_datetime):
         """Open data file for reading and initalise time variables.
