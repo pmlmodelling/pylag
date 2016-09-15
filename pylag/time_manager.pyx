@@ -89,6 +89,15 @@ cdef class TimeManager(object):
         # Set the current time to time_start
         self._time = self._time_start
 
+    def new_simulation(self):
+        """Start a new simulation?
+        
+        """
+        if self._current_release < self._number_of_particle_releases:
+            return True
+        
+        return False
+
     def update_release_counters(self):
         """ Set counters and time variables ready for the next particle release
         

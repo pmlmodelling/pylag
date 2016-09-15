@@ -51,8 +51,7 @@ class TraceSimulator(Simulator):
         self.model.set_particle_data(group_ids, x_positions, y_positions, z_positions)
 
         # Run the ensemble
-        release = 0
-        while release < self.time_manager.number_of_particle_releases:
+        while self.time_manager.new_simulation():
             # Set up data access for the new simulation
             self.model.read_data(self.time_manager.datetime_start,
                                  self.time_manager.datetime_end)
@@ -61,7 +60,7 @@ class TraceSimulator(Simulator):
             self.model.seed(self.time_manager.time)
             
             # Create data logger
-            file_name = ''.join([config.get('GENERAL', 'output_file'), '_{}'.format(release)])
+            file_name = ''.join([config.get('GENERAL', 'output_file'), '_{}'.format(self.time_manager.current_release)])
             start_datetime = self.time_manager.datetime_start
             self.data_logger = NetCDFLogger(file_name, start_datetime, n_particles)
 
@@ -73,7 +72,7 @@ class TraceSimulator(Simulator):
             self.data_logger.write(self.time_manager.time, particle_diagnostics)
 
             # The main update loop
-            print '\nStarting ensemble member {} ...'.format(release)
+            print '\nStarting ensemble member {} ...'.format(self.time_manager.current_release)
             print 'Progress:'
             pbar = ProgressBar(maxval=self.time_manager.time_end, term_width=50).start()
             while self.time_manager.time < self.time_manager.time_end:
@@ -95,6 +94,3 @@ class TraceSimulator(Simulator):
             
             # Update release counters
             self.time_manager.update_release_counters()
-
-            # Update release counter
-            release += 1
