@@ -28,10 +28,6 @@ class TraceSimulator(Simulator):
         # Model object
         self.model = get_model(config)
 
-        # Set up data access using the simulation start and end times
-        self.model.read_data(self.time_manager.datetime_start,
-                             self.time_manager.datetime_end)
-
         # MPI objects and variables
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
@@ -67,14 +63,6 @@ class TraceSimulator(Simulator):
                     'number of particles = {}. The total number of workers = '\
                     '{}.'.format(self.n_particles,size))
                 comm.Abort()
-                
-            # Data logger
-            file_name = config.get('GENERAL', 'output_file')
-            start_datetime = config.get("SIMULATION", "start_datetime")
-            self.data_logger = NetCDFLogger(file_name, start_datetime, n_particles)
-
-            # Write particle group ids to file
-            self.data_logger.write_group_ids(group_ids)
         else:
             group_ids = None
             x_positions = None
@@ -102,22 +90,40 @@ class TraceSimulator(Simulator):
         if config.get('GENERAL', 'log_level') == 'DEBUG':
             print 'Pocessor with rank {} is managing {} particles.'.format(rank, my_n_particles)
 
-        # Initialise time counters, create particle seed
-        self.model.create_seed(self.time_manager.time, my_group_ids, my_x_positions,
-                my_y_positions, my_z_positions)
+        # Initialise particle arrays
+        self.model.set_particle_data(my_group_ids, my_x_positions, my_y_positions, my_z_positions)
 
-        # Write initial state to file
-        particle_diagnostics = self.model.get_diagnostics(self.time_manager.time)
-        self._record(self.time_manager.time, particle_diagnostics)
+        # Run the ensemble
+        while self.time_manager.new_simulation():
+            # Set up data access for the new simulation
+            self.model.read_data(self.time_manager.datetime_start,
+                                 self.time_manager.datetime_end)
+            
+            # Seed the model
+            self.model.seed(self.time_manager.time)
 
-        # The main update loop
-        while self.time_manager.time < self.time_manager.time_end:
-            self.model.update(self.time_manager.time)
-            self.time_manager.update_current_time()
-            if self.time_manager.write_output_to_file() == 1:
-                particle_diagnostics = self.model.get_diagnostics(self.time_manager.time)
-                self._record(self.time_manager.time, particle_diagnostics)
-            self.model.update_reading_frames(self.time_manager.time)
+            if rank == 0:
+                # Data logger on the root process
+                file_name = ''.join([config.get('GENERAL', 'output_file'), '_{}'.format(self.time_manager.current_release)])
+                start_datetime = config.get("SIMULATION", "start_datetime")
+                self.data_logger = NetCDFLogger(file_name, start_datetime, n_particles)
+
+                # Write particle group ids to file
+                self.data_logger.write_group_ids(group_ids)
+
+            # Write initial state to file
+            particle_diagnostics = self.model.get_diagnostics(self.time_manager.time)
+            self._record(self.time_manager.time, particle_diagnostics)
+
+            # The main update loop
+            if rank == 0: logger.info('Starting ensemble member {} ...'.format(self.time_manager.current_release))
+            while self.time_manager.time < self.time_manager.time_end:
+                self.model.update(self.time_manager.time)
+                self.time_manager.update_current_time()
+                if self.time_manager.write_output_to_file() == 1:
+                    particle_diagnostics = self.model.get_diagnostics(self.time_manager.time)
+                    self._record(self.time_manager.time, particle_diagnostics)
+                self.model.update_reading_frames(self.time_manager.time)
 
     def _record(self, time, diags):
         # MPI objects and variables
