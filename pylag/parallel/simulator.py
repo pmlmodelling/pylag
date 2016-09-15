@@ -21,13 +21,16 @@ class Simulator(object):
 
 class TraceSimulator(Simulator):
     def __init__(self, config):
-        # Time manager - for controlling particle release events, time stepping etc
-        self.time_manager = TimeManager(config)
+        # Configuration object
+        self._config = config
+        
+        # Time manager - for controlling time stepping etc
+        self.time_manager = TimeManager(self._config)
     
-    def run(self, config):
         # Model object
-        self.model = get_model(config)
-
+        self.model = get_model(self._config)
+    
+    def run(self):
         # MPI objects and variables
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
@@ -38,7 +41,7 @@ class TraceSimulator(Simulator):
             # For logging
             logger = logging.getLogger(__name__)
             
-            file_name = config.get('SIMULATION', 'initial_positions_file')
+            file_name = self._config.get('SIMULATION', 'initial_positions_file')
 
             n_particles, group_ids, x_positions, y_positions, z_positions = \
                     read_particle_initial_positions(file_name)
@@ -87,7 +90,7 @@ class TraceSimulator(Simulator):
         comm.Scatter(z_positions,my_z_positions,root=0)   
 
         # Display particle count if running in debug mode
-        if config.get('GENERAL', 'log_level') == 'DEBUG':
+        if self._config.get('GENERAL', 'log_level') == 'DEBUG':
             print 'Pocessor with rank {} is managing {} particles.'.format(rank, my_n_particles)
 
         # Initialise particle arrays
@@ -104,8 +107,8 @@ class TraceSimulator(Simulator):
 
             if rank == 0:
                 # Data logger on the root process
-                file_name = ''.join([config.get('GENERAL', 'output_file'), '_{}'.format(self.time_manager.current_release)])
-                start_datetime = config.get("SIMULATION", "start_datetime")
+                file_name = ''.join([self._config.get('GENERAL', 'output_file'), '_{}'.format(self.time_manager.current_release)])
+                start_datetime = self._config.get("SIMULATION", "start_datetime")
                 self.data_logger = NetCDFLogger(file_name, start_datetime, n_particles)
 
                 # Write particle group ids to file

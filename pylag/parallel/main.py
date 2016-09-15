@@ -69,7 +69,7 @@ def main():
     
     # Run the simulation
     simulator = get_simulator(config)
-    simulator.run(config)
+    simulator.run()
     
     # End logging and exit
     if rank == 0:
