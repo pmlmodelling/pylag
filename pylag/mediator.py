@@ -1,4 +1,4 @@
-from pylag.file_reader import FVCOMFileReader
+from pylag.file_reader import FileReader
 
 class Mediator(object):
     """ Base class for objects of type Mediator.
@@ -34,10 +34,10 @@ class Mediator(object):
     def get_time_dependent_variable_at_next_time_index(self, var_name, var_dims=None, var_type=None):
         pass
 
-class FVCOMMediator(Mediator):
+class SerialMediator(Mediator):
     def __init__(self, config):
         self.config = config
-        self.file_reader = FVCOMFileReader(config)
+        self.file_reader = FileReader(config)
 
     def setup_data_access(self, start_datetime, end_datetime):
         self.file_reader.setup_data_access(start_datetime, end_datetime)

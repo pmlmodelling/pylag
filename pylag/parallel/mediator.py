@@ -3,10 +3,10 @@ import numpy as np
 # For parallel simulations
 from mpi4py import MPI
 
-from pylag.file_reader import FVCOMFileReader
+from pylag.file_reader import FileReader
 from pylag.mediator import Mediator
 
-class FVCOMMediator(Mediator):
+class MPIMediator(Mediator):
     def __init__(self, config):
         self.config = config
 
@@ -16,7 +16,7 @@ class FVCOMMediator(Mediator):
         
         # Only the root process accesses the file system
         if rank == 0:
-            self.file_reader = FVCOMFileReader(config)
+            self.file_reader = FileReader(config)
         else:
             self.file_reader = None
 

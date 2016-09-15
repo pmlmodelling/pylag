@@ -2,47 +2,15 @@ import numpy as np
 from netCDF4 import Dataset, num2date
 import glob
 import natsort
-import datetime
 import logging
 import ConfigParser
 
-from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
-from pylag.unstruct_grid_tools import round_time, create_fvcom_grid_metrics_file
+from pylag.data_types_python import DTYPE_FLOAT
+from pylag.unstruct_grid_tools import round_time
 
 class FileReader(object):
-    def __init__(self):
-        pass
+    """Read in and manage access to grid and field data stored in NetCDF files.
     
-    def set_time_counters(self, start_datetime, end_datetime):
-        pass
-
-    def update_reading_frames(self):
-        pass
-    
-    def get_dimension_variable(self):
-        pass
-    
-    def get_grid_variable(self):
-        pass
-    
-    def get_time_at_last_time_index(self):
-        pass
-    
-    def get_time_at_next_time_index(self):
-        pass
-
-    def get_time_dependent_variable_at_last_time_index(self, var_name):
-        pass
-    
-    def get_time_dependent_variable_at_next_time_index(self, var_name):
-        pass
-
-class FVCOMFileReader(FileReader):
-    """
-    TODO:
-    
-    1) Remove FVCOM specific elements?
-    2) Document.
     """
     def __init__(self, config):
         self._config = config
