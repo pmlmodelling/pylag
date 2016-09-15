@@ -60,9 +60,6 @@ cdef class TimeManager(object):
 
         # Initialise counter for the current particle release
         self._current_release = 0
-        
-        # Set start and end datetimes for the current particle release
-        self._set_time_vars()
 
     def _set_time_vars(self):
         """ Set time variables for the current particle release
@@ -92,20 +89,17 @@ cdef class TimeManager(object):
     def new_simulation(self):
         """Start a new simulation?
         
+        If True, (re-)set all time variables and counters, then increment the 
+        indentifier for the current particle release.
         """
-        if self._current_release < self._number_of_particle_releases:
-            return True
+        if self._current_release >= self._number_of_particle_releases:
+            return False
         
-        return False
-
-    def update_release_counters(self):
-        """ Set counters and time variables ready for the next particle release
-        
-        Increment indentifier for the current particle release and (re-)set all
-        time variables and counters
-        """
-        self._current_release += 1
         self._set_time_vars()
+        
+        self._current_release += 1
+        
+        return True
 
     def update_current_time(self):
         self._time = self._time + self._time_step

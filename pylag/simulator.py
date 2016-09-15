@@ -91,6 +91,3 @@ class TraceSimulator(Simulator):
             
             # Close the current data logger
             self.data_logger.close()
-            
-            # Update release counters
-            self.time_manager.update_release_counters()
