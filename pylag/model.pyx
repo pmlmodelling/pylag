@@ -12,7 +12,6 @@ from pylag.random_walk import get_vertical_random_walk_model, get_horizontal_ran
 from pylag.particle_positions_reader import read_particle_initial_positions
 from pylag.particle import Particle
 from pylag.delta import Delta
-from pylag.netcdf_logger import NetCDFLogger
 
 from pylag.data_reader cimport DataReader
 from pylag.integrator cimport NumIntegrator
