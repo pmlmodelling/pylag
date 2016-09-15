@@ -19,13 +19,13 @@ from pylag.integrator cimport NumIntegrator
 from pylag.random_walk cimport VerticalRandomWalk, HorizontalRandomWalk
 
 cdef class OPTModel:
-    def read_data(self, start_datetime, end_datetime):
-        pass
-
-    def create_seed(self, time, group_ids, x_positions, y_positions, z_positions):
+    def set_particle_data(self, group_ids, x_positions, y_positions, z_positions):
         pass
     
-    def seed(self):
+    def read_data(self, start_datetime, end_datetime):
+        pass
+    
+    def seed(self, time):
         pass
 
     def update_reading_frames(self, time):
@@ -48,7 +48,13 @@ cdef class FVCOMOPTModel(OPTModel):
 
     # Grid boundary limits
     cdef DTYPE_FLOAT_t _zmin
-    cdef DTYPE_FLOAT_t _zmax    
+    cdef DTYPE_FLOAT_t _zmax
+    
+    # Seed particle data (as read from file)
+    cdef DTYPE_INT_t[:] _group_ids
+    cdef DTYPE_FLOAT_t[:] _x_positions
+    cdef DTYPE_FLOAT_t[:] _y_positions
+    cdef DTYPE_FLOAT_t[:] _z_positions
 
     def __init__(self, config, data_reader, *args, **kwargs):
         super(FVCOMOPTModel, self).__init__(*args, **kwargs)
@@ -72,13 +78,33 @@ cdef class FVCOMOPTModel(OPTModel):
         self._zmin = self.config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmin')
         self._zmax = self.config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmax')
 
+    def set_particle_data(self, group_ids, x_positions, y_positions, z_positions):
+        """Initialise memory views for data describing the particle seed.
+        
+        """
+        self._group_ids = group_ids
+        self._x_positions = x_positions
+        self._y_positions = y_positions
+        self._z_positions = z_positions
+
     def read_data(self, start_datetime, end_datetime):
         """Setup access to time dependent variables.
 
         """
         self.data_reader.read_data(start_datetime, end_datetime)
 
-    def create_seed(self, time, group_ids, x_positions, y_positions, z_positions):
+    def seed(self, time=None):
+        """Set particle positions equal to those of the particle seed.
+        
+        Create the particle seed if it has not been created already. Make
+        an `active' copy of the particle seed.
+        """
+        if self.particle_seed is None:
+            self._create_seed(time)
+
+        self.particle_set = copy.deepcopy(self.particle_seed)
+
+    def _create_seed(self, time):
         """Create the particle seed.
         
         Create the particle seed using the supplied arguments. Initialise
@@ -91,7 +117,7 @@ cdef class FVCOMOPTModel(OPTModel):
 
         guess = None
         particles_in_domain = 0
-        for group, x, y, z_temp in zip(group_ids, x_positions, y_positions, z_positions):
+        for group, x, y, z_temp in zip(self._group_ids, self._x_positions, self._y_positions, self._z_positions):
             # Find particle host element
             if guess is not None:
                 # Try local search first, then global search if this fails
@@ -144,19 +170,6 @@ cdef class FVCOMOPTModel(OPTModel):
         if self.config.getboolean('GENERAL', 'full_logging'):
             logger = logging.getLogger(__name__)
             logger.info('{} of {} particles are located in the model domain.'.format(particles_in_domain, len(self.particle_seed)))
-        
-        # Seed the model
-        self.seed()
-
-    def seed(self):
-        """Set particle positions equal to those of the particle seed.
-        
-        Make an `active' copy of the particle seed.
-        """
-        if self.particle_seed is not None:
-            self.particle_set = copy.deepcopy(self.particle_seed)
-        else:
-            raise RuntimeError('Particle seed has yet to be created.')
 
     def update_reading_frames(self, time):
         self.data_reader.update_time_dependent_vars(time)

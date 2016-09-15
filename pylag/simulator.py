@@ -29,10 +29,6 @@ class TraceSimulator(Simulator):
         # Model object
         self.model = get_model(config)
 
-        # Set up data access for the simulation start and end times
-        self.model.read_data(self.time_manager.datetime_start,
-                             self.time_manager.datetime_end)
-
         # Read in particle initial positions from file - these will be used to
         # create the initial particle set.
         file_name = config.get('SIMULATION', 'initial_positions_file')
@@ -51,15 +47,18 @@ class TraceSimulator(Simulator):
             raise RuntimeError('Error encountered while reading the particle '\
                 'initial positions file {}.'.format(file_name))
 
-        # Initialise time counters, create particle seed
-        self.model.create_seed(self.time_manager.time, group_ids, x_positions, \
-            y_positions, z_positions)
+        # Initialise particle arrays
+        self.model.set_particle_data(group_ids, x_positions, y_positions, z_positions)
 
         # Run the ensemble
         release = 0
         while release < self.time_manager.number_of_particle_releases:
+            # Set up data access for the new simulation
+            self.model.read_data(self.time_manager.datetime_start,
+                                 self.time_manager.datetime_end)
+            
             # Seed the model
-            self.model.seed()
+            self.model.seed(self.time_manager.time)
             
             # Create data logger
             file_name = ''.join([config.get('GENERAL', 'output_file'), '_{}'.format(release)])
@@ -96,10 +95,6 @@ class TraceSimulator(Simulator):
             
             # Update release counters
             self.time_manager.update_release_counters()
-
-            # Set up data access for the new simulation
-            self.model.read_data(self.time_manager.datetime_start,
-                                 self.time_manager.datetime_end)
 
             # Update release counter
             release += 1
