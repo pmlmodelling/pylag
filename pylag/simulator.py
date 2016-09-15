@@ -53,8 +53,8 @@ class TraceSimulator(Simulator):
         # Run the ensemble
         while self.time_manager.new_simulation():
             # Set up data access for the new simulation
-            self.model.read_data(self.time_manager.datetime_start,
-                                 self.time_manager.datetime_end)
+            self.model.setup_input_data_access(self.time_manager.datetime_start,
+                                               self.time_manager.datetime_end)
             
             # Seed the model
             self.model.seed(self.time_manager.time)
@@ -85,7 +85,7 @@ class TraceSimulator(Simulator):
                 # Check on status of reading frames and update if necessary
                 # Communicate updated arrays to the data reader if these are out of
                 # date.
-                self.model.update_reading_frames(self.time_manager.time)
+                self.model.read_input_data(self.time_manager.time)
                 pbar.update(self.time_manager.time)
             pbar.finish()
             

@@ -96,8 +96,8 @@ class TraceSimulator(Simulator):
         # Run the ensemble
         while self.time_manager.new_simulation():
             # Set up data access for the new simulation
-            self.model.read_data(self.time_manager.datetime_start,
-                                 self.time_manager.datetime_end)
+            self.model.setup_input_data_access(self.time_manager.datetime_start,
+                                               self.time_manager.datetime_end)
             
             # Seed the model
             self.model.seed(self.time_manager.time)
@@ -123,7 +123,7 @@ class TraceSimulator(Simulator):
                 if self.time_manager.write_output_to_file() == 1:
                     particle_diagnostics = self.model.get_diagnostics(self.time_manager.time)
                     self._record(self.time_manager.time, particle_diagnostics)
-                self.model.update_reading_frames(self.time_manager.time)
+                self.model.read_input_data(self.time_manager.time)
 
     def _record(self, time, diags):
         # MPI objects and variables

@@ -90,10 +90,19 @@ cdef class FVCOMDataReader(DataReader):
 
         self._read_grid()
 
-    cpdef read_data(self, start_datetime, end_datetime):
+    cpdef setup_data_access(self, start_datetime, end_datetime):
         self.mediator.setup_data_access(start_datetime, end_datetime)
 
         self._read_time_dependent_vars()
+
+    cpdef read_data(self, DTYPE_FLOAT_t time):
+        """ Update local time dependent variables as required.
+        
+        """
+        time_fraction = interp.get_linear_fraction(time, self._time_last, self._time_next)
+        if time_fraction < 0.0 or time_fraction >= 1.0:
+            self.mediator.update_reading_frames(time)
+            self._read_time_dependent_vars()
 
     cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
         return self.find_host_using_local_search(xpos, ypos, guess)
@@ -176,15 +185,6 @@ cdef class FVCOMDataReader(DataReader):
                     logger.warning('EPSILON applied during global host element search.')
                 return i
         return -1
-
-    cpdef update_time_dependent_vars(self, DTYPE_FLOAT_t time):
-        """ Update local time dependent variables as required.
-        
-        """
-        time_fraction = interp.get_linear_fraction(time, self._time_last, self._time_next)
-        if time_fraction < 0.0 or time_fraction >= 1.0:
-            self.mediator.update_reading_frames(time)
-            self._read_time_dependent_vars()
 
     cpdef get_bathymetry(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
         """

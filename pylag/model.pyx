@@ -21,13 +21,13 @@ cdef class OPTModel:
     def set_particle_data(self, group_ids, x_positions, y_positions, z_positions):
         pass
     
-    def read_data(self, start_datetime, end_datetime):
-        pass
-    
-    def seed(self, time):
+    def setup_input_data_access(self, start_datetime, end_datetime):
         pass
 
-    def update_reading_frames(self, time):
+    def read_input_data(self, time):
+        pass
+
+    def seed(self, time):
         pass
     
     def update(self, time):
@@ -86,11 +86,17 @@ cdef class FVCOMOPTModel(OPTModel):
         self._y_positions = y_positions
         self._z_positions = z_positions
 
-    def read_data(self, start_datetime, end_datetime):
-        """Setup access to time dependent variables.
+    def setup_input_data_access(self, start_datetime, end_datetime):
+        """Setup access to FVCOM time dependent variables.
 
         """
-        self.data_reader.read_data(start_datetime, end_datetime)
+        self.data_reader.setup_data_access(start_datetime, end_datetime)
+
+    def read_input_data(self, time):
+        """Update reading frames for FVCOM data fields.
+        
+        """
+        self.data_reader.read_data(time)
 
     def seed(self, time=None):
         """Set particle positions equal to those of the particle seed.
@@ -169,9 +175,6 @@ cdef class FVCOMOPTModel(OPTModel):
         if self.config.getboolean('GENERAL', 'full_logging'):
             logger = logging.getLogger(__name__)
             logger.info('{} of {} particles are located in the model domain.'.format(particles_in_domain, len(self.particle_seed)))
-
-    def update_reading_frames(self, time):
-        self.data_reader.update_time_dependent_vars(time)
 
     def update(self, DTYPE_FLOAT_t time):
         """

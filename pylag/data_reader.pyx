@@ -2,13 +2,13 @@
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 cdef class DataReader:
-    cpdef read_data(self, start_datetime, end_datetime):
+    cpdef setup_data_access(self, start_datetime, end_datetime):
+        pass
+
+    cpdef read_data(self, DTYPE_FLOAT_t time):
         pass
 
     cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
-        pass
-    
-    cpdef update_time_dependent_vars(self, DTYPE_FLOAT_t time):
         pass
     
     cpdef get_bathymetry(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, 
