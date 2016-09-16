@@ -153,8 +153,8 @@ cdef class FVCOMDataReader(DataReader):
                 host_found = True
             
             # If the particle has walked into an element with two land
-            # boundaries flag it is having moved outside of the domain - ideally
-            # unstructured grids should aim to avoid including such elements.
+            # boundaries flag it as having moved outside of the domain - ideally
+            # unstructured grids should not include such elements.
             if host_found is True:
                 n_land_boundaries = 0
                 for i in xrange(3):
