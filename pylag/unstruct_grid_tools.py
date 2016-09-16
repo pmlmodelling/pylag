@@ -3,7 +3,55 @@ import os
 from netCDF4 import Dataset
 import datetime
 
+def round_time(datetime_raw, rounding_interval=3600):
+    """Apply rounding to datetime objects
+    
+    Rounding is sometimes required when simulation times are written to file 
+    with limited precision.
+
+    Parameters:
+    -----------
+    datetime_raw: List, Datetime
+        List of datetime objects to which rounding should be applied
+
+    rounding_interval: int, optional
+        No. of seconds to round to (default 3600, or one hour)
+        
+    Returns:
+    --------
+    datetime_rounded: List, Datetime
+        List of rounded datetime objects
+    """
+    datetime_rounded = []
+    for dt in datetime_raw:
+        seconds = (dt - dt.min).seconds
+        rounding = (seconds + rounding_interval/2) // rounding_interval * rounding_interval
+        datetime_rounded.append(dt + datetime.timedelta(0,rounding-seconds,-dt.microsecond))
+    return datetime_rounded
+
 def create_fvcom_grid_metrics_file(ncin_file_name, ncout_file_name):
+    """Create FVCOM grid metrics file
+    
+    Grid variables saved by FVCOM are not necessarily ordered in a way that 
+    can be understood by PyLag. This function rectifies this by generating a 
+    separate grid metrics file that can be passed to PyLag.
+    
+    NB This function only needs to be called once per FVCOM model grid - the 
+    grid metrics file generated can be reused by all future simulations.
+    
+    Parameters:
+    -----------
+    nv : 2D ndarray, int
+        Nodes surrounding element, shape (3, n_elems)
+        
+    nbe : 2D ndarray, int
+        Elements surrounding element, shape (3, n_elems)
+        
+    Returns:
+    --------
+    nbe_sorted: 2D ndarray, int
+        The new nbe array
+    """
     # Make new file with global attributes and copied variables
     var_to_copy = ['nv', 'nbe', 'x', 'y', 'xc', 'yc', 'lat', 'lon', 'latc', 
             'lonc', 'siglev', 'siglay', 'h', 'a1u', 'a2u']
@@ -33,48 +81,26 @@ def create_fvcom_grid_metrics_file(ncin_file_name, ncout_file_name):
     ds_in.close()
     ds_out.close()
 
-def round_time(datetime_raw, rounding_interval=3600):
-    """
-    Round given datetime object to the number of given seconds
-    c
-    Parameters:
-    -----------
-    dt: List, Datetime
-        List of datetime objects to be rounded
-        
-    rounding_interval: int
-        No. of seconds to round to (default 3600, or one hour)
-        
-    Returns:
-    --------
-    datetime_rounded: List, Datetime
-        List of rounded datetime objects
-    """
-    datetime_rounded = []
-    for dt in datetime_raw:
-        seconds = (dt - dt.min).seconds
-        rounding = (seconds + rounding_interval/2) // rounding_interval * rounding_interval
-        datetime_rounded.append(dt + datetime.timedelta(0,rounding-seconds,-dt.microsecond))
-    return datetime_rounded
-
 def sort_adjacency_array(nv, nbe):
-    """
-    Sort nbe array for FlowVC. This step is critical, as the algorithm FlowVC
-    uses to identify neighbouring elements a particle has moved into depends on
-    the correct sorting of nbe.
+    """Sort the adjacency array
+    
+    PyLag expects the adjacency array (nbe) to be sorted in a particlular way
+    relative to the grid connectivity array (nv). NB The former lists the
+    elements surrounding each element; the latter the nodes surrounding each
+    element.
     
     Parameters:
     -----------
-    nv: 2D ndarray, int
-        Nodes surrounding element with shape (3, n_elems)
+    nv : 2D ndarray, int
+        Nodes surrounding element, shape (3, n_elems)
         
-    nbe: 2D ndarray, int
-        Elements surrounding element with shape (3, n_elems)
+    nbe : 2D ndarray, int
+        Elements surrounding element, shape (3, n_elems)
         
     Returns:
     --------
     nbe_sorted: 2D ndarray, int
-        The new nbe array, sorted for FlowVC.
+        The new nbe array
     """
     n_elems = nv.shape[1]
 
@@ -115,9 +141,26 @@ def sort_adjacency_array(nv, nbe):
     return nbe_sorted
 
 def sort_interpolants(a1u, a2u, nbe, nbe_sorted):
-    """
-    Match entries in axu to nbe_sorted, given that axu is currently matched to 
-    nbe.
+    """Sort interpolant arrays
+    
+    PyLag expects the arrays containing interpolation coefficients (a1u and a2u)
+    to be sorted in the same way as the sorted nbe array (see above). This
+    function matches entries in a{1,2}u to nbe_sorted, given that a{1,2}u is 
+    currently matched to the array nbe.
+    
+    Parameters:
+    -----------
+    a1u : 2D ndarray
+        FVCOM interpolation coefficients, shape (4, n_elems)
+
+    a2u : 2D ndarray
+        FVCOM interpolation coefficients, shape (4, n_elems)
+        
+    nbe : 2D ndarray, int
+        Elements surrounding each element, shape (3, n_elems)
+
+    nbe_sorted : 2D ndarray, int
+        Sorted nbe array, shape (3, n_elems)
     """
     
     n_elems = a1u.shape[1]
