@@ -23,8 +23,6 @@ cimport interpolation as interp
 
 from math cimport int_min, float_min
 
-from pylag.unstruct_grid_tools import round_time
-
 cdef class FVCOMDataReader(DataReader):
     # Configurtion object
     cdef object config

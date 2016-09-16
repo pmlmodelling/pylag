@@ -6,7 +6,7 @@ import logging
 import ConfigParser
 
 from pylag.data_types_python import DTYPE_FLOAT
-from pylag.unstruct_grid_tools import round_time
+from pylag.utils import round_time
 
 class FileReader(object):
     """Read in and manage access to grid and field data stored in NetCDF files.
