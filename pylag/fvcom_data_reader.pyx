@@ -132,6 +132,12 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_FLOAT_t phi[N_VERTICES]
         cdef DTYPE_FLOAT_t phi_test
 
+        cdef bool host_found
+
+        cdef DTYPE_INT_t n_host_land_boundaries
+
+        host_found = False
+        
         while True:
             # Barycentric coordinates
             self._get_phi(xpos, ypos, guess, phi)
@@ -139,15 +145,33 @@ cdef class FVCOMDataReader(DataReader):
             # Check to see if the particle is in the current element
             phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
             if phi_test >= 0.0:
-                return guess
+                host_found = True
             elif phi_test >= -EPSILON:
                 if self.config.getboolean('GENERAL', 'full_logging'):
                     logger = logging.getLogger(__name__)
                     logger.warning('EPSILON applied during local host element search.')
-                return guess
+                host_found = True
+            
+            # If the particle has walked into an element with two land
+            # boundaries flag it is having moved outside of the domain - ideally
+            # unstructured grids should aim to avoid including such elements.
+            if host_found is True:
+                n_land_boundaries = 0
+                for i in xrange(3):
+                    if self._nbe[i,guess] == -1:
+                        n_land_boundaries += 1
+                
+                if n_host_land_boundaries < 2:
+                    return guess
+                else:
+                    if self.config.getboolean('GENERAL', 'full_logging'):
+                        logger = logging.getLogger(__name__)
+                        logger.warning('Particle prevented from entering '\
+                            'element {} which has two land '\
+                            'boundaries.'.format(guess))    
+                    return -1
 
             # If not, use phi to select the next element to be searched
-            # TODO epsilon for floating point comp
             if phi[0] == phi_test:
                 guess = self._nbe[0,guess]
             elif phi[1] == phi_test:
@@ -156,7 +180,7 @@ cdef class FVCOMDataReader(DataReader):
                 guess = self._nbe[2,guess]
             else:
                 raise RuntimeError('Host element search algorithm failed.')
-            
+
             if guess == -1:
                 # Local search failed
                 return guess
