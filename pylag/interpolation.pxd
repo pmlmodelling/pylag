@@ -5,7 +5,7 @@ from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 cdef get_barycentric_coords(DTYPE_FLOAT_t x, DTYPE_FLOAT_t y,
         DTYPE_FLOAT_t x_tri[3], DTYPE_FLOAT_t y_tri[3], DTYPE_FLOAT_t phi[3])
 
-cpdef DTYPE_FLOAT_t shephard_interpolation(DTYPE_FLOAT_t x,
+cpdef DTYPE_FLOAT_t shepard_interpolation(DTYPE_FLOAT_t x,
         DTYPE_FLOAT_t y, DTYPE_INT_t npts, DTYPE_FLOAT_t[:] xpts, 
         DTYPE_FLOAT_t[:] ypts, DTYPE_FLOAT_t[:] vals)
 
