@@ -653,10 +653,6 @@ cdef class FVCOMDataReader(DataReader):
         # Vel at the given location in the underlying sigma layer
         cdef DTYPE_FLOAT_t up2, vp2
         
-        cdef DTYPE_FLOAT_t dudx, dudy, dvdx, dvdy
-        
-        cdef DTYPE_FLOAT_t rx, ry
-        
         # Variables used when determining indices for the sigma layers that
         # bound the particle's position
         cdef bool particle_found
@@ -672,9 +668,6 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_INT_t i, j, k, neighbour
         
         cdef DTYPE_INT_t nbe_min
-
-        # Barycentric coordinates
-        self._get_phi(xpos, ypos, host, phi)
         
         # Find the sigma layers bounding the particle's position. First check
         # the upper and lower boundaries, then the centre of the water columnun.
@@ -750,8 +743,8 @@ cdef class FVCOMDataReader(DataReader):
                     uc1[j] = interp.linear_interp(time_fraction, self._u_last[k_boundary, neighbour], self._u_next[k_boundary, neighbour])
                     vc1[j] = interp.linear_interp(time_fraction, self._v_last[k_boundary, neighbour], self._v_next[k_boundary, neighbour])
                 
-                vel[0] = self._interpolate_vel_between_elements(xpos, ypos, host, uc1)
-                vel[1] = self._interpolate_vel_between_elements(xpos, ypos, host, vc1)
+                vel[0] = interp.shepard_interpolation(xpos, ypos, 4, xc, yc, uc1)
+                vel[1] = interp.shepard_interpolation(xpos, ypos, 4, xc, yc, vc1)
                 return  
             else:
                 xc[0] = self._xc[host]
@@ -771,12 +764,12 @@ cdef class FVCOMDataReader(DataReader):
                     vc2[j] = interp.linear_interp(time_fraction, self._v_last[k_upper_layer, host], self._v_next[k_upper_layer, host])
             
             # ... lower bounding sigma layer
-            up1 = self._interpolate_vel_between_elements(xpos, ypos, host, uc1)
-            vp1 = self._interpolate_vel_between_elements(xpos, ypos, host, vc1)
+            up1 = interp.shepard_interpolation(xpos, ypos, 4, xc, yc, uc1)
+            vp1 = interp.shepard_interpolation(xpos, ypos, 4, xc, yc, vc1)
 
             # ... upper bounding sigma layer
-            up2 = self._interpolate_vel_between_elements(xpos, ypos, host, uc2)
-            vp2 = self._interpolate_vel_between_elements(xpos, ypos, host, vc2)
+            up2 = interp.shepard_interpolation(xpos, ypos, 4, xc, yc, uc2)
+            vp2 = interp.shepard_interpolation(xpos, ypos, 4, xc, yc, vc2)
             
         # Vertical interpolation
         sigma_fraction = interp.get_linear_fraction(zpos, sigma_lower_layer, sigma_upper_layer)
@@ -814,10 +807,6 @@ cdef class FVCOMDataReader(DataReader):
         -----------
         TODO
         """
-        # x/y coordinates of element centres
-        cdef DTYPE_FLOAT_t xc[N_NEIGH_ELEMS]
-        cdef DTYPE_FLOAT_t yc[N_NEIGH_ELEMS]
-
         # Temporary array for vel at element centres at last time point
         cdef DTYPE_FLOAT_t uc_last[N_NEIGH_ELEMS]
         cdef DTYPE_FLOAT_t vc_last[N_NEIGH_ELEMS]
@@ -840,10 +829,6 @@ cdef class FVCOMDataReader(DataReader):
         # Vel at the given location in the underlying sigma layer
         cdef DTYPE_FLOAT_t up2, vp2
         
-        cdef DTYPE_FLOAT_t dudx, dudy, dvdx, dvdy
-        
-        cdef DTYPE_FLOAT_t rx, ry
-        
         # Variables used when determining indices for the sigma layers that
         # bound the particle's position
         cdef bool particle_found
@@ -859,9 +844,6 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_INT_t i, j, k, neighbour
         
         cdef DTYPE_INT_t nbe_min
-
-        # Barycentric coordinates
-        self._get_phi(xpos, ypos, host, phi)
         
         # Find the sigma layers bounding the particle's position. First check
         # the upper and lower boundaries, then the centre of the water columnun.
@@ -925,15 +907,11 @@ cdef class FVCOMDataReader(DataReader):
         else:
             # Non-boundary element - perform horizontal and temporal interpolation
             if particle_at_surface_or_bottom_boundary is True:
-                xc[0] = self._xc[host]
-                yc[0] = self._yc[host]
                 uc1[0] = interp.linear_interp(time_fraction, self._u_last[k_boundary, host], self._u_next[k_boundary, host])
                 vc1[0] = interp.linear_interp(time_fraction, self._v_last[k_boundary, host], self._v_next[k_boundary, host])
                 for i in xrange(3):
                     neighbour = self._nbe[i, host]
                     j = i+1 # +1 as host is 0
-                    xc[j] = self._xc[neighbour] 
-                    yc[j] = self._yc[neighbour]
                     uc1[j] = interp.linear_interp(time_fraction, self._u_last[k_boundary, neighbour], self._u_next[k_boundary, neighbour])
                     vc1[j] = interp.linear_interp(time_fraction, self._v_last[k_boundary, neighbour], self._v_next[k_boundary, neighbour])
                 
@@ -941,8 +919,6 @@ cdef class FVCOMDataReader(DataReader):
                 vel[1] = self._interpolate_vel_between_elements(xpos, ypos, host, vc1)
                 return  
             else:
-                xc[0] = self._xc[host]
-                yc[0] = self._yc[host]
                 uc1[0] = interp.linear_interp(time_fraction, self._u_last[k_lower_layer, host], self._u_next[k_lower_layer, host])
                 vc1[0] = interp.linear_interp(time_fraction, self._v_last[k_lower_layer, host], self._v_next[k_lower_layer, host])
                 uc2[0] = interp.linear_interp(time_fraction, self._u_last[k_upper_layer, host], self._u_next[k_upper_layer, host])
@@ -950,8 +926,6 @@ cdef class FVCOMDataReader(DataReader):
                 for i in xrange(3):
                     neighbour = self._nbe[i, host]
                     j = i+1 # +1 as host is 0
-                    xc[j] = self._xc[neighbour] 
-                    yc[j] = self._yc[neighbour]
                     uc1[j] = interp.linear_interp(time_fraction, self._u_last[k_lower_layer, host], self._u_next[k_lower_layer, host])
                     vc1[j] = interp.linear_interp(time_fraction, self._v_last[k_lower_layer, host], self._v_next[k_lower_layer, host])    
                     uc2[j] = interp.linear_interp(time_fraction, self._u_last[k_upper_layer, host], self._u_next[k_upper_layer, host])
