@@ -327,17 +327,14 @@ cdef class FVCOMDataReader(DataReader):
         
         TODO
         - Create tests.
-        - Minimise code duplication?
         """
         # Barycentric coordinates
         cdef DTYPE_FLOAT_t phi[N_VERTICES]
 
-        # Variables used when determining indices for the sigma layers that
-        # bound the particle's position
-        cdef bool particle_found
-        cdef bool particle_at_surface_or_bottom_boundary
-        cdef DTYPE_FLOAT_t sigma_test
-        cdef DTYPE_FLOAT_t sigma_lower_layer, sigma_upper_layer
+        # Object describing a point's location within FVCOM's vertical grid. 
+        cdef ZGridPosition z_grid_pos
+        
+        # Indices identifying the layers bounding the point's vertical position 
         cdef DTYPE_INT_t k_boundary, k_lower_layer, k_upper_layer
 
         # No. of vertices and a temporary object used for determining variable
@@ -363,44 +360,8 @@ cdef class FVCOMDataReader(DataReader):
         # Barycentric coordinates
         self._get_phi(xpos, ypos, host, phi)
         
-        # Find the sigma layers bounding the particle's position. First check
-        # the upper and lower boundaries, then the centre of the water columnun.
-        particle_found = False
-        particle_at_surface_or_bottom_boundary = False
-        
-        # Try the top sigma layer
-        k = 0
-        sigma_test = self._interp_on_sigma_layer(phi, host, k)
-        if zpos >= sigma_test:
-            particle_at_surface_or_bottom_boundary = True
-            k_boundary = k
-            
-            particle_found = True
-        else:
-            # ... the bottom sigma layer
-            k = self._n_siglay - 1
-            sigma_test = self._interp_on_sigma_layer(phi, host, k)
-            if zpos <= sigma_test:
-                particle_at_surface_or_bottom_boundary = True
-                k_boundary = k
-                
-                particle_found = True
-            else:
-                # ... search the middle of the water column
-                for k in xrange(1, self._n_siglay):
-                    sigma_test = self._interp_on_sigma_layer(phi, host, k)
-                    if zpos >= sigma_test:
-                        k_lower_layer = k
-                        k_upper_layer = k - 1
-
-                        sigma_lower_layer = self._interp_on_sigma_layer(phi, host, k_lower_layer)
-                        sigma_upper_layer = self._interp_on_sigma_layer(phi, host, k_upper_layer)
-
-                        particle_found = True
-                        break
-        
-        if particle_found is False:
-            raise ValueError("Particle zpos (={}) not found!".format(zpos))
+        # Set variables describing the position within the vertical grid
+        z_grid_pos = self._get_z_grid_position(zpos, host, phi)        
 
         # Time fraction
         time_fraction = interp.get_linear_fraction(time, self._time_last, self._time_next)
@@ -412,8 +373,9 @@ cdef class FVCOMDataReader(DataReader):
 
         # No vertical interpolation for particles near to the surface or bottom, 
         # i.e. above or below the top or bottom sigma layer depths respectively.
-        if particle_at_surface_or_bottom_boundary is True:
+        if z_grid_pos.get_in_vertical_boundary_layer() is True:
             # Extract viscofh near to the boundary
+            k_boundary = z_grid_pos.get_k_boundary()
             for i in xrange(N_VERTICES):
                 vertex = self._nv[i,host]
                 viscofh_tri_t_last_layer_1[i] = self._viscofh_last[k_boundary, vertex]
@@ -430,6 +392,8 @@ cdef class FVCOMDataReader(DataReader):
 
         else:
             # Extract viscofh on the lower and upper bounding sigma layers
+            k_lower_layer = z_grid_pos.get_k_lower_layer()
+            k_upper_layer = z_grid_pos.get_k_upper_layer()
             for i in xrange(N_VERTICES):
                 vertex = self._nv[i,host]
                 viscofh_tri_t_last_layer_1[i] = self._viscofh_last[k_lower_layer, vertex]
@@ -452,7 +416,7 @@ cdef class FVCOMDataReader(DataReader):
             viscofh_layer_2 = interp.interpolate_within_element(viscofh_tri_layer_2, phi)
 
             # Vertical interpolation
-            sigma_fraction = interp.get_linear_fraction(zpos, sigma_lower_layer, sigma_upper_layer)
+            sigma_fraction = interp.get_linear_fraction(zpos, z_grid_pos.get_sigma_lower_layer(), z_grid_pos.get_sigma_upper_layer())
             if sigma_fraction < 0.0 or sigma_fraction > 1.0:
                 if self.config.getboolean('GENERAL', 'full_logging'):
                     logger = logging.getLogger(__name__)
@@ -653,14 +617,12 @@ cdef class FVCOMDataReader(DataReader):
         # Vel at the given location in the underlying sigma layer
         cdef DTYPE_FLOAT_t up2, vp2
         
-        # Variables used when determining indices for the sigma layers that
-        # bound the particle's position
-        cdef bool particle_found
-        cdef bool particle_at_surface_or_bottom_boundary
-        cdef DTYPE_FLOAT_t sigma_test
-        cdef DTYPE_FLOAT_t sigma_lower_layer, sigma_upper_layer
-        cdef DTYPE_INT_t k_boundary, k_lower_layer, k_upper_layer
+        # Object describing a point's location within FVCOM's vertical grid. 
+        cdef ZGridPosition z_grid_pos
         
+        # Indices identifying the layers bounding the point's vertical position 
+        cdef DTYPE_INT_t k_boundary, k_lower_layer, k_upper_layer
+         
         # Time and sigma fractions for interpolation in time and sigma
         cdef DTYPE_FLOAT_t time_fraction, sigma_fraction
 
@@ -669,44 +631,8 @@ cdef class FVCOMDataReader(DataReader):
         
         cdef DTYPE_INT_t nbe_min
         
-        # Find the sigma layers bounding the particle's position. First check
-        # the upper and lower boundaries, then the centre of the water columnun.
-        particle_found = False
-        particle_at_surface_or_bottom_boundary = False
-        
-        # Try the top sigma layer
-        k = 0
-        sigma_test = self._interp_on_sigma_layer(phi, host, k)
-        if zpos >= sigma_test:
-            particle_at_surface_or_bottom_boundary = True
-            k_boundary = k
-            
-            particle_found = True
-        else:
-            # ... the bottom sigma layer
-            k = self._n_siglay - 1
-            sigma_test = self._interp_on_sigma_layer(phi, host, k)
-            if zpos <= sigma_test:
-                particle_at_surface_or_bottom_boundary = True
-                k_boundary = k
-                
-                particle_found = True
-            else:
-                # ... search the middle of the water column
-                for k in xrange(1, self._n_siglay):
-                    sigma_test = self._interp_on_sigma_layer(phi, host, k)
-                    if zpos >= sigma_test:
-                        k_lower_layer = k
-                        k_upper_layer = k - 1
-
-                        sigma_lower_layer = self._interp_on_sigma_layer(phi, host, k_lower_layer)
-                        sigma_upper_layer = self._interp_on_sigma_layer(phi, host, k_upper_layer)
-
-                        particle_found = True
-                        break
-        
-        if particle_found is False:
-            raise ValueError("Particle zpos (={} not found!".format(zpos))
+        # Set variables describing the position within the vertical grid
+        z_grid_pos = self._get_z_grid_position(zpos, host, phi)
 
         # Time fraction
         time_fraction = interp.get_linear_fraction(time, self._time_last, self._time_next)
@@ -719,18 +645,23 @@ cdef class FVCOMDataReader(DataReader):
         nbe_min = int_min(int_min(self._nbe[0, host], self._nbe[1, host]), self._nbe[2, host])
         if nbe_min < 0:
             # Boundary element - no horizontal interpolation
-            if particle_at_surface_or_bottom_boundary is True:
+            if z_grid_pos.get_in_vertical_boundary_layer() is True:
+                k_boundary = z_grid_pos.get_k_boundary()
                 vel[0] = interp.linear_interp(time_fraction, self._u_last[k_boundary, host], self._u_next[k_boundary, host])
                 vel[1] = interp.linear_interp(time_fraction, self._v_last[k_boundary, host], self._v_next[k_boundary, host])
                 return
             else:
+                k_lower_layer = z_grid_pos.get_k_lower_layer()
                 up1 = interp.linear_interp(time_fraction, self._u_last[k_lower_layer, host], self._u_next[k_lower_layer, host])
                 vp1 = interp.linear_interp(time_fraction, self._v_last[k_lower_layer, host], self._v_next[k_lower_layer, host])
+                
+                k_upper_layer = z_grid_pos.get_k_upper_layer()
                 up2 = interp.linear_interp(time_fraction, self._u_last[k_upper_layer, host], self._u_next[k_upper_layer, host])
                 vp2 = interp.linear_interp(time_fraction, self._v_last[k_upper_layer, host], self._v_next[k_upper_layer, host])
         else:
             # Non-boundary element - perform horizontal and temporal interpolation
-            if particle_at_surface_or_bottom_boundary is True:
+            if z_grid_pos.get_in_vertical_boundary_layer() is True:
+                k_boundary = z_grid_pos.get_k_boundary()
                 xc[0] = self._xc[host]
                 yc[0] = self._yc[host]
                 uc1[0] = interp.linear_interp(time_fraction, self._u_last[k_boundary, host], self._u_next[k_boundary, host])
@@ -749,8 +680,11 @@ cdef class FVCOMDataReader(DataReader):
             else:
                 xc[0] = self._xc[host]
                 yc[0] = self._yc[host]
+                k_upper_layer = z_grid_pos.get_k_lower_layer()
                 uc1[0] = interp.linear_interp(time_fraction, self._u_last[k_lower_layer, host], self._u_next[k_lower_layer, host])
                 vc1[0] = interp.linear_interp(time_fraction, self._v_last[k_lower_layer, host], self._v_next[k_lower_layer, host])
+                
+                k_upper_layer = z_grid_pos.get_k_upper_layer()
                 uc2[0] = interp.linear_interp(time_fraction, self._u_last[k_upper_layer, host], self._u_next[k_upper_layer, host])
                 vc2[0] = interp.linear_interp(time_fraction, self._v_last[k_upper_layer, host], self._v_next[k_upper_layer, host])
                 for i in xrange(3):
@@ -772,7 +706,7 @@ cdef class FVCOMDataReader(DataReader):
             vp2 = interp.shepard_interpolation(xpos, ypos, 4, xc, yc, vc2)
             
         # Vertical interpolation
-        sigma_fraction = interp.get_linear_fraction(zpos, sigma_lower_layer, sigma_upper_layer)
+        sigma_fraction = interp.get_linear_fraction(zpos, z_grid_pos.get_sigma_lower_layer(), z_grid_pos.get_sigma_upper_layer())
         if sigma_fraction < 0.0 or sigma_fraction > 1.0:
             if self.config.getboolean('GENERAL', 'full_logging'):
                 logger = logging.getLogger(__name__)
