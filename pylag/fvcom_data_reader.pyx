@@ -287,7 +287,7 @@ cdef class FVCOMDataReader(DataReader):
         self._get_phi(xpos, ypos, host, phi)
         
         # Compute u/v velocities and save
-        self._get_uv_velocity_using_shepard_interpolation(time, 
+        self._get_uv_velocity_using_linear_least_squares_interpolation(time, 
                 xpos, ypos, zpos, host, phi, vel_uv)
         for i in xrange(2):
             vel[i] = vel_uv[i]
@@ -303,7 +303,7 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_FLOAT_t phi[N_VERTICES]
 
         self._get_phi(xpos, ypos, host, phi)        
-        self._get_uv_velocity_using_shepard_interpolation(time, 
+        self._get_uv_velocity_using_linear_least_squares_interpolation(time, 
                 xpos, ypos, zpos, host, phi, vel)
         return
     
@@ -824,9 +824,9 @@ cdef class FVCOMDataReader(DataReader):
         vel[1] = interp.linear_interp(sigma_fraction, vp1, vp2)
         return
 
-    cdef _get_omega_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
-            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host, 
-            DTYPE_FLOAT_t phi[N_VERTICES]):
+    cdef DTYPE_FLOAT_t _get_omega_velocity(self, DTYPE_FLOAT_t time,
+            DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos,
+            DTYPE_INT_t host, DTYPE_FLOAT_t phi[N_VERTICES]):
         """
         Steps:
         1) Determine natural coordinates of the host element - these are used
@@ -1013,8 +1013,8 @@ cdef class FVCOMDataReader(DataReader):
         # Calculate barycentric coordinates
         interp.get_barycentric_coords(xpos, ypos, x_tri, y_tri, phi)
 
-    cdef _interp_on_sigma_layer(self, DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_INT_t host,
-            DTYPE_INT_t kidx):
+    cdef DTYPE_FLOAT_t _interp_on_sigma_layer(self, 
+            DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_INT_t host, DTYPE_INT_t kidx):
         """ Return the linearly interpolated value of sigma on the sigma layer.
         
         Compute sigma on the specified sigma layer within the given host 
@@ -1048,8 +1048,8 @@ cdef class FVCOMDataReader(DataReader):
         sigma = interp.interpolate_within_element(sigma_nodes, phi)
         return sigma
 
-    cdef _interp_on_sigma_level(self, DTYPE_FLOAT_t phi[N_VERTICES],
-            DTYPE_INT_t host, DTYPE_INT_t kidx):
+    cdef DTYPE_FLOAT_t _interp_on_sigma_level(self, 
+            DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_INT_t host, DTYPE_INT_t kidx):
         """ Return the linearly interpolated value of sigma.
         
         Compute sigma on the specified sigma level within the given host 
@@ -1083,8 +1083,8 @@ cdef class FVCOMDataReader(DataReader):
         sigma = interp.interpolate_within_element(sigma_nodes, phi)
         return sigma
 
-    cdef _interpolate_vel_between_elements(self, DTYPE_FLOAT_t xpos, 
-            DTYPE_FLOAT_t ypos, DTYPE_INT_t host, 
+    cdef DTYPE_FLOAT_t _interpolate_vel_between_elements(self, 
+            DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t host, 
             DTYPE_FLOAT_t vel_elem[N_NEIGH_ELEMS]):
         """Interpolate between elements using linear least squares interpolation.
         
