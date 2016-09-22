@@ -56,3 +56,22 @@ cpdef DTYPE_FLOAT_t shepard_interpolation(DTYPE_FLOAT_t x,
         sumw = sumw + w*vals[i]
 
     return sumw/sum
+
+cdef DTYPE_FLOAT_t get_linear_fraction_safe(DTYPE_FLOAT_t var, DTYPE_FLOAT_t var1,
+        DTYPE_FLOAT_t var2):
+    """Compute the fractional linear distance of a point between two numbers.
+    
+    The function is deemed safe as it raises an exception if `var' does not lie
+    between `var1' and`var2'. Clients should call `get_linear_fraction' if this
+    behaviour is not desired.
+    
+    """
+    cdef DTYPE_FLOAT_t frac
+    
+    frac = get_linear_fraction(var, var1, var2)
+    
+    if frac >= 0.0 and frac <= 1.0:
+        return frac
+    else:
+        raise ValueError('{} does not lie between {} and {}.'.format(var, var1, var2))
+    

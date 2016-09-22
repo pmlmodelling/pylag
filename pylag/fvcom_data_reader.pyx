@@ -253,7 +253,7 @@ cdef class FVCOMDataReader(DataReader):
             zeta_tri_t_next[i] = self._zeta_next[vertex]
 
         # Interpolate in time
-        time_fraction = interp.get_linear_fraction(time, self._time_last, self._time_next)
+        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
         for i in xrange(N_VERTICES):
             zeta_tri[i] = interp.linear_interp(time_fraction, zeta_tri_t_last[i], zeta_tri_t_next[i])
 
@@ -364,12 +364,7 @@ cdef class FVCOMDataReader(DataReader):
         z_grid_pos = self._get_z_grid_position(zpos, host, phi)        
 
         # Time fraction
-        time_fraction = interp.get_linear_fraction(time, self._time_last, self._time_next)
-        if time_fraction < 0.0 or time_fraction > 1.0:
-            if self.config.getboolean('GENERAL', 'full_logging'):
-                logger = logging.getLogger(__name__)
-                logger.info('Invalid time fraction computed at time {}s.'.format(time))
-            raise ValueError('Time out of range.')
+        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
         # No vertical interpolation for particles near to the surface or bottom, 
         # i.e. above or below the top or bottom sigma layer depths respectively.
@@ -416,12 +411,9 @@ cdef class FVCOMDataReader(DataReader):
             viscofh_layer_2 = interp.interpolate_within_element(viscofh_tri_layer_2, phi)
 
             # Vertical interpolation
-            sigma_fraction = interp.get_linear_fraction(zpos, z_grid_pos.get_sigma_lower_layer(), z_grid_pos.get_sigma_upper_layer())
-            if sigma_fraction < 0.0 or sigma_fraction > 1.0:
-                if self.config.getboolean('GENERAL', 'full_logging'):
-                    logger = logging.getLogger(__name__)
-                    logger.info('Invalid sigma fraction (={}) computed for a sigma value of {}.'.format(sigma_fraction, zpos))
-                raise ValueError('Sigma out of range.')
+            sigma_fraction = interp.get_linear_fraction_safe(zpos, 
+                    z_grid_pos.get_sigma_lower_layer(), 
+                    z_grid_pos.get_sigma_upper_layer())
             return interp.linear_interp(sigma_fraction, viscofh_layer_1, viscofh_layer_2)
 
     cpdef get_horizontal_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
@@ -508,7 +500,7 @@ cdef class FVCOMDataReader(DataReader):
             h_tri[i] = self._h[vertex]
 
         # Interpolate kh and zeta in time
-        time_fraction = interp.get_linear_fraction(time, self._time_last, self._time_next)
+        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
         for i in xrange(N_VERTICES):
             kh_tri_lower_level[i] = interp.linear_interp(time_fraction, 
                                                 kh_tri_t_last_lower_level[i],
@@ -525,13 +517,7 @@ cdef class FVCOMDataReader(DataReader):
         h = interp.interpolate_within_element(h_tri, phi)
 
         # Interpolate between sigma levels
-        sigma_fraction = interp.get_linear_fraction(zpos, sigma_lower_level, sigma_upper_level)
-        if sigma_fraction < 0.0 or sigma_fraction > 1.0:
-            if self.config.getboolean('GENERAL', 'full_logging'):
-                logger = logging.getLogger(__name__)
-                logger.info('Invalid sigma fraction (={}) computed for a sigma value of {}.'.format(sigma_fraction, zpos))
-            raise ValueError('Sigma out of range.')
-        
+        sigma_fraction = interp.get_linear_fraction_safe(zpos, sigma_lower_level, sigma_upper_level)
         return interp.linear_interp(sigma_fraction, kh_lower_level, kh_upper_level) / (h + zeta)**2
 
     cpdef get_vertical_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
@@ -635,12 +621,7 @@ cdef class FVCOMDataReader(DataReader):
         z_grid_pos = self._get_z_grid_position(zpos, host, phi)
 
         # Time fraction
-        time_fraction = interp.get_linear_fraction(time, self._time_last, self._time_next)
-        if time_fraction < 0.0 or time_fraction > 1.0:
-            if self.config.getboolean('GENERAL', 'full_logging'):
-                logger = logging.getLogger(__name__)
-                logger.info('Invalid time fraction computed at time {}s.'.format(time))
-            raise ValueError('Time out of range.')
+        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
         nbe_min = int_min(int_min(self._nbe[0, host], self._nbe[1, host]), self._nbe[2, host])
         if nbe_min < 0:
@@ -706,12 +687,9 @@ cdef class FVCOMDataReader(DataReader):
             vp2 = interp.shepard_interpolation(xpos, ypos, 4, xc, yc, vc2)
             
         # Vertical interpolation
-        sigma_fraction = interp.get_linear_fraction(zpos, z_grid_pos.get_sigma_lower_layer(), z_grid_pos.get_sigma_upper_layer())
-        if sigma_fraction < 0.0 or sigma_fraction > 1.0:
-            if self.config.getboolean('GENERAL', 'full_logging'):
-                logger = logging.getLogger(__name__)
-                logger.info('Invalid sigma fraction (={}) computed for a sigma value of {}.'.format(sigma_fraction, zpos))
-            raise ValueError('Sigma out of range.')
+        sigma_fraction = interp.get_linear_fraction_safe(zpos,
+                z_grid_pos.get_sigma_lower_layer(),
+                z_grid_pos.get_sigma_upper_layer())
         vel[0] = interp.linear_interp(sigma_fraction, up1, up2)
         vel[1] = interp.linear_interp(sigma_fraction, vp1, vp2)
         return
@@ -781,12 +759,7 @@ cdef class FVCOMDataReader(DataReader):
         z_grid_pos = self._get_z_grid_position(zpos, host, phi)
 
         # Time fraction
-        time_fraction = interp.get_linear_fraction(time, self._time_last, self._time_next)
-        if time_fraction < 0.0 or time_fraction > 1.0:
-            if self.config.getboolean('GENERAL', 'full_logging'):
-                logger = logging.getLogger(__name__)
-                logger.info('Invalid time fraction computed at time {}s.'.format(time))
-            raise ValueError('Time out of range.')
+        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
         nbe_min = int_min(int_min(self._nbe[0, host], self._nbe[1, host]), self._nbe[2, host])
         if nbe_min < 0:
@@ -844,12 +817,9 @@ cdef class FVCOMDataReader(DataReader):
             vp2 = self._interpolate_vel_between_elements(xpos, ypos, host, vc2)
             
         # Vertical interpolation
-        sigma_fraction = interp.get_linear_fraction(zpos, z_grid_pos.get_sigma_lower_layer(), z_grid_pos.get_sigma_upper_layer())
-        if sigma_fraction < 0.0 or sigma_fraction > 1.0:
-            if self.config.getboolean('GENERAL', 'full_logging'):
-                logger = logging.getLogger(__name__)
-                logger.info('Invalid sigma fraction (={}) computed for a sigma value of {}.'.format(sigma_fraction, zpos))
-            raise ValueError('Sigma out of range.')
+        sigma_fraction = interp.get_linear_fraction_safe(zpos,
+                z_grid_pos.get_sigma_lower_layer(),
+                z_grid_pos.get_sigma_upper_layer())
         vel[0] = interp.linear_interp(sigma_fraction, up1, up2)
         vel[1] = interp.linear_interp(sigma_fraction, vp1, vp2)
         return
@@ -937,7 +907,7 @@ cdef class FVCOMDataReader(DataReader):
             h_tri[i] = self._h[vertex]
 
         # Interpolate omega and zeta in time
-        time_fraction = interp.get_linear_fraction(time, self._time_last, self._time_next)
+        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
         for i in xrange(N_VERTICES):
             omega_tri_lower_level[i] = interp.linear_interp(time_fraction, 
                                                 omega_tri_t_last_lower_level[i],
@@ -954,12 +924,7 @@ cdef class FVCOMDataReader(DataReader):
         h = interp.interpolate_within_element(h_tri, phi)
 
         # Interpolate between sigma levels
-        sigma_fraction = interp.get_linear_fraction(zpos, sigma_lower_level, sigma_upper_level)
-        if sigma_fraction < 0.0 or sigma_fraction > 1.0:
-            if self.config.getboolean('GENERAL', 'full_logging'):
-                logger = logging.getLogger(__name__)
-                logger.info('Invalid sigma fraction (={}) computed for a sigma value of {}.'.format(sigma_fraction, zpos))
-            raise ValueError('Sigma out of range.')
+        sigma_fraction = interp.get_linear_fraction_safe(zpos, sigma_lower_level, sigma_upper_level)
         return interp.linear_interp(sigma_fraction, omega_lower_level, omega_upper_level) / (h + zeta)
 
     def _read_grid(self):
