@@ -303,7 +303,7 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_FLOAT_t phi[N_VERTICES]
 
         self._get_phi(xpos, ypos, host, phi)        
-        self._get_uv_velocity_using_linear_least_squares_interpolation(time, 
+        self._get_uv_velocity_using_shepard_interpolation(time, 
                 xpos, ypos, zpos, host, phi, vel)
         return
     
@@ -655,8 +655,8 @@ cdef class FVCOMDataReader(DataReader):
                     uc1[j] = interp.linear_interp(time_fraction, self._u_last[k_boundary, neighbour], self._u_next[k_boundary, neighbour])
                     vc1[j] = interp.linear_interp(time_fraction, self._v_last[k_boundary, neighbour], self._v_next[k_boundary, neighbour])
                 
-                vel[0] = interp.shepard_interpolation(xpos, ypos, 4, xc, yc, uc1)
-                vel[1] = interp.shepard_interpolation(xpos, ypos, 4, xc, yc, vc1)
+                vel[0] = interp.shepard_interpolation(xpos, ypos, xc, yc, uc1)
+                vel[1] = interp.shepard_interpolation(xpos, ypos, xc, yc, vc1)
                 return  
             else:
                 xc[0] = self._xc[host]
@@ -679,12 +679,12 @@ cdef class FVCOMDataReader(DataReader):
                     vc2[j] = interp.linear_interp(time_fraction, self._v_last[k_upper_layer, host], self._v_next[k_upper_layer, host])
             
             # ... lower bounding sigma layer
-            up1 = interp.shepard_interpolation(xpos, ypos, 4, xc, yc, uc1)
-            vp1 = interp.shepard_interpolation(xpos, ypos, 4, xc, yc, vc1)
+            up1 = interp.shepard_interpolation(xpos, ypos, xc, yc, uc1)
+            vp1 = interp.shepard_interpolation(xpos, ypos, xc, yc, vc1)
 
             # ... upper bounding sigma layer
-            up2 = interp.shepard_interpolation(xpos, ypos, 4, xc, yc, uc2)
-            vp2 = interp.shepard_interpolation(xpos, ypos, 4, xc, yc, vc2)
+            up2 = interp.shepard_interpolation(xpos, ypos, xc, yc, uc2)
+            vp2 = interp.shepard_interpolation(xpos, ypos, xc, yc, vc2)
             
         # Vertical interpolation
         sigma_fraction = interp.get_linear_fraction_safe(zpos,

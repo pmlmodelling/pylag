@@ -26,9 +26,9 @@ cdef get_barycentric_coords(DTYPE_FLOAT_t x, DTYPE_FLOAT_t y,
     phi[1] = (a21*(x - x_tri[0]) + a22*(y - y_tri[0]))/det
     phi[2] = 1.0 - phi[0] - phi[1]
 
-cpdef DTYPE_FLOAT_t shepard_interpolation(DTYPE_FLOAT_t x,
-        DTYPE_FLOAT_t y, DTYPE_INT_t npts, DTYPE_FLOAT_t[:] xpts, 
-        DTYPE_FLOAT_t[:] ypts, DTYPE_FLOAT_t[:] vals):
+cdef DTYPE_FLOAT_t shepard_interpolation(DTYPE_FLOAT_t x,
+        DTYPE_FLOAT_t y, DTYPE_FLOAT_t xpts[4], DTYPE_FLOAT_t ypts[4],
+        DTYPE_FLOAT_t vals[4]):
     """Shepard interpolation.
 
     """
@@ -48,10 +48,10 @@ cpdef DTYPE_FLOAT_t shepard_interpolation(DTYPE_FLOAT_t x,
     # Loop over all reference points
     sum = 0.0
     sumw = 0.0
-    for i in xrange(npts):
+    for i in xrange(4):
         r = _get_euclidian_distance(x, y, xpts[i], ypts[i])
         if r == 0.0: return vals[i]
-        w = 1.0/(r*r) # TODO hardoced p value of -2.0 for now.
+        w = 1.0/(r*r) # hardoced p value of -2
         sum = sum + w
         sumw = sumw + w*vals[i]
 
