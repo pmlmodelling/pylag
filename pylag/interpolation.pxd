@@ -9,10 +9,6 @@ cpdef DTYPE_FLOAT_t shepard_interpolation(DTYPE_FLOAT_t x,
         DTYPE_FLOAT_t y, DTYPE_INT_t npts, DTYPE_FLOAT_t[:] xpts, 
         DTYPE_FLOAT_t[:] ypts, DTYPE_FLOAT_t[:] vals)
 
-cpdef inline DTYPE_FLOAT_t get_euclidian_distance(DTYPE_FLOAT_t x1,
-        DTYPE_FLOAT_t y1, DTYPE_FLOAT_t x2, DTYPE_FLOAT_t y2):
-     return sqrt_c((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1))
-
 cdef DTYPE_FLOAT_t get_linear_fraction_safe(DTYPE_FLOAT_t var, 
         DTYPE_FLOAT_t var1, DTYPE_FLOAT_t var2)
 

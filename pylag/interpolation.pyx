@@ -49,7 +49,7 @@ cpdef DTYPE_FLOAT_t shepard_interpolation(DTYPE_FLOAT_t x,
     sum = 0.0
     sumw = 0.0
     for i in xrange(npts):
-        r = get_euclidian_distance(x, y, xpts[i], ypts[i])
+        r = _get_euclidian_distance(x, y, xpts[i], ypts[i])
         if r == 0.0: return vals[i]
         w = 1.0/(r*r) # TODO hardoced p value of -2.0 for now.
         sum = sum + w
@@ -74,4 +74,7 @@ cdef DTYPE_FLOAT_t get_linear_fraction_safe(DTYPE_FLOAT_t var, DTYPE_FLOAT_t var
         return frac
     else:
         raise ValueError('{} does not lie between {} and {}.'.format(var, var1, var2))
-    
+
+cpdef inline DTYPE_FLOAT_t _get_euclidian_distance(DTYPE_FLOAT_t x1,
+        DTYPE_FLOAT_t y1, DTYPE_FLOAT_t x2, DTYPE_FLOAT_t y2):
+    return sqrt_c((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1))
