@@ -156,10 +156,10 @@ cdef class FVCOMDataReader(DataReader):
             # boundaries flag it as having moved outside of the domain - ideally
             # unstructured grids should not include such elements.
             if host_found is True:
-                n_land_boundaries = 0
+                n_host_land_boundaries = 0
                 for i in xrange(3):
                     if self._nbe[i,guess] == -1:
-                        n_land_boundaries += 1
+                        n_host_land_boundaries += 1
                 
                 if n_host_land_boundaries < 2:
                     return guess
