@@ -287,7 +287,7 @@ cdef class FVCOMDataReader(DataReader):
         self._get_phi(xpos, ypos, host, phi)
         
         # Compute u/v velocities and save
-        self._get_uv_velocity_using_linear_least_squares_interpolation(time, 
+        self._get_uv_velocity_using_shepard_interpolation(time, 
                 xpos, ypos, zpos, host, phi, vel_uv)
         for i in xrange(2):
             vel[i] = vel_uv[i]
@@ -1015,19 +1015,23 @@ cdef class FVCOMDataReader(DataReader):
 
     cdef _interp_on_sigma_layer(self, DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_INT_t host,
             DTYPE_INT_t kidx):
-        """
-        Return the linearly interpolated value of sigma on the specified sigma
-        layer within the given host element.
+        """ Return the linearly interpolated value of sigma on the sigma layer.
+        
+        Compute sigma on the specified sigma layer within the given host 
+        element.
         
         Parameters
         ----------
-        phi: MemoryView, float
+        phi : c array, float
             Array of length three giving the barycentric coordinates at which 
             to interpolate
-        host: int
+
+        host : int
             Host element index
-        kidx: int
+
+        kidx : int
             Sigma layer on which to interpolate
+
         Returns
         -------
         sigma: float
@@ -1044,23 +1048,27 @@ cdef class FVCOMDataReader(DataReader):
         sigma = interp.interpolate_within_element(sigma_nodes, phi)
         return sigma
 
-    cdef _interp_on_sigma_level(self, DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_INT_t host,
-            DTYPE_INT_t kidx):
-        """
-        Return the linearly interpolated value of sigma on the specified sigma
-        level within the given host element.
+    cdef _interp_on_sigma_level(self, DTYPE_FLOAT_t phi[N_VERTICES],
+            DTYPE_INT_t host, DTYPE_INT_t kidx):
+        """ Return the linearly interpolated value of sigma.
         
-        Parameters
-        ----------
-        phi: MemoryView, float
+        Compute sigma on the specified sigma level within the given host 
+        element.
+        
+        Parameters:
+        -----------
+        phi : c array, float
             Array of length three giving the barycentric coordinates at which 
-            to interpolate
-        host: int
-            Host element index
-        kidx: int
-            Sigma layer on which to interpolate
-        Returns
-        -------
+            to interpolate.
+            
+        host : int
+            Host element index.
+
+        kidx : int
+            Sigma layer on which to interpolate.
+
+        Returns:
+        --------
         sigma: float
             Interpolated value of sigma.
         """
@@ -1076,7 +1084,28 @@ cdef class FVCOMDataReader(DataReader):
         return sigma
 
     cdef _interpolate_vel_between_elements(self, DTYPE_FLOAT_t xpos, 
-            DTYPE_FLOAT_t ypos, DTYPE_INT_t host, DTYPE_FLOAT_t vel_elem[N_NEIGH_ELEMS]):
+            DTYPE_FLOAT_t ypos, DTYPE_INT_t host, 
+            DTYPE_FLOAT_t vel_elem[N_NEIGH_ELEMS]):
+        """Interpolate between elements using linear least squares interpolation.
+        
+        Use the a1u and a2u interpolants to compute the velocity at xpos and
+        ypos.
+        
+        Parameters:
+        -----------
+        xpos : float
+            x position in cartesian coordinates.
+
+        ypos : float
+            y position in cartesian coordinates.
+        
+        host : int
+            The host element.
+
+        vel_elem : c array, float
+            Velocity at the centroid of the host element and its three 
+            surrounding neighbour elements.
+        """
 
         cdef DTYPE_FLOAT_t rx, ry
         cdef DTYPE_FLOAT_t dudx, dudy
@@ -1097,10 +1126,25 @@ cdef class FVCOMDataReader(DataReader):
         """Find the sigma layers bounding the given z position.
         
         First check the upper and lower boundaries, then the centre of the 
-        water columnun. An exception is raised if zpos is not found.
+        water columnun. An exception is raised if the given z position is not 
+        found.
         
         Parameters:
         -----------
+        zpos : float
+            The given z position in sigma coordinates.
+
+        host : int
+            The host element.
+
+        phi : c array, float
+            Barycentirc coordinates within the host element.
+        
+        Returns:
+        --------
+        z_grid_pos : ZGridPostion
+            Object describing the location of the given z position within 
+            FVCOM's vertical grid.
         """
         cdef ZGridPosition z_grid_pos
         
@@ -1145,8 +1189,33 @@ cdef class FVCOMDataReader(DataReader):
         raise ValueError("zpos (={}) not found!".format(zpos))   
 
 cdef class ZGridPosition(object):
-    """Class describing the location of a point within FVCOM's vertical grid. 
+    """Class describing the location of a point within FVCOM's vertical grid.
     
+    Parameters:
+    -----------
+    in_vertical_boundar_layer : bool
+        True if the given location is within the top or bottom boundary layer,
+        False if not.
+
+    k_boundary : int
+        Top or bottom boundary layer index. Only set if the given location is
+        within the top or bottom boundary layer.
+
+    k_lower_layer : int
+        Index of the layer lying directly below the given location. Only set
+        if the given location lies within the centre of the water column.
+
+    k_upper_layer : int
+        Index of the layer lying directly above the given location. Only set
+        if the given location lies within the centre of the water column.
+
+    sigma_lower_layer : float
+        Sigma on the layer lying directly below the given location. Only set
+        if the given location lies within the centre of the water column.
+
+    sigma_upper_layer : float
+        Sigma on the layer lying directly above the given location. Only set
+        if the given location lies within the centre of the water column.
     """
     
     cdef bool _in_vertical_boundary_layer
