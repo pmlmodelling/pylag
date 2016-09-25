@@ -333,9 +333,6 @@ cdef class FVCOMDataReader(DataReader):
 
         # Object describing a point's location within FVCOM's vertical grid. 
         cdef ZGridPosition z_grid_pos
-        
-        # Indices identifying the layers bounding the point's vertical position 
-        cdef DTYPE_INT_t k_boundary, k_lower_layer, k_upper_layer
 
         # No. of vertices and a temporary object used for determining variable
         # values at the host element's nodes
@@ -370,11 +367,10 @@ cdef class FVCOMDataReader(DataReader):
         # i.e. above or below the top or bottom sigma layer depths respectively.
         if z_grid_pos.in_vertical_boundary_layer is True:
             # Extract viscofh near to the boundary
-            k_boundary = z_grid_pos.k_boundary
             for i in xrange(N_VERTICES):
                 vertex = self._nv[i,host]
-                viscofh_tri_t_last_layer_1[i] = self._viscofh_last[k_boundary, vertex]
-                viscofh_tri_t_next_layer_1[i] = self._viscofh_next[k_boundary, vertex]
+                viscofh_tri_t_last_layer_1[i] = self._viscofh_last[z_grid_pos.k_boundary, vertex]
+                viscofh_tri_t_next_layer_1[i] = self._viscofh_next[z_grid_pos.k_boundary, vertex]
 
             # Interpolate in time
             for i in xrange(N_VERTICES):
@@ -387,14 +383,12 @@ cdef class FVCOMDataReader(DataReader):
 
         else:
             # Extract viscofh on the lower and upper bounding sigma layers
-            k_lower_layer = z_grid_pos.k_lower_layer
-            k_upper_layer = z_grid_pos.k_upper_layer
             for i in xrange(N_VERTICES):
                 vertex = self._nv[i,host]
-                viscofh_tri_t_last_layer_1[i] = self._viscofh_last[k_lower_layer, vertex]
-                viscofh_tri_t_next_layer_1[i] = self._viscofh_next[k_lower_layer, vertex]
-                viscofh_tri_t_last_layer_2[i] = self._viscofh_last[k_upper_layer, vertex]
-                viscofh_tri_t_next_layer_2[i] = self._viscofh_next[k_upper_layer, vertex]
+                viscofh_tri_t_last_layer_1[i] = self._viscofh_last[z_grid_pos.k_lower_layer, vertex]
+                viscofh_tri_t_next_layer_1[i] = self._viscofh_next[z_grid_pos.k_lower_layer, vertex]
+                viscofh_tri_t_last_layer_2[i] = self._viscofh_last[z_grid_pos.k_upper_layer, vertex]
+                viscofh_tri_t_next_layer_2[i] = self._viscofh_next[z_grid_pos.k_upper_layer, vertex]
 
             # Interpolate in time
             for i in xrange(N_VERTICES):
@@ -605,9 +599,6 @@ cdef class FVCOMDataReader(DataReader):
         
         # Object describing a point's location within FVCOM's vertical grid. 
         cdef ZGridPosition z_grid_pos
-        
-        # Indices identifying the layers bounding the point's vertical position 
-        cdef DTYPE_INT_t k_boundary, k_lower_layer, k_upper_layer
          
         # Time and sigma fractions for interpolation in time and sigma
         cdef DTYPE_FLOAT_t time_fraction, sigma_fraction
@@ -627,33 +618,28 @@ cdef class FVCOMDataReader(DataReader):
         if nbe_min < 0:
             # Boundary element - no horizontal interpolation
             if z_grid_pos.in_vertical_boundary_layer is True:
-                k_boundary = z_grid_pos.k_boundary
-                vel[0] = interp.linear_interp(time_fraction, self._u_last[k_boundary, host], self._u_next[k_boundary, host])
-                vel[1] = interp.linear_interp(time_fraction, self._v_last[k_boundary, host], self._v_next[k_boundary, host])
+                vel[0] = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_boundary, host], self._u_next[z_grid_pos.k_boundary, host])
+                vel[1] = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_boundary, host], self._v_next[z_grid_pos.k_boundary, host])
                 return
             else:
-                k_lower_layer = z_grid_pos.k_lower_layer
-                up1 = interp.linear_interp(time_fraction, self._u_last[k_lower_layer, host], self._u_next[k_lower_layer, host])
-                vp1 = interp.linear_interp(time_fraction, self._v_last[k_lower_layer, host], self._v_next[k_lower_layer, host])
-                
-                k_upper_layer = z_grid_pos.k_upper_layer
-                up2 = interp.linear_interp(time_fraction, self._u_last[k_upper_layer, host], self._u_next[k_upper_layer, host])
-                vp2 = interp.linear_interp(time_fraction, self._v_last[k_upper_layer, host], self._v_next[k_upper_layer, host])
+                up1 = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_lower_layer, host], self._u_next[z_grid_pos.k_lower_layer, host])
+                vp1 = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_lower_layer, host], self._v_next[z_grid_pos.k_lower_layer, host])
+                up2 = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_upper_layer, host], self._u_next[z_grid_pos.k_upper_layer, host])
+                vp2 = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_upper_layer, host], self._v_next[z_grid_pos.k_upper_layer, host])
         else:
             # Non-boundary element - perform horizontal and temporal interpolation
             if z_grid_pos.in_vertical_boundary_layer is True:
-                k_boundary = z_grid_pos.k_boundary
                 xc[0] = self._xc[host]
                 yc[0] = self._yc[host]
-                uc1[0] = interp.linear_interp(time_fraction, self._u_last[k_boundary, host], self._u_next[k_boundary, host])
-                vc1[0] = interp.linear_interp(time_fraction, self._v_last[k_boundary, host], self._v_next[k_boundary, host])
+                uc1[0] = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_boundary, host], self._u_next[z_grid_pos.k_boundary, host])
+                vc1[0] = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_boundary, host], self._v_next[z_grid_pos.k_boundary, host])
                 for i in xrange(3):
                     neighbour = self._nbe[i, host]
                     j = i+1 # +1 as host is 0
                     xc[j] = self._xc[neighbour] 
                     yc[j] = self._yc[neighbour]
-                    uc1[j] = interp.linear_interp(time_fraction, self._u_last[k_boundary, neighbour], self._u_next[k_boundary, neighbour])
-                    vc1[j] = interp.linear_interp(time_fraction, self._v_last[k_boundary, neighbour], self._v_next[k_boundary, neighbour])
+                    uc1[j] = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_boundary, neighbour], self._u_next[z_grid_pos.k_boundary, neighbour])
+                    vc1[j] = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_boundary, neighbour], self._v_next[z_grid_pos.k_boundary, neighbour])
                 
                 vel[0] = interp.shepard_interpolation(xpos, ypos, xc, yc, uc1)
                 vel[1] = interp.shepard_interpolation(xpos, ypos, xc, yc, vc1)
@@ -661,22 +647,19 @@ cdef class FVCOMDataReader(DataReader):
             else:
                 xc[0] = self._xc[host]
                 yc[0] = self._yc[host]
-                k_upper_layer = z_grid_pos.k_lower_layer
-                uc1[0] = interp.linear_interp(time_fraction, self._u_last[k_lower_layer, host], self._u_next[k_lower_layer, host])
-                vc1[0] = interp.linear_interp(time_fraction, self._v_last[k_lower_layer, host], self._v_next[k_lower_layer, host])
-                
-                k_upper_layer = z_grid_pos.k_upper_layer
-                uc2[0] = interp.linear_interp(time_fraction, self._u_last[k_upper_layer, host], self._u_next[k_upper_layer, host])
-                vc2[0] = interp.linear_interp(time_fraction, self._v_last[k_upper_layer, host], self._v_next[k_upper_layer, host])
+                uc1[0] = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_lower_layer, host], self._u_next[z_grid_pos.k_lower_layer, host])
+                vc1[0] = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_lower_layer, host], self._v_next[z_grid_pos.k_lower_layer, host])
+                uc2[0] = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_upper_layer, host], self._u_next[z_grid_pos.k_upper_layer, host])
+                vc2[0] = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_upper_layer, host], self._v_next[z_grid_pos.k_upper_layer, host])
                 for i in xrange(3):
                     neighbour = self._nbe[i, host]
                     j = i+1 # +1 as host is 0
                     xc[j] = self._xc[neighbour] 
                     yc[j] = self._yc[neighbour]
-                    uc1[j] = interp.linear_interp(time_fraction, self._u_last[k_lower_layer, host], self._u_next[k_lower_layer, host])
-                    vc1[j] = interp.linear_interp(time_fraction, self._v_last[k_lower_layer, host], self._v_next[k_lower_layer, host])    
-                    uc2[j] = interp.linear_interp(time_fraction, self._u_last[k_upper_layer, host], self._u_next[k_upper_layer, host])
-                    vc2[j] = interp.linear_interp(time_fraction, self._v_last[k_upper_layer, host], self._v_next[k_upper_layer, host])
+                    uc1[j] = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_lower_layer, host], self._u_next[z_grid_pos.k_lower_layer, host])
+                    vc1[j] = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_lower_layer, host], self._v_next[z_grid_pos.k_lower_layer, host])    
+                    uc2[j] = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_upper_layer, host], self._u_next[z_grid_pos.k_upper_layer, host])
+                    vc2[j] = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_upper_layer, host], self._v_next[z_grid_pos.k_upper_layer, host])
             
             # ... lower bounding sigma layer
             up1 = interp.shepard_interpolation(xpos, ypos, xc, yc, uc1)
@@ -744,9 +727,6 @@ cdef class FVCOMDataReader(DataReader):
         # Object describing a point's location within FVCOM's vertical grid. 
         cdef ZGridPosition z_grid_pos
         
-        # Indices identifying the layers bounding the point's vertical position 
-        cdef DTYPE_INT_t k_boundary, k_lower_layer, k_upper_layer
-        
         # Time and sigma fractions for interpolation in time and sigma
         cdef DTYPE_FLOAT_t time_fraction, sigma_fraction
 
@@ -765,48 +745,40 @@ cdef class FVCOMDataReader(DataReader):
         if nbe_min < 0:
             # Boundary element - no horizontal interpolation
             if z_grid_pos.in_vertical_boundary_layer is True:
-                k_boundary = z_grid_pos.k_boundary
-                vel[0] = interp.linear_interp(time_fraction, self._u_last[k_boundary, host], self._u_next[k_boundary, host])
-                vel[1] = interp.linear_interp(time_fraction, self._v_last[k_boundary, host], self._v_next[k_boundary, host])
+                vel[0] = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_boundary, host], self._u_next[z_grid_pos.k_boundary, host])
+                vel[1] = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_boundary, host], self._v_next[z_grid_pos.k_boundary, host])
                 return
             else:
-                k_lower_layer = z_grid_pos.k_lower_layer
-                up1 = interp.linear_interp(time_fraction, self._u_last[k_lower_layer, host], self._u_next[k_lower_layer, host])
-                vp1 = interp.linear_interp(time_fraction, self._v_last[k_lower_layer, host], self._v_next[k_lower_layer, host])
-                
-                k_upper_layer = z_grid_pos.k_upper_layer
-                up2 = interp.linear_interp(time_fraction, self._u_last[k_upper_layer, host], self._u_next[k_upper_layer, host])
-                vp2 = interp.linear_interp(time_fraction, self._v_last[k_upper_layer, host], self._v_next[k_upper_layer, host])
+                up1 = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_lower_layer, host], self._u_next[z_grid_pos.k_lower_layer, host])
+                vp1 = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_lower_layer, host], self._v_next[z_grid_pos.k_lower_layer, host])
+                up2 = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_upper_layer, host], self._u_next[z_grid_pos.k_upper_layer, host])
+                vp2 = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_upper_layer, host], self._v_next[z_grid_pos.k_upper_layer, host])
         else:
             # Non-boundary element - perform horizontal and temporal interpolation
             if z_grid_pos.in_vertical_boundary_layer is True:
-                k_boundary = z_grid_pos.k_boundary
-                uc1[0] = interp.linear_interp(time_fraction, self._u_last[k_boundary, host], self._u_next[k_boundary, host])
-                vc1[0] = interp.linear_interp(time_fraction, self._v_last[k_boundary, host], self._v_next[k_boundary, host])
+                uc1[0] = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_boundary, host], self._u_next[z_grid_pos.k_boundary, host])
+                vc1[0] = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_boundary, host], self._v_next[z_grid_pos.k_boundary, host])
                 for i in xrange(3):
                     neighbour = self._nbe[i, host]
                     j = i+1 # +1 as host is 0
-                    uc1[j] = interp.linear_interp(time_fraction, self._u_last[k_boundary, neighbour], self._u_next[k_boundary, neighbour])
-                    vc1[j] = interp.linear_interp(time_fraction, self._v_last[k_boundary, neighbour], self._v_next[k_boundary, neighbour])
+                    uc1[j] = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_boundary, neighbour], self._u_next[z_grid_pos.k_boundary, neighbour])
+                    vc1[j] = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_boundary, neighbour], self._v_next[z_grid_pos.k_boundary, neighbour])
                 
                 vel[0] = self._interpolate_vel_between_elements(xpos, ypos, host, uc1)
                 vel[1] = self._interpolate_vel_between_elements(xpos, ypos, host, vc1)
                 return  
             else:
-                k_lower_layer = z_grid_pos.k_lower_layer
-                uc1[0] = interp.linear_interp(time_fraction, self._u_last[k_lower_layer, host], self._u_next[k_lower_layer, host])
-                vc1[0] = interp.linear_interp(time_fraction, self._v_last[k_lower_layer, host], self._v_next[k_lower_layer, host])
-                
-                k_upper_layer = z_grid_pos.k_upper_layer
-                uc2[0] = interp.linear_interp(time_fraction, self._u_last[k_upper_layer, host], self._u_next[k_upper_layer, host])
-                vc2[0] = interp.linear_interp(time_fraction, self._v_last[k_upper_layer, host], self._v_next[k_upper_layer, host])
+                uc1[0] = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_lower_layer, host], self._u_next[z_grid_pos.k_lower_layer, host])
+                vc1[0] = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_lower_layer, host], self._v_next[z_grid_pos.k_lower_layer, host])
+                uc2[0] = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_upper_layer, host], self._u_next[z_grid_pos.k_upper_layer, host])
+                vc2[0] = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_upper_layer, host], self._v_next[z_grid_pos.k_upper_layer, host])
                 for i in xrange(3):
                     neighbour = self._nbe[i, host]
                     j = i+1 # +1 as host is 0
-                    uc1[j] = interp.linear_interp(time_fraction, self._u_last[k_lower_layer, host], self._u_next[k_lower_layer, host])
-                    vc1[j] = interp.linear_interp(time_fraction, self._v_last[k_lower_layer, host], self._v_next[k_lower_layer, host])    
-                    uc2[j] = interp.linear_interp(time_fraction, self._u_last[k_upper_layer, host], self._u_next[k_upper_layer, host])
-                    vc2[j] = interp.linear_interp(time_fraction, self._v_last[k_upper_layer, host], self._v_next[k_upper_layer, host])
+                    uc1[j] = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_lower_layer, host], self._u_next[z_grid_pos.k_lower_layer, host])
+                    vc1[j] = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_lower_layer, host], self._v_next[z_grid_pos.k_lower_layer, host])    
+                    uc2[j] = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_upper_layer, host], self._u_next[z_grid_pos.k_upper_layer, host])
+                    vc2[j] = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_upper_layer, host], self._v_next[z_grid_pos.k_upper_layer, host])
             
             # ... lower bounding sigma layer
             up1 = self._interpolate_vel_between_elements(xpos, ypos, host, uc1)
