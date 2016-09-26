@@ -24,6 +24,23 @@ cimport interpolation as interp
 from math cimport int_min, float_min
 
 cdef class FVCOMDataReader(DataReader):
+    """ DataReader for FVCOM.
+    
+    Objects of type FVCOMDataReader are intended to manage all access to FVCOM 
+    data objects, including data describing the model grid as well as model
+    output variables. Provided are methods for searching the model grid for
+    host horizontal elements and for interpolating gridded field data to
+    a given point in space and time.
+    
+    Parameters:
+    -----------
+    config : SafeConfigParser
+        Configuration object.
+    
+    mediator : Mediator
+        Mediator object for managing access to data read from file.
+    """
+    
     # Configurtion object
     cdef object config
 
@@ -89,44 +106,85 @@ cdef class FVCOMDataReader(DataReader):
         self._read_grid()
 
     cpdef setup_data_access(self, start_datetime, end_datetime):
+        """ Set up access to time-dependent variables.
+        
+        Parameters:
+        -----------
+        start_datetime : Datetime
+            Datetime object corresponding to the simulation start time.
+        
+        end_datetime : Datetime
+            Datetime object corresponding to the simulation end time.
+        """
         self.mediator.setup_data_access(start_datetime, end_datetime)
 
         self._read_time_dependent_vars()
 
     cpdef read_data(self, DTYPE_FLOAT_t time):
-        """ Update local time dependent variables as required.
+        """ Read in time dependent variable data from file?
         
+        `time' is used to test if new data should be read in from file. If this
+        is the case, arrays containing time-dependent variable data are updated.
+        
+        Parameters:
+        -----------
+        time : float
+            The current time.
         """
         time_fraction = interp.get_linear_fraction(time, self._time_last, self._time_next)
         if time_fraction < 0.0 or time_fraction >= 1.0:
             self.mediator.update_reading_frames(time)
             self._read_time_dependent_vars()
 
-    cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
-        return self.find_host_using_local_search(xpos, ypos, guess)
-
-    cpdef find_host_using_local_search(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
-        """
-        Try to establish the host horizontal element for the particle.
-        The algorithm adopted is as described in Shadden (2009), adapted for
-        FVCOM's grid which is unstructured in the horizontal only.
+    cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos,
+            DTYPE_INT_t guess):
+        """ Returns the host horizontal element.
+        
+        For now, this method is basicaly a wrapper for the local search
+        algorithm `find_element_using_local_search'.
         
         Parameters:
         -----------
-        particle: Particle
+        xpos : float
+            x-position.
+
+        ypos : float
+            y-position
+        
+        guess : int
+            First element to try try during the search.
         
         Returns:
         --------
-        N/A
+        host : int
+            ID of the host horizontal element.
+        """
+
+        return self.find_host_using_local_search(xpos, ypos, guess)
+
+    cpdef find_host_using_local_search(self, DTYPE_FLOAT_t xpos,
+            DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
+        """ Returns the host horizontal element through local searching.
         
-        Author(s):
-        ----------------
-        James Clark (PML) October 2015.
-            Implemented algorithm based on Shadden (2009).
+        Use a local search for the host horizontal element in which the next
+        element to be search is determined by the barycentric coordinates of
+        the last. Returns -1 is the search fails.
         
-        References:
+        Parameters:
         -----------
-        Shadden, S. 2009 TODO
+        xpos : float
+            x-position.
+
+        ypos : float
+            y-position
+        
+        guess : int
+            First element to try try during the search.
+        
+        Returns:
+        --------
+        host : int
+            ID of the host horizontal element.
         """
         # Intermediate arrays/variables
         cdef DTYPE_FLOAT_t phi[N_VERTICES]
@@ -185,7 +243,27 @@ cdef class FVCOMDataReader(DataReader):
                 # Local search failed
                 return guess
 
-    cpdef find_host_using_global_search(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos):
+    cpdef find_host_using_global_search(self, DTYPE_FLOAT_t xpos,
+            DTYPE_FLOAT_t ypos):
+        """ Returns the host horizontal element through global searching.
+        
+        Sequentially search all elements for the given location. Return the
+        ID of the host horizontal element if it exists and -1 if the particle
+        lies outside of the domain.
+        
+        Parameters:
+        -----------
+        xpos : float
+            x-position.
+
+        ypos : float
+            y-position
+        
+        Returns:
+        --------
+        host : int
+            ID of the host horizontal element.
+        """
         # Loop counter
         cdef int i
 
@@ -208,9 +286,28 @@ cdef class FVCOMDataReader(DataReader):
                 return i
         return -1
 
-    cpdef get_bathymetry(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
-        """
-        Return bathymetry at the supplied x/y coordinates.
+    cpdef get_bathymetry(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos,
+            DTYPE_INT_t host):
+        """ Returns the bathymetry through linear interpolation.
+        
+        h is defined at element nodes. Linear interpolation in space is used
+        to compute h(x,y).
+        
+        Parameters:
+        -----------
+        xpos : float
+            x-position at which to interpolate.
+        
+        ypos : float
+            y-position at which to interpolate.
+            
+        host : int
+            Host horizontal element.
+
+        Return:
+        -------
+        h : float
+            Bathymetry.
         """
         cdef int i # Loop counters
         cdef int vertex # Vertex identifier  
@@ -231,8 +328,29 @@ cdef class FVCOMDataReader(DataReader):
     
     cpdef get_sea_sur_elev(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
-        """
-        Return sea surface elevation at the supplied x/y coordinates.
+        """ Returns the sea surface elevation through linear interpolation.
+        
+        zeta is defined at element nodes. Interpolation proceeds through linear
+        interpolation time followed by interpolation in space.
+        
+        Parameters:
+        -----------
+        time : float
+            Time at which to interpolate.
+        
+        xpos : float
+            x-position at which to interpolate.
+        
+        ypos : float
+            y-position at which to interpolate.
+            
+        host : int
+            Host horizontal element.
+
+        Return:
+        -------
+        zeta : float
+            Sea surface elevation.
         """
         cdef int i # Loop counters
         cdef int vertex # Vertex identifier
@@ -265,14 +383,36 @@ cdef class FVCOMDataReader(DataReader):
     cdef get_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
             DTYPE_FLOAT_t vel[3]):
-        """
-        Returns the velocity field u(t,x,y,z) through linear interpolation for a 
+        """ Returns the velocity u(t,x,y,z) through linear interpolation
+        
+        Returns the velocity u(t,x,y,z) through linear interpolation for a 
         particle residing in the horizontal host element `host'. The actual 
         computation is split into two separate parts - one for computing u and 
         v, and one for computing omega. This reflects the fact that u and v are
         defined are element centres on sigma layers, while omega is defined at
-        element nodes on sigma levels, which means the two must be handled
-        separately.
+        element nodes on sigma levels.
+
+        Parameters:
+        -----------
+        time : float
+            Time at which to interpolate.
+        
+        xpos : float
+            x-position at which to interpolate.
+        
+        ypos : float
+            y-position at which to interpolate.
+
+        zpos : float
+            z-position at which to interpolate.
+
+        host : int
+            Host horizontal element.
+
+        Return:
+        -------
+        vel : C array, float
+            u/v/w velocity components stored in a C array.           
         """
         # Barycentric coordinates
         cdef DTYPE_FLOAT_t phi[N_VERTICES]
@@ -299,6 +439,38 @@ cdef class FVCOMDataReader(DataReader):
     cdef get_horizontal_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host, 
             DTYPE_FLOAT_t vel[2]):
+        """ Returns the u/v velocity components through linear interpolation.
+        
+        This function is effectively a wrapper for _get_uv_velocity*.
+        
+        TODO:
+        -----
+        1) Two schemes are implemented but the choice is hardcoded. Have this
+        set by a config parameter?
+        
+        Parameters:
+        -----------
+        time : float
+            Time at which to interpolate.
+        
+        xpos : float
+            x-position at which to interpolate.
+        
+        ypos : float
+            y-position at which to interpolate.
+
+        zpos : float
+            z-position at which to interpolate.
+
+        host : int
+            Host horizontal element.
+
+        Return:
+        -------
+        vel : C array, float
+            u/v velocity components stored in a C array.        
+        """
+
         # Barycentric coordinates
         cdef DTYPE_FLOAT_t phi[N_VERTICES]
 
@@ -309,6 +481,33 @@ cdef class FVCOMDataReader(DataReader):
     
     cdef get_vertical_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host):
+        """ Returns the vertical velocity through linear interpolation.
+        
+        This function is effectively a wrapper for _get_vertical_velocity.
+        
+        Parameters:
+        -----------
+        time : float
+            Time at which to interpolate.
+        
+        xpos : float
+            x-position at which to interpolate.
+        
+        ypos : float
+            y-position at which to interpolate.
+
+        zpos : float
+            z-position at which to interpolate.
+
+        host : int
+            Host horizontal element.
+
+        Return:
+        -------
+        omega : float
+            Omega velocity.        
+        """
+        
         # Barycentric coordinates
         cdef DTYPE_FLOAT_t phi[N_VERTICES]
 
@@ -317,16 +516,34 @@ cdef class FVCOMDataReader(DataReader):
 
     cpdef get_horizontal_eddy_diffusivity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host):
-        """
-        Returns the horizontal eddy diffusivity fiscofh(t,x,y,z) through linear
-        interpolation. viscofh is defined at element nodes on sigma layers.
-        Above and below the top and bottom sigma layers respectivey viscofh is
-        extrapolated, taking a value equal to that on the layer. Linear
-        interpolation in the vertical is used for z positions lying between the
-        top and bottom sigma layers.
+        """ Returns the horizontal eddy diffusivity through linear interpolation.
         
-        TODO
-        - Create tests.
+        viscofh is defined at element nodes on sigma layers. Above and below the
+        top and bottom sigma layers respectivey viscofh is extrapolated, taking
+        a value equal to that on the layer. Linear interpolation in the vertical
+        is used for z positions lying between the top and bottom sigma layers.
+        
+        Parameters:
+        -----------
+        time : float
+            Time at which to interpolate.
+        
+        xpos : float
+            x-position at which to interpolate.
+        
+        ypos : float
+            y-position at which to interpolate.
+
+        zpos : float
+            z-position at which to interpolate.
+
+        host : int
+            Host horizontal element.
+        
+        Returns:
+        --------
+        viscofh : float
+            The horizontal eddy diffusivity.      
         """
         # Barycentric coordinates
         cdef DTYPE_FLOAT_t phi[N_VERTICES]
@@ -413,17 +630,63 @@ cdef class FVCOMDataReader(DataReader):
     cpdef get_horizontal_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, 
             DTYPE_INT_t host):
-        """
-        Returns the spatial derivative of the horizontal eddy diffusivity 
-        fiscofh(t,x,y,z) through ...?
+        """ NOT YET IMPLEMENTED
+        
+                Parameters:
+        -----------
+        time : float
+            Time at which to interpolate.
+        
+        xpos : float
+            x-position at which to interpolate.
+        
+        ypos : float
+            y-position at which to interpolate.
+
+        zpos : float
+            z-position at which to interpolate.
+
+        host : int
+            Host horizontal element.
+        
+        Returns:
+        --------
+        viscofh_prime : float
+            The horizontal eddy diffusivity.
+        
         """
         pass
 
     cpdef get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host):
-        """
-        Returns the vertical eddy diffusivity k(t,x,y,z) through linear
-        interpolation.
+        """ Returns the vertical eddy diffusivity through linear interpolation.
+        
+        The vertical eddy diffusivity is defined at element nodes on sigma
+        levels. Interpolation is performed first in time, then in x and y,
+        and finally in z.
+        
+        Parameters:
+        -----------
+        time : float
+            Time at which to interpolate.
+        
+        xpos : float
+            x-position at which to interpolate.
+        
+        ypos : float
+            y-position at which to interpolate.
+
+        zpos : float
+            z-position at which to interpolate.
+
+        host : int
+            Host horizontal element.
+        
+        Returns:
+        --------
+        kh : float
+            The vertical eddy diffusivity.        
+        
         """
         # Barycentric coordinates
         cdef DTYPE_FLOAT_t phi[N_VERTICES]
@@ -517,9 +780,32 @@ cdef class FVCOMDataReader(DataReader):
     cpdef get_vertical_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, 
             DTYPE_INT_t host):
-        """
+        """ Returns the gradient in the vertical eddy diffusivity.
+        
         Return a numerical approximation of the gradient in the vertical eddy 
         diffusivity at (t,x,y,z).
+        
+        Parameters:
+        -----------
+        time : float
+            Time at which to interpolate.
+        
+        xpos : float
+            x-position at which to interpolate.
+        
+        ypos : float
+            y-position at which to interpolate.
+
+        zpos : float
+            z-position at which to interpolate.
+
+        host : int
+            Host horizontal element.
+        
+        Returns:
+        --------
+        k_prime : float
+            Gradient in the vertical eddy diffusivity field.
         """
         # Diffusivities
         cdef DTYPE_FLOAT_t kh1, kh2
@@ -552,7 +838,7 @@ cdef class FVCOMDataReader(DataReader):
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, 
             DTYPE_INT_t host, DTYPE_FLOAT_t phi[N_VERTICES], 
             DTYPE_FLOAT_t vel[2]):
-        """Return u and v components at a point using Shepard interpolation.
+        """ Return u and v components at a point using Shepard interpolation.
         
         In FVCOM, the u and v velocity components are defined at element centres
         on sigma layers and saved at discrete points in time. Here,
@@ -565,11 +851,30 @@ cdef class FVCOMDataReader(DataReader):
         the host element's centre and its immediate neghbours (i.e. at the
         centre of those elements that share a face with the host element).
         
-        TODO - apply boundary fix?
+        Parameters:
+        -----------
+        time : float
+            Time at which to interpolate.
         
-        Parameters
-        ----------
-        TODO
+        xpos : float
+            x-position at which to interpolate.
+        
+        ypos : float
+            y-position at which to interpolate.
+
+        zpos : float
+            z-position at which to interpolate.
+
+        host : int
+            Host horizontal element.
+
+        phi : C array, float
+            Barycentric coordinates of the point.
+        
+        Returns:
+        --------
+        vel : C array, float
+            Two element array giving the u and v velocity component.
         """
         # x/y coordinates of element centres
         cdef DTYPE_FLOAT_t xc[N_NEIGH_ELEMS]
@@ -681,7 +986,7 @@ cdef class FVCOMDataReader(DataReader):
             DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, 
             DTYPE_FLOAT_t zpos, DTYPE_INT_t host, DTYPE_FLOAT_t phi[N_VERTICES],
             DTYPE_FLOAT_t vel[2]):
-        """Return u and v components at a point using LLS interpolation.
+        """ Return u and v components at a point using LLS interpolation.
         
         In FVCOM, the u and v velocity components are defined at element centres
         on sigma layers and saved at discrete points in time. Here,
@@ -700,7 +1005,28 @@ cdef class FVCOMDataReader(DataReader):
 
         Parameters:
         -----------
-        TODO
+        time : float
+            Time at which to interpolate.
+        
+        xpos : float
+            x-position at which to interpolate.
+        
+        ypos : float
+            y-position at which to interpolate.
+
+        zpos : float
+            z-position at which to interpolate.
+
+        host : int
+            Host horizontal element.
+
+        phi : C array, float
+            Barycentric coordinates of the point.
+        
+        Returns:
+        --------
+        vel : C array, float
+            Two element array giving the u and v velocity component.
         """
         # Temporary array for vel at element centres at last time point
         cdef DTYPE_FLOAT_t uc_last[N_NEIGH_ELEMS]
@@ -799,22 +1125,44 @@ cdef class FVCOMDataReader(DataReader):
     cdef DTYPE_FLOAT_t _get_omega_velocity(self, DTYPE_FLOAT_t time,
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos,
             DTYPE_INT_t host, DTYPE_FLOAT_t phi[N_VERTICES]):
-        """
-        Steps:
-        1) Determine natural coordinates of the host element - these are used
-        in the computation of sigma on the upper and lower sigma
-        levels bounding the particle's position.
-        2) Determine indices for the upper and lower sigma levels
-        bounding the particle's position.
-        3) Determine the value of sigma on the upper and lower sigma
-        levels bounding the particle's position.
-        4) Calculate the time fraction used for interpolation in time.
-        6) Perform time interpolation of omega at nodes of the host element on
+        """ Get omega velocity through linear interpolation.
+        
+        Omega is defined at element nodes on sigma levels. Linear interpolation
+        procedes as follows:
+        
+        1) Perform time interpolation of omega at nodes of the host element on
         the upper and lower bounding sigma levels.
-        8) Interpolate omega within the host element on the upper and lower 
+        
+        2) Interpolate omega within the host element on the upper and lower 
         bounding sigma levels.
-        10) Perform vertical interpolation of omega between sigma levels at the
+        
+        3) Perform vertical interpolation of omega between sigma levels at the
         particle's x/y position.
+        
+        Parameters:
+        -----------
+        time : float
+            Time at which to interpolate.
+        
+        xpos : float
+            x-position at which to interpolate.
+        
+        ypos : float
+            y-position at which to interpolate.
+
+        zpos : float
+            z-position at which to interpolate.
+
+        host : int
+            Host horizontal element.
+
+        phi : C array, float
+            Barycentric coordinates of the point.
+
+        Return:
+        -------
+        omega : float
+            Omega velocity.
         """
         # Variables used when determining indices for the sigma levels that
         # bound the particle's position
@@ -904,6 +1252,14 @@ cdef class FVCOMDataReader(DataReader):
         
         All communications go via the mediator in order to guarentee support for
         both serial and parallel simulations.
+        
+        Parameters:
+        -----------
+        N/A
+        
+        Returns:
+        --------
+        N/A
         """
         # Read in the grid's dimensions
         self._n_nodes = self.mediator.get_dimension_variable('node')
@@ -935,7 +1291,7 @@ cdef class FVCOMDataReader(DataReader):
         self._a2u = self.mediator.get_grid_variable('a2u', (4, self._n_elems), DTYPE_FLOAT)
 
     cdef _read_time_dependent_vars(self):
-        """ Set time references and update memory views for FVCOM data fields.
+        """ Update time variables and memory views for FVCOM data fields.
         
         For each FVCOM time-dependent variable needed by PyLag two references
         are stored. These correspond to the last and next time points at which
@@ -943,6 +1299,14 @@ cdef class FVCOMDataReader(DataReader):
         
         All communications go via the mediator in order to guarentee support for
         both serial and parallel simulations.
+        
+        Parameters:
+        -----------
+        N/A
+        
+        Returns:
+        --------
+        N/A
         """
         # Update time references
         self._time_last = self.mediator.get_time_at_last_time_index()
@@ -968,8 +1332,27 @@ cdef class FVCOMDataReader(DataReader):
         self._viscofh_last = self.mediator.get_time_dependent_variable_at_last_time_index('viscofh', (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
         self._viscofh_next = self.mediator.get_time_dependent_variable_at_next_time_index('viscofh', (self._n_siglay, self._n_nodes), DTYPE_FLOAT)     
 
-    cdef _get_phi(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t host,
-             DTYPE_FLOAT_t phi[N_VERTICES]):
+    cdef void _get_phi(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos,
+            DTYPE_INT_t host, DTYPE_FLOAT_t phi[N_VERTICES]):
+        """ Get barycentric coordinates.
+        
+        Parameters:
+        -----------
+        xpos : float
+            x-position in cartesian coordinates.
+        
+        ypos : float
+            y-position in cartesian coordinates.
+        
+        host : int
+            Host element.
+        
+        Returns:
+        --------
+        phi : C array, float
+            Barycentric coordinates.
+        """
+        
         cdef int i # Loop counters
         cdef int vertex # Vertex identifier
 
@@ -1095,7 +1478,7 @@ cdef class FVCOMDataReader(DataReader):
 
     cdef void _get_z_grid_position(self, DTYPE_FLOAT_t zpos, DTYPE_INT_t host, 
             DTYPE_FLOAT_t phi[N_VERTICES], ZGridPosition *z_grid_pos):
-        """Find the sigma layers bounding the given z position.
+        """ Find the sigma layers bounding the given z position.
         
         First check the upper and lower boundaries, then the centre of the 
         water columnun. An exception is raised if the given z position is not 
