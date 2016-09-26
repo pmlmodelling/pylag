@@ -133,7 +133,7 @@ cdef class FVCOMOPTModel(OPTModel):
                 host_horizontal_elem = self.data_reader.find_host_using_global_search(x, y)
 
             if host_horizontal_elem != -1:
-                in_domain = 1
+                in_domain = True
 
                 h = self.data_reader.get_bathymetry(x, y, host_horizontal_elem)
 
@@ -168,7 +168,7 @@ cdef class FVCOMOPTModel(OPTModel):
                 # next. This should be fast if particle initial positions are colocated.
                 guess = host_horizontal_elem
             else:
-                in_domain = 0
+                in_domain = False
                 particle = Particle(group_id=group, in_domain=in_domain)
                 self.particle_seed.append(particle)
 
@@ -200,7 +200,7 @@ cdef class FVCOMOPTModel(OPTModel):
         # particles that remain in the model domain
         n_particles = len(self.particle_set)
         for i in xrange(n_particles):
-            if self.particle_set[i].in_domain != -1:
+            if self.particle_set[i].in_domain:
                 delta_X.reset()
                 
                 # Advection

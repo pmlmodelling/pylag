@@ -12,7 +12,7 @@ from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 cdef class Particle:
     def __init__(self, DTYPE_INT_t group_id=-999, DTYPE_FLOAT_t xpos=-999., 
             DTYPE_FLOAT_t ypos=-999., DTYPE_FLOAT_t zpos=-999., DTYPE_INT_t host=-999, 
-            DTYPE_INT_t in_domain=-999):
+            DTYPE_INT_t in_domain=False):
         self._group_id = group_id
         
         self._xpos = xpos
@@ -66,5 +66,5 @@ cdef class Particle:
     property in_domain:
         def __get__(self):
             return self._in_domain
-        def __set__(self, DTYPE_INT_t value):
+        def __set__(self, bint value):
             self._in_domain = value
