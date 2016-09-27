@@ -20,16 +20,47 @@ cdef class NumIntegrator:
         pass
 
 cdef class RK4Integrator2D(NumIntegrator):
-
+    """ 2D Fourth Order Runga Kutta numerical integration scheme.
+    
+    Parameters:
+    -----------
+    config : SafeConfigParser
+        Configuration object.
+    """
     def __init__(self, config):
         self._time_step = config.getfloat('SIMULATION', 'time_step')
     
     cpdef DTYPE_INT_t advect(self, DTYPE_FLOAT_t time, Particle particle,
             DataReader data_reader, Delta delta_X):
-        """
-        Advect particles forward in time. If particles are advected outside of
-        the model domain, the particle's position is not updated. This mimics
-        the behaviour of FVCOM's particle tracking model at solid boundaries.
+        """ Advect particles forward in time.
+        
+        Use a basic fourth order Runga Kutta scheme to compute changes in a
+        particle's position in two dimensions. These are saved in an object
+        of type Delta. If the particle moves outside of the model domain
+        delta_X is left unchanged and the flag identifying that a boundary
+        crossing has occurred is returned. This function returns a value
+        of 0 if a boundary crossing has not occured.
+        
+        Parameters:
+        -----------
+        time : float
+            The current time.
+        
+        particle : Particle
+            Particle object that stores the current particle's position.
+        
+        data_reader : DataReader
+            DataReader object used for calculating point velocities.
+        
+        delta_X : Delta
+            Delta object in which the change in the particle's position is
+            stored.
+        
+        Returns:
+        --------
+        host : int
+            Flag identifying if a boundary crossing has occurred. A return value
+            of 0 means a boundary crossing did not occur.
         """
         # Arrays for RK4 stages
         cdef DTYPE_FLOAT_t k1[2]
@@ -98,6 +129,13 @@ cdef class RK4Integrator2D(NumIntegrator):
         return 0
 
 cdef class RK4Integrator3D(NumIntegrator):
+    """ 3D Fourth Order Runga Kutta numerical integration scheme.
+    
+    Parameters:
+    -----------
+    config : SafeConfigParser
+        Configuration object.
+    """
 
     def __init__(self, config):
         self._time_step = config.getfloat('SIMULATION', 'time_step')
@@ -106,16 +144,35 @@ cdef class RK4Integrator3D(NumIntegrator):
     
     cpdef DTYPE_INT_t advect(self, DTYPE_FLOAT_t time, Particle particle,
             DataReader data_reader, Delta delta_X):
-        """
-        Advect particles forward in time. If particles are advected outside of
-        the model domain, the particle's position is not updated. This mimics
-        the behaviour of FVCOM's particle tracking model at solid boundaries.
+        """ Advect particles forward in time.
         
-        TODO - this is not an ideal solution. Firstly, open boundaries are not
-        distinguished from solid boundaries, and it makes more sense for
-        particles to be lost from the model domain when they cross an open
-        boundary. And secondly, it seems like we should be able to do something
-        better at solid boundaries.
+        Use a basic fourth order Runga Kutta scheme to compute changes in a
+        particle's position in three dimensions. These are saved in an object
+        of type Delta. If the particle moves outside of the model domain
+        delta_X is left unchanged and the flag identifying that a boundary
+        crossing has occurred is returned. This function returns a value
+        of 0 if a boundary crossing has not occured.
+        
+        Parameters:
+        -----------
+        time : float
+            The current time.
+        
+        particle : Particle
+            Particle object that stores the current particle's position.
+        
+        data_reader : DataReader
+            DataReader object used for calculating point velocities.
+        
+        delta_X : Delta
+            Delta object in which the change in the particle's position is
+            stored.
+        
+        Returns:
+        --------
+        host : int
+            Flag identifying if a boundary crossing has occurred. A return value
+            of 0 means a boundary crossing did not occur.
         """
         # Arrays for RK4 stages
         cdef DTYPE_FLOAT_t k1[3]
