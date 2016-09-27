@@ -137,15 +137,14 @@ cdef class FVCOMOPTModel(OPTModel):
             if host_horizontal_elem >= 0:
                 in_domain = True
 
-                h = self.data_reader.get_bathymetry(x, y, host_horizontal_elem)
-
-                zeta = self.data_reader.get_sea_sur_elev(time, x, y, host_horizontal_elem)
-
                 # Set z depending on the specified coordinate system
                 if self.config.get("SIMULATION", "depth_coordinates") == "cartesian":
-                    # z is given as the distance below the free surface. We use this,
-                    # and zeta to determine the distance below the mean free
-                    # surface, which is then used to calculate sigma
+                    # z is given as the distance below the free surface. We use
+                    # this and zeta to determine the distance below the mean
+                    # free surface, which is then used with h to calculate sigma
+                    h = self.data_reader.get_bathymetry(x, y, host_horizontal_elem)
+                    zeta = self.data_reader.get_sea_sur_elev(time, x, y, host_horizontal_elem)
+
                     z = z_temp + zeta
                     sigma = self._cartesian_to_sigma_coords(z, h, zeta)
                     
