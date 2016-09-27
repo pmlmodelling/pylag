@@ -178,19 +178,30 @@ cdef class FVCOMOPTModel(OPTModel):
             logger.info('{} of {} particles are located in the model domain.'.format(particles_in_domain, len(self.particle_seed)))
 
     def update(self, DTYPE_FLOAT_t time):
-        """
+        """ Compute and update each particle's position.
+        
         Compute the net effect of resolved and unresolved processes on particle
         motion in the interval t -> t + dt. Resolved velocities are used to
         advect particles. A random displacement model is used to model the
-        effect of unresolved (subgrid scale) processes. Particle displacements
-        are first stored and accumulated in an object of type Delta before
-        then being used to update a given particle's position. For now, if a
-        particle crosses a lateral boundary its motion is temporarily arrested.
-        Reflecting boundary conditions are applied at the bottom and surface
-        boundaries.
+        effect of unresolved (subgrid scale) vertical and horizontal transport
+        processes. Particle displacements are first stored and accumulated in an
+        object of type Delta before then being used to update a given particle's
+        position.
+        
+        If a particle crosses a land boundary its motion is temporarily
+        arrested. If the particle crosses an open boundary it is flagged as
+        having left the domain. These checks are performed twice - the first
+        after the advection call and the second after the net effect of each
+        process has been summed. The former is implemented in order to catch
+        errors thrown by the numerical integration scheme - these often employ
+        multi-step process which will error if the particle exits the domain 
+        mid-way through the computation.
+        
+        In the vertical, reflecting boundary conditions are applied at the 
+        bottom and surface boundaries.
         """
         cdef DTYPE_FLOAT_t xpos, ypos, zpos
-        cdef DTYPE_INT_t host
+        cdef DTYPE_INT_t host, host_err
         cdef DTYPE_INT_t i, n_particles
 
         # Object for storing position deltas resulting from advection and random
@@ -206,8 +217,16 @@ cdef class FVCOMOPTModel(OPTModel):
                 
                 # Advection
                 if self.num_integrator is not None:
-                    self.num_integrator.advect(time, self.particle_set[i], 
-                            self.data_reader, delta_X)
+                    host_err = self.num_integrator.advect(time,
+                            self.particle_set[i], self.data_reader, delta_X)
+                            
+                    # Check for boundary crossings. These are checked for
+                    # a second time at the end of the update loop.
+                    if host_err == -1:
+                        continue
+                    elif host_err == -2:
+                        self.particle_set[i].in_domain = False
+                        continue
                 
                 # Vertical random walk
                 if self.vert_rand_walk_model is not None:
@@ -219,31 +238,43 @@ cdef class FVCOMOPTModel(OPTModel):
                     self.horiz_rand_walk_model.random_walk(time, self.particle_set[i], 
                             self.data_reader, delta_X)  
                 
-                # Check for boundary crossings. TODO For now, arrest particle 
-                # motion.
+                # Sum contributions
                 xpos = self.particle_set[i].xpos + delta_X.x
                 ypos = self.particle_set[i].ypos + delta_X.y
                 zpos = self.particle_set[i].zpos + delta_X.z
                 host = self.data_reader.find_host(xpos, ypos, self.particle_set[i].host_horizontal_elem)
-                if host == -1: continue
+              
+                # If the particle still resides in the domain update its
+                # position. If the particle has crossed a land boundary arrest
+                # its position. If it has crossed an open boundary flag it as
+                # having left the model domain.
+                if host >= 0:
+                    # Apply reflecting surface/bottom boundary conditions
+                    if zpos < self._zmin:
+                        zpos = self._zmin + self._zmin - zpos
+                    elif zpos > self._zmax:
+                        zpos = self._zmax + self._zmax - zpos
 
-                # Apply reflecting surface/bottom boundary conditions
-                if zpos < self._zmin:
-                    zpos = self._zmin + self._zmin - zpos
-                elif zpos > self._zmax:
-                    zpos = self._zmax + self._zmax - zpos
+                    # Check for valid zpos
+                    if zpos < (self._zmin - sys.float_info.epsilon):
+                        raise ValueError("New zpos (= {}) lies below the sea floor.".format(zpos))
+                    elif zpos > (self._zmax + sys.float_info.epsilon):
+                        raise ValueError("New zpos (= {}) lies above the free surface.".format(zpos))                
 
-                # Check for valid zpos
-                if zpos < (self._zmin - sys.float_info.epsilon):
-                    raise ValueError("New zpos (= {}) lies below the sea floor.".format(zpos))
-                elif zpos > (self._zmax + sys.float_info.epsilon):
-                    raise ValueError("New zpos (= {}) lies above the free surface.".format(zpos))                
-                
-                # Update the particle's position
-                self.particle_set[i].xpos = xpos
-                self.particle_set[i].ypos = ypos
-                self.particle_set[i].zpos = zpos
-                self.particle_set[i].host_horizontal_elem = host
+                    # Update the particle's position
+                    self.particle_set[i].xpos = xpos
+                    self.particle_set[i].ypos = ypos
+                    self.particle_set[i].zpos = zpos
+                    self.particle_set[i].host_horizontal_elem = host
+                elif host == -1:
+                    # Land boundary crossed - do nothing.
+                    continue
+                elif host == -2:
+                    # Open boundary crossed - flag as having left the domain.
+                    self.particle_set[i].in_domain = False
+                    continue
+                else:
+                    raise ValueError('Unrecognised host element {}.'.format(host))
 
     def get_diagnostics(self, time):
         diags = {'xpos': [], 'ypos': [], 'zpos': [], 'host_horizontal_elem': [], 'h': [], 'zeta': []}
