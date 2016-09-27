@@ -136,7 +136,7 @@ cdef class FVCOMDataReader(DataReader):
             self.mediator.update_reading_frames(time)
             self._read_time_dependent_vars()
 
-    cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos,
+    cpdef DTYPE_INT_t find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos,
             DTYPE_INT_t guess):
         """ Returns the host horizontal element.
         
@@ -159,8 +159,28 @@ cdef class FVCOMDataReader(DataReader):
         host : int
             ID of the host horizontal element.
         """
+        cdef DTYPE_INT_t host
+        
+        host = self.find_host_using_local_search(xpos, ypos, guess)
+        if host >= 0:
+            return host
+        else:
+            # Local search failed
+            if self.config.getboolean('GENERAL', 'full_logging'):
+                logger = logging.getLogger(__name__)
+                logger.warning('Local host element search failed.')
 
-        return self.find_host_using_local_search(xpos, ypos, guess)
+            try:
+                return self.find_host_using_global_search(xpos, ypos)
+            except ValueError as ve:
+                if self.config.getboolean('GENERAL', 'full_logging'):
+                    logger = logging.getLogger(__name__)
+                    logger.warning(ve.message)
+                    logger.warning('Global host element search failed. Local '\
+                        'searching yielded a host value of {}. A value of -1 '\
+                        'suggests a land boundary crossing, a value of -2 '\
+                        'an open boundary crossing.'.format(host))
+                return host
 
     cpdef find_host_using_local_search(self, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
@@ -168,7 +188,7 @@ cdef class FVCOMDataReader(DataReader):
         
         Use a local search for the host horizontal element in which the next
         element to be search is determined by the barycentric coordinates of
-        the last. Returns -1 is the search fails.
+        the last. A return value < 0 indicates the search algorithm failed.
         
         Parameters:
         -----------
@@ -179,7 +199,7 @@ cdef class FVCOMDataReader(DataReader):
             y-position
         
         guess : int
-            First element to try try during the search.
+            First element to try during the search.
         
         Returns:
         --------
@@ -190,9 +210,14 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_FLOAT_t phi[N_VERTICES]
         cdef DTYPE_FLOAT_t phi_test
 
-        cdef bool host_found
+        cdef bint host_found
 
         cdef DTYPE_INT_t n_host_land_boundaries
+
+        # Check for non-sensical start points.
+        if guess < 0:
+            raise ValueError('Invalid start point for local host element '\
+                    'search. Start point = {}'.format(guess))
 
         host_found = False
         
@@ -234,12 +259,10 @@ cdef class FVCOMDataReader(DataReader):
                 guess = self._nbe[0,guess]
             elif phi[1] == phi_test:
                 guess = self._nbe[1,guess]
-            elif phi[2] == phi_test:
-                guess = self._nbe[2,guess]
             else:
-                raise RuntimeError('Host element search algorithm failed.')
+                guess = self._nbe[2,guess]
 
-            if guess == -1:
+            if guess < 0:
                 # Local search failed
                 return guess
 
@@ -265,7 +288,7 @@ cdef class FVCOMDataReader(DataReader):
             ID of the host horizontal element.
         """
         # Loop counter
-        cdef int i
+        cdef DTYPE_INT_t i
 
         # Intermediate arrays/variables
         cdef DTYPE_FLOAT_t phi[N_VERTICES]
@@ -284,7 +307,8 @@ cdef class FVCOMDataReader(DataReader):
                     logger = logging.getLogger(__name__)
                     logger.warning('EPSILON applied during global host element search.')
                 return i
-        return -1
+
+        raise ValueError('Point ({}, {}) is not in the model domain.'.format(xpos, ypos))
 
     cpdef get_bathymetry(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos,
             DTYPE_INT_t host):

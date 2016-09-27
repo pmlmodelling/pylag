@@ -27,7 +27,8 @@ cdef class TestVelocityDataReader(DataReader):
     
     Author: James Clark (PML)
     """
-    cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
+    cpdef DTYPE_INT_t find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos,
+            DTYPE_INT_t guess):
         return 0    
     
     cdef get_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
@@ -121,7 +122,7 @@ cdef class TestDiffusivityDataReader(DataReader):
         self._zmin = config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmin')
         self._zmax = config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmax')
 
-    cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
+    cpdef DTYPE_INT_t find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
         return 0
     
     cdef get_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 

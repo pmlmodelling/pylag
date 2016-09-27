@@ -125,14 +125,11 @@ cdef class FVCOMOPTModel(OPTModel):
         for group, x, y, z_temp in zip(self._group_ids, self._x_positions, self._y_positions, self._z_positions):
             # Find particle host element
             if guess is not None:
-                # Try local search first, then global search if this fails
-                host_horizontal_elem = self.data_reader.find_host_using_local_search(x, y, guess)
-                if host_horizontal_elem == -1:
-                    host_horizontal_elem = self.data_reader.find_host_using_global_search(x, y)
+                host_horizontal_elem = self.data_reader.find_host(x, y, guess)
             else:
                 host_horizontal_elem = self.data_reader.find_host_using_global_search(x, y)
 
-            if host_horizontal_elem != -1:
+            if host_horizontal_elem >= 0:
                 in_domain = True
 
                 h = self.data_reader.get_bathymetry(x, y, host_horizontal_elem)
