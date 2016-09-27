@@ -162,25 +162,27 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_INT_t host
         
         host = self.find_host_using_local_search(xpos, ypos, guess)
-        if host >= 0:
-            return host
-        else:
-            # Local search failed
-            if self.config.getboolean('GENERAL', 'full_logging'):
-                logger = logging.getLogger(__name__)
-                logger.warning('Local host element search failed.')
-
-            try:
-                return self.find_host_using_global_search(xpos, ypos)
-            except ValueError as ve:
-                if self.config.getboolean('GENERAL', 'full_logging'):
-                    logger = logging.getLogger(__name__)
-                    logger.warning(ve.message)
-                    logger.warning('Global host element search failed. Local '\
-                        'searching yielded a host value of {}. A value of -1 '\
-                        'suggests a land boundary crossing, a value of -2 '\
-                        'an open boundary crossing.'.format(host))
-                return host
+        
+        return host
+#
+#        if host >= 0:
+#            return host
+#        else:
+#            # Local search failed
+#            try:
+#                return self.find_host_using_global_search(xpos, ypos)
+#                if self.config.getboolean('GENERAL', 'full_logging'):
+#                    logger = logging.getLogger(__name__)
+#                    logger.info('Particle found through global searching.')
+#            except ValueError as ve:
+#                if self.config.getboolean('GENERAL', 'full_logging'):
+#                    logger = logging.getLogger(__name__)
+#                    logger.warning(ve.message)
+#                    logger.warning('Global host element search failed. Local '\
+#                        'searching yielded a host value of {}. A value of -1 '\
+#                        'suggests a land boundary crossing, a value of -2 '\
+#                        'an open boundary crossing.'.format(host))
+#                return host
 
     cpdef find_host_using_local_search(self, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
