@@ -1,6 +1,8 @@
 import logging
 from netCDF4 import Dataset, date2num, num2date
 
+from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT 
+
 class NetCDFLogger(object):
     """NetCDFLogger
 
@@ -31,15 +33,12 @@ class NetCDFLogger(object):
 
         try:
             logger.info('Creating output file: {}.'.format(self.file_name))
-            self._ncfile = Dataset(self.file_name, mode='w', format='NETCDF4_CLASSIC')
+            self._ncfile = Dataset(self.file_name, mode='w')
         except:
             raise RuntimeError('Failed to create output file {}.'.format(self.file_name))
 
         # Time units
         self._simulation_time_units = 'seconds since {}'.format(start_datetime)
-
-        # Variable data type
-        self._data_type='f4'
 
         # Create coordinate variables etc.
         self._create_file_structure(n_particles)
@@ -53,38 +52,38 @@ class NetCDFLogger(object):
         self._ncfile.createDimension('time', None)
  
         # Add time variable
-        self._time = self._ncfile.createVariable('time','i4',('time',))
+        self._time = self._ncfile.createVariable('time', DTYPE_INT,('time',))
         self._time.units = 'seconds since 1960-01-01 00:00:00'
         self._time.calendar = 'standard'
         self._time.long_name = 'Time'
 
         # Add particle group ids
-        self._group_id = self._ncfile.createVariable('group_id','i4',('particles',))
+        self._group_id = self._ncfile.createVariable('group_id', DTYPE_INT,('particles',))
         self._group_id.long_name = 'Particle group ID'
         
         # Add position variables
-        self._xpos = self._ncfile.createVariable('xpos', self._data_type, ('time', 'particles',))
+        self._xpos = self._ncfile.createVariable('xpos', DTYPE_FLOAT, ('time', 'particles',))
         self._xpos.units = 'meters (m)'
         self._xpos.long_name = 'Particle x position'
         
-        self._ypos = self._ncfile.createVariable('ypos', self._data_type, ('time', 'particles',))
+        self._ypos = self._ncfile.createVariable('ypos', DTYPE_FLOAT, ('time', 'particles',))
         self._ypos.units = 'meters (m)'
         self._ypos.long_name = 'Particle y position'        
         
-        self._zpos = self._ncfile.createVariable('zpos', self._data_type, ('time', 'particles',))
+        self._zpos = self._ncfile.createVariable('zpos', DTYPE_FLOAT, ('time', 'particles',))
         self._zpos.units = 'meters (m)'
         self._zpos.long_name = 'Particle z position'
 
-        self._host = self._ncfile.createVariable('host', 'i4', ('time', 'particles',))
+        self._host = self._ncfile.createVariable('host', DTYPE_INT, ('time', 'particles',))
         self._host.units = 'None'
         self._host.long_name = 'Host horizontal element'
         
         # Add local environmental variables
-        self._h = self._ncfile.createVariable('h', self._data_type, ('time', 'particles',))
+        self._h = self._ncfile.createVariable('h', DTYPE_FLOAT, ('time', 'particles',))
         self._h.units = 'meters (m)'
         self._h.long_name = 'Water depth'
         
-        self._zeta = self._ncfile.createVariable('zeta', self._data_type, ('time', 'particles',))
+        self._zeta = self._ncfile.createVariable('zeta', DTYPE_FLOAT, ('time', 'particles',))
         self._zeta.units = 'meters (m)'
         self._zeta.long_name = 'Sea surface elevation'
         
