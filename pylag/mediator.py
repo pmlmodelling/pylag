@@ -19,7 +19,7 @@ class Mediator(object):
     def get_dimension_variable(self, var_name):
         pass
     
-    def get_grid_variable(self, var_name, var_dims=None, var_type=None):
+    def get_grid_variable(self, var_name, var_dims, var_type):
         pass
 
     def get_time_at_last_time_index(self):
@@ -28,10 +28,10 @@ class Mediator(object):
     def get_time_at_next_time_index(self):
         pass
 
-    def get_time_dependent_variable_at_last_time_index(self, var_name, var_dims=None, var_type=None):
+    def get_time_dependent_variable_at_last_time_index(self, var_name, var_dims, var_type):
         pass
 
-    def get_time_dependent_variable_at_next_time_index(self, var_name, var_dims=None, var_type=None):
+    def get_time_dependent_variable_at_next_time_index(self, var_name, var_dims, var_type):
         pass
 
 class SerialMediator(Mediator):
@@ -48,8 +48,8 @@ class SerialMediator(Mediator):
     def get_dimension_variable(self, var_name):
         return self.file_reader.get_dimension_variable(var_name)
     
-    def get_grid_variable(self, var_name, var_dims=None, var_type=None):
-        return self.file_reader.get_grid_variable(var_name)
+    def get_grid_variable(self, var_name, var_dims, var_type):
+        return self.file_reader.get_grid_variable(var_name).astype(var_type)
 
     def get_time_at_last_time_index(self):
         return self.file_reader.get_time_at_last_time_index()
@@ -57,8 +57,8 @@ class SerialMediator(Mediator):
     def get_time_at_next_time_index(self):
         return self.file_reader.get_time_at_next_time_index()
 
-    def get_time_dependent_variable_at_last_time_index(self, var_name, var_dims=None, var_type=None):
-        return self.file_reader.get_time_dependent_variable_at_last_time_index(var_name)
+    def get_time_dependent_variable_at_last_time_index(self, var_name, var_dims, var_type):
+        return self.file_reader.get_time_dependent_variable_at_last_time_index(var_name).astype(var_type)
 
-    def get_time_dependent_variable_at_next_time_index(self, var_name, var_dims=None, var_type=None):
-        return self.file_reader.get_time_dependent_variable_at_next_time_index(var_name)
+    def get_time_dependent_variable_at_next_time_index(self, var_name, var_dims, var_type):
+        return self.file_reader.get_time_dependent_variable_at_next_time_index(var_name).astype(var_type)

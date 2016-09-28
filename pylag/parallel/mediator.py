@@ -50,13 +50,13 @@ class MPIMediator(Mediator):
         
         return var
 
-    def get_grid_variable(self, var_name, var_dims=None, var_type=None):
+    def get_grid_variable(self, var_name, var_dims, var_type):
         # MPI objects and variables
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
         
         if rank == 0:
-            var = self.file_reader.get_grid_variable(var_name)
+            var = self.file_reader.get_grid_variable(var_name).astype(var_type)
         else:
             var = np.empty(var_dims, dtype=var_type)
         
@@ -92,13 +92,13 @@ class MPIMediator(Mediator):
         
         return time
     
-    def get_time_dependent_variable_at_last_time_index(self, var_name, var_dims=None, var_type=None):
+    def get_time_dependent_variable_at_last_time_index(self, var_name, var_dims, var_type):
          # MPI objects and variables
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
         
         if rank == 0:
-            var = self.file_reader.get_time_dependent_variable_at_last_time_index(var_name)
+            var = self.file_reader.get_time_dependent_variable_at_last_time_index(var_name).astype(var_type)
         else:
             var = np.empty(var_dims, dtype=var_type)
         
@@ -106,13 +106,13 @@ class MPIMediator(Mediator):
         
         return var
 
-    def get_time_dependent_variable_at_next_time_index(self, var_name, var_dims=None, var_type=None):
+    def get_time_dependent_variable_at_next_time_index(self, var_name, var_dims, var_type):
          # MPI objects and variables
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
         
         if rank == 0:
-            var = self.file_reader.get_time_dependent_variable_at_next_time_index(var_name)
+            var = self.file_reader.get_time_dependent_variable_at_next_time_index(var_name).astype(var_type)
         else:
             var = np.empty(var_dims, dtype=var_type)
         
