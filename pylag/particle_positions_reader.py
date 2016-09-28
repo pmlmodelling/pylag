@@ -1,5 +1,7 @@
 import numpy as np
 
+from data_types_python import DTYPE_INT, DTYPE_FLOAT
+
 def read_particle_initial_positions(file_name):
     """
     Read in particle initial positions from file and return to caller.
@@ -30,7 +32,7 @@ def read_particle_initial_positions(file_name):
         data.append(line.rstrip('\r\n').split(' '))    
         
     # The first entry is the number of particles
-    n_particles = _get_entry(data.pop(0)[0], np.int32)
+    n_particles = _get_entry(data.pop(0)[0], DTYPE_INT)
 
     # Create seed particle set
     group_ids = []
@@ -38,10 +40,10 @@ def read_particle_initial_positions(file_name):
     y_positions = []
     z_positions = []
     for row in data:
-        group_ids.append(_get_entry(row[0], np.int32))
-        x_positions.append(_get_entry(row[1], np.float32))
-        y_positions.append(_get_entry(row[2], np.float32))
-        z_positions.append(_get_entry(row[3], np.float32))
+        group_ids.append(_get_entry(row[0], DTYPE_INT))
+        x_positions.append(_get_entry(row[1], DTYPE_FLOAT))
+        y_positions.append(_get_entry(row[2], DTYPE_FLOAT))
+        z_positions.append(_get_entry(row[3], DTYPE_FLOAT))
     
     group_ids = np.array(group_ids)
     x_positions = np.array(x_positions)
