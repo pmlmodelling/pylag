@@ -9,6 +9,28 @@ from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 cdef get_barycentric_coords(DTYPE_FLOAT_t x, DTYPE_FLOAT_t y,
         DTYPE_FLOAT_t x_tri[3], DTYPE_FLOAT_t y_tri[3], DTYPE_FLOAT_t phi[3]):
+    """ Get barycentric coordinates.
+    
+    Compute and return barycentric coordinates for the point (x,y) within the
+    triangle defined by x/y coordinates stored in the arrays x_tri and y_tri.
+     
+    Parameters:
+    -----------
+    x : float
+        x-position.
+    
+    y : float
+        y-position.
+    
+    x_tri : C array, float
+        Triangle x coordinates.
+        
+    y_tri : C array, float
+        Triangle y coordinates.
+    
+    phi : C array, float
+        Barycentric coordinates.
+    """
 
     cdef DTYPE_FLOAT_t a11, a12, a21, a22, det
 

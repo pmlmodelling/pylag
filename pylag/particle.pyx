@@ -10,6 +10,29 @@ from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 cdef class Particle:
+    """ Class describing the position and properties of particle objects.
+    
+    Parameters:
+    -----------
+    group_id : int
+        Particle group ID
+    
+    xpos : float
+        Particle x-position
+    
+    ypos : float
+        Particle y-position
+    
+    zpos : float
+        Particle z-position
+    
+    host : int
+        The host horizontal element.
+    
+    in_domain : bool
+        Flag identifying whether or not the particle resides within the model
+        domain.
+    """
     def __init__(self, DTYPE_INT_t group_id=-999, DTYPE_FLOAT_t xpos=-999., 
             DTYPE_FLOAT_t ypos=-999., DTYPE_FLOAT_t zpos=-999., DTYPE_INT_t host=-999, 
             DTYPE_INT_t in_domain=False):

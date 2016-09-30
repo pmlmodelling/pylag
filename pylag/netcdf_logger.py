@@ -4,7 +4,7 @@ from netCDF4 import Dataset, date2num, num2date
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT 
 
 class NetCDFLogger(object):
-    """NetCDFLogger
+    """ NetCDF data logger.
 
     Parameters:
     -----------
@@ -17,10 +17,6 @@ class NetCDFLogger(object):
     
     n_partilces : int
         The number of particles.
-
-    Original author:
-    ----------------
-    James Clark (PML)
     """
     def __init__(self, file_name, start_datetime, n_particles):
         

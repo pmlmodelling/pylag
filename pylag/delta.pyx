@@ -10,11 +10,12 @@ from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 cdef class Delta:
-    """
-    Objects of type Delta store and provide access to position delta values that
-    are a result, for example, of advection or random displacement. The purpose
-    of Delta objects is to allow position deltas to first be accumulated before
-    being used to update a given particle's position.
+    """ Object for storing changes in a particle's position.
+    
+    Objects of type Delta store and provide access to position delta values
+    that are a result, for example, of advection or random displacement. The
+    purpose of Delta objects is to allow position deltas to first be accumulated
+    before being used to update a given particle's position.
     """
     def __init__(self, DTYPE_FLOAT_t x=0., DTYPE_FLOAT_t y=0., 
             DTYPE_FLOAT_t z=0.):
