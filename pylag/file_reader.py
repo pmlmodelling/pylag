@@ -51,7 +51,7 @@ class FileReader(object):
         return len(self._grid_file.dimensions[var_name])
         
     def get_grid_variable(self, var_name):
-        return self._grid_file.variables[var_name][:]
+        return self._grid_file.variables[var_name][:].squeeze()
 
     def get_time_at_last_time_index(self):
         return self._time[self._tidx_last]
@@ -60,10 +60,10 @@ class FileReader(object):
         return self._time[self._tidx_next]
 
     def get_time_dependent_variable_at_last_time_index(self, var_name):
-        return self._current_data_file.variables[var_name][self._tidx_last,:]
+        return self._current_data_file.variables[var_name][self._tidx_last,:].squeeze()
     
     def get_time_dependent_variable_at_next_time_index(self, var_name):
-        return self._current_data_file.variables[var_name][self._tidx_next,:]
+        return self._current_data_file.variables[var_name][self._tidx_next,:].squeeze()
 
     def _setup_file_access(self):
         logger = logging.getLogger(__name__)
