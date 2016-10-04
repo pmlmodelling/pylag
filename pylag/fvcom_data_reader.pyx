@@ -1,7 +1,7 @@
 include "constants.pxi"
 
 import numpy as np
-from netCDF4 import MFDataset, Dataset, num2date
+from netCDF4 import Dataset, num2date
 import glob
 import natsort
 import datetime
