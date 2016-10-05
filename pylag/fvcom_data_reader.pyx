@@ -99,6 +99,10 @@ cdef class FVCOMDataReader(DataReader):
     cdef DTYPE_FLOAT_t _time_last
     cdef DTYPE_FLOAT_t _time_next
 
+    # z min/max
+    cdef DTYPE_FLOAT_t _zmin
+    cdef DTYPE_FLOAT_t _zmax    
+
     def __init__(self, config, mediator):
         self.config = config
         self.mediator = mediator
@@ -311,6 +315,56 @@ cdef class FVCOMDataReader(DataReader):
                 return i
 
         raise ValueError('Point ({}, {}) is not in the model domain.'.format(xpos, ypos))
+
+    cpdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
+            DTYPE_FLOAT_t ypos):
+        """ Returns zmin.
+        
+        In sigma coordinates this is simply -1.0 as detailed in the FVCOM
+        manual.
+
+        Parameters:
+        -----------
+        time : float
+            Time.
+
+        xpos : float
+            x-position.
+
+        ypos : float
+            y-position
+        
+        Returns:
+        --------
+        zmin : float
+            z min.
+        """
+        return self._zmin
+
+    cpdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
+            DTYPE_FLOAT_t ypos):
+        """ Returns zmax.
+        
+        In sigma coordinates this is simply 0.0 as detailed in the FVCOM
+        manual.
+
+        Parameters:
+        -----------
+        time : float
+            Time.
+
+        xpos : float
+            x-position.
+
+        ypos : float
+            y-position
+        
+        Returns:
+        --------
+        zmax : float
+            z max.
+        """
+        return self._zmax
 
     cpdef get_bathymetry(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos,
             DTYPE_INT_t host):
@@ -1315,6 +1369,10 @@ cdef class FVCOMDataReader(DataReader):
         # Interpolation parameters (a1u, a2u, aw0, awx, awy)
         self._a1u = self.mediator.get_grid_variable('a1u', (4, self._n_elems), DTYPE_FLOAT)
         self._a2u = self.mediator.get_grid_variable('a2u', (4, self._n_elems), DTYPE_FLOAT)
+        
+        # z min/max
+        self._zmin = -1.0
+        self._zmax = 0.0
 
     cdef _read_time_dependent_vars(self):
         """ Update time variables and memory views for FVCOM data fields.

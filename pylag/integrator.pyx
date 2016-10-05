@@ -139,8 +139,6 @@ cdef class RK4Integrator3D(NumIntegrator):
 
     def __init__(self, config):
         self._time_step = config.getfloat('SIMULATION', 'time_step')
-        self._zmin = config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmin')
-        self._zmax = config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmax')
     
     cpdef DTYPE_INT_t advect(self, DTYPE_FLOAT_t time, Particle particle,
             DataReader data_reader, Delta delta_X):
@@ -186,6 +184,7 @@ cdef class RK4Integrator3D(NumIntegrator):
         # Temporary containers
         cdef DTYPE_FLOAT_t t, xpos, ypos, zpos
         cdef DTYPE_INT_t host
+        cdef DTYPE_FLOAT_t zmin, zmax
 
         # Array indices/loop counters
         cdef DTYPE_INT_t ndim = 3
@@ -208,10 +207,12 @@ cdef class RK4Integrator3D(NumIntegrator):
         zpos = particle.zpos + 0.5 * k1[2]
         
         # Impose reflecting boundary condition in z
-        if zpos < self._zmin:
-            zpos = self._zmin + self._zmin - zpos
-        elif zpos > self._zmax:
-            zpos = self._zmax + self._zmax - zpos
+        zmin = data_reader.get_zmin(t, xpos, ypos)
+        zmax = data_reader.get_zmax(t, xpos, ypos)
+        if zpos < zmin:
+            zpos = zmin + zmin - zpos
+        elif zpos > zmax:
+            zpos = zmax + zmax - zpos
         
         host = data_reader.find_host(xpos, ypos, host)
         if host < 0: return host
@@ -226,10 +227,12 @@ cdef class RK4Integrator3D(NumIntegrator):
         zpos = particle.zpos + 0.5 * k2[2]
         
         # Impose reflecting boundary condition in z
-        if zpos < self._zmin:
-            zpos = self._zmin + self._zmin - zpos
-        elif zpos > self._zmax:
-            zpos = self._zmax + self._zmax - zpos
+        zmin = data_reader.get_zmin(t, xpos, ypos)
+        zmax = data_reader.get_zmax(t, xpos, ypos)
+        if zpos < zmin:
+            zpos = zmin + zmin - zpos
+        elif zpos > zmax:
+            zpos = zmax + zmax - zpos
         
         host = data_reader.find_host(xpos, ypos, host)
         if host < 0: return host
@@ -244,10 +247,12 @@ cdef class RK4Integrator3D(NumIntegrator):
         zpos = particle.zpos + k3[2]
         
         # Impose reflecting boundary condition in z
-        if zpos < self._zmin:
-            zpos = self._zmin + self._zmin - zpos
-        elif zpos > self._zmax:
-            zpos = self._zmax + self._zmax - zpos
+        zmin = data_reader.get_zmin(t, xpos, ypos)
+        zmax = data_reader.get_zmax(t, xpos, ypos)
+        if zpos < zmin:
+            zpos = zmin + zmin - zpos
+        elif zpos > zmax:
+            zpos = zmax + zmax - zpos
 
         host = data_reader.find_host(xpos, ypos, host)
         if host < 0: return host

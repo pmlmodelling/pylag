@@ -9,6 +9,12 @@ cdef class DataReader:
     cpdef DTYPE_INT_t find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos,
         DTYPE_INT_t guess)
 
+    cpdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
+        DTYPE_FLOAT_t ypos)
+
+    cpdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
+        DTYPE_FLOAT_t ypos)
+
     cpdef get_bathymetry(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, 
             DTYPE_INT_t host)
 

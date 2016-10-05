@@ -18,8 +18,6 @@ cdef class VerticalRandomWalk(RandomWalk):
 cdef class NaiveVerticalRandomWalk(VerticalRandomWalk):
     def __init__(self, config):
         self._time_step = config.getfloat('SIMULATION', 'time_step')
-        self._zmin = config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmin')
-        self._zmax = config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmax')
 
     cpdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader, Delta delta_X):
         """
@@ -64,8 +62,6 @@ cdef class NaiveVerticalRandomWalk(VerticalRandomWalk):
 cdef class AR0VerticalRandomWalk(VerticalRandomWalk):
     def __init__(self, config):
         self._time_step = config.getfloat('SIMULATION', 'time_step')
-        self._zmin = config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmin')
-        self._zmax = config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmax')
 
     cpdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader, Delta delta_X):
         """
@@ -94,6 +90,7 @@ cdef class AR0VerticalRandomWalk(VerticalRandomWalk):
         """
         # Temporary containers for the particle's location
         cdef DTYPE_FLOAT_t t, xpos, ypos, zpos
+        cdef DTYPE_FLOAT_t zmin, zmax
         cdef DTYPE_INT_t host
         
         # Temporary containers for z position offset from the current position -
@@ -126,10 +123,12 @@ cdef class AR0VerticalRandomWalk(VerticalRandomWalk):
         # dz_advection/2. Apply reflecting boundary condition if the computed
         # offset falls outside of the model domain
         zpos_offset = zpos + 0.5 * dz_advection
-        if zpos_offset < self._zmin:
-            zpos_offset = self._zmin + self._zmin - zpos_offset
-        elif zpos_offset > self._zmax:
-            zpos_offset = self._zmax + self._zmax - zpos_offset
+        zmin = data_reader.get_zmin(t, xpos, ypos)
+        zmax = data_reader.get_zmax(t, xpos, ypos)
+        if zpos_offset < zmin:
+            zpos_offset = zmin + zmin - zpos_offset
+        elif zpos_offset > zmax:
+            zpos_offset = zmax + zmax - zpos_offset
         k = data_reader.get_vertical_eddy_diffusivity(t, xpos, ypos, zpos_offset, host)
 
         # Compute the random component of the particle's motion

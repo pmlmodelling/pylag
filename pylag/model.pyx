@@ -57,10 +57,6 @@ cdef class FVCOMOPTModel(OPTModel):
     cdef HorizontalRandomWalk horiz_rand_walk_model
     cdef object particle_seed
     cdef object particle_set
-
-    # Grid boundary limits
-    cdef DTYPE_FLOAT_t _zmin
-    cdef DTYPE_FLOAT_t _zmax
     
     # Seed particle data (as read from file)
     cdef DTYPE_INT_t[:] _group_ids
@@ -85,10 +81,6 @@ cdef class FVCOMOPTModel(OPTModel):
 
         # Create horizontal random walk model
         self.horiz_rand_walk_model = get_horizontal_random_walk_model(self.config)
-        
-        # Vertical min and max values - used to check for boundary crossings
-        self._zmin = self.config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmin')
-        self._zmax = self.config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmax')
 
     def set_particle_data(self, group_ids, x_positions, y_positions, z_positions):
         """Initialise memory views for data describing the particle seed.
@@ -164,6 +156,10 @@ cdef class FVCOMOPTModel(OPTModel):
         time : float
             The current time.        
         """
+        # Grid boundary limits
+        cdef DTYPE_FLOAT_t zmin
+        cdef DTYPE_FLOAT_t zmax
+        
         # Create particle seed - particles stored in a list object
         self.particle_seed = []
 
@@ -201,9 +197,11 @@ cdef class FVCOMOPTModel(OPTModel):
                     sigma = z_temp
                 
                 # Check that the given depth is valid
-                if sigma < (self._zmin - sys.float_info.epsilon):
+                zmin = self.data_reader.get_zmin(time, x, y)
+                zmax = self.data_reader.get_zmax(time, x, y)
+                if sigma < (zmin - sys.float_info.epsilon):
                     raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(z,h))
-                elif sigma > (self._zmax + sys.float_info.epsilon):
+                elif sigma > (zmax + sys.float_info.epsilon):
                     raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(z,zeta))
 
                 # Create particle
@@ -253,6 +251,7 @@ cdef class FVCOMOPTModel(OPTModel):
             The current time.
         """
         cdef DTYPE_FLOAT_t xpos, ypos, zpos
+        cdef DTYPE_FLOAT_t zmin, zmax
         cdef DTYPE_INT_t host, host_err
         cdef DTYPE_INT_t i, n_particles
 
@@ -302,15 +301,17 @@ cdef class FVCOMOPTModel(OPTModel):
                 # having left the model domain.
                 if host >= 0:
                     # Apply reflecting surface/bottom boundary conditions
-                    if zpos < self._zmin:
-                        zpos = self._zmin + self._zmin - zpos
-                    elif zpos > self._zmax:
-                        zpos = self._zmax + self._zmax - zpos
+                    zmin = self.data_reader.get_zmin(time, xpos, ypos)
+                    zmax = self.data_reader.get_zmax(time, xpos, ypos)
+                    if zpos < zmin:
+                        zpos = zmin + zmin - zpos
+                    elif zpos > zmax:
+                        zpos = zmax + zmax - zpos
 
                     # Check for valid zpos
-                    if zpos < (self._zmin - sys.float_info.epsilon):
+                    if zpos < (zmin - sys.float_info.epsilon):
                         raise ValueError("New zpos (= {}) lies below the sea floor.".format(zpos))
-                    elif zpos > (self._zmax + sys.float_info.epsilon):
+                    elif zpos > (zmax + sys.float_info.epsilon):
                         raise ValueError("New zpos (= {}) lies above the free surface.".format(zpos))                
 
                     # Update the particle's position
