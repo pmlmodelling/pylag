@@ -6,7 +6,6 @@ import copy
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
-from pylag.fvcom_data_reader import FVCOMDataReader
 from pylag.integrator import get_num_integrator
 from pylag.random_walk import get_vertical_random_walk_model, get_horizontal_random_walk_model
 from pylag.particle_positions_reader import read_particle_initial_positions
