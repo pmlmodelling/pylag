@@ -64,8 +64,6 @@ cdef class FVCOMOPTModel(OPTModel):
     cdef DTYPE_FLOAT_t[:] _z_positions
 
     def __init__(self, config, data_reader, *args, **kwargs):
-        super(FVCOMOPTModel, self).__init__(*args, **kwargs)
-
         # Initialise config
         self.config = config
 
