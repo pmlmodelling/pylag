@@ -12,7 +12,7 @@ from pylag.particle_positions_reader import read_particle_initial_positions
 from pylag.particle import Particle
 from pylag.delta import Delta
 
-from pylag.data_reader cimport DataReader
+from pylag.data_reader cimport DataReader, sigma_to_cartesian_coords, cartesian_to_sigma_coords
 from pylag.integrator cimport NumIntegrator
 from pylag.random_walk cimport VerticalRandomWalk, HorizontalRandomWalk
 
@@ -186,7 +186,7 @@ cdef class FVCOMOPTModel(OPTModel):
                     zeta = self.data_reader.get_sea_sur_elev(time, x, y, host_horizontal_elem)
 
                     z = z_temp + zeta
-                    sigma = self._cartesian_to_sigma_coords(z, h, zeta)
+                    sigma = cartesian_to_sigma_coords(z, h, zeta)
                     
                 elif self.config.get("SIMULATION", "depth_coordinates") == "sigma":
                     # sigma ranges from 0.0 at the sea surface to -1.0 at the 
@@ -348,19 +348,11 @@ cdef class FVCOMOPTModel(OPTModel):
             # Derived vars including depth, which is first converted to cartesian coords
             h = self.data_reader.get_bathymetry(particle.xpos, particle.ypos, particle.host_horizontal_elem)
             zeta = self.data_reader.get_sea_sur_elev(time, particle.xpos, particle.ypos, particle.host_horizontal_elem)
-            z = self._sigma_to_cartesian_coords(particle.zpos, h, zeta)
+            z = sigma_to_cartesian_coords(particle.zpos, h, zeta)
             diags['h'].append(h)
             diags['zeta'].append(zeta)
             diags['zpos'].append(z)
         return diags
-        
-    def _sigma_to_cartesian_coords(self, DTYPE_FLOAT_t sigma, DTYPE_FLOAT_t h,
-            DTYPE_FLOAT_t zeta):
-        return zeta + sigma * (h + zeta)
-    
-    def _cartesian_to_sigma_coords(self, DTYPE_FLOAT_t z, DTYPE_FLOAT_t h,
-            DTYPE_FLOAT_t zeta):
-        return (z - zeta) / (h + zeta)
 
 cdef class GOTMOPTModel(OPTModel):
     """ GOTM Offline Particle Tracking Model.
@@ -472,11 +464,6 @@ cdef class GOTMOPTModel(OPTModel):
         time : float
             The current time.        
         """
-        # Grid boundary limits
-        cdef DTYPE_FLOAT_t z
-        cdef DTYPE_FLOAT_t zmin
-        cdef DTYPE_FLOAT_t zmax
-        
         # Create particle seed - particles stored in a list object
         self.particle_seed = []
         for group, x, y, z_temp in zip(self._group_ids, self._x_positions,
@@ -492,26 +479,27 @@ cdef class GOTMOPTModel(OPTModel):
                 # z is given as the distance below the free surface. We use
                 # this and zeta to determine the distance below the mean
                 # free surface, which is then used with h to calculate sigma
-                z = z_temp
+                h = self.data_reader.get_bathymetry(x, y, host)
+                zeta = self.data_reader.get_sea_sur_elev(time, x, y, host)
+
+                z = z_temp + zeta
+                sigma = cartesian_to_sigma_coords(z, h, zeta)
 
             elif self.config.get("SIMULATION", "depth_coordinates") == "sigma":
                 # sigma ranges from 0.0 at the sea surface to -1.0 at the 
                 # sea floor.
-                h = self.data_reader.get_bathymetry(x, y, host)
-                zeta = self.data_reader.get_sea_sur_elev(time, x, y, host)
-
-                z = self._sigma_to_cartesian_coords(z_temp, h, zeta)
+                sigma = z_temp
 
             # Check that the given depth is valid
             zmin = self.data_reader.get_zmin(time, x, y)
             zmax = self.data_reader.get_zmax(time, x, y)
-            if z < (zmin - sys.float_info.epsilon):
-                raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(z,h))
-            elif z > (zmax + sys.float_info.epsilon):
-                raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(z,zeta))
+            if sigma < (zmin - sys.float_info.epsilon):
+                raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(sigma,zmin))
+            elif sigma > (zmax + sys.float_info.epsilon):
+                raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(sigma,zmax))
 
             # Create particle
-            particle = Particle(group, x, y, z, host, in_domain)
+            particle = Particle(group, x, y, sigma, host, in_domain)
             self.particle_seed.append(particle)
 
     def update(self, DTYPE_FLOAT_t time):
@@ -582,20 +570,13 @@ cdef class GOTMOPTModel(OPTModel):
         for particle in self.particle_set:
             diags['xpos'].append(particle.xpos)
             diags['ypos'].append(particle.ypos)
-            diags['zpos'].append(particle.zpos)
             diags['host_horizontal_elem'].append(particle.host_horizontal_elem)            
             
             # Derived vars including depth, which is first converted to cartesian coords
             h = self.data_reader.get_bathymetry(particle.xpos, particle.ypos, particle.host_horizontal_elem)
             zeta = self.data_reader.get_sea_sur_elev(time, particle.xpos, particle.ypos, particle.host_horizontal_elem)
+            z = sigma_to_cartesian_coords(particle.zpos, h, zeta)
             diags['h'].append(h)
             diags['zeta'].append(zeta)
+            diags['zpos'].append(z)
         return diags
-        
-    def _sigma_to_cartesian_coords(self, DTYPE_FLOAT_t sigma, DTYPE_FLOAT_t h,
-            DTYPE_FLOAT_t zeta):
-        return zeta + sigma * (h + zeta)
-    
-    def _cartesian_to_sigma_coords(self, DTYPE_FLOAT_t z, DTYPE_FLOAT_t h,
-            DTYPE_FLOAT_t zeta):
-        return (z - zeta) / (h + zeta)

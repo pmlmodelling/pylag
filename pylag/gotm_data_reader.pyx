@@ -8,7 +8,7 @@ np.import_array()
 from data_types_python import DTYPE_INT, DTYPE_FLOAT
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
-from data_reader cimport DataReader
+from data_reader cimport DataReader, sigma_to_cartesian_coords
 
 cimport interpolation as interp
 
@@ -164,7 +164,7 @@ cdef class GOTMDataReader(DataReader):
 
     cpdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos):
-        """ Returns zmin
+        """ Returns zmin in sigma coordinates
 
         Parameters:
         -----------
@@ -182,19 +182,15 @@ cdef class GOTMDataReader(DataReader):
         zmin : float
             z min.
         """
-        cdef DTYPE_FLOAT_t time_fraction
-        
-        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
-
-        return interp.linear_interp(time_fraction, self._zlev_last[0], self._zlev_next[0])
+        return -1.0
 
     cpdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos):
-        """ Returns zmax
+        """ Returns zmax in sigma coordinates
 
         Parameters:
         -----------
-        time : float
+        time : float (unused)
             Time.
 
         xpos : float
@@ -208,11 +204,7 @@ cdef class GOTMDataReader(DataReader):
         zmax : float
             z max.
         """
-        cdef DTYPE_FLOAT_t time_fraction
-        
-        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
-        
-        return interp.linear_interp(time_fraction, self._zlev_last[-1], self._zlev_next[-1])
+        return 0.0
 
     cpdef get_bathymetry(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, 
             DTYPE_INT_t host):
@@ -300,7 +292,7 @@ cdef class GOTMDataReader(DataReader):
         # Variables used when determining indices for the z levels that
         # bound the particle's position
         cdef DTYPE_INT_t k_lower_level, k_upper_level
-        cdef DTYPE_FLOAT_t z_lower_level, z_upper_level        
+        cdef DTYPE_FLOAT_t z, z_lower_level, z_upper_level        
         cdef bint particle_found
         
         # Time and z fractions for interpolation in time and z
@@ -309,6 +301,16 @@ cdef class GOTMDataReader(DataReader):
         # Interpolated diffusivities on lower and upper bounding z levels
         cdef DTYPE_FLOAT_t kh_lower_level
         cdef DTYPE_FLOAT_t kh_upper_level
+        
+        # Bathymetry and sea surface elevation
+        cdef DTYPE_FLOAT_t h, zeta
+        
+        # Compute bathymetry and sea surface elevation
+        h = self.get_bathymetry(xpos, ypos, host)
+        zeta = self.get_sea_sur_elev(time, xpos, ypos, host)
+        
+        # Convert from sigma to z coordinates
+        z = sigma_to_cartesian_coords(zpos, h, zeta)
         
         # Get time fraction for interpolation in time
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
@@ -321,20 +323,20 @@ cdef class GOTMDataReader(DataReader):
             z_lower_level = interp.linear_interp(time_fraction, self._zlev_last[k_lower_level], self._zlev_next[k_lower_level])
             z_upper_level = interp.linear_interp(time_fraction, self._zlev_last[k_upper_level], self._zlev_next[k_upper_level])
             
-            if zpos <= z_upper_level and zpos >= z_lower_level:
+            if z <= z_upper_level and z >= z_lower_level:
                 particle_found = True
                 break
         
         if particle_found is False:
-            raise ValueError("Particle zpos (={} not found!".format(zpos))
+            raise ValueError("Particle z position (={}) not found!".format(z))
 
         # Interpolate kh in time
         kh_lower_level = interp.linear_interp(time_fraction, self._kh_last[k_lower_level], self._kh_next[k_lower_level])
         kh_upper_level = interp.linear_interp(time_fraction, self._kh_last[k_upper_level], self._kh_next[k_upper_level])
         
         # Interpolate kh in z
-        z_fraction = interp.get_linear_fraction_safe(zpos, z_lower_level, z_upper_level)
-        return interp.linear_interp(z_fraction, kh_lower_level, kh_upper_level)
+        z_fraction = interp.get_linear_fraction_safe(z, z_lower_level, z_upper_level)
+        return interp.linear_interp(z_fraction, kh_lower_level, kh_upper_level) / (h + zeta)**2
 
     cpdef get_vertical_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos,
@@ -378,11 +380,11 @@ cdef class GOTMDataReader(DataReader):
         # Use a point arbitrarily close to zpos (in sigma coordinates) for the 
         # gradient calculation
         zpos_increment = 1.0e-3
-        
+
         # Use the negative of zpos_increment at the top of the water column
         if ((zpos + zpos_increment) > 0.0):
             zpos_increment = -zpos_increment
-            
+
         # A point close to zpos
         zpos_incremented = zpos + zpos_increment
 

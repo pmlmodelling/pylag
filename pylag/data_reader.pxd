@@ -45,3 +45,11 @@ cdef class DataReader:
     cpdef get_vertical_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos,
             DTYPE_INT_t host)
+
+cdef inline sigma_to_cartesian_coords(DTYPE_FLOAT_t sigma, DTYPE_FLOAT_t h,
+        DTYPE_FLOAT_t zeta):
+    return zeta + sigma * (h + zeta)
+
+cdef inline cartesian_to_sigma_coords(DTYPE_FLOAT_t z, DTYPE_FLOAT_t h,
+        DTYPE_FLOAT_t zeta):
+    return (z - zeta) / (h + zeta)
