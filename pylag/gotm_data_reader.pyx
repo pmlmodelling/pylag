@@ -305,6 +305,9 @@ cdef class GOTMDataReader(DataReader):
         # Bathymetry and sea surface elevation
         cdef DTYPE_FLOAT_t h, zeta
         
+        # Loop index
+        cdef DTYPE_INT_t i
+        
         # Compute bathymetry and sea surface elevation
         h = self.get_bathymetry(xpos, ypos, host)
         zeta = self.get_sea_sur_elev(time, xpos, ypos, host)
