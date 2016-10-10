@@ -14,6 +14,7 @@ from pylag.delta import Delta
 from pylag.data_reader cimport DataReader, sigma_to_cartesian_coords, cartesian_to_sigma_coords
 from pylag.integrator cimport NumIntegrator
 from pylag.random_walk cimport VerticalRandomWalk, HorizontalRandomWalk
+from pylag.delta cimport Delta
 
 cdef class OPTModel:
     def set_particle_data(self, group_ids, x_positions, y_positions, z_positions):
@@ -517,6 +518,7 @@ cdef class GOTMOPTModel(OPTModel):
         """
         cdef DTYPE_FLOAT_t xpos, ypos, zpos
         cdef DTYPE_FLOAT_t zmin, zmax
+        cdef Delta delta_X
         cdef DTYPE_INT_t i, n_particles
 
         # Object for storing position deltas resulting from advection and random
