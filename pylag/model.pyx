@@ -1,4 +1,3 @@
-import sys
 import logging
 import copy
 
@@ -196,9 +195,9 @@ cdef class FVCOMOPTModel(OPTModel):
                 # Check that the given depth is valid
                 zmin = self.data_reader.get_zmin(time, x, y)
                 zmax = self.data_reader.get_zmax(time, x, y)
-                if sigma < (zmin - sys.float_info.epsilon):
+                if sigma < zmin:
                     raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(z,h))
-                elif sigma > (zmax + sys.float_info.epsilon):
+                elif sigma > zmax:
                     raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(z,zeta))
 
                 # Create particle
@@ -306,9 +305,9 @@ cdef class FVCOMOPTModel(OPTModel):
                         zpos = zmax + zmax - zpos
 
                     # Check for valid zpos
-                    if zpos < (zmin - sys.float_info.epsilon):
+                    if zpos < zmin:
                         raise ValueError("New zpos (= {}) lies below the sea floor.".format(zpos))
-                    elif zpos > (zmax + sys.float_info.epsilon):
+                    elif zpos > zmax:
                         raise ValueError("New zpos (= {}) lies above the free surface.".format(zpos))                
 
                     # Update the particle's position
@@ -493,9 +492,9 @@ cdef class GOTMOPTModel(OPTModel):
             # Check that the given depth is valid
             zmin = self.data_reader.get_zmin(time, x, y)
             zmax = self.data_reader.get_zmax(time, x, y)
-            if sigma < (zmin - sys.float_info.epsilon):
+            if sigma < zmin:
                 raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(sigma,zmin))
-            elif sigma > (zmax + sys.float_info.epsilon):
+            elif sigma > zmax:
                 raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(sigma,zmax))
 
             # Find the host z layer
@@ -548,9 +547,9 @@ cdef class GOTMOPTModel(OPTModel):
                     zpos = zmax + zmax - zpos
 
                 # Check for valid zpos
-                if zpos < (zmin - sys.float_info.epsilon):
+                if zpos < zmin:
                     raise ValueError("New zpos (= {}) lies below the sea floor.".format(zpos))
-                elif zpos > (zmax + sys.float_info.epsilon):
+                elif zpos > zmax:
                     raise ValueError("New zpos (= {}) lies above the free surface.".format(zpos))                
 
                 # Find the new host z layer using the old host z layer
