@@ -347,41 +347,14 @@ cdef class GOTMDataReader(DataReader):
             The vertical eddy diffusivity.        
         
         """
-        # Variables used when determining indices for the z levels that
-        # bound the particle's position
-        cdef DTYPE_FLOAT_t z, z_lower_level, z_upper_level
-        
-        # Time and z fractions for interpolation in time and z
-        cdef DTYPE_FLOAT_t time_fraction, z_fraction
-        
-        # Interpolated diffusivities on lower and upper bounding z levels
-        cdef DTYPE_FLOAT_t kh_lower_level
-        cdef DTYPE_FLOAT_t kh_upper_level
-        
-        # Bathymetry and sea surface elevation
-        cdef DTYPE_FLOAT_t h, zeta
-        
-        # Compute bathymetry and sea surface elevation
-        h = self.get_bathymetry(xpos, ypos, host)
-        zeta = self.get_sea_sur_elev(time, xpos, ypos, host)
+        cdef DTYPE_FLOAT_t z, z_fraction
         
         # Convert from sigma to z coordinates
-        z = sigma_to_cartesian_coords(zpos, h, zeta)
-        
-        # Get time fraction for interpolation in time
-        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
-        
-        # Interpolate z in time
-        z_lower_level = interp.linear_interp(time_fraction, self._zlev_last[zlayer], self._zlev_next[zlayer])
-        z_upper_level = interp.linear_interp(time_fraction, self._zlev_last[zlayer+1], self._zlev_next[zlayer+1])
-
-        # Interpolate kh in time
-        kh_lower_level = interp.linear_interp(time_fraction, self._kh_last[zlayer], self._kh_next[zlayer])
-        kh_upper_level = interp.linear_interp(time_fraction, self._kh_last[zlayer+1], self._kh_next[zlayer+1])
+        z = sigma_to_cartesian_coords(zpos, self._H, self._zeta)
         
         # Interpolate kh in z
-        z_fraction = interp.get_linear_fraction_safe(z, z_lower_level, z_upper_level)
-        return interp.linear_interp(z_fraction, kh_lower_level, kh_upper_level) / (h + zeta)**2
+        z_fraction = interp.get_linear_fraction_safe(z, self._zlev[zlayer], self._zlev[zlayer+1])
+        return interp.linear_interp(z_fraction, self._kh[zlayer], self._kh[zlayer+1]) / (self._H + self._zeta)**2
 
     cpdef get_vertical_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos,
