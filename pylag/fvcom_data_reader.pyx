@@ -316,6 +316,11 @@ cdef class FVCOMDataReader(DataReader):
 
         raise ValueError('Point ({}, {}) is not in the model domain.'.format(xpos, ypos))
 
+    cpdef DTYPE_INT_t find_zlayer(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
+        DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
+        DTYPE_INT_t guess):
+        pass
+
     cpdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos):
         """ Returns zmin.
@@ -738,7 +743,8 @@ cdef class FVCOMDataReader(DataReader):
         pass
 
     cpdef get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host):
+            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
+            DTYPE_INT_t zlayer):
         """ Returns the vertical eddy diffusivity through linear interpolation.
         
         The vertical eddy diffusivity is defined at element nodes on sigma
@@ -859,7 +865,7 @@ cdef class FVCOMDataReader(DataReader):
 
     cpdef get_vertical_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, 
-            DTYPE_INT_t host):
+            DTYPE_INT_t host, DTYPE_INT_t zlayer):
         """ Returns the gradient in the vertical eddy diffusivity.
         
         Return a numerical approximation of the gradient in the vertical eddy 
@@ -896,6 +902,9 @@ cdef class FVCOMDataReader(DataReader):
         # Z coordinate vars for the gradient calculation
         cdef DTYPE_FLOAT_t zpos_increment, zpos_incremented
         
+        # Z layer for incremented position
+        cdef DTYPE_INT_t zlayer_incremented
+        
         # Use a point arbitrarily close to zpos (in sigma coordinates) for the 
         # gradient calculation
         zpos_increment = 1.0e-3
@@ -906,10 +915,11 @@ cdef class FVCOMDataReader(DataReader):
             
         # A point close to zpos
         zpos_incremented = zpos + zpos_increment
+        zlayer_incremented = self.find_zlayer(time, xpos, ypos, zpos_incremented, host, zlayer)
 
         # Compute the gradient
-        k1 = self.get_vertical_eddy_diffusivity(time, xpos, ypos, zpos, host)
-        k2 = self.get_vertical_eddy_diffusivity(time, xpos, ypos, zpos_incremented, host)
+        k1 = self.get_vertical_eddy_diffusivity(time, xpos, ypos, zpos, host, zlayer)
+        k2 = self.get_vertical_eddy_diffusivity(time, xpos, ypos, zpos_incremented, host, zlayer_incremented)
         k_prime = (k2 - k1) / zpos_increment
 
         return k_prime

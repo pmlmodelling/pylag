@@ -12,6 +12,11 @@ cdef class DataReader:
             DTYPE_INT_t guess):
         pass
 
+    cpdef DTYPE_INT_t find_zlayer(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
+        DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
+        DTYPE_INT_t guess):
+        pass
+
     cpdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos):
         pass
@@ -52,10 +57,11 @@ cdef class DataReader:
         pass
 
     cpdef get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host):
+            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
+            DTYPE_INT_t zlayer):
         pass
     
     cpdef get_vertical_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos,
-            DTYPE_INT_t host):
+            DTYPE_INT_t host, DTYPE_INT_t zlayer):
         pass

@@ -9,6 +9,10 @@ cdef class DataReader:
     cpdef DTYPE_INT_t find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos,
         DTYPE_INT_t guess)
 
+    cpdef DTYPE_INT_t find_zlayer(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
+        DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
+        DTYPE_INT_t guess)
+
     cpdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
         DTYPE_FLOAT_t ypos)
 
@@ -40,11 +44,12 @@ cdef class DataReader:
             DTYPE_INT_t host)
 
     cpdef get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host)
+            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
+            DTYPE_INT_t zlayer)
 
     cpdef get_vertical_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos,
-            DTYPE_INT_t host)
+            DTYPE_INT_t host, DTYPE_INT_t zlayer)
 
 cdef inline sigma_to_cartesian_coords(DTYPE_FLOAT_t sigma, DTYPE_FLOAT_t h,
         DTYPE_FLOAT_t zeta):

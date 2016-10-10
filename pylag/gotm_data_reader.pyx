@@ -161,6 +161,53 @@ cdef class GOTMDataReader(DataReader):
     cpdef DTYPE_INT_t find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos,
         DTYPE_INT_t guess):
         return 0
+    
+    cpdef DTYPE_INT_t find_zlayer(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
+        DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
+        DTYPE_INT_t guess):
+        """ Find the host vertical layer
+        
+        Find the host vertical layer. Begin with a local search using `guess' as
+        a starting point. If this fails search the full vertical grid.
+        """
+        cdef DTYPE_INT_t k
+        cdef DTYPE_FLOAT_t z, z_lower_level, z_upper_level
+        cdef DTYPE_FLOAT_t h, zeta
+
+        # Time fraction for interpolation in time
+        cdef DTYPE_FLOAT_t time_fraction
+
+        # Compute bathymetry and sea surface elevation
+        h = self.get_bathymetry(xpos, ypos, host)
+        zeta = self.get_sea_sur_elev(time, xpos, ypos, host)
+        
+        # Convert from sigma to z coordinates
+        z = sigma_to_cartesian_coords(zpos, h, zeta)
+
+        # Get time fraction for interpolation in time
+        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
+
+        # Start with a local search
+        for k in [guess, guess + 1, guess - 1]:
+            if k < 0 or k >= self._n_zlay:
+                continue
+
+            z_lower_level = interp.linear_interp(time_fraction, self._zlev_last[k], self._zlev_next[k])
+            z_upper_level = interp.linear_interp(time_fraction, self._zlev_last[k+1], self._zlev_next[k+1])
+
+            if z <= z_upper_level and z >= z_lower_level:
+                return k
+
+        # Search the full vertical grid!
+        for k in xrange(self._n_zlay): 
+            z_lower_level = interp.linear_interp(time_fraction, self._zlev_last[k], self._zlev_next[k])
+            z_upper_level = interp.linear_interp(time_fraction, self._zlev_last[k+1], self._zlev_next[k+1])
+
+            if z <= z_upper_level and z >= z_lower_level:
+                return k
+    
+        # Search failed
+        raise ValueError("Particle z position (={}) not found!".format(z))
 
     cpdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos):
@@ -260,7 +307,8 @@ cdef class GOTMDataReader(DataReader):
         return interp.linear_interp(time_fraction, self._zeta_last, self._zeta_next)
     
     cpdef get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host):
+            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
+            DTYPE_INT_t zlayer):
         """ Returns the vertical eddy diffusivity through linear interpolation.
         
         The vertical eddy diffusivity is defined at layer interfaces.
@@ -291,9 +339,7 @@ cdef class GOTMDataReader(DataReader):
         """
         # Variables used when determining indices for the z levels that
         # bound the particle's position
-        cdef DTYPE_INT_t k_lower_level, k_upper_level
-        cdef DTYPE_FLOAT_t z, z_lower_level, z_upper_level        
-        cdef bint particle_found
+        cdef DTYPE_FLOAT_t z, z_lower_level, z_upper_level
         
         # Time and z fractions for interpolation in time and z
         cdef DTYPE_FLOAT_t time_fraction, z_fraction
@@ -305,9 +351,6 @@ cdef class GOTMDataReader(DataReader):
         # Bathymetry and sea surface elevation
         cdef DTYPE_FLOAT_t h, zeta
         
-        # Loop index
-        cdef DTYPE_INT_t i
-        
         # Compute bathymetry and sea surface elevation
         h = self.get_bathymetry(xpos, ypos, host)
         zeta = self.get_sea_sur_elev(time, xpos, ypos, host)
@@ -318,24 +361,13 @@ cdef class GOTMDataReader(DataReader):
         # Get time fraction for interpolation in time
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
         
-        # Determine upper and lower bounding z levels
-        particle_found = False
-        for i in xrange(self._n_zlay):
-            k_lower_level = i
-            k_upper_level = i+1
-            z_lower_level = interp.linear_interp(time_fraction, self._zlev_last[k_lower_level], self._zlev_next[k_lower_level])
-            z_upper_level = interp.linear_interp(time_fraction, self._zlev_last[k_upper_level], self._zlev_next[k_upper_level])
-            
-            if z <= z_upper_level and z >= z_lower_level:
-                particle_found = True
-                break
-        
-        if particle_found is False:
-            raise ValueError("Particle z position (={}) not found!".format(z))
+        # Interpolate z in time
+        z_lower_level = interp.linear_interp(time_fraction, self._zlev_last[zlayer], self._zlev_next[zlayer])
+        z_upper_level = interp.linear_interp(time_fraction, self._zlev_last[zlayer+1], self._zlev_next[zlayer+1])
 
         # Interpolate kh in time
-        kh_lower_level = interp.linear_interp(time_fraction, self._kh_last[k_lower_level], self._kh_next[k_lower_level])
-        kh_upper_level = interp.linear_interp(time_fraction, self._kh_last[k_upper_level], self._kh_next[k_upper_level])
+        kh_lower_level = interp.linear_interp(time_fraction, self._kh_last[zlayer], self._kh_next[zlayer])
+        kh_upper_level = interp.linear_interp(time_fraction, self._kh_last[zlayer+1], self._kh_next[zlayer+1])
         
         # Interpolate kh in z
         z_fraction = interp.get_linear_fraction_safe(z, z_lower_level, z_upper_level)
@@ -343,7 +375,7 @@ cdef class GOTMDataReader(DataReader):
 
     cpdef get_vertical_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos,
-            DTYPE_INT_t host):
+            DTYPE_INT_t host, DTYPE_INT_t zlayer):
         """ Returns the gradient in the vertical eddy diffusivity.
         
         Return a numerical approximation of the gradient in the vertical eddy 
@@ -379,7 +411,10 @@ cdef class GOTMDataReader(DataReader):
         
         # Z coordinate vars for the gradient calculation
         cdef DTYPE_FLOAT_t zpos_increment, zpos_incremented
-        
+
+        # Z layer for incremented position
+        cdef DTYPE_INT_t zlayer_incremented
+
         # Use a point arbitrarily close to zpos (in sigma coordinates) for the 
         # gradient calculation
         zpos_increment = 1.0e-3
@@ -390,10 +425,11 @@ cdef class GOTMDataReader(DataReader):
 
         # A point close to zpos
         zpos_incremented = zpos + zpos_increment
+        zlayer_incremented = self.find_zlayer(time, xpos, ypos, zpos_incremented, host, zlayer)
 
         # Compute the gradient
-        k1 = self.get_vertical_eddy_diffusivity(time, xpos, ypos, zpos, host)
-        k2 = self.get_vertical_eddy_diffusivity(time, xpos, ypos, zpos_incremented, host)
+        k1 = self.get_vertical_eddy_diffusivity(time, xpos, ypos, zpos, host, zlayer)
+        k2 = self.get_vertical_eddy_diffusivity(time, xpos, ypos, zpos_incremented, host, zlayer_incremented)
         k_prime = (k2 - k1) / zpos_increment
 
         return k_prime

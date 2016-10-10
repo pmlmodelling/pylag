@@ -140,7 +140,8 @@ cdef class TestDiffusivityDataReader(DataReader):
         vel[2] = 0.0
 
     cpdef get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host):
+            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
+            DTYPE_INT_t zlayer):
         """ Returns the vertical eddy diffusivity at zpos.
         
         """  
@@ -154,7 +155,7 @@ cdef class TestDiffusivityDataReader(DataReader):
 
     cpdef get_vertical_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time, 
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos,
-            DTYPE_INT_t host):
+            DTYPE_INT_t host, DTYPE_INT_t zlayer):
         """ Returns the derivative of the vertical eddy diffusivity.
 
         This is approximated numerically, as in PyLag, as opposed to being

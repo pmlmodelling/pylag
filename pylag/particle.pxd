@@ -9,4 +9,6 @@ cdef class Particle:
     
     cdef DTYPE_INT_t _host_horizontal_elem
 
+    cdef DTYPE_INT_t _host_z_layer
+
     cdef bint _in_domain

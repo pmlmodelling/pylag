@@ -35,7 +35,7 @@ cdef class Particle:
     """
     def __init__(self, DTYPE_INT_t group_id=-999, DTYPE_FLOAT_t xpos=-999., 
             DTYPE_FLOAT_t ypos=-999., DTYPE_FLOAT_t zpos=-999., DTYPE_INT_t host=-999, 
-            DTYPE_INT_t in_domain=False):
+            DTYPE_INT_t host_z_layer=-999, DTYPE_INT_t in_domain=False):
         self._group_id = group_id
         
         self._xpos = xpos
@@ -43,12 +43,14 @@ cdef class Particle:
         self._zpos = zpos
         
         self._host_horizontal_elem = host
+        
+        self._host_z_layer = host_z_layer
 
         self._in_domain = in_domain
 
     def __reduce__(self):
         return (self.__class__, (self._group_id, self._xpos, self._ypos, self._zpos,
-            self._host_horizontal_elem, self._in_domain))
+            self._host_horizontal_elem, self._host_z_layer, self._in_domain))
 
     # Group ID
     property group_id:
@@ -84,6 +86,13 @@ cdef class Particle:
             return self._host_horizontal_elem
         def __set__(self, DTYPE_INT_t value):
             self._host_horizontal_elem = value
+
+    # Host z layer
+    property host_z_layer:
+        def __get__(self):
+            return self._host_z_layer
+        def __set__(self, DTYPE_INT_t value):
+            self._host_z_layer = value
 
     # Is the particle in the domain?
     property in_domain:

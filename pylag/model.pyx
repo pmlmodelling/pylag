@@ -498,8 +498,11 @@ cdef class GOTMOPTModel(OPTModel):
             elif sigma > (zmax + sys.float_info.epsilon):
                 raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(sigma,zmax))
 
+            # Find the host z layer
+            z_layer = self.data_reader.find_zlayer(time, x, y, sigma, host, 0)
+
             # Create particle
-            particle = Particle(group, x, y, sigma, host, in_domain)
+            particle = Particle(group, x, y, sigma, host, z_layer, in_domain)
             self.particle_seed.append(particle)
 
     def update(self, DTYPE_FLOAT_t time):
@@ -513,7 +516,7 @@ cdef class GOTMOPTModel(OPTModel):
         time : float
             The current time.
         """
-        cdef DTYPE_FLOAT_t zpos
+        cdef DTYPE_FLOAT_t xpos, ypos, zpos
         cdef DTYPE_FLOAT_t zmin, zmax
         cdef DTYPE_INT_t i, n_particles
 
@@ -550,8 +553,18 @@ cdef class GOTMOPTModel(OPTModel):
                 elif zpos > (zmax + sys.float_info.epsilon):
                     raise ValueError("New zpos (= {}) lies above the free surface.".format(zpos))                
 
-                # Update the particle's position
+                # Find the new host z layer using the old host z layer
+                xpos = self.particle_set[i].xpos
+                ypos = self.particle_set[i].ypos
+                host_horizontal_elem = self.particle_set[i].host_horizontal_elem
+                old_host_z_layer = self.particle_set[i].host_z_layer
+                
+                host_z_layer = self.data_reader.find_zlayer(time, xpos, ypos, 
+                    zpos, host_horizontal_elem, old_host_z_layer)
+
+                # Update the particle's position and the host z layer
                 self.particle_set[i].zpos = zpos
+                self.particle_set[i].host_z_layer = host_z_layer
 
     def get_diagnostics(self, time):
         """ Get particle diagnostics
