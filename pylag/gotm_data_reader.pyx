@@ -199,38 +199,21 @@ cdef class GOTMDataReader(DataReader):
         """
         cdef DTYPE_INT_t k
         cdef DTYPE_FLOAT_t z, z_lower_level, z_upper_level
-        cdef DTYPE_FLOAT_t h, zeta
-
-        # Time fraction for interpolation in time
-        cdef DTYPE_FLOAT_t time_fraction
-        
-        # Compute bathymetry and sea surface elevation
-        h = self.get_bathymetry(xpos, ypos, host)
-        zeta = self.get_sea_sur_elev(time, xpos, ypos, host)
         
         # Convert from sigma to z coordinates
-        z = sigma_to_cartesian_coords(zpos, h, zeta)
-
-        # Get time fraction for interpolation in time
-        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
+        z = sigma_to_cartesian_coords(zpos, self._H, self._zeta)
 
         # Start with a local search
         for k in [guess, guess + 1, guess - 1]:
             if k < 0 or k >= self._n_zlay:
                 continue
 
-            z_lower_level = interp.linear_interp(time_fraction, self._zlev_last[k], self._zlev_next[k])
-            z_upper_level = interp.linear_interp(time_fraction, self._zlev_last[k+1], self._zlev_next[k+1])
-
-            if z <= z_upper_level and z >= z_lower_level:
+            if z <= self._zlev[k+1] and z >= self._zlev[k]:
                 return k
 
         # Search the full vertical grid!
         for k in xrange(self._n_zlay): 
-            z_lower_level = interp.linear_interp(time_fraction, self._zlev_last[k], self._zlev_next[k])
-            z_upper_level = interp.linear_interp(time_fraction, self._zlev_last[k+1], self._zlev_next[k+1])
-
-            if z <= z_upper_level and z >= z_lower_level:
+            if z <= self._zlev[k+1] and z >= self._zlev[k]:
                 return k
     
         # Search failed
