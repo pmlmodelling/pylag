@@ -203,14 +203,14 @@ cdef class GOTMDataReader(DataReader):
         z = sigma_to_cartesian_coords(zpos, self._H, self._zeta)
 
         # Start with a local search
-        for k in [guess, guess + 1, guess - 1]:
+        for k in xrange(guess-2, guess+2, 1):
             if k < 0 or k >= self._n_zlay:
                 continue
 
             if z <= self._zlev[k+1] and z >= self._zlev[k]:
                 return k
 
-        # Search the full vertical grid!
+        # Search the full vertical grid
         for k in xrange(self._n_zlay): 
             if z <= self._zlev[k+1] and z >= self._zlev[k]:
                 return k
