@@ -37,19 +37,20 @@ cdef class GOTMDataReader(DataReader):
     # Number of z levels and layers
     cdef DTYPE_INT_t _n_zlay, _n_zlev
 
+    # Time
+    cdef DTYPE_FLOAT_t _time_last, _time_next, _time_fraction
+
+    # Water depth (from the mean sea surface height to the sea floor)
+    cdef DTYPE_FLOAT_t _H
+
     # Sea surface elevation
-    cdef DTYPE_FLOAT_t _zeta_last
-    cdef DTYPE_FLOAT_t _zeta_next
+    cdef DTYPE_FLOAT_t _zeta_last, _zeta_next, _zeta
 
     # Z level depths
-    cdef DTYPE_FLOAT_t[:] _zlev_last, _zlev_next
+    cdef DTYPE_FLOAT_t[:] _zlev_last, _zlev_next, _zlev
 
     # Eddy diffusivity on depth levels
-    cdef DTYPE_FLOAT_t[:] _kh_last, _kh_next   
-
-    # Time
-    cdef DTYPE_FLOAT_t _time_last
-    cdef DTYPE_FLOAT_t _time_next
+    cdef DTYPE_FLOAT_t[:] _kh_last, _kh_next, _kh
 
     def __init__(self, config, mediator):
         self.config = config
@@ -62,10 +63,11 @@ cdef class GOTMDataReader(DataReader):
         # through calls to _read_time_dependent_vars.
         self._zlev_last = np.empty((self._n_zlev), dtype=DTYPE_FLOAT)
         self._zlev_next = np.empty((self._n_zlev), dtype=DTYPE_FLOAT)
+        self._zlev = np.empty((self._n_zlev), dtype=DTYPE_FLOAT)
         self._kh_last = np.empty((self._n_zlev), dtype=DTYPE_FLOAT)
         self._kh_next = np.empty((self._n_zlev), dtype=DTYPE_FLOAT)
+        self._kh = np.empty((self._n_zlev), dtype=DTYPE_FLOAT)
         
-
     cdef _read_time_dependent_vars(self):
         """ Update time variables and memory views for GOTM data fields
         
@@ -127,6 +129,28 @@ cdef class GOTMDataReader(DataReader):
         self._kh_last[0] = 0.0
         self._kh_next[0] = 0.0
         
+        # Set H
+        self._H = -self._zlev_last[0]
+
+    cdef _interpolate_in_time(self, time):
+        """ Linearly interpolate in time all time dependent variables
+        
+        Interpolate all gridded variables in time and store for later use. This
+        saves having to compute the same quantities at the same instance in time
+        for each particle. This results in much reduced run times for the case
+        in which n_particles >> n_levels.
+        """
+        cdef DTYPE_INT_t i
+        
+        self._time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
+        
+        self._zeta = interp.linear_interp(self._time_fraction, self._zeta_last, self._zeta_next)
+
+        for i in xrange(self._n_zlev): 
+            self._zlev[i] = interp.linear_interp(self._time_fraction, self._zlev_last[i], self._zlev_next[i])
+
+            self._kh[i] = interp.linear_interp(self._time_fraction, self._kh_last[i], self._kh_next[i])
+        
     cpdef setup_data_access(self, start_datetime, end_datetime):
         """ Set up access to time-dependent variables.
         
@@ -146,8 +170,9 @@ cdef class GOTMDataReader(DataReader):
         """ Read in time dependent variable data from file?
         
         `time' is used to test if new data should be read in from file. If this
-        is the case, arrays containing time-dependent variable data are updated.
-        
+        is the case arrays containing time-dependent variable data are updated.
+        Following this, all time interpolated gridded fields are computed.
+
         Parameters:
         -----------
         time : float
@@ -157,6 +182,8 @@ cdef class GOTMDataReader(DataReader):
         if time_fraction < 0.0 or time_fraction >= 1.0:
             self.mediator.update_reading_frames(time)
             self._read_time_dependent_vars()
+        
+        self._interpolate_in_time(time)
 
     cpdef DTYPE_INT_t find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos,
         DTYPE_INT_t guess):
@@ -176,7 +203,7 @@ cdef class GOTMDataReader(DataReader):
 
         # Time fraction for interpolation in time
         cdef DTYPE_FLOAT_t time_fraction
-
+        
         # Compute bathymetry and sea surface elevation
         h = self.get_bathymetry(xpos, ypos, host)
         zeta = self.get_sea_sur_elev(time, xpos, ypos, host)
@@ -273,18 +300,22 @@ cdef class GOTMDataReader(DataReader):
         h : float
             Bathymetry.
         """
-        return -self._zlev_last[0]
+        return self._H
 
     cpdef get_sea_sur_elev(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
-        """ Returns the sea surface elevation through linear interpolation.
+        """ Returns the sea surface elevation.
         
-        Interpolation proceeds through linear interpolation in time.
-        
+        Returns the stored sea surface elevation that was set from the last
+        call to `read_data'. All function arguments are ignored meaning
+        interpolation is time is not performed! Please call `read_data' before
+        calling this function in order to update GotmDataReader's internal
+        state.
+
         Parameters:
         -----------
         time : float
-            Time at which to interpolate.
+            Time at which to interpolate (unused).
         
         xpos : float
             x-position at which to interpolate (unused).
@@ -300,11 +331,7 @@ cdef class GOTMDataReader(DataReader):
         zeta : float
             Sea surface elevation.
         """
-        cdef DTYPE_FLOAT_t time_fraction
-        
-        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
-        
-        return interp.linear_interp(time_fraction, self._zeta_last, self._zeta_next)
+        return self._zeta
     
     cpdef get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,

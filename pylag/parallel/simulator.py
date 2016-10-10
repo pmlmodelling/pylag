@@ -102,6 +102,9 @@ class TraceSimulator(Simulator):
             self.model.setup_input_data_access(self.time_manager.datetime_start,
                                                self.time_manager.datetime_end)
             
+            # Read data into arrays
+            self.model.read_input_data(self.time_manager.time)
+            
             # Seed the model
             self.model.seed(self.time_manager.time)
 
