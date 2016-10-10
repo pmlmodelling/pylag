@@ -128,9 +128,6 @@ cdef class GOTMDataReader(DataReader):
         # At the missing interface set the diffusivity to zero
         self._kh_last[0] = 0.0
         self._kh_next[0] = 0.0
-        
-        # Set H
-        self._H = -self._zlev_last[0]
 
     cdef _interpolate_in_time(self, time):
         """ Linearly interpolate in time all time dependent variables
@@ -144,7 +141,7 @@ cdef class GOTMDataReader(DataReader):
         
         self._time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
-        self._H = interp.linear_interp(self._time_fraction, self._zlev_last[0], self._zlev_next[0])
+        self._H = -interp.linear_interp(self._time_fraction, self._zlev_last[0], self._zlev_next[0])
         
         self._zeta = interp.linear_interp(self._time_fraction, self._zeta_last, self._zeta_next)
 
