@@ -15,8 +15,8 @@ from data_reader cimport DataReader
 from delta cimport Delta
 
 cdef class NumIntegrator:
-    cpdef DTYPE_INT_t advect(self, DTYPE_FLOAT_t time, Particle particle,
-            DataReader data_reader, Delta delta_X):
+    cdef DTYPE_INT_t advect(self, DTYPE_FLOAT_t time, Particle particle,
+            DataReader data_reader, Delta *delta_X):
         pass
 
 cdef class RK4Integrator2D(NumIntegrator):
@@ -30,8 +30,8 @@ cdef class RK4Integrator2D(NumIntegrator):
     def __init__(self, config):
         self._time_step = config.getfloat('SIMULATION', 'time_step')
     
-    cpdef DTYPE_INT_t advect(self, DTYPE_FLOAT_t time, Particle particle,
-            DataReader data_reader, Delta delta_X):
+    cdef DTYPE_INT_t advect(self, DTYPE_FLOAT_t time, Particle particle,
+            DataReader data_reader, Delta *delta_X):
         """ Advect particles forward in time.
         
         Use a basic fourth order Runga Kutta scheme to compute changes in a
@@ -140,8 +140,8 @@ cdef class RK4Integrator3D(NumIntegrator):
     def __init__(self, config):
         self._time_step = config.getfloat('SIMULATION', 'time_step')
     
-    cpdef DTYPE_INT_t advect(self, DTYPE_FLOAT_t time, Particle particle,
-            DataReader data_reader, Delta delta_X):
+    cdef DTYPE_INT_t advect(self, DTYPE_FLOAT_t time, Particle particle,
+            DataReader data_reader, Delta *delta_X):
         """ Advect particles forward in time.
         
         Use a basic fourth order Runga Kutta scheme to compute changes in a

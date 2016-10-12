@@ -9,12 +9,11 @@ from pylag.integrator import get_num_integrator
 from pylag.random_walk import get_vertical_random_walk_model, get_horizontal_random_walk_model
 from pylag.particle_positions_reader import read_particle_initial_positions
 from pylag.particle import Particle
-from pylag.delta import Delta
 
 from pylag.data_reader cimport DataReader, sigma_to_cartesian_coords, cartesian_to_sigma_coords
 from pylag.integrator cimport NumIntegrator
 from pylag.random_walk cimport VerticalRandomWalk, HorizontalRandomWalk
-from pylag.delta cimport Delta
+from pylag.delta cimport Delta, reset
 
 cdef class OPTModel:
     def set_particle_data(self, group_ids, x_positions, y_positions, z_positions):
@@ -249,24 +248,21 @@ cdef class FVCOMOPTModel(OPTModel):
         """
         cdef DTYPE_FLOAT_t xpos, ypos, zpos
         cdef DTYPE_FLOAT_t zmin, zmax
+        cdef Delta delta_X
         cdef DTYPE_INT_t host, host_err
         cdef DTYPE_INT_t i, n_particles
-
-        # Object for storing position deltas resulting from advection and random
-        # displacement in the interval t -> t + dt
-        delta_X = Delta()
         
         # Cycle over the particle set, updating the position of only those
         # particles that remain in the model domain
         n_particles = len(self.particle_set)
         for i in xrange(n_particles):
             if self.particle_set[i].in_domain:
-                delta_X.reset()
+                reset(&delta_X)
                 
                 # Advection
                 if self.num_integrator is not None:
                     host_err = self.num_integrator.advect(time,
-                            self.particle_set[i], self.data_reader, delta_X)
+                            self.particle_set[i], self.data_reader, &delta_X)
                             
                     # Check for boundary crossings. These are checked for
                     # a second time at the end of the update loop.
@@ -279,12 +275,12 @@ cdef class FVCOMOPTModel(OPTModel):
                 # Vertical random walk
                 if self.vert_rand_walk_model is not None:
                     self.vert_rand_walk_model.random_walk(time, self.particle_set[i], 
-                            self.data_reader, delta_X)
+                            self.data_reader, &delta_X)
 
                 # Horizontal random walk
                 if self.horiz_rand_walk_model is not None:
                     self.horiz_rand_walk_model.random_walk(time, self.particle_set[i], 
-                            self.data_reader, delta_X)  
+                            self.data_reader, &delta_X)  
                 
                 # Sum contributions
                 xpos = self.particle_set[i].xpos + delta_X.x
@@ -520,22 +516,18 @@ cdef class GOTMOPTModel(OPTModel):
         cdef DTYPE_FLOAT_t zmin, zmax
         cdef Delta delta_X
         cdef DTYPE_INT_t i, n_particles
-
-        # Object for storing position deltas resulting from advection and random
-        # displacement in the interval t -> t + dt
-        delta_X = Delta()
         
         # Cycle over the particle set, updating the position of only those
         # particles that remain in the model domain
         n_particles = len(self.particle_set)
         for i in xrange(n_particles):
             if self.particle_set[i].in_domain:
-                delta_X.reset()
+                reset(&delta_X)
                 
                 # Vertical random walk
                 if self.vert_rand_walk_model is not None:
                     self.vert_rand_walk_model.random_walk(time, self.particle_set[i], 
-                            self.data_reader, delta_X)
+                            self.data_reader, &delta_X)
 
                 # Sum contributions
                 zpos = self.particle_set[i].zpos + delta_X.z
