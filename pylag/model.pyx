@@ -1,5 +1,4 @@
 import logging
-import copy
 
 # Data types used for constructing C data structures
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
@@ -8,12 +7,15 @@ from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 from pylag.integrator import get_num_integrator
 from pylag.random_walk import get_vertical_random_walk_model, get_horizontal_random_walk_model
 from pylag.particle_positions_reader import read_particle_initial_positions
-from pylag.particle import Particle
+from pylag.particle import ParticleSmartPtr
+
+from libcpp.vector cimport vector
 
 from pylag.data_reader cimport DataReader, sigma_to_cartesian_coords, cartesian_to_sigma_coords
 from pylag.integrator cimport NumIntegrator
 from pylag.random_walk cimport VerticalRandomWalk, HorizontalRandomWalk
 from pylag.delta cimport Delta, reset
+from pylag.particle cimport Particle, copy
 
 cdef class OPTModel:
     def set_particle_data(self, group_ids, x_positions, y_positions, z_positions):
@@ -53,8 +55,9 @@ cdef class FVCOMOPTModel(OPTModel):
     cdef NumIntegrator num_integrator
     cdef VerticalRandomWalk vert_rand_walk_model
     cdef HorizontalRandomWalk horiz_rand_walk_model
-    cdef object particle_seed
-    cdef object particle_set
+    cdef object particle_seed_smart_ptrs
+    cdef object particle_smart_ptrs
+    cdef vector[Particle*] particle_ptrs
     
     # Seed particle data (as read from file)
     cdef DTYPE_INT_t[:] _group_ids
@@ -134,10 +137,17 @@ cdef class FVCOMOPTModel(OPTModel):
         time : float
             The current time.
         """
-        if self.particle_seed is None:
+        if self.particle_seed_smart_ptrs is None:
             self._create_seed(time)
 
-        self.particle_set = copy.deepcopy(self.particle_seed)
+        # Destroy the current active particle set and all pointers to it
+        self.particle_smart_ptrs = []
+        self.particle_ptrs.clear()
+
+        for particle_seed_smart_ptr in self.particle_seed_smart_ptrs:
+            particle_smart_ptr = copy(particle_seed_smart_ptr)
+            self.particle_smart_ptrs.append(particle_smart_ptr)
+            self.particle_ptrs.push_back(particle_smart_ptr.get_ptr())
 
     def _create_seed(self, time):
         """Create the particle seed.
@@ -157,7 +167,7 @@ cdef class FVCOMOPTModel(OPTModel):
         cdef DTYPE_FLOAT_t zmax
         
         # Create particle seed - particles stored in a list object
-        self.particle_seed = []
+        self.particle_seed_smart_ptrs = []
 
         guess = None
         particles_in_domain = 0
@@ -201,8 +211,8 @@ cdef class FVCOMOPTModel(OPTModel):
                     raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(z,zeta))
 
                 # Create particle
-                particle = Particle(group, x, y, sigma, host_horizontal_elem, in_domain)
-                self.particle_seed.append(particle)
+                particle_seed_smart_ptr = ParticleSmartPtr(group, x, y, sigma, host_horizontal_elem, in_domain=in_domain)
+                self.particle_seed_smart_ptrs.append(particle_seed_smart_ptr)
 
                 particles_in_domain += 1
 
@@ -211,8 +221,8 @@ cdef class FVCOMOPTModel(OPTModel):
                 guess = host_horizontal_elem
             else:
                 in_domain = False
-                particle = Particle(group_id=group, in_domain=in_domain)
-                self.particle_seed.append(particle)
+                particle_seed_smart_ptr = ParticleSmartPtr(group_id=group, in_domain=in_domain)
+                self.particle_seed_smart_ptrs.append(particle_seed_smart_ptr)
 
         if self.config.getboolean('GENERAL', 'full_logging'):
             logger = logging.getLogger(__name__)
@@ -249,44 +259,44 @@ cdef class FVCOMOPTModel(OPTModel):
         cdef DTYPE_FLOAT_t xpos, ypos, zpos
         cdef DTYPE_FLOAT_t zmin, zmax
         cdef Delta delta_X
+        cdef Particle* particle_ptr
         cdef DTYPE_INT_t host, host_err
         cdef DTYPE_INT_t i, n_particles
         
         # Cycle over the particle set, updating the position of only those
         # particles that remain in the model domain
-        n_particles = len(self.particle_set)
-        for i in xrange(n_particles):
-            if self.particle_set[i].in_domain:
+        for particle_ptr in self.particle_ptrs:
+            if particle_ptr.in_domain:
                 reset(&delta_X)
                 
                 # Advection
                 if self.num_integrator is not None:
                     host_err = self.num_integrator.advect(time,
-                            self.particle_set[i], self.data_reader, &delta_X)
+                            particle_ptr, self.data_reader, &delta_X)
                             
                     # Check for boundary crossings. These are checked for
                     # a second time at the end of the update loop.
                     if host_err == -1:
                         continue
                     elif host_err == -2:
-                        self.particle_set[i].in_domain = False
+                        particle_ptr.in_domain = False
                         continue
                 
                 # Vertical random walk
                 if self.vert_rand_walk_model is not None:
-                    self.vert_rand_walk_model.random_walk(time, self.particle_set[i], 
+                    self.vert_rand_walk_model.random_walk(time, particle_ptr, 
                             self.data_reader, &delta_X)
 
                 # Horizontal random walk
                 if self.horiz_rand_walk_model is not None:
-                    self.horiz_rand_walk_model.random_walk(time, self.particle_set[i], 
+                    self.horiz_rand_walk_model.random_walk(time, particle_ptr, 
                             self.data_reader, &delta_X)  
                 
                 # Sum contributions
                 xpos = self.particle_set[i].xpos + delta_X.x
                 ypos = self.particle_set[i].ypos + delta_X.y
                 zpos = self.particle_set[i].zpos + delta_X.z
-                host = self.data_reader.find_host(xpos, ypos, self.particle_set[i].host_horizontal_elem)
+                host = self.data_reader.find_host(xpos, ypos, particle_ptr.host_horizontal_elem)
               
                 # If the particle still resides in the domain update its
                 # position. If the particle has crossed a land boundary arrest
@@ -308,16 +318,16 @@ cdef class FVCOMOPTModel(OPTModel):
                         raise ValueError("New zpos (= {}) lies above the free surface.".format(zpos))                
 
                     # Update the particle's position
-                    self.particle_set[i].xpos = xpos
-                    self.particle_set[i].ypos = ypos
-                    self.particle_set[i].zpos = zpos
-                    self.particle_set[i].host_horizontal_elem = host
+                    particle_ptr.xpos = xpos
+                    particle_ptr.ypos = ypos
+                    particle_ptr.zpos = zpos
+                    particle_ptr.host_horizontal_elem = host
                 elif host == -1:
                     # Land boundary crossed - do nothing.
                     continue
                 elif host == -2:
                     # Open boundary crossed - flag as having left the domain.
-                    self.particle_set[i].in_domain = False
+                    particle_ptr.in_domain = False
                     continue
                 else:
                     raise ValueError('Unrecognised host element {}.'.format(host))
@@ -335,16 +345,18 @@ cdef class FVCOMOPTModel(OPTModel):
         diags : dict
             Dictionary holding particle diagnostic data.
         """
+        cdef Particle* particle_ptr
+        
         diags = {'xpos': [], 'ypos': [], 'zpos': [], 'host_horizontal_elem': [], 'h': [], 'zeta': []}
-        for particle in self.particle_set:
-            diags['xpos'].append(particle.xpos)
-            diags['ypos'].append(particle.ypos)
-            diags['host_horizontal_elem'].append(particle.host_horizontal_elem)            
+        for particle_ptr in self.particle_ptrs:
+            diags['xpos'].append(particle_ptr.xpos)
+            diags['ypos'].append(particle_ptr.ypos)
+            diags['host_horizontal_elem'].append(particle_ptr.host_horizontal_elem)            
             
             # Derived vars including depth, which is first converted to cartesian coords
-            h = self.data_reader.get_bathymetry(particle.xpos, particle.ypos, particle.host_horizontal_elem)
-            zeta = self.data_reader.get_sea_sur_elev(time, particle.xpos, particle.ypos, particle.host_horizontal_elem)
-            z = sigma_to_cartesian_coords(particle.zpos, h, zeta)
+            h = self.data_reader.get_bathymetry(particle_ptr.xpos, particle_ptr.ypos, particle_ptr.host_horizontal_elem)
+            zeta = self.data_reader.get_sea_sur_elev(time, particle_ptr.xpos, particle_ptr.ypos, particle_ptr.host_horizontal_elem)
+            z = sigma_to_cartesian_coords(particle_ptr.zpos, h, zeta)
             diags['h'].append(h)
             diags['zeta'].append(zeta)
             diags['zpos'].append(z)
@@ -367,8 +379,9 @@ cdef class GOTMOPTModel(OPTModel):
     cdef object config
     cdef DataReader data_reader
     cdef VerticalRandomWalk vert_rand_walk_model
-    cdef object particle_seed
-    cdef object particle_set
+    cdef object particle_seed_smart_ptrs
+    cdef object particle_smart_ptrs
+    cdef vector[Particle*] particle_ptrs
     
     # Seed particle data (as read from file)
     cdef DTYPE_INT_t[:] _group_ids
@@ -442,10 +455,17 @@ cdef class GOTMOPTModel(OPTModel):
         time : float
             The current time.
         """
-        if self.particle_seed is None:
+        if self.particle_seed_smart_ptrs is None:
             self._create_seed(time)
 
-        self.particle_set = copy.deepcopy(self.particle_seed)
+        # Destroy the current active particle set and all pointers to it
+        self.particle_smart_ptrs = []
+        self.particle_ptrs.clear()
+
+        for particle_seed_smart_ptr in self.particle_seed_smart_ptrs:
+            particle_smart_ptr = copy(particle_seed_smart_ptr)
+            self.particle_smart_ptrs.append(particle_smart_ptr)
+            self.particle_ptrs.push_back(particle_smart_ptr.get_ptr())
 
     def _create_seed(self, time):
         """Create the particle seed.
@@ -461,7 +481,7 @@ cdef class GOTMOPTModel(OPTModel):
             The current time.        
         """
         # Create particle seed - particles stored in a list object
-        self.particle_seed = []
+        self.particle_seed_smart_ptrs = []
         for group, x, y, z_temp in zip(self._group_ids, self._x_positions,
                 self._y_positions, self._z_positions):
             # Particle in the domain - this is a 1D column model.
@@ -498,8 +518,8 @@ cdef class GOTMOPTModel(OPTModel):
             z_layer = self.data_reader.find_zlayer(time, x, y, sigma, host, 0)
 
             # Create particle
-            particle = Particle(group, x, y, sigma, host, z_layer, in_domain)
-            self.particle_seed.append(particle)
+            particle_seed_smart_ptr = ParticleSmartPtr(group, x, y, sigma, host, z_layer, in_domain)
+            self.particle_seed_smart_ptrs.append(particle_seed_smart_ptr)
 
     def update(self, DTYPE_FLOAT_t time):
         """ Compute and update each particle's position.
@@ -513,24 +533,28 @@ cdef class GOTMOPTModel(OPTModel):
             The current time.
         """
         cdef DTYPE_FLOAT_t xpos, ypos, zpos
+
         cdef DTYPE_FLOAT_t zmin, zmax
+
         cdef Delta delta_X
+
+        cdef Particle* particle_ptr
+
         cdef DTYPE_INT_t i, n_particles
-        
+
         # Cycle over the particle set, updating the position of only those
         # particles that remain in the model domain
-        n_particles = len(self.particle_set)
-        for i in xrange(n_particles):
-            if self.particle_set[i].in_domain:
+        for particle_ptr in self.particle_ptrs:
+            if particle_ptr.in_domain:
                 reset(&delta_X)
                 
                 # Vertical random walk
                 if self.vert_rand_walk_model is not None:
-                    self.vert_rand_walk_model.random_walk(time, self.particle_set[i], 
+                    self.vert_rand_walk_model.random_walk(time, particle_ptr, 
                             self.data_reader, &delta_X)
 
                 # Sum contributions
-                zpos = self.particle_set[i].zpos + delta_X.z
+                zpos = particle_ptr.zpos + delta_X.z
 
                 # Apply reflecting surface/bottom boundary conditions
                 zmin = self.data_reader.get_zmin(time, 0.0, 0.0)
@@ -547,17 +571,17 @@ cdef class GOTMOPTModel(OPTModel):
                     raise ValueError("New zpos (= {}) lies above the free surface.".format(zpos))                
 
                 # Find the new host z layer using the old host z layer
-                xpos = self.particle_set[i].xpos
-                ypos = self.particle_set[i].ypos
-                host_horizontal_elem = self.particle_set[i].host_horizontal_elem
-                old_host_z_layer = self.particle_set[i].host_z_layer
+                xpos = particle_ptr.xpos
+                ypos = particle_ptr.ypos
+                host_horizontal_elem = particle_ptr.host_horizontal_elem
+                old_host_z_layer = particle_ptr.host_z_layer
                 
                 host_z_layer = self.data_reader.find_zlayer(time, xpos, ypos, 
                     zpos, host_horizontal_elem, old_host_z_layer)
 
                 # Update the particle's position and the host z layer
-                self.particle_set[i].zpos = zpos
-                self.particle_set[i].host_z_layer = host_z_layer
+                particle_ptr.zpos = zpos
+                particle_ptr.host_z_layer = host_z_layer
 
     def get_diagnostics(self, time):
         """ Get particle diagnostics
@@ -572,16 +596,18 @@ cdef class GOTMOPTModel(OPTModel):
         diags : dict
             Dictionary holding particle diagnostic data.
         """
+        cdef Particle* particle_ptr
+        
         diags = {'xpos': [], 'ypos': [], 'zpos': [], 'host_horizontal_elem': [], 'h': [], 'zeta': []}
-        for particle in self.particle_set:
-            diags['xpos'].append(particle.xpos)
-            diags['ypos'].append(particle.ypos)
-            diags['host_horizontal_elem'].append(particle.host_horizontal_elem)            
+        for particle_ptr in self.particle_ptrs:
+            diags['xpos'].append(particle_ptr.xpos)
+            diags['ypos'].append(particle_ptr.ypos)
+            diags['host_horizontal_elem'].append(particle_ptr.host_horizontal_elem)            
             
             # Derived vars including depth, which is first converted to cartesian coords
-            h = self.data_reader.get_bathymetry(particle.xpos, particle.ypos, particle.host_horizontal_elem)
-            zeta = self.data_reader.get_sea_sur_elev(time, particle.xpos, particle.ypos, particle.host_horizontal_elem)
-            z = sigma_to_cartesian_coords(particle.zpos, h, zeta)
+            h = self.data_reader.get_bathymetry(particle_ptr.xpos, particle_ptr.ypos, particle_ptr.host_horizontal_elem)
+            zeta = self.data_reader.get_sea_sur_elev(time, particle_ptr.xpos, particle_ptr.ypos, particle_ptr.host_horizontal_elem)
+            z = sigma_to_cartesian_coords(particle_ptr.zpos, h, zeta)
             diags['h'].append(h)
             diags['zeta'].append(zeta)
             diags['zpos'].append(z)

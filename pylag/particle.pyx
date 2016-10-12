@@ -1,102 +1,63 @@
-import numpy as np
-import logging
+from cpython.mem cimport PyMem_Malloc, PyMem_Free
 
-# Cython imports
-cimport numpy as np
-np.import_array()
-
-# Data types used for constructing C data structures
-from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
+# Data types
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
-cdef class Particle:
-    """ Class describing the position and properties of particle objects.
+cdef class ParticleSmartPtr:
+    """ Python object for managing the memory associated with Particle objects
+    
+    This class ties the lifetime of a Particle object allocated on the heap to 
+    the lifetime of a ParticleSmartPtr object.
+    """
+    
+    def __cinit__(self, DTYPE_INT_t group_id=-999, DTYPE_FLOAT_t xpos=-999., 
+            DTYPE_FLOAT_t ypos=-999., DTYPE_FLOAT_t zpos=-999., DTYPE_INT_t host=-999, 
+            DTYPE_INT_t host_z_layer=-999, DTYPE_INT_t in_domain=False):
+
+        self._particle = <Particle *>PyMem_Malloc(sizeof(Particle))
+
+        if not self._particle:
+            raise MemoryError()
+
+        self._particle.group_id = group_id
+        self._particle.xpos = xpos
+        self._particle.ypos = ypos
+        self._particle.zpos = zpos
+        self._particle.host_horizontal_elem = host
+        self._particle.host_z_layer = host_z_layer
+        self._particle.in_domain = in_domain
+
+    def __dealloc__(self):
+        PyMem_Free(self._particle)
+
+    cdef Particle* get_ptr(self):
+        return self._particle
+
+cdef ParticleSmartPtr copy(ParticleSmartPtr particle_smart_ptr):
+    """ Create a copy of a ParticleSmartPtr object
+    
+    This function creates a new copy a ParticleSmartPtr object. In so doing
+    new memory is allocated. This memory is automatically freed when the
+    ParticleSmartPtr is deleted.
     
     Parameters:
     -----------
-    group_id : int
-        Particle group ID
+    particle_smart_ptr : ParticleSmartPtr
+        ParticleSmartPtr object.
     
-    xpos : float
-        Particle x-position
-    
-    ypos : float
-        Particle y-position
-    
-    zpos : float
-        Particle z-position
-    
-    host : int
-        The host horizontal element.
-    
-    in_domain : bool
-        Flag identifying whether or not the particle resides within the model
-        domain.
+    Returns:
+    --------
+    particle_smart_ptr : ParticleSmartPtr
+        An exact copy of the ParticleSmartPtr object passed in.
     """
-    def __init__(self, DTYPE_INT_t group_id=-999, DTYPE_FLOAT_t xpos=-999., 
-            DTYPE_FLOAT_t ypos=-999., DTYPE_FLOAT_t zpos=-999., DTYPE_INT_t host=-999, 
-            DTYPE_INT_t host_z_layer=-999, DTYPE_INT_t in_domain=False):
-        self._group_id = group_id
-        
-        self._xpos = xpos
-        self._ypos = ypos
-        self._zpos = zpos
-        
-        self._host_horizontal_elem = host
-        
-        self._host_z_layer = host_z_layer
-
-        self._in_domain = in_domain
-
-    def __reduce__(self):
-        return (self.__class__, (self._group_id, self._xpos, self._ypos, self._zpos,
-            self._host_horizontal_elem, self._host_z_layer, self._in_domain))
-
-    # Group ID
-    property group_id:
-        def __get__(self):
-            return self._group_id
-        def __set__(self, DTYPE_INT_t value):
-            self._group_id = value
+    cdef Particle* particle_ptr
     
-    # x position
-    property xpos:
-        def __get__(self):
-            return self._xpos
-        def __set__(self, DTYPE_FLOAT_t value):
-            self._xpos = value
-            
-    # y position
-    property ypos:
-        def __get__(self):
-            return self._ypos
-        def __set__(self, DTYPE_FLOAT_t value):
-            self._ypos = value
-            
-    # z position
-    property zpos:
-        def __get__(self):
-            return self._zpos
-        def __set__(self, DTYPE_FLOAT_t value):
-            self._zpos = value
+    particle_ptr = particle_smart_ptr.get_ptr()
 
-    # Host horizontal element
-    property host_horizontal_elem:
-        def __get__(self):
-            return self._host_horizontal_elem
-        def __set__(self, DTYPE_INT_t value):
-            self._host_horizontal_elem = value
-
-    # Host z layer
-    property host_z_layer:
-        def __get__(self):
-            return self._host_z_layer
-        def __set__(self, DTYPE_INT_t value):
-            self._host_z_layer = value
-
-    # Is the particle in the domain?
-    property in_domain:
-        def __get__(self):
-            return self._in_domain
-        def __set__(self, bint value):
-            self._in_domain = value
+    return ParticleSmartPtr(particle_ptr.group_id,
+                            particle_ptr.xpos,
+                            particle_ptr.ypos,
+                            particle_ptr.zpos,
+                            particle_ptr.host_horizontal_elem,
+                            particle_ptr.host_z_layer,
+                            particle_ptr.in_domain)

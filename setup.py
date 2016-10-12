@@ -100,7 +100,8 @@ def makeExtension(extName, file_type):
     return Extension(
         extName,
         [extPath],
-        libraries=cython_gsl.get_libraries(),
+        language="c++",
+        libraries=["stdc++"] + cython_gsl.get_libraries(),
         library_dirs=[cython_gsl.get_library_dir()],
         include_dirs=[cython_gsl.get_cython_include_dir(), '.'],
         )

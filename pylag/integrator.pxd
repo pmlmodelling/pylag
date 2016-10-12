@@ -8,13 +8,13 @@ from data_reader cimport DataReader
 from delta cimport Delta
 
 cdef class NumIntegrator:
-    cdef DTYPE_INT_t advect(self, DTYPE_FLOAT_t time, Particle particle,
+    cdef DTYPE_INT_t advect(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X)
 
 cdef class RK4Integrator2D(NumIntegrator):
     cdef DTYPE_FLOAT_t _time_step
 
-    cdef DTYPE_INT_t advect(self, DTYPE_FLOAT_t time, Particle particle, 
+    cdef DTYPE_INT_t advect(self, DTYPE_FLOAT_t time, Particle *particle, 
             DataReader data_reader, Delta *delta_X)
     
 cdef class RK4Integrator3D(NumIntegrator):
@@ -24,5 +24,5 @@ cdef class RK4Integrator3D(NumIntegrator):
     cdef DTYPE_FLOAT_t _zmin
     cdef DTYPE_FLOAT_t _zmax
 
-    cdef DTYPE_INT_t advect(self, DTYPE_FLOAT_t time, Particle particle,
+    cdef DTYPE_INT_t advect(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X)

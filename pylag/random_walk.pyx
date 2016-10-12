@@ -5,21 +5,21 @@ from libc.math cimport sqrt
 cimport pylag.random as random
 
 cdef class RandomWalk:
-    cdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader, Delta *delta_X):
+    cdef random_walk(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
         pass
 
  # Vertical Random Walks
  # ---------------------
  
 cdef class VerticalRandomWalk(RandomWalk):
-    cdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader, Delta *delta_X):
+    cdef random_walk(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
         pass    
 
 cdef class NaiveVerticalRandomWalk(VerticalRandomWalk):
     def __init__(self, config):
         self._time_step = config.getfloat('SIMULATION', 'time_step')
 
-    cdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader, Delta *delta_X):
+    cdef random_walk(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
         """
         Naive vertical random walk. This method should only be used when
         the vertical eddy diffusivity is homogenous. When it is not, particles
@@ -64,7 +64,7 @@ cdef class AR0VerticalRandomWalk(VerticalRandomWalk):
     def __init__(self, config):
         self._time_step = config.getfloat('SIMULATION', 'time_step')
 
-    cdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader, Delta *delta_X):
+    cdef random_walk(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
         """
         AR0 vertical random walk. This method is an extension of the
         NaiveVerticalRandomWalk model to situations in which the eddy diffusivity
@@ -144,7 +144,7 @@ cdef class AR0VerticalRandomWalkWithSpline(VerticalRandomWalk):
     def __init__(self, config):
         pass
 
-    cdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader, Delta *delta_X):
+    cdef random_walk(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
         pass
 
 
@@ -152,7 +152,7 @@ cdef class AR0VerticalRandomWalkWithSpline(VerticalRandomWalk):
 # -----------------------
  
 cdef class HorizontalRandomWalk(RandomWalk):
-    cdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader, Delta *delta_X):
+    cdef random_walk(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
         pass  
 
 cdef class ConstantHorizontalRandomWalk(HorizontalRandomWalk):
@@ -160,7 +160,7 @@ cdef class ConstantHorizontalRandomWalk(HorizontalRandomWalk):
         self._time_step = config.getfloat('SIMULATION', 'time_step')
         self._kh = config.getfloat("SIMULATION", "horizontal_eddy_diffusivity_constant")
 
-    cdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader, Delta *delta_X):
+    cdef random_walk(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
         """
         Horizontal random walk using a constant value for the horizontal eddy 
         diffusivity that is provided as a parameter value.
@@ -186,7 +186,7 @@ cdef class NaiveHorizontalRandomWalk(HorizontalRandomWalk):
     def __init__(self, config):
         self._time_step = config.getfloat('SIMULATION', 'time_step')
 
-    cdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader, Delta *delta_X):
+    cdef random_walk(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
         """
         Naive horizontal random walk. This method should only be used when
         the horizontal eddy diffusivity is both homogenous and isotropic in x
@@ -228,7 +228,7 @@ cdef class AR0HorizontalRandomWalk(HorizontalRandomWalk):
     def __init__(self, config):
         pass
 
-    cdef random_walk(self, DTYPE_FLOAT_t time, Particle particle, DataReader data_reader, Delta *delta_X):
+    cdef random_walk(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
         pass
 
 def get_vertical_random_walk_model(config):
