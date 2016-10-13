@@ -293,9 +293,9 @@ cdef class FVCOMOPTModel(OPTModel):
                             self.data_reader, &delta_X)  
                 
                 # Sum contributions
-                xpos = self.particle_set[i].xpos + delta_X.x
-                ypos = self.particle_set[i].ypos + delta_X.y
-                zpos = self.particle_set[i].zpos + delta_X.z
+                xpos = self.particle_ptr.xpos + delta_X.x
+                ypos = self.particle_ptr.ypos + delta_X.y
+                zpos = self.particle_ptr.zpos + delta_X.z
                 host = self.data_reader.find_host(xpos, ypos, particle_ptr.host_horizontal_elem)
               
                 # If the particle still resides in the domain update its
