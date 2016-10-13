@@ -53,7 +53,7 @@ def seed(seed=None):
     # Set the seed for the RNG
     gsl_rng_set(r, _seed)
         
-cpdef gauss(DTYPE_FLOAT_t std = 1.0):
+cpdef DTYPE_FLOAT_t gauss(DTYPE_FLOAT_t std = 1.0):
     """
     Generate a random Gaussian variate. The Gaussian distribution has a standard
     deviation of std, and a mean of 0.0.
@@ -72,7 +72,7 @@ cpdef gauss(DTYPE_FLOAT_t std = 1.0):
     variate = gsl_ran_gaussian(r, std)
     return variate
 
-cpdef uniform(DTYPE_FLOAT_t a = -1.0, DTYPE_FLOAT_t b = 1.0):
+cpdef DTYPE_FLOAT_t uniform(DTYPE_FLOAT_t a = -1.0, DTYPE_FLOAT_t b = 1.0):
     """
     Generate a random variate within the range [a, b].
     
