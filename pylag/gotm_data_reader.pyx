@@ -315,7 +315,7 @@ cdef class GOTMDataReader(DataReader):
         """
         return self._zeta
     
-    cpdef get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
+    cpdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
             DTYPE_INT_t zlayer):
         """ Returns the vertical eddy diffusivity through linear interpolation.
@@ -355,7 +355,7 @@ cdef class GOTMDataReader(DataReader):
         z_fraction = interp.get_linear_fraction_safe(z, self._zlev[zlayer], self._zlev[zlayer+1])
         return interp.linear_interp(z_fraction, self._kh[zlayer], self._kh[zlayer+1]) / (self._H + self._zeta)**2
 
-    cpdef get_vertical_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
+    cpdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos,
             DTYPE_INT_t host, DTYPE_INT_t zlayer):
         """ Returns the gradient in the vertical eddy diffusivity.
@@ -410,8 +410,8 @@ cdef class GOTMDataReader(DataReader):
         zlayer_incremented = self.find_zlayer(time, xpos, ypos, zpos_incremented, host, zlayer)
 
         # Compute the gradient
-        k1 = self.get_vertical_eddy_diffusivity(time, xpos, ypos, zpos, host, zlayer)
-        k2 = self.get_vertical_eddy_diffusivity(time, xpos, ypos, zpos_incremented, host, zlayer_incremented)
-        k_prime = (k2 - k1) / zpos_increment
+        kh1 = self.get_vertical_eddy_diffusivity(time, xpos, ypos, zpos, host, zlayer)
+        kh2 = self.get_vertical_eddy_diffusivity(time, xpos, ypos, zpos_incremented, host, zlayer_incremented)
+        k_prime = (kh2 - kh1) / zpos_increment
 
         return k_prime
