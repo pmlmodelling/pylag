@@ -153,9 +153,9 @@ cdef class FVCOMOPTModel(OPTModel):
         """Create the particle seed.
         
         Create the particle seed using the supplied arguments. Initialise
-        `particle_set' using `particle_seed'. A separate copy of the particle
-        seed is stored so that the model can be reseeded at a later time, as
-        required.
+        the active particle set using seed particles. A separate copy of the 
+        particle seed is stored so that the model can be reseeded at a later 
+        time, as may be required during ensemble simulations.
 
         Parameters:
         -----------
@@ -210,8 +210,11 @@ cdef class FVCOMOPTModel(OPTModel):
                 elif sigma > zmax:
                     raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(z,zeta))
 
+                # Find the host z layer
+                z_layer = self.data_reader.find_zlayer(time, x, y, sigma, host_horizontal_elem, 0)
+
                 # Create particle
-                particle_seed_smart_ptr = ParticleSmartPtr(group, x, y, sigma, host_horizontal_elem, in_domain=in_domain)
+                particle_seed_smart_ptr = ParticleSmartPtr(group, x, y, sigma, host_horizontal_elem, z_layer, in_domain)
                 self.particle_seed_smart_ptrs.append(particle_seed_smart_ptr)
 
                 particles_in_domain += 1
@@ -226,7 +229,7 @@ cdef class FVCOMOPTModel(OPTModel):
 
         if self.config.getboolean('GENERAL', 'full_logging'):
             logger = logging.getLogger(__name__)
-            logger.info('{} of {} particles are located in the model domain.'.format(particles_in_domain, len(self.particle_seed)))
+            logger.info('{} of {} particles are located in the model domain.'.format(particles_in_domain, len(self.particle_seed_smart_ptrs)))
 
     def update(self, DTYPE_FLOAT_t time):
         """ Compute and update each particle's position.
@@ -293,9 +296,9 @@ cdef class FVCOMOPTModel(OPTModel):
                             self.data_reader, &delta_X)  
                 
                 # Sum contributions
-                xpos = self.particle_ptr.xpos + delta_X.x
-                ypos = self.particle_ptr.ypos + delta_X.y
-                zpos = self.particle_ptr.zpos + delta_X.z
+                xpos = particle_ptr.xpos + delta_X.x
+                ypos = particle_ptr.ypos + delta_X.y
+                zpos = particle_ptr.zpos + delta_X.z
                 host = self.data_reader.find_host(xpos, ypos, particle_ptr.host_horizontal_elem)
               
                 # If the particle still resides in the domain update its
@@ -317,11 +320,17 @@ cdef class FVCOMOPTModel(OPTModel):
                     elif zpos > zmax:
                         raise ValueError("New zpos (= {}) lies above the free surface.".format(zpos))                
 
+                    # Determine the new host z layer
+                    old_host_z_layer = particle_ptr.host_z_layer
+                    host_z_layer = self.data_reader.find_zlayer(time, xpos, ypos, 
+                        zpos, host, old_host_z_layer)
+
                     # Update the particle's position
                     particle_ptr.xpos = xpos
                     particle_ptr.ypos = ypos
                     particle_ptr.zpos = zpos
                     particle_ptr.host_horizontal_elem = host
+                    particle_ptr.host_z_layer = host_z_layer
                 elif host == -1:
                     # Land boundary crossed - do nothing.
                     continue
@@ -471,9 +480,9 @@ cdef class GOTMOPTModel(OPTModel):
         """Create the particle seed.
         
         Create the particle seed using the supplied arguments. Initialise
-        `particle_set' using `particle_seed'. A separate copy of the particle
-        seed is stored so that the model can be reseeded at a later time, as
-        required.
+        the active particle set using seed particles. A separate copy of the 
+        particle seed is stored so that the model can be reseeded at a later 
+        time, as may be required during ensemble simulations.
 
         Parameters:
         -----------
