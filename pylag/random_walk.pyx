@@ -13,7 +13,7 @@ cdef class RandomWalk:
  
 cdef class VerticalRandomWalk(RandomWalk):
     cdef random_walk(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
-        pass    
+        pass
 
 cdef class NaiveVerticalRandomWalk(VerticalRandomWalk):
     def __init__(self, config):
@@ -207,7 +207,7 @@ cdef class NaiveHorizontalRandomWalk(HorizontalRandomWalk):
         """
         # Temporary containers
         cdef DTYPE_FLOAT_t t, xpos, ypos, zpos
-        cdef DTYPE_INT_t host
+        cdef DTYPE_INT_t host, zlayer
         
         # The horizontal eddy diffusiviy
         cdef DTYPE_FLOAT_t kh
@@ -218,7 +218,8 @@ cdef class NaiveHorizontalRandomWalk(HorizontalRandomWalk):
         ypos = particle.ypos
         zpos = particle.zpos
         host = particle.host_horizontal_elem
-        kh = data_reader.get_horizontal_eddy_diffusivity(t, xpos, ypos, zpos, host)
+        zlayer = particle.host_z_layer
+        kh = data_reader.get_horizontal_eddy_diffusivity(t, xpos, ypos, zpos, host, zlayer)
         
         # Change in position
         delta_X.x += sqrt(2.0*kh*self._time_step) * random.gauss(1.0)

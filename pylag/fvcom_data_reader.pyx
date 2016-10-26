@@ -491,7 +491,7 @@ cdef class FVCOMDataReader(DataReader):
 
     cdef get_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
-            DTYPE_FLOAT_t vel[3]):
+            DTYPE_INT_t zlayer, DTYPE_FLOAT_t vel[3]):
         """ Returns the velocity u(t,x,y,z) through linear interpolation
         
         Returns the velocity u(t,x,y,z) through linear interpolation for a 
@@ -518,6 +518,9 @@ cdef class FVCOMDataReader(DataReader):
         host : int
             Host horizontal element.
 
+        zlayer : int
+            Host z layer.
+
         Return:
         -------
         vel : C array, float
@@ -537,17 +540,17 @@ cdef class FVCOMDataReader(DataReader):
         
         # Compute u/v velocities and save
         self._get_uv_velocity_using_linear_least_squares_interpolation(time, 
-                xpos, ypos, zpos, host, phi, vel_uv)
+                xpos, ypos, zpos, host, zlayer, phi, vel_uv)
         for i in xrange(2):
             vel[i] = vel_uv[i]
         
         # Compute omega velocity and save
-        vel[2] = self._get_omega_velocity(time, xpos, ypos, zpos, host, phi)
+        vel[2] = self._get_omega_velocity(time, xpos, ypos, zpos, host, zlayer, phi)
         return
 
     cdef get_horizontal_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
-            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host, 
-            DTYPE_FLOAT_t vel[2]):
+            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
+            DTYPE_INT_t zlayer, DTYPE_FLOAT_t vel[2]):
         """ Returns the u/v velocity components through linear interpolation.
         
         This function is effectively a wrapper for _get_uv_velocity*.
@@ -574,6 +577,9 @@ cdef class FVCOMDataReader(DataReader):
         host : int
             Host horizontal element.
 
+        zlayer : int
+            Host z layer.
+
         Return:
         -------
         vel : C array, float
@@ -585,11 +591,12 @@ cdef class FVCOMDataReader(DataReader):
 
         self._get_phi(xpos, ypos, host, phi)        
         self._get_uv_velocity_using_linear_least_squares_interpolation(time, 
-                xpos, ypos, zpos, host, phi, vel)
+                xpos, ypos, zpos, host, zlayer, phi, vel)
         return
     
     cdef get_vertical_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
-            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host):
+            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
+            DTYPE_INT_t zlayer):
         """ Returns the vertical velocity through linear interpolation.
         
         This function is effectively a wrapper for _get_vertical_velocity.
@@ -611,6 +618,9 @@ cdef class FVCOMDataReader(DataReader):
         host : int
             Host horizontal element.
 
+        zlayer : int
+            Host z layer.
+
         Return:
         -------
         omega : float
@@ -621,10 +631,11 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_FLOAT_t phi[N_VERTICES]
 
         self._get_phi(xpos, ypos, host, phi)
-        return self._get_omega_velocity(time, xpos, ypos, zpos, host, phi)
+        return self._get_omega_velocity(time, xpos, ypos, zpos, host, zlayer, phi)
 
     cpdef get_horizontal_eddy_diffusivity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host):
+            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
+            DTYPE_INT_t zlayer):
         """ Returns the horizontal eddy diffusivity through linear interpolation.
         
         viscofh is defined at element nodes on sigma layers. Above and below the
@@ -648,6 +659,9 @@ cdef class FVCOMDataReader(DataReader):
 
         host : int
             Host horizontal element.
+
+        zlayer : int
+            Host z layer.        
         
         Returns:
         --------
@@ -738,7 +752,7 @@ cdef class FVCOMDataReader(DataReader):
 
     cpdef get_horizontal_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, 
-            DTYPE_INT_t host):
+            DTYPE_INT_t host, DTYPE_INT_t zlayer):
         """ NOT YET IMPLEMENTED
         
                 Parameters:
@@ -757,7 +771,10 @@ cdef class FVCOMDataReader(DataReader):
 
         host : int
             Host horizontal element.
-        
+
+        zlayer : int
+            Host z layer.
+
         Returns:
         --------
         viscofh_prime : float
@@ -766,9 +783,9 @@ cdef class FVCOMDataReader(DataReader):
         """
         pass
 
-    cpdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
-            DTYPE_INT_t zlayer):
+    cpdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time,
+            DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos,
+            DTYPE_INT_t host, DTYPE_INT_t zlayer):
         """ Returns the vertical eddy diffusivity through linear interpolation.
         
         The vertical eddy diffusivity is defined at element nodes on sigma
@@ -900,6 +917,9 @@ cdef class FVCOMDataReader(DataReader):
 
         host : int
             Host horizontal element.
+
+        zlayer : int
+            Host z layer.
         
         Returns:
         --------
@@ -939,8 +959,8 @@ cdef class FVCOMDataReader(DataReader):
 
     cdef _get_uv_velocity_using_shepard_interpolation(self, DTYPE_FLOAT_t time,
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, 
-            DTYPE_INT_t host, DTYPE_FLOAT_t phi[N_VERTICES], 
-            DTYPE_FLOAT_t vel[2]):
+            DTYPE_INT_t host, DTYPE_INT_t zlayer, 
+            DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_FLOAT_t vel[2]):
         """ Return u and v components at a point using Shepard interpolation.
         
         In FVCOM, the u and v velocity components are defined at element centres
@@ -1087,8 +1107,8 @@ cdef class FVCOMDataReader(DataReader):
 
     cdef _get_uv_velocity_using_linear_least_squares_interpolation(self, 
             DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, 
-            DTYPE_FLOAT_t zpos, DTYPE_INT_t host, DTYPE_FLOAT_t phi[N_VERTICES],
-            DTYPE_FLOAT_t vel[2]):
+            DTYPE_FLOAT_t zpos, DTYPE_INT_t host, DTYPE_INT_t zlayer, 
+            DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_FLOAT_t vel[2]):
         """ Return u and v components at a point using LLS interpolation.
         
         In FVCOM, the u and v velocity components are defined at element centres
@@ -1227,7 +1247,8 @@ cdef class FVCOMDataReader(DataReader):
 
     cdef DTYPE_FLOAT_t _get_omega_velocity(self, DTYPE_FLOAT_t time,
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos,
-            DTYPE_INT_t host, DTYPE_FLOAT_t phi[N_VERTICES]):
+            DTYPE_INT_t host, DTYPE_INT_t zlayer, 
+            DTYPE_FLOAT_t phi[N_VERTICES]):
         """ Get omega velocity through linear interpolation.
         
         Omega is defined at element nodes on sigma levels. Linear interpolation

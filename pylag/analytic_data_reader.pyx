@@ -32,7 +32,7 @@ cdef class TestVelocityDataReader(DataReader):
     
     cdef get_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
-            DTYPE_FLOAT_t vel[3]):
+            DTYPE_INT_t zlayer, DTYPE_FLOAT_t vel[3]):
         """ Return velocity field array for the given space/time coordinates.
         
         """  
@@ -42,7 +42,7 @@ cdef class TestVelocityDataReader(DataReader):
         
     cdef get_horizontal_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
-            DTYPE_FLOAT_t vel[2]):
+            DTYPE_INT_t zlayer, DTYPE_FLOAT_t vel[2]):
         """ Return horizontal velocity for the given space/time coordinates.
         
         """  
@@ -50,7 +50,8 @@ cdef class TestVelocityDataReader(DataReader):
         vel[1] = self._get_v_component(ypos)
 
     cdef get_vertical_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
-            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host):
+            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
+            DTYPE_INT_t zlayer):
         """ Return vertical velocity field for the given space/time coordinates.
         
         """ 
@@ -128,7 +129,7 @@ cdef class TestDiffusivityDataReader(DataReader):
     
     cdef get_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
-            DTYPE_FLOAT_t vel[3]):
+            DTYPE_INT_t zlayer, DTYPE_FLOAT_t vel[3]):
         """ Returns a zeroed velocity vector.
         
         The advective velocity is used by random displacement models adapted to
@@ -139,9 +140,9 @@ cdef class TestDiffusivityDataReader(DataReader):
         vel[1] = 0.0
         vel[2] = 0.0
 
-    cpdef get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
-            DTYPE_INT_t zlayer):
+    cpdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time, 
+            DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos,
+            DTYPE_INT_t host, DTYPE_INT_t zlayer):
         """ Returns the vertical eddy diffusivity at zpos.
         
         """  
@@ -153,7 +154,7 @@ cdef class TestDiffusivityDataReader(DataReader):
                 8.65898e-6 * zpos**4 + 1.7623e-7 * zpos**5 - 1.40918e-9 * zpos**6
         return k
 
-    cpdef get_vertical_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time, 
+    cpdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time, 
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos,
             DTYPE_INT_t host, DTYPE_INT_t zlayer):
         """ Returns the derivative of the vertical eddy diffusivity.

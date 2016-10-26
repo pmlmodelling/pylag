@@ -49,14 +49,26 @@ cpdef interpolate_within_element(var, phi):
     
     return interp.interpolate_within_element(var_c, phi_c)
 
-cpdef get_velocity(DataReader data_reader, t, x, y, z, host):
+cpdef get_velocity(DataReader data_reader, t, x, y, z, host, zlayer):
     cdef DTYPE_FLOAT_t vel_c[N_VERTICES]
     cdef DTYPE_INT_t i
     
-    data_reader.get_velocity(t, x, y, z, host, vel_c)
+    data_reader.get_velocity(t, x, y, z, host, zlayer, vel_c)
     
     # Generate and pass back an array type python can understand
     vel_out = np.empty(N_VERTICES, dtype='float32')
     for i in xrange(N_VERTICES):
+        vel_out[i] = vel_c[i]
+    return vel_out
+
+cpdef get_horizontal_velocity(DataReader data_reader, t, x, y, z, host, zlayer):
+    cdef DTYPE_FLOAT_t vel_c[2]
+    cdef DTYPE_INT_t i
+    
+    data_reader.get_horizontal_velocity(t, x, y, z, host, zlayer, vel_c)
+    
+    # Generate and pass back an array python can understand
+    vel_out = np.empty(N_VERTICES, dtype='float32')
+    for i in xrange(2):
         vel_out[i] = vel_c[i]
     return vel_out
