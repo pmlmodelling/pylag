@@ -100,27 +100,27 @@ cdef class GOTMDataReader(DataReader):
         self._time_next = self.mediator.get_time_at_next_time_index()
 
         # Update zeta
-        self._zeta_last = self.mediator.get_time_dependent_variable_at_last_time_index('zeta', (1), DTYPE_FLOAT)[0]
-        self._zeta_next = self.mediator.get_time_dependent_variable_at_next_time_index('zeta', (1), DTYPE_FLOAT)[0]
+        self._zeta_last = self.mediator.get_time_dependent_variable_at_last_time_index('zeta', (1,1), DTYPE_FLOAT)[0,0]
+        self._zeta_next = self.mediator.get_time_dependent_variable_at_next_time_index('zeta', (1,1), DTYPE_FLOAT)[0,0]
 
         # Update memory views for interface depths at the last time point
-        h = self.mediator.get_time_dependent_variable_at_last_time_index('h', (self._n_zlay), DTYPE_FLOAT)
-        z = self.mediator.get_time_dependent_variable_at_last_time_index('z', (self._n_zlay), DTYPE_FLOAT)
+        h = self.mediator.get_time_dependent_variable_at_last_time_index('h', (self._n_zlay,1,1), DTYPE_FLOAT)[:,0,0]
+        z = self.mediator.get_time_dependent_variable_at_last_time_index('z', (self._n_zlay,1,1), DTYPE_FLOAT)[:,0,0]
         for i in xrange(self._n_zlay):
             self._zlev_last[i] = z[i] - h[i]/2.0
         self._zlev_last[-1] = z[i] + h[i]/2.0
 
         # Update memory views for interface depths at the next time point
-        h = self.mediator.get_time_dependent_variable_at_next_time_index('h', (self._n_zlay), DTYPE_FLOAT)
-        z = self.mediator.get_time_dependent_variable_at_next_time_index('z', (self._n_zlay), DTYPE_FLOAT)
+        h = self.mediator.get_time_dependent_variable_at_next_time_index('h', (self._n_zlay,1,1), DTYPE_FLOAT)[:,0,0]
+        z = self.mediator.get_time_dependent_variable_at_next_time_index('z', (self._n_zlay,1,1), DTYPE_FLOAT)[:,0,0]
         for i in xrange(self._n_zlay):
             self._zlev_next[i] = z[i] - h[i]/2.0
         self._zlev_next[-1] = z[-1] + h[-1]/2.0
         
         # Update memory views for kh. As GOTM drops the value of the diffusivity
         # at the last interface this must be set separately.
-        kh_last = self.mediator.get_time_dependent_variable_at_last_time_index('nuh', (self._n_zlay), DTYPE_FLOAT)
-        kh_next = self.mediator.get_time_dependent_variable_at_next_time_index('nuh', (self._n_zlay), DTYPE_FLOAT)
+        kh_last = self.mediator.get_time_dependent_variable_at_last_time_index('nuh', (self._n_zlay,1,1), DTYPE_FLOAT)[:,0,0]
+        kh_next = self.mediator.get_time_dependent_variable_at_next_time_index('nuh', (self._n_zlay,1,1), DTYPE_FLOAT)[:,0,0]
         for i in xrange(self._n_zlay):
             self._kh_last[i+1] = kh_last[i]
             self._kh_next[i+1] = kh_next[i]
