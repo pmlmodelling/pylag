@@ -791,6 +791,9 @@ cdef class FVCOMDataReader(DataReader):
 
         host : int
             Host horizontal element.
+            
+        zlayer : int
+            Host z layer.
         
         Returns:
         --------
@@ -800,21 +803,19 @@ cdef class FVCOMDataReader(DataReader):
         """
         # Barycentric coordinates
         cdef DTYPE_FLOAT_t phi[N_VERTICES]
-        
-        # Variables used when determining indices for the sigma levels that
-        # bound the particle's position
-        cdef DTYPE_INT_t k_lower_level, k_upper_level
-        cdef DTYPE_FLOAT_t sigma_lower_level, sigma_upper_level        
-        cdef bool particle_found
 
-        # No. of vertices and a temporary object used for determining variable
-        # values at the host element's nodes
-        cdef int i # Loop counters
-        cdef int vertex # Vertex identifier
+        # Loop counter
+        cdef int i
         
-        # Time and sigma fractions for interpolation in time and sigma        
-        cdef DTYPE_FLOAT_t time_fraction, sigma_fraction
+        # Vertex identifier
+        cdef int vertex
         
+        # Time fraction used for interpolation in time        
+        cdef DTYPE_FLOAT_t time_fraction
+
+        # Variables used for interpolation in sigma
+        cdef DTYPE_FLOAT_t sigma_fraction, sigma_lower_level, sigma_upper_level
+
         # Intermediate arrays - kh
         cdef DTYPE_FLOAT_t kh_tri_t_last_lower_level[N_VERTICES]
         cdef DTYPE_FLOAT_t kh_tri_t_next_lower_level[N_VERTICES]
@@ -840,28 +841,13 @@ cdef class FVCOMDataReader(DataReader):
         # Compute barycentric coordinates for the given x/y coordinates
         self._get_phi(xpos, ypos, host, phi)
 
-        # Determine upper and lower bounding sigma levels
-        particle_found = False
-        for i in xrange(self._n_siglay):
-            k_lower_level = i + 1
-            k_upper_level = i
-            sigma_lower_level = self._interp_on_sigma_level(phi, host, k_lower_level)
-            sigma_upper_level = self._interp_on_sigma_level(phi, host, k_upper_level)
-            
-            if zpos <= sigma_upper_level and zpos >= sigma_lower_level:
-                particle_found = True
-                break
-        
-        if particle_found is False:
-            raise ValueError("Particle zpos (={} not found!".format(zpos))
-
         # Extract kh on the lower and upper bounding sigma levels, h and zeta
         for i in xrange(N_VERTICES):
             vertex = self._nv[i,host]
-            kh_tri_t_last_lower_level[i] = self._kh_last[k_lower_level, vertex]
-            kh_tri_t_next_lower_level[i] = self._kh_next[k_lower_level, vertex]
-            kh_tri_t_last_upper_level[i] = self._kh_last[k_upper_level, vertex]
-            kh_tri_t_next_upper_level[i] = self._kh_next[k_upper_level, vertex]
+            kh_tri_t_last_lower_level[i] = self._kh_last[zlayer+1, vertex]
+            kh_tri_t_next_lower_level[i] = self._kh_next[zlayer+1, vertex]
+            kh_tri_t_last_upper_level[i] = self._kh_last[zlayer, vertex]
+            kh_tri_t_next_upper_level[i] = self._kh_next[zlayer, vertex]
             zeta_tri_t_last[i] = self._zeta_last[vertex]
             zeta_tri_t_next[i] = self._zeta_next[vertex]
             h_tri[i] = self._h[vertex]
@@ -884,7 +870,10 @@ cdef class FVCOMDataReader(DataReader):
         h = interp.interpolate_within_element(h_tri, phi)
 
         # Interpolate between sigma levels
+        sigma_upper_level = self._interp_on_sigma_level(phi, host, zlayer)
+        sigma_lower_level = self._interp_on_sigma_level(phi, host, zlayer+1)
         sigma_fraction = interp.get_linear_fraction_safe(zpos, sigma_lower_level, sigma_upper_level)
+
         return interp.linear_interp(sigma_fraction, kh_lower_level, kh_upper_level) / (h + zeta)**2
 
     cpdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
