@@ -319,7 +319,31 @@ cdef class FVCOMDataReader(DataReader):
     cpdef DTYPE_INT_t find_zlayer(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
         DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
         DTYPE_INT_t guess):
-        pass
+        """ Find the host vertical layer
+        
+        Find the host sigma layer. Sigma levels are counted up from 0
+        starting at the surface and moving downwards. The current sigma layer is
+        found by determining the two sigma levels that bound the given z
+        position. Here, `guess' is ignored.
+        """
+        cdef DTYPE_FLOAT_t phi[N_VERTICES]
+
+        cdef DTYPE_FLOAT_t sigma_upper_level, sigma_lower_level
+
+        cdef DTYPE_INT_t k
+
+        # Compute barycentric coordinates for the given x/y coordinates
+        self._get_phi(xpos, ypos, host, phi)
+
+        # Loop over all levels to find the host z layer
+        for k in xrange(self._n_siglay):
+            sigma_upper_level = self._interp_on_sigma_level(phi, host, k)
+            sigma_lower_level = self._interp_on_sigma_level(phi, host, k+1)
+            
+            if zpos <= sigma_upper_level and zpos >= sigma_lower_level:
+                return k
+        
+        raise ValueError("Particle zpos (={}) not found!".format(zpos))
 
     cpdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos):
