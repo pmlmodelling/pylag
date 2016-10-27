@@ -6,6 +6,7 @@ from mpi4py import MPI
 from pylag.time_manager import TimeManager
 from pylag.particle_positions_reader import read_particle_initial_positions
 from pylag.netcdf_logger import NetCDFLogger
+from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 
 from pylag.parallel.model_factory import get_model
 
@@ -23,7 +24,7 @@ class TraceSimulator(Simulator):
     def __init__(self, config):
         # Configuration object
         self._config = config
-        
+
         # Time manager - for controlling time stepping etc
         self.time_manager = TimeManager(self._config)
     
@@ -35,7 +36,7 @@ class TraceSimulator(Simulator):
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
         size = comm.Get_size()
-        
+
         # Read in particle initial positions from file
         if rank == 0:
             # For logging
@@ -78,16 +79,16 @@ class TraceSimulator(Simulator):
         my_n_particles = comm.bcast(my_n_particles, root=0)
         
         # Local arrays for holding particle data
-        my_group_ids = np.empty(my_n_particles, dtype=np.int32)
-        my_x_positions = np.empty(my_n_particles, dtype=np.float32)
-        my_y_positions = np.empty(my_n_particles, dtype=np.float32)
-        my_z_positions = np.empty(my_n_particles, dtype=np.float32)
+        my_group_ids = np.empty(my_n_particles, dtype=DTYPE_INT)
+        my_x_positions = np.empty(my_n_particles, dtype=DTYPE_FLOAT)
+        my_y_positions = np.empty(my_n_particles, dtype=DTYPE_FLOAT)
+        my_z_positions = np.empty(my_n_particles, dtype=DTYPE_FLOAT)
 
         # Scatter particles across workers
         comm.Scatter(group_ids,my_group_ids,root=0)
         comm.Scatter(x_positions,my_x_positions,root=0)
         comm.Scatter(y_positions,my_y_positions,root=0)
-        comm.Scatter(z_positions,my_z_positions,root=0)   
+        comm.Scatter(z_positions,my_z_positions,root=0)
 
         # Display particle count if running in debug mode
         if self._config.get('GENERAL', 'log_level') == 'DEBUG':
@@ -101,7 +102,7 @@ class TraceSimulator(Simulator):
             # Set up data access for the new simulation
             self.model.setup_input_data_access(self.time_manager.datetime_start,
                                                self.time_manager.datetime_end)
-            
+
             # Read data into arrays
             self.model.read_input_data(self.time_manager.time)
             
