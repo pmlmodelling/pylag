@@ -2,6 +2,7 @@
 *.pyc
 *~
 *.c
+*.cpp
 *.html
 *.nc
 *.so
