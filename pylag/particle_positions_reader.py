@@ -1,6 +1,6 @@
 import numpy as np
 
-from data_types_python import DTYPE_INT, DTYPE_FLOAT
+from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 
 def read_particle_initial_positions(file_name):
     """
