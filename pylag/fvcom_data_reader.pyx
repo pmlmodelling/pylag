@@ -678,9 +678,12 @@ cdef class FVCOMDataReader(DataReader):
         # values at the host element's nodes
         cdef int i # Loop counters
         cdef int vertex # Vertex identifier
-        
-        # Time and sigma fractions for interpolation in time and sigma        
-        cdef DTYPE_FLOAT_t time_fraction, sigma_fraction
+
+        # Variables used in interpolation in time      
+        cdef DTYPE_FLOAT_t time_fraction
+
+        # Variables used in interpolation in z
+        cdef DTYPE_FLOAT_t sigma_fraction, sigma_lower_layer, sigma_upper_layer
         
         # Intermediate arrays - viscofh
         cdef DTYPE_FLOAT_t viscofh_tri_t_last_layer_1[N_VERTICES]
@@ -698,7 +701,7 @@ cdef class FVCOMDataReader(DataReader):
         self._get_phi(xpos, ypos, host, phi)
         
         # Set variables describing the position within the vertical grid
-        self._get_z_grid_position(zpos, host, phi, &z_grid_pos) 
+        self._get_z_grid_position(zpos, host, zlayer, phi, &z_grid_pos) 
 
         # Time fraction
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
@@ -745,9 +748,10 @@ cdef class FVCOMDataReader(DataReader):
             viscofh_layer_2 = interp.interpolate_within_element(viscofh_tri_layer_2, phi)
 
             # Vertical interpolation
-            sigma_fraction = interp.get_linear_fraction_safe(zpos, 
-                    z_grid_pos.sigma_lower_layer, 
-                    z_grid_pos.sigma_upper_layer)
+            sigma_lower_layer = self._interp_on_sigma_layer(phi, host, z_grid_pos.k_lower_layer)
+            sigma_upper_layer = self._interp_on_sigma_layer(phi, host, z_grid_pos.k_upper_layer)
+            sigma_fraction = interp.get_linear_fraction_safe(zpos, sigma_lower_layer, sigma_upper_layer)
+
             return interp.linear_interp(sigma_fraction, viscofh_layer_1, viscofh_layer_2)
 
     cpdef get_horizontal_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
@@ -1028,8 +1032,11 @@ cdef class FVCOMDataReader(DataReader):
         # Object describing a point's location within FVCOM's vertical grid. 
         cdef ZGridPosition z_grid_pos
          
-        # Time and sigma fractions for interpolation in time and sigma
-        cdef DTYPE_FLOAT_t time_fraction, sigma_fraction
+        # Variables used in interpolation in time      
+        cdef DTYPE_FLOAT_t time_fraction
+
+        # Variables used in interpolation in z
+        cdef DTYPE_FLOAT_t sigma_fraction, sigma_lower_layer, sigma_upper_layer
 
         # Array and loop indices
         cdef DTYPE_INT_t i, j, k, neighbour
@@ -1037,7 +1044,7 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_INT_t nbe_min
         
         # Set variables describing the position within the vertical grid
-        self._get_z_grid_position(zpos, host, phi, &z_grid_pos)
+        self._get_z_grid_position(zpos, host, zlayer, phi, &z_grid_pos)
 
         # Time fraction
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
@@ -1096,11 +1103,12 @@ cdef class FVCOMDataReader(DataReader):
             # ... upper bounding sigma layer
             up2 = interp.shepard_interpolation(xpos, ypos, xc, yc, uc2)
             vp2 = interp.shepard_interpolation(xpos, ypos, xc, yc, vc2)
-            
+
         # Vertical interpolation
-        sigma_fraction = interp.get_linear_fraction_safe(zpos,
-                z_grid_pos.sigma_lower_layer,
-                z_grid_pos.sigma_upper_layer)
+        sigma_lower_layer = self._interp_on_sigma_layer(phi, host, z_grid_pos.k_lower_layer)
+        sigma_upper_layer = self._interp_on_sigma_layer(phi, host, z_grid_pos.k_upper_layer)
+        sigma_fraction = interp.get_linear_fraction_safe(zpos, sigma_lower_layer, sigma_upper_layer)
+
         vel[0] = interp.linear_interp(sigma_fraction, up1, up2)
         vel[1] = interp.linear_interp(sigma_fraction, vp1, vp2)
         return
@@ -1176,8 +1184,11 @@ cdef class FVCOMDataReader(DataReader):
         # Object describing a point's location within FVCOM's vertical grid. 
         cdef ZGridPosition z_grid_pos
         
-        # Time and sigma fractions for interpolation in time and sigma
-        cdef DTYPE_FLOAT_t time_fraction, sigma_fraction
+        # Variables used in interpolation in time      
+        cdef DTYPE_FLOAT_t time_fraction
+
+        # Variables used in interpolation in z
+        cdef DTYPE_FLOAT_t sigma_fraction, sigma_lower_layer, sigma_upper_layer
 
         # Array and loop indices
         cdef DTYPE_INT_t i, j, k, neighbour
@@ -1185,7 +1196,7 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_INT_t nbe_min
 
         # Set variables describing the position within the vertical grid
-        self._get_z_grid_position(zpos, host, phi, &z_grid_pos)
+        self._get_z_grid_position(zpos, host, zlayer, phi, &z_grid_pos)
 
         # Time fraction
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
@@ -1238,9 +1249,10 @@ cdef class FVCOMDataReader(DataReader):
             vp2 = self._interpolate_vel_between_elements(xpos, ypos, host, vc2)
             
         # Vertical interpolation
-        sigma_fraction = interp.get_linear_fraction_safe(zpos,
-                z_grid_pos.sigma_lower_layer,
-                z_grid_pos.sigma_upper_layer)
+        sigma_lower_layer = self._interp_on_sigma_layer(phi, host, z_grid_pos.k_lower_layer)
+        sigma_upper_layer = self._interp_on_sigma_layer(phi, host, z_grid_pos.k_upper_layer)
+        sigma_fraction = interp.get_linear_fraction_safe(zpos, sigma_lower_layer, sigma_upper_layer)
+
         vel[0] = interp.linear_interp(sigma_fraction, up1, up2)
         vel[1] = interp.linear_interp(sigma_fraction, vp1, vp2)
         return
@@ -1596,12 +1608,12 @@ cdef class FVCOMDataReader(DataReader):
         return vel_elem[0] + dudx*rx + dudy*ry
 
     cdef void _get_z_grid_position(self, DTYPE_FLOAT_t zpos, DTYPE_INT_t host, 
-            DTYPE_FLOAT_t phi[N_VERTICES], ZGridPosition *z_grid_pos):
+            DTYPE_INT_t zlayer, DTYPE_FLOAT_t phi[N_VERTICES],
+            ZGridPosition *z_grid_pos):
         """ Find the sigma layers bounding the given z position.
         
         First check the upper and lower boundaries, then the centre of the 
-        water columnun. An exception is raised if the given z position is not 
-        found.
+        water columnun.
         
         Parameters:
         -----------
@@ -1610,6 +1622,9 @@ cdef class FVCOMDataReader(DataReader):
 
         host : int
             The host element.
+
+        zlayer : int
+            The host zlayer.
 
         phi : c array, float
             Barycentirc coordinates within the host element.
@@ -1620,42 +1635,30 @@ cdef class FVCOMDataReader(DataReader):
             Object describing the location of the given z position within 
             FVCOM's vertical grid.
         """
-        cdef DTYPE_INT_t k
-
         cdef DTYPE_FLOAT_t sigma_test
-        
-        # Try the top sigma layer
-        k = 0
-        sigma_test = self._interp_on_sigma_layer(phi, host, k)
-        if zpos >= sigma_test:
-            z_grid_pos.in_vertical_boundary_layer = True
-            z_grid_pos.k_boundary = k
-            
-            return
 
-        # ... try the bottom sigma layer
-        k = self._n_siglay - 1
-        sigma_test = self._interp_on_sigma_layer(phi, host, k)
-        if zpos <= sigma_test:
-            z_grid_pos.in_vertical_boundary_layer = True
-            z_grid_pos.k_boundary = k
+        # Use the value of sigma on the given z layer to determine if zpos
+        # lies below or above the mid-layer depth - this will determine which
+        # layers should be used for interpolation.
+        sigma_test = self._interp_on_sigma_layer(phi, host, zlayer)
 
-            return
-
-        # ... search the middle of the water column
-        for k in xrange(1, self._n_siglay):
-            sigma_test = self._interp_on_sigma_layer(phi, host, k)
-            if zpos >= sigma_test:
-                z_grid_pos.in_vertical_boundary_layer = False
-                z_grid_pos.k_lower_layer = k
-                z_grid_pos.k_upper_layer = k - 1
-
-                z_grid_pos.sigma_lower_layer = self._interp_on_sigma_layer(phi, host, z_grid_pos.k_lower_layer)
-                z_grid_pos.sigma_upper_layer = self._interp_on_sigma_layer(phi, host, z_grid_pos.k_upper_layer)
+        # Is zpos in the top or bottom boundary layer?
+        if (zlayer == 0 and zpos >= sigma_test) or (zlayer == self._n_siglay - 1 and zpos <= sigma_test):
+                z_grid_pos.in_vertical_boundary_layer = True
+                z_grid_pos.k_boundary = zlayer
 
                 return
 
-        raise ValueError("zpos (={}) not found!".format(zpos))
+        # zpos bounded by upper and lower sigma layers
+        z_grid_pos.in_vertical_boundary_layer = False
+        if zpos >= sigma_test:
+            z_grid_pos.k_upper_layer = zlayer - 1
+            z_grid_pos.k_lower_layer = zlayer
+        else:
+            z_grid_pos.k_upper_layer = zlayer
+            z_grid_pos.k_lower_layer = zlayer + 1
+
+        return
 
 cdef struct ZGridPosition:
     # Struct describing the location of a point within FVCOM's vertical grid.
@@ -1675,11 +1678,3 @@ cdef struct ZGridPosition:
     # Index of the layer lying directly above the given location. Only set
     # if the given location lies within the centre of the water column.    
     DTYPE_INT_t k_upper_layer
-
-    # Sigma on the layer lying directly below the given location. Only set
-    # if the given location lies within the centre of the water column.    
-    DTYPE_FLOAT_t sigma_lower_layer
-
-    # Sigma on the layer lying directly above the given location. Only set
-    # if the given location lies within the centre of the water column.    
-    DTYPE_FLOAT_t sigma_upper_layer
