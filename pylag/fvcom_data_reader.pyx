@@ -955,9 +955,9 @@ cdef class FVCOMDataReader(DataReader):
         zlayer_incremented = self.find_zlayer(time, xpos, ypos, zpos_incremented, host, zlayer)
 
         # Compute the gradient
-        k1 = self.get_vertical_eddy_diffusivity(time, xpos, ypos, zpos, host, zlayer)
-        k2 = self.get_vertical_eddy_diffusivity(time, xpos, ypos, zpos_incremented, host, zlayer_incremented)
-        k_prime = (k2 - k1) / zpos_increment
+        kh1 = self.get_vertical_eddy_diffusivity(time, xpos, ypos, zpos, host, zlayer)
+        kh2 = self.get_vertical_eddy_diffusivity(time, xpos, ypos, zpos_incremented, host, zlayer_incremented)
+        k_prime = (kh2 - kh1) / zpos_increment
 
         return k_prime
 
