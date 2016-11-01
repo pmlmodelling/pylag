@@ -35,6 +35,19 @@ cpdef get_barycentric_coords(x, y, x_tri, y_tri):
         phi_out[i] = phi_c[i]
     return phi_out
 
+cpdef shepard_interpolation(x, y, xpts, ypts, vals):
+    cdef DTYPE_FLOAT_t[N_NEIGH_ELEMS] xpts_c, ypts_c, vals_c
+    
+    if xpts.shape[0] != N_NEIGH_ELEMS or ypts.shape[0] != N_NEIGH_ELEMS or vals.shape[0] != N_NEIGH_ELEMS:
+        raise ValueError('1D arrays should be {} elements in length.'.format(N_NEIGH_ELEMS))
+
+    for i in xrange(N_NEIGH_ELEMS):
+        xpts_c[i] = xpts[i]
+        ypts_c[i] = ypts[i]   
+        vals_c[i] = vals[i]
+    
+    return interp.shepard_interpolation(x, y, xpts_c, ypts_c, vals_c)
+
 cpdef interpolate_within_element(var, phi):
     cdef DTYPE_FLOAT_t var_c[N_VERTICES]
     cdef DTYPE_FLOAT_t phi_c[N_VERTICES]
