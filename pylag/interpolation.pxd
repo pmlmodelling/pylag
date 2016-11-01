@@ -23,3 +23,7 @@ cpdef inline DTYPE_FLOAT_t linear_interp(DTYPE_FLOAT_t fraction,
 cdef inline DTYPE_FLOAT_t interpolate_within_element(DTYPE_FLOAT_t var[3], 
         DTYPE_FLOAT_t phi[3]):
     return var[0] + phi[0] * (var[1] - var[0]) + phi[1] * (var[2] - var[0])
+
+cpdef inline DTYPE_FLOAT_t get_euclidian_distance(DTYPE_FLOAT_t x1,
+        DTYPE_FLOAT_t y1, DTYPE_FLOAT_t x2, DTYPE_FLOAT_t y2):
+    return sqrt_c((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1))
