@@ -3,16 +3,7 @@ from matplotlib import pyplot as plt
 from ConfigParser import SafeConfigParser
 
 from pylag.analytic_data_reader import TestVelocityDataReader
-from pylag.particle import Particle
-from pylag.integrator import RK4Integrator3D
-from pylag.delta import Delta
-
-# Create test particle
-group_id = 0
-x_0 = 0.1
-y_0 = 0.1
-z_0 = 0.0
-test_particle = Particle(group_id, x_0, y_0, z_0)
+from pylag import cwrappers
 
 # Create data reader
 data_reader = TestVelocityDataReader()
@@ -23,36 +14,45 @@ time_end = 3.0
 time_step = 0.01
 time = np.arange(time_start,time_end,time_step)
 
-# Config - needed for creation of RK4Integrator3D
+
+# Config - needed for creation of the numerical integrator
 config = SafeConfigParser()
 config.add_section("SIMULATION")
-config.add_section("OCEAN_CIRCULATION_MODEL")
 config.set("SIMULATION", "time_step", str(time_step))
-config.set("OCEAN_CIRCULATION_MODEL", "zmin", str(0.0))
-config.set("OCEAN_CIRCULATION_MODEL", "zmax", str(0.0))
+config.set("SIMULATION", "num_integrator", "RK4_2D")
 
-# Num integrator
-rk4 = RK4Integrator3D(config)
+# Create test object
+test_num_integrator = cwrappers.TestRK4Integrator(config)
 
+# Arrays in which particle position data will be stored
 xpos_analytic = []
 ypos_analytic = []
 xpos_numeric = []
 ypos_numeric = []
 
-delta_X = Delta()
+# Initial position
+x_0 = 0.1
+y_0 = 0.1
+z_0 = 0.0
+
+# Initialse variables that will hold the position of the particle as calculated
+# by the chosen numerical integration scheme
+x_numeric = x_0
+y_numeric = y_0
+z_numeric = z_0
+
 for t in time:
-    xpos, ypos = data_reader.get_position_analytic(x_0, y_0, t)
-    xpos_analytic.append(xpos)
-    ypos_analytic.append(ypos)
+    # Compute and save position using analytic formulae
+    x_analytic, y_analytic = data_reader.get_position_analytic(x_0, y_0, t)
+    xpos_analytic.append(x_analytic)
+    ypos_analytic.append(y_analytic)
     
-    xpos_numeric.append(test_particle.xpos)
-    ypos_numeric.append(test_particle.ypos)
+    # Save position as computed by the numerical scheme
+    xpos_numeric.append(x_numeric)
+    ypos_numeric.append(y_numeric)
     
-    delta_X.reset()
-    rk4.advect(t, test_particle, data_reader, delta_X)
-    
-    test_particle.xpos += delta_X.x
-    test_particle.ypos += delta_X.y
+    # Advect the particle
+    x_numeric, y_numeric, z_numeric = test_num_integrator.advect(data_reader, t, x_numeric, y_numeric, z_numeric)
     
 xmin = np.min(xpos_analytic)
 xmax = np.max(xpos_analytic)
