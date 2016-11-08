@@ -120,8 +120,16 @@ cdef class TestDiffusivityDataReader(DataReader):
     cdef DTYPE_FLOAT_t _zmax
     
     def __init__(self, config):
-        self._zmin = config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmin')
-        self._zmax = config.getfloat('OCEAN_CIRCULATION_MODEL', 'zmax')
+        self._zmin = 0.0
+        self._zmax = 40.0
+
+    cpdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
+        DTYPE_FLOAT_t ypos):
+        return self._zmin
+
+    cpdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
+        DTYPE_FLOAT_t ypos):
+        return self._zmax
 
     cpdef DTYPE_INT_t find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, 
             DTYPE_INT_t guess):

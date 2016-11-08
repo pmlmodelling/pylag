@@ -10,6 +10,8 @@ import numpy as np
 
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 from integrator import get_num_integrator
+from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
+from random_walk import get_vertical_random_walk_model
 
 # PyLag cimports
 cimport pylag.interpolation as interp
@@ -17,6 +19,7 @@ from data_reader cimport DataReader
 from particle cimport Particle
 from delta cimport Delta, reset
 from integrator cimport NumIntegrator
+from random_walk cimport VerticalRandomWalk
 
 cpdef get_barycentric_coords(x, y, x_tri, y_tri):
     cdef DTYPE_FLOAT_t x_tri_c[N_VERTICES]
@@ -132,3 +135,58 @@ cdef class TestRK4Integrator:
 
         # Return the updated position
         return xpos_new, ypos_new, zpos_new
+
+cdef class TestVerticalRandomWalk:
+    """ Test class for vertical random walk models.
+    
+    Parameters:
+    -----------
+    config : SafeConfigParser
+        Configuration object.
+    """
+    cdef VerticalRandomWalk _vertical_random_walk
+    
+    def __init__(self, config):
+        
+        self._vertical_random_walk = get_vertical_random_walk_model(config)
+    
+    def random_walk(self, data_reader, time, xpos, ypos, zpos):
+        cdef Particle particle
+        cdef Delta delta_X
+
+        # Set these properties to default values
+        particle.group_id = 0
+        particle.host_horizontal_elem = 0
+        particle.host_z_layer = 0
+        particle.in_domain = True
+
+        # Initialise remaining particle properties using the supplied arguments
+        particle.xpos = xpos
+        particle.ypos = ypos
+        particle.zpos = zpos
+        
+        # Reset Delta object
+        reset(&delta_X)
+        
+        # Advect the particle
+        self._vertical_random_walk.random_walk(time, &particle, data_reader, &delta_X)
+
+        # Apply reflecting surface/bottom boundary conditions
+        zmin = data_reader.get_zmin(time, 0.0, 0.0)
+        zmax = data_reader.get_zmax(time, 0.0, 0.0)
+        if zpos < zmin:
+            zpos = zmin + zmin - zpos
+        elif zpos > zmax:
+            zpos = zmax + zmax - zpos
+
+        # Check for valid zpos
+        if zpos < zmin:
+            raise ValueError("New zpos (= {}) lies below the sea floor.".format(zpos))
+        elif zpos > zmax:
+            raise ValueError("New zpos (= {}) lies above the free surface.".format(zpos))          
+
+        # Use Delta values to update the particle's position
+        zpos_new = particle.zpos + delta_X.z
+
+        # Return the updated position
+        return zpos_new
