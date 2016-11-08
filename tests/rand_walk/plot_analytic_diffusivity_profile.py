@@ -20,6 +20,7 @@ t = 0.0
 xpos = 0.0
 ypos = 0.0
 host = 0
+zlayer = 0
 
 # Define a range of z values (measured as height above the sea bed)
 zmin = 0.0
@@ -45,7 +46,7 @@ K = np.empty_like(z)
 
 # Compute K
 for i, zpos in enumerate(z):
-    K[i] = data_reader.get_vertical_eddy_diffusivity(t, xpos, ypos, zpos, host)
+    K[i] = data_reader.get_vertical_eddy_diffusivity(t, xpos, ypos, zpos, host, zlayer)
 
 # Plot
 plt.figure()
