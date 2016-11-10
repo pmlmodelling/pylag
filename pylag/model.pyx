@@ -30,7 +30,7 @@ cdef class OPTModel:
     def seed(self, time):
         pass
     
-    def update(self, time):
+    cpdef update(self, DTYPE_FLOAT_t time):
         pass
     
     def get_diagnostics(self, time):
@@ -231,7 +231,7 @@ cdef class FVCOMOPTModel(OPTModel):
             logger = logging.getLogger(__name__)
             logger.info('{} of {} particles are located in the model domain.'.format(particles_in_domain, len(self.particle_seed_smart_ptrs)))
 
-    def update(self, DTYPE_FLOAT_t time):
+    cpdef update(self, DTYPE_FLOAT_t time):
         """ Compute and update each particle's position.
         
         Compute the net effect of resolved and unresolved processes on particle
@@ -530,7 +530,7 @@ cdef class GOTMOPTModel(OPTModel):
             particle_seed_smart_ptr = ParticleSmartPtr(group, x, y, sigma, host, z_layer, in_domain)
             self.particle_seed_smart_ptrs.append(particle_seed_smart_ptr)
 
-    def update(self, DTYPE_FLOAT_t time):
+    cpdef update(self, DTYPE_FLOAT_t time):
         """ Compute and update each particle's position.
         
         Reflecting boundary conditions are applied at the bottom and surface
