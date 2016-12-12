@@ -112,7 +112,7 @@ class TraceSimulator(Simulator):
             if rank == 0:
                 # Data logger on the root process
                 file_name = ''.join([self._config.get('GENERAL', 'output_file'), '_{}'.format(self.time_manager.current_release)])
-                start_datetime = self._config.get("SIMULATION", "start_datetime")
+                start_datetime = self.time_manager.datetime_start
                 self.data_logger = NetCDFLogger(file_name, start_datetime, n_particles)
 
                 # Write particle group ids to file
@@ -131,6 +131,10 @@ class TraceSimulator(Simulator):
                     particle_diagnostics = self.model.get_diagnostics(self.time_manager.time)
                     self._record(self.time_manager.time, particle_diagnostics)
                 self.model.read_input_data(self.time_manager.time)
+
+            # Close the current data logger
+            if rank == 0:
+                self.data_logger.close()
 
     def _record(self, time, diags):
         # MPI objects and variables
