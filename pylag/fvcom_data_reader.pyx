@@ -140,7 +140,7 @@ cdef class FVCOMDataReader(DataReader):
             self.mediator.update_reading_frames(time)
             self._read_time_dependent_vars()
 
-    cpdef DTYPE_INT_t find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos,
+    cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos,
             DTYPE_INT_t guess):
         """ Returns the host horizontal element.
         

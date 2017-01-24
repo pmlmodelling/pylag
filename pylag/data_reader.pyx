@@ -8,7 +8,7 @@ cdef class DataReader:
     cpdef read_data(self, DTYPE_FLOAT_t time):
         pass
 
-    cpdef DTYPE_INT_t find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos,
+    cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos,
             DTYPE_INT_t guess):
         pass
 
