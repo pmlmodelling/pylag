@@ -175,8 +175,8 @@ cdef class FVCOMOPTModel(OPTModel):
             # Find particle host element
             if guess is not None:
                 # Try a local search first
-                host_horizontal_elem = self.data_reader.find_host_using_local_search(x, y, guess)
-                if host_horizontal_elem < 0:
+                flag, host_horizontal_elem = self.data_reader.find_host_using_local_search(x, y, guess)
+                if flag < 0:
                     # Local search failed - try a global search
                     host_horizontal_elem = self.data_reader.find_host_using_global_search(x, y)
             else:
@@ -263,7 +263,7 @@ cdef class FVCOMOPTModel(OPTModel):
         cdef DTYPE_FLOAT_t zmin, zmax
         cdef Delta delta_X
         cdef Particle* particle_ptr
-        cdef DTYPE_INT_t host, host_err
+        cdef DTYPE_INT_t flag, host, host_err
         cdef DTYPE_INT_t i, n_particles
         
         # Cycle over the particle set, updating the position of only those
@@ -299,13 +299,13 @@ cdef class FVCOMOPTModel(OPTModel):
                 xpos = particle_ptr.xpos + delta_X.x
                 ypos = particle_ptr.ypos + delta_X.y
                 zpos = particle_ptr.zpos + delta_X.z
-                host = self.data_reader.find_host(xpos, ypos, particle_ptr.host_horizontal_elem)
+                flag, host = self.data_reader.find_host(xpos, ypos, particle_ptr.host_horizontal_elem)
               
                 # If the particle still resides in the domain update its
                 # position. If the particle has crossed a land boundary arrest
                 # its position. If it has crossed an open boundary flag it as
                 # having left the model domain.
-                if host >= 0:
+                if flag == 0:
                     # Apply reflecting surface/bottom boundary conditions
                     zmin = self.data_reader.get_zmin(time, xpos, ypos)
                     zmax = self.data_reader.get_zmax(time, xpos, ypos)
@@ -331,10 +331,10 @@ cdef class FVCOMOPTModel(OPTModel):
                     particle_ptr.zpos = zpos
                     particle_ptr.host_horizontal_elem = host
                     particle_ptr.host_z_layer = host_z_layer
-                elif host == -1:
-                    # Land boundary crossed - do nothing.
+                elif flag == -1:
+                    # Land boundary crossed - do nothing for now.
                     continue
-                elif host == -2:
+                elif flag == -2:
                     # Open boundary crossed - flag as having left the domain.
                     particle_ptr.in_domain = False
                     continue

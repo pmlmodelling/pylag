@@ -163,11 +163,11 @@ cdef class FVCOMDataReader(DataReader):
         host : int
             ID of the host horizontal element.
         """
-        cdef DTYPE_INT_t host
+        cdef DTYPE_INT_t flag, host
         
-        host = self.find_host_using_local_search(xpos, ypos, guess)
+        flag, host = self.find_host_using_local_search(xpos, ypos, guess)
         
-        return host
+        return flag, host
 #
 #        if host >= 0:
 #            return host
@@ -189,12 +189,32 @@ cdef class FVCOMDataReader(DataReader):
 #                return host
 
     cpdef find_host_using_local_search(self, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos, DTYPE_INT_t guess):
+            DTYPE_FLOAT_t ypos, DTYPE_INT_t first_guess):
         """ Returns the host horizontal element through local searching.
         
         Use a local search for the host horizontal element in which the next
         element to be search is determined by the barycentric coordinates of
-        the last. A return value < 0 indicates the search algorithm failed.
+        the last.
+        
+        Two variables are returned. The first is a flag that indicates whether
+        or not the search was successful, the second gives either the host
+        element or the last element searched before exiting the domain.
+        
+        Conventions
+        -----------
+        flag = 0:
+            This indicates that the particle was found successfully. Host is
+            is the index of the new host element.
+        
+        flag = -1:
+            This indicates that the particle exited the domain across a land
+            boundary. Host is set to the last element the particle passed
+            through before exiting the domain.
+
+        flag = -2:
+            This indicates that the particle exited the domain across an open
+            boundary. Host is set to the last element the particle passed
+            through before exiting the domain.
         
         Parameters:
         -----------
@@ -204,13 +224,16 @@ cdef class FVCOMDataReader(DataReader):
         ypos : float
             y-position
         
-        guess : int
+        first_guess : int
             First element to try during the search.
         
         Returns:
         --------
-        host : int
-            ID of the host horizontal element.
+        flag : int
+            Integer flag that indicates whether or not the seach was successful.
+
+        guess : int
+            ID of the host horizontal element or the last element searched.
         """
         # Intermediate arrays/variables
         cdef DTYPE_FLOAT_t phi[N_VERTICES]
@@ -219,8 +242,11 @@ cdef class FVCOMDataReader(DataReader):
         cdef bint host_found
 
         cdef DTYPE_INT_t n_host_land_boundaries
+        
+        cdef DTYPE_INT_t flag, last_guess, guess
 
         # Check for non-sensical start points.
+        guess = first_guess
         if guess < 0:
             raise ValueError('Invalid start point for local host element '\
                     'search. Start point = {}'.format(guess))
@@ -240,7 +266,7 @@ cdef class FVCOMDataReader(DataReader):
                     logger = logging.getLogger(__name__)
                     logger.warning('EPSILON applied during local host element search.')
                 host_found = True
-            
+
             # If the particle has walked into an element with two land
             # boundaries flag it as having moved outside of the domain - ideally
             # unstructured grids should not include such elements.
@@ -249,28 +275,40 @@ cdef class FVCOMDataReader(DataReader):
                 for i in xrange(3):
                     if self._nbe[i,guess] == -1:
                         n_host_land_boundaries += 1
-                
+
                 if n_host_land_boundaries < 2:
-                    return guess
+                    # Normal element
+                    flag = 0
+                    return flag, guess
                 else:
+                    # Element has two land boundaries - mark as land and
+                    # return the last element searched
                     if self.config.getboolean('GENERAL', 'full_logging'):
                         logger = logging.getLogger(__name__)
                         logger.warning('Particle prevented from entering '\
                             'element {} which has two land '\
-                            'boundaries.'.format(guess))    
-                    return -1
+                            'boundaries.'.format(guess))
+                    flag = -1
+                return flag, last_guess 
 
             # If not, use phi to select the next element to be searched
+            last_guess = guess
             if phi[0] == phi_test:
-                guess = self._nbe[0,guess]
+                guess = self._nbe[0,last_guess]
             elif phi[1] == phi_test:
-                guess = self._nbe[1,guess]
+                guess = self._nbe[1,last_guess]
             else:
-                guess = self._nbe[2,guess]
+                guess = self._nbe[2,last_guess]
 
-            if guess < 0:
-                # Local search failed
-                return guess
+            # Check for boundary crossings
+            if guess == -1:
+                # Land boundary crossed
+                flag = -1
+                return flag, last_guess
+            elif guess == -2:
+                # Open ocean boundary crossed
+                flag = -2
+                return flag, last_guess
 
     cpdef find_host_using_global_search(self, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos):

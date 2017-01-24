@@ -73,7 +73,7 @@ cdef class RK4Integrator2D(NumIntegrator):
         
         # Temporary containers
         cdef DTYPE_FLOAT_t t, xpos, ypos, zpos
-        cdef DTYPE_INT_t host, zlayer
+        cdef DTYPE_INT_t flag, host, zlayer
 
         # Array indices/loop counters
         cdef DTYPE_INT_t ndim = 2
@@ -95,9 +95,9 @@ cdef class RK4Integrator2D(NumIntegrator):
         xpos = particle.xpos + 0.5 * k1[0]
         ypos = particle.ypos + 0.5 * k1[1]
         
-        host = data_reader.find_host(xpos, ypos, host)
+        flag, host = data_reader.find_host(xpos, ypos, host)
+        if flag < 0: return flag
         zlayer = data_reader.find_zlayer(t, xpos, ypos, zpos, host, zlayer)
-        if host < 0: return host
         data_reader.get_horizontal_velocity(t, xpos, ypos, zpos, host, zlayer, vel) 
         for i in xrange(ndim):
             k2[i] = self._time_step * vel[i]
@@ -107,9 +107,9 @@ cdef class RK4Integrator2D(NumIntegrator):
         xpos = particle.xpos + 0.5 * k2[0]
         ypos = particle.ypos + 0.5 * k2[1]
         
-        host = data_reader.find_host(xpos, ypos, host)
+        flag, host = data_reader.find_host(xpos, ypos, host)
+        if flag < 0: return flag
         zlayer = data_reader.find_zlayer(t, xpos, ypos, zpos, host, zlayer)
-        if host < 0: return host
         data_reader.get_horizontal_velocity(t, xpos, ypos, zpos, host, zlayer, vel) 
         for i in xrange(ndim):
             k3[i] = self._time_step * vel[i]
@@ -119,9 +119,9 @@ cdef class RK4Integrator2D(NumIntegrator):
         xpos = particle.xpos + k3[0]
         ypos = particle.ypos + k3[1]
 
-        host = data_reader.find_host(xpos, ypos, host)
+        flag, host = data_reader.find_host(xpos, ypos, host)
+        if flag < 0: return flag
         zlayer = data_reader.find_zlayer(t, xpos, ypos, zpos, host, zlayer)
-        if host < 0: return host
         data_reader.get_horizontal_velocity(t, xpos, ypos, zpos, host, zlayer, vel)
         for i in xrange(ndim):
             k4[i] = self._time_step * vel[i]
@@ -130,7 +130,7 @@ cdef class RK4Integrator2D(NumIntegrator):
         delta_X.x += (k1[0] + 2.0*k2[0] + 2.0*k3[0] + k4[0])/6.0
         delta_X.y += (k1[1] + 2.0*k2[1] + 2.0*k3[1] + k4[1])/6.0
     
-        return 0
+        return flag
 
 cdef class RK4Integrator3D(NumIntegrator):
     """ 3D Fourth Order Runga Kutta numerical integration scheme.
@@ -187,7 +187,7 @@ cdef class RK4Integrator3D(NumIntegrator):
         
         # Temporary containers
         cdef DTYPE_FLOAT_t t, xpos, ypos, zpos
-        cdef DTYPE_INT_t host, zlayer
+        cdef DTYPE_INT_t flag, host, zlayer
         cdef DTYPE_FLOAT_t zmin, zmax
 
         # Array indices/loop counters
@@ -219,9 +219,9 @@ cdef class RK4Integrator3D(NumIntegrator):
         elif zpos > zmax:
             zpos = zmax + zmax - zpos
         
-        host = data_reader.find_host(xpos, ypos, host)
+        flag, host = data_reader.find_host(xpos, ypos, host)
+        if flag < 0: return flag
         zlayer = data_reader.find_zlayer(t, xpos, ypos, zpos, host, zlayer)
-        if host < 0: return host
         data_reader.get_velocity(t, xpos, ypos, zpos, host, zlayer, vel) 
         for i in xrange(ndim):
             k2[i] = self._time_step * vel[i]
@@ -240,9 +240,9 @@ cdef class RK4Integrator3D(NumIntegrator):
         elif zpos > zmax:
             zpos = zmax + zmax - zpos
         
-        host = data_reader.find_host(xpos, ypos, host)
+        flag, host = data_reader.find_host(xpos, ypos, host)
+        if flag < 0: return flag
         zlayer = data_reader.find_zlayer(t, xpos, ypos, zpos, host, zlayer)
-        if host < 0: return host
         data_reader.get_velocity(t, xpos, ypos, zpos, host, zlayer, vel) 
         for i in xrange(ndim):
             k3[i] = self._time_step * vel[i]
@@ -261,9 +261,9 @@ cdef class RK4Integrator3D(NumIntegrator):
         elif zpos > zmax:
             zpos = zmax + zmax - zpos
 
-        host = data_reader.find_host(xpos, ypos, host)
+        flag, host = data_reader.find_host(xpos, ypos, host)
+        if flag < 0: return flag
         zlayer = data_reader.find_zlayer(t, xpos, ypos, zpos, host, zlayer)
-        if host < 0: return host
         data_reader.get_velocity(t, xpos, ypos, zpos, host, zlayer, vel) 
         for i in xrange(ndim):
             k4[i] = self._time_step * vel[i]
@@ -273,7 +273,7 @@ cdef class RK4Integrator3D(NumIntegrator):
         delta_X.y += (k1[1] + 2.0*k2[1] + 2.0*k3[1] + k4[1])/6.0
         delta_X.z += (k1[2] + 2.0*k2[2] + 2.0*k3[2] + k4[2])/6.0
 
-        return 0
+        return flag
 
 def get_num_integrator(config):
     if not config.has_option("SIMULATION", "num_integrator"):
