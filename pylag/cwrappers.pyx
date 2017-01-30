@@ -15,12 +15,27 @@ from pylag.integrator import get_num_integrator
 from pylag.random_walk import get_vertical_random_walk_model
 
 # PyLag cimports
+cimport pylag.math as math
 cimport pylag.interpolation as interp
 from pylag.data_reader cimport DataReader
 from pylag.particle cimport Particle
 from pylag.delta cimport Delta, reset
 from pylag.integrator cimport NumIntegrator
 from pylag.random_walk cimport VerticalRandomWalk
+
+def det_wrapper(a, b):
+    cdef DTYPE_FLOAT_t a_c[2]
+    cdef DTYPE_FLOAT_t b_c[2]
+    a_c[:] = a[:]
+    b_c[:] = b[:]
+    return math.det(a_c, b_c)
+
+def inner_product_wrapper(a, b):
+    cdef DTYPE_FLOAT_t a_c[2]
+    cdef DTYPE_FLOAT_t b_c[2]
+    a_c[:] = a[:]
+    b_c[:] = b[:]
+    return math.inner_product(a_c, b_c)
 
 cpdef get_barycentric_coords(x, y, x_tri, y_tri):
     cdef DTYPE_FLOAT_t x_tri_c[N_VERTICES]
