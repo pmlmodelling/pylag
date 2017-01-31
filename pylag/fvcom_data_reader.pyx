@@ -536,6 +536,92 @@ cdef class FVCOMDataReader(DataReader):
 
         raise ValueError('Point ({}, {}) is not in the model domain.'.format(xpos, ypos))
 
+    cpdef get_boundary_intersection(self, DTYPE_FLOAT_t xpos_old,
+        DTYPE_FLOAT_t ypos_old, DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new,
+        DTYPE_INT_t last_host):
+        """ Find the boundary intersection point
+
+        This function is primarily intended to assist in the application of 
+        horizontal boundary conditions where it is often necessary to establish
+        the point on a side of an element at which particle crossed before
+        exiting the model domain.
+        
+        Parameters:
+        -----------
+        xpos_old : float
+            x-position at the last time point.
+
+        ypos_old : float
+            y-position at the next time point.
+
+        xpos_new : float
+            x-position at the next time point that lies outside of the domain.
+
+        ypos_new : float
+            y-position at the next time point that lies outside of the domain.      
+        
+        last_host : int
+            The last element the particle passed through before exiting the
+            domain.
+        
+        Returns:
+        --------
+        x1, y1, x2, y2, xi, yi :  float
+            The end coordinates of the line segment (side) and the intersection
+            point.
+        """
+        cdef int i # Loop counter
+        cdef int vertex # Vertex identifier
+
+        # Intermediate arrays/variables
+        cdef DTYPE_FLOAT_t x_tri[N_VERTICES]
+        cdef DTYPE_FLOAT_t y_tri[N_VERTICES]
+
+        # 2D position vectors for the end points of the element's side
+        cdef DTYPE_FLOAT_t x1[2]
+        cdef DTYPE_FLOAT_t x2[2]
+        
+        # 2D position vectors for the particle's previous and new position
+        cdef DTYPE_FLOAT_t x3[2]
+        cdef DTYPE_FLOAT_t x4[2]
+        
+        # 2D position vector for the intersection point
+        cdef DTYPE_FLOAT_t xi[2]
+
+        # Intermediate arrays
+        cdef DTYPE_INT_t x1_indices[3]
+        cdef DTYPE_INT_t x2_indices[3]
+        cdef DTYPE_INT_t nbe_indices[3]
+        
+        x1_indices = [0,1,2]
+        x2_indices = [1,2,0]
+        nbe_indices = [1,2,0]
+        
+        # Construct arrays to hold the coordinates of the particle's previous
+        # position vector and its new position vector
+        x3[0] = xpos_old; x3[1] = ypos_old
+        x4[0] = xpos_new; x4[1] = ypos_new
+
+        # Extract nodal coordinates
+        for i in xrange(3):
+            vertex = self._nv[i,last_host]
+            x_tri[i] = self._x[vertex]
+            y_tri[i] = self._y[vertex]
+
+        # Loop over all sides of the element to check for crossings
+        for x1_idx, x2_idx, nbe_idx in zip(x1_indices, x2_indices, nbe_indices):
+            # End coordinates for the side
+            x1[0] = x_tri[x1_idx]; x1[1] = y_tri[x1_idx]
+            x2[0] = x_tri[x2_idx]; x2[1] = y_tri[x2_idx]
+            
+            try:
+                get_intersection_point(x1, x2, x3, x4, xi)
+                return x1[0], x1[1], x2[0], x2[1], xi[0], xi[1]
+            except ValueError:
+                continue
+        
+        raise RuntimeError('Particle path does not intersect any side of the given element.')
+
     cpdef DTYPE_INT_t find_zlayer(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
         DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
         DTYPE_INT_t guess):

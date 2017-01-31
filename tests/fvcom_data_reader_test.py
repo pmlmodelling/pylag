@@ -89,6 +89,30 @@ class FVCOMDataReader_test(TestCase):
         test.assert_equal(flag, -1)
         test.assert_equal(host, 0)
 
+    def test_get_boundary_intersection_x2x0(self):
+        xpos_old = 369208.8125 # Centroid of element 1 (x coordinate)
+        ypos_old = 5323103.0 # Centroid of element 1 (y coordinate)
+        xpos_new = 370267.0 # Point outside element (x coordinate)
+        ypos_new = 5324350.0 # Point outside element (y coordinate)
+        last_host = 1
+        x1, y1, x2, y2, xi, yi = self.data_reader.get_boundary_intersection(xpos_old, ypos_old, xpos_new, ypos_new, last_host)
+        test.assert_almost_equal(x1, 370100.0)
+        test.assert_almost_equal(y1, 5325070.0)
+        test.assert_almost_equal(x2, 370395.625)
+        test.assert_almost_equal(y2, 5321986.5)
+
+    def test_get_boundary_intersection_x0x1(self):
+        xpos_old = 369208.8125 # Centroid of element 1 (x coordinate)
+        ypos_old = 5323103.0 # Centroid of element 1 (y coordinate)
+        xpos_new = 368802.0 # Point outside element (x coordinate)
+        ypos_new = 5321920.0 # Point outside element (y coordinate)
+        last_host = 1
+        x1, y1, x2, y2, xi, yi = self.data_reader.get_boundary_intersection(xpos_old, ypos_old, xpos_new, ypos_new, last_host)
+        test.assert_almost_equal(x1, 370395.625)
+        test.assert_almost_equal(y1, 5321986.5)
+        test.assert_almost_equal(x2, 367130.84375)
+        test.assert_almost_equal(y2, 5322253.0)
+
     def test_get_bathymetry(self):
         xpos = 365751.7
         ypos = 5323568.0
