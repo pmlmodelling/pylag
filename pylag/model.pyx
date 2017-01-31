@@ -299,7 +299,8 @@ cdef class FVCOMOPTModel(OPTModel):
                 xpos = particle_ptr.xpos + delta_X.x
                 ypos = particle_ptr.ypos + delta_X.y
                 zpos = particle_ptr.zpos + delta_X.z
-                flag, host = self.data_reader.find_host(xpos, ypos, particle_ptr.host_horizontal_elem)
+                flag, host = self.data_reader.find_host(particle_ptr.xpos,
+                        particle_ptr.ypos, xpos, ypos, particle_ptr.host_horizontal_elem)
               
                 # If the particle still resides in the domain update its
                 # position. If the particle has crossed a land boundary arrest

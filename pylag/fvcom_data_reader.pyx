@@ -21,7 +21,7 @@ from data_reader cimport DataReader
 
 cimport interpolation as interp
 
-from math cimport int_min, float_min
+from pylag.math cimport int_min, float_min, get_intersection_point
 
 cdef class FVCOMDataReader(DataReader):
     """ DataReader for FVCOM.
@@ -140,53 +140,75 @@ cdef class FVCOMDataReader(DataReader):
             self.mediator.update_reading_frames(time)
             self._read_time_dependent_vars()
 
-    cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos,
-            DTYPE_INT_t guess):
+    cpdef find_host(self, DTYPE_FLOAT_t xpos_old, DTYPE_FLOAT_t ypos_old,
+            DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new, DTYPE_INT_t guess):
         """ Returns the host horizontal element.
         
-        For now, this method is basicaly a wrapper for the local search
-        algorithm `find_element_using_local_search'.
+        This function first tries to find the new host horizontal element using
+        a local search algorithm based on the new point's barycentric
+        coordinates. This is relatively fast. However, it can incorrectly flag
+        that a particle has left the domain when in-fact it hasn't. For this
+        reason, when the local host element search indicates that a particle
+        has left the domain, a check is performed based on the particle's
+        pathline - if this crosses a known boundary, the particle is deemed
+        to have left the domain.
+
+        Two variables are returned. The first is a flag that indicates whether
+        or not the particle remains in the domain; the second gives either the
+        host element or the last element the particle passed through before
+        exiting the domain.
+        
+        Conventions
+        -----------
+        flag = 0:
+            This indicates that the particle was found successfully. Host is the
+            index of the new host element.
+        
+        flag = -1:
+            This indicates that the particle exited the domain across a land
+            boundary. Host is set to the last element the particle passed
+            through before exiting the domain.
+
+        flag = -2:
+            This indicates that the particle exited the domain across an open
+            boundary. Host is set to the last element the particle passed
+            through before exiting the domain.
         
         Parameters:
         -----------
-        xpos : float
-            x-position.
+        xpos_old : float
+            Old x-position.
 
-        ypos : float
-            y-position
+        ypos_old : float
+            Old y-position
+
+        xpos_new : float
+            New x-position.
+
+        ypos_new : float
+            New y-position
         
         guess : int
-            First element to try try during the search.
+            First element to try during the search.
         
         Returns:
         --------
         host : int
-            ID of the host horizontal element.
+            ID of the new host horizontal element or the last element the
+            particle passed through before exiting the domain.
         """
         cdef DTYPE_INT_t flag, host
         
-        flag, host = self.find_host_using_local_search(xpos, ypos, guess)
+        flag, host = self.find_host_using_local_search(xpos_new, ypos_new,
+                guess)
+        
+        if flag < 0:
+            # Local search failed to find the particle. Perform check to see if
+            # the particle has indeed left the model domain
+            flag, host = self.find_host_using_particle_tracing(xpos_old,
+                    ypos_old, xpos_new, ypos_new, guess)
         
         return flag, host
-#
-#        if host >= 0:
-#            return host
-#        else:
-#            # Local search failed
-#            try:
-#                return self.find_host_using_global_search(xpos, ypos)
-#                if self.config.getboolean('GENERAL', 'full_logging'):
-#                    logger = logging.getLogger(__name__)
-#                    logger.info('Particle found through global searching.')
-#            except ValueError as ve:
-#                if self.config.getboolean('GENERAL', 'full_logging'):
-#                    logger = logging.getLogger(__name__)
-#                    logger.warning(ve.message)
-#                    logger.warning('Global host element search failed. Local '\
-#                        'searching yielded a host value of {}. A value of -1 '\
-#                        'suggests a land boundary crossing, a value of -2 '\
-#                        'an open boundary crossing.'.format(host))
-#                return host
 
     cpdef find_host_using_local_search(self, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos, DTYPE_INT_t first_guess):
@@ -309,6 +331,166 @@ cdef class FVCOMDataReader(DataReader):
                 # Open ocean boundary crossed
                 flag = -2
                 return flag, last_guess
+
+    cpdef find_host_using_particle_tracing(self, DTYPE_FLOAT_t xpos_old,
+        DTYPE_FLOAT_t ypos_old, DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new,
+        DTYPE_INT_t last_host):
+        """ Try to find the new host element using the particle's pathline
+        
+        The algorithm navigates between elements by finding the exit point
+        of the pathline from each element. If the pathline terminates within
+        a valid host element, the index of the new host element is returned
+        along with a flag indicating that a valid host element was successfully
+        found. If the pathline crosses a model boundary, the last element the
+        particle passed through before exiting the domain is returned along
+        with a flag indicating the type of boundary crossed. Flag conventions
+        are the same as those applied in local host element searching.
+
+        Conventions
+        -----------
+        flag = 0:
+            This indicates that the particle was found successfully. Host is the
+            index of the new host element.
+        
+        flag = -1:
+            This indicates that the particle exited the domain across a land
+            boundary. Host is set to the last element the particle passed
+            through before exiting the domain.
+
+        flag = -2:
+            This indicates that the particle exited the domain across an open
+            boundary. Host is set to the last element the particle passed
+            through before exiting the domain.
+
+        Parameters:
+        -----------
+        xpos_old : float
+            x-position at the last time point.
+
+        ypos_old : float
+            y-position at the next time point.
+
+        xpos_new : float
+            x-position at the last time point.
+
+        ypos_new : float
+            y-position at the next time point.        
+        
+        last_host : int
+            Element to use when computing the particle's barycentric coordinates
+        
+        Returns:
+        --------
+        flag : int
+            Integer flag that indicates whether or not the seach was successful.
+
+        host : int
+            ID of the host horizontal element or the last element searched.
+        """
+        cdef int i # Loop counter
+        cdef int vertex # Vertex identifier
+        cdef DTYPE_INT_t elem, last_elem, current_elem # Element identifies
+        cdef DTYPE_INT_t flag, host
+
+        # Intermediate arrays/variables
+        cdef DTYPE_FLOAT_t x_tri[N_VERTICES]
+        cdef DTYPE_FLOAT_t y_tri[N_VERTICES]
+
+        # 2D position vectors for the end points of the element's side
+        cdef DTYPE_FLOAT_t x1[2]
+        cdef DTYPE_FLOAT_t x2[2]
+        
+        # 2D position vectors for the particle's previous and new position
+        cdef DTYPE_FLOAT_t x3[2]
+        cdef DTYPE_FLOAT_t x4[2]
+        
+        # 2D position vector for the intersection point
+        cdef DTYPE_FLOAT_t xi[2]
+
+        # Intermediate arrays
+        cdef DTYPE_INT_t x1_indices[3]
+        cdef DTYPE_INT_t x2_indices[3]
+        cdef DTYPE_INT_t nbe_indices[3]
+        
+        x1_indices = [0,1,2]
+        x2_indices = [1,2,0]
+        nbe_indices = [1,2,0]
+        
+        # Construct arrays to hold the coordinates of the particle's previous
+        # position vector and its new position vector
+        x3[0] = xpos_old; x3[1] = ypos_old
+        x4[0] = xpos_new; x4[1] = ypos_new
+
+        # Start the search using the host known to contain (xpos_old, ypos_old)
+        elem = last_host
+        
+        # Set last_elem equal to elem in the first instance
+        last_elem = elem
+
+        while True:
+            # Extract nodal coordinates
+            for i in xrange(3):
+                vertex = self._nv[i,elem]
+                x_tri[i] = self._x[vertex]
+                y_tri[i] = self._y[vertex]
+
+            # This keeps track of the element currently being checked
+            current_elem = elem
+
+            # Loop over all sides of the element to check for crossings
+            for x1_idx, x2_idx, nbe_idx in zip(x1_indices, x2_indices, nbe_indices):
+
+                # Test to avoid checking the side the pathline just crossed
+                if last_elem == self._nbe[nbe_idx, elem]:
+                    continue
+            
+                # End coordinates for the side
+                x1[0] = x_tri[x1_idx]; x1[1] = y_tri[x1_idx]
+                x2[0] = x_tri[x2_idx]; x2[1] = y_tri[x2_idx]
+                
+                try:
+                    get_intersection_point(x1, x2, x3, x4, xi)
+                except ValueError:
+                    # Lines do not intersect - check the next one
+                    continue
+
+                # Intersection found - keep a record of the last element checked
+                last_elem = elem
+
+                # Index for the neighbour element
+                elem = self._nbe[nbe_idx, elem]
+
+                # Check to see if the pathline has exited the domain
+                if elem >= 0:
+                    # Treat elements with two boundaries as land (i.e. set
+                    # `flag' equal to -1) and return the last element checked
+                    n_host_boundaries = 0
+                    for i in xrange(3):
+                        if self._nbe[i,elem] == -1:
+                            n_host_boundaries += 1
+                    if n_host_boundaries == 2:
+                        flag = -1
+                        return flag, last_elem
+                    else:
+                        # Intersection found but the pathline has not exited the
+                        # domain
+                        break
+                else:
+                    # Particle has crossed a boundary
+                    if elem == -1:
+                        # Land boundary crossed
+                        flag = -1
+                        return flag, last_elem
+                    elif elem == -2:
+                        # Open ocean boundary crossed
+                        flag = -2
+                        return flag, last_elem
+
+            if current_elem == elem:
+                # Particle has not exited the current element meaning it must
+                # still reside in the domain
+                flag = 0
+                return flag, current_elem
 
     cpdef find_host_using_global_search(self, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos):

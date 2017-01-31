@@ -26,9 +26,9 @@ cdef class TestVelocityDataReader(DataReader):
     which can be used to test different integration schemes.
     
     """
-    cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos,
-            DTYPE_INT_t guess):
-        return 0    
+    cpdef find_host(self, DTYPE_FLOAT_t xpos_old, DTYPE_FLOAT_t ypos_old,
+            DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new, DTYPE_INT_t guess):
+        return 0, 0
     
     cdef get_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
@@ -131,9 +131,9 @@ cdef class TestDiffusivityDataReader(DataReader):
         DTYPE_FLOAT_t ypos):
         return self._zmax
 
-    cpdef find_host(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, 
-            DTYPE_INT_t guess):
-        return 0
+    cpdef find_host(self, DTYPE_FLOAT_t xpos_old, DTYPE_FLOAT_t ypos_old,
+            DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new, DTYPE_INT_t guess):
+        return 0, 0
     
     cdef get_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,

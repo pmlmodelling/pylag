@@ -13,8 +13,10 @@ class FVCOMDataReader_test(TestCase):
     def setUp(self):
         # Create config
         config = SafeConfigParser()
+        config.add_section("GENERAL")
         config.add_section("SIMULATION")
         config.add_section("OCEAN_CIRCULATION_MODEL")
+        config.set('GENERAL', 'full_logging', 'False')
         config.set('SIMULATION', 'start_datetime', '2013-01-06 00:00:00')
         config.set('SIMULATION', 'end_datetime', '2013-01-06 01:00:00')
         config.set('OCEAN_CIRCULATION_MODEL', 'data_dir', '../resources/')
@@ -37,17 +39,54 @@ class FVCOMDataReader_test(TestCase):
     def tearDown(self):
         del(self.data_reader)
 
-    def test_find_host_using_local_search(self):
-        xpos = 365751.7
-        ypos = 5323568.0
-        guess = 1 # Known neighbour
-        host = self.data_reader.find_host_using_local_search(xpos, ypos, guess)
-        test.assert_equal(host, 0)
-    
     def test_find_host_using_global_search(self):
-        xpos = 365751.7
-        ypos = 5323568.0
+        xpos = 368086.9375 # Centroid of element 0 (x coordinate)
+        ypos = 5324397.5 # Centroid of element 0 (y coordinate)
         host = self.data_reader.find_host_using_global_search(xpos, ypos)
+        test.assert_equal(host, 0)
+
+    def test_find_host_when_particle_is_in_the_domain(self):
+        xpos_old = 368260.875 # Centroid of element 3 (x coordinate)
+        ypos_old = 5326351.0 # Centroid of element 3 (y coordinate)
+        xpos_new = 368086.9375 # Centroid of element 0 (x coordinate)
+        ypos_new = 5324397.5 # Centroid of element 0 (y coordinate)
+        last_host = 3
+        flag, host = self.data_reader.find_host(xpos_old, ypos_old, xpos_new,
+                ypos_new, last_host)
+        test.assert_equal(flag, 0)
+        test.assert_equal(host, 0)
+
+    def test_find_host_when_particle_has_crossed_into_an_element_with_two_land_boundaries(self):
+        xpos_old = 368086.9375 # Centroid of element 0 (x coordinate)
+        ypos_old = 5324397.5 # Centroid of element 0 (y coordinate)
+        xpos_new = 369208.8125 # Centroid of element 1 that has two land boundaries (x coordinate)
+        ypos_new = 5323103.0 # Centroid of element 1 that has two land boundaries (y coordinate)
+        last_host = 0 # Center element
+        flag, host = self.data_reader.find_host(xpos_old, ypos_old, xpos_new,
+                ypos_new, last_host)
+        test.assert_equal(flag, -1)
+        test.assert_equal(host, 0)
+
+    def test_find_host_when_particle_has_crossed_a_land_boundary(self):
+        xpos_old = 369208.8125 # Centroid of element 1 (x coordinate)
+        ypos_old = 5323103.0 # Centroid of element 1 (y coordinate)
+        xpos_new = 370267.0 # Point outside of the domain (x coordinate)
+        ypos_new = 5324350.0 # Point outside of the domain (y coordinate)
+        last_host = 1 # Center element
+        flag, host = self.data_reader.find_host(xpos_old, ypos_old, xpos_new,
+                ypos_new, last_host)
+        test.assert_equal(flag, -1)
+        test.assert_equal(host, 1)
+
+    def test_find_host_when_particle_has_crossed_multiple_elements_to_an_element_with_two_land_boundaries(self):
+        xpos_old = 369208.8125 # Centroid of element 1 (x coordinate)
+        ypos_old = 5323103.0 # Centroid of element 1 (y coordinate)
+        xpos_new = 365751.6875 # Centroid of element 2 (x coordinate)
+        ypos_new = 5323568.5 # Centroid of element 2 (y coordinate)
+        last_host = 1 # Center element
+        flag, host = self.data_reader.find_host(xpos_old, ypos_old, xpos_new,
+                ypos_new, last_host)
+        test.assert_equal(flag, -1)
         test.assert_equal(host, 0)
 
     def test_get_bathymetry(self):

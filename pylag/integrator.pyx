@@ -95,7 +95,8 @@ cdef class RK4Integrator2D(NumIntegrator):
         xpos = particle.xpos + 0.5 * k1[0]
         ypos = particle.ypos + 0.5 * k1[1]
         
-        flag, host = data_reader.find_host(xpos, ypos, host)
+        flag, host = data_reader.find_host(particle.xpos, particle.ypos, xpos,
+                ypos, particle.host_horizontal_elem)
         if flag < 0: return flag
         zlayer = data_reader.find_zlayer(t, xpos, ypos, zpos, host, zlayer)
         data_reader.get_horizontal_velocity(t, xpos, ypos, zpos, host, zlayer, vel) 
@@ -107,7 +108,8 @@ cdef class RK4Integrator2D(NumIntegrator):
         xpos = particle.xpos + 0.5 * k2[0]
         ypos = particle.ypos + 0.5 * k2[1]
         
-        flag, host = data_reader.find_host(xpos, ypos, host)
+        flag, host = data_reader.find_host(particle.xpos, particle.ypos, xpos,
+                ypos, particle.host_horizontal_elem)
         if flag < 0: return flag
         zlayer = data_reader.find_zlayer(t, xpos, ypos, zpos, host, zlayer)
         data_reader.get_horizontal_velocity(t, xpos, ypos, zpos, host, zlayer, vel) 
@@ -119,7 +121,8 @@ cdef class RK4Integrator2D(NumIntegrator):
         xpos = particle.xpos + k3[0]
         ypos = particle.ypos + k3[1]
 
-        flag, host = data_reader.find_host(xpos, ypos, host)
+        flag, host = data_reader.find_host(particle.xpos, particle.ypos, xpos,
+                ypos, particle.host_horizontal_elem)
         if flag < 0: return flag
         zlayer = data_reader.find_zlayer(t, xpos, ypos, zpos, host, zlayer)
         data_reader.get_horizontal_velocity(t, xpos, ypos, zpos, host, zlayer, vel)
@@ -219,7 +222,8 @@ cdef class RK4Integrator3D(NumIntegrator):
         elif zpos > zmax:
             zpos = zmax + zmax - zpos
         
-        flag, host = data_reader.find_host(xpos, ypos, host)
+        flag, host = data_reader.find_host(particle.xpos, particle.ypos, xpos,
+                ypos, particle.host_horizontal_elem)
         if flag < 0: return flag
         zlayer = data_reader.find_zlayer(t, xpos, ypos, zpos, host, zlayer)
         data_reader.get_velocity(t, xpos, ypos, zpos, host, zlayer, vel) 
@@ -240,7 +244,8 @@ cdef class RK4Integrator3D(NumIntegrator):
         elif zpos > zmax:
             zpos = zmax + zmax - zpos
         
-        flag, host = data_reader.find_host(xpos, ypos, host)
+        flag, host = data_reader.find_host(particle.xpos, particle.ypos, xpos,
+                ypos, particle.host_horizontal_elem)
         if flag < 0: return flag
         zlayer = data_reader.find_zlayer(t, xpos, ypos, zpos, host, zlayer)
         data_reader.get_velocity(t, xpos, ypos, zpos, host, zlayer, vel) 
@@ -261,7 +266,8 @@ cdef class RK4Integrator3D(NumIntegrator):
         elif zpos > zmax:
             zpos = zmax + zmax - zpos
 
-        flag, host = data_reader.find_host(xpos, ypos, host)
+        flag, host = data_reader.find_host(particle.xpos, particle.ypos, xpos,
+                ypos, particle.host_horizontal_elem)
         if flag < 0: return flag
         zlayer = data_reader.find_zlayer(t, xpos, ypos, zpos, host, zlayer)
         data_reader.get_velocity(t, xpos, ypos, zpos, host, zlayer, vel) 
