@@ -3,6 +3,7 @@ import numpy.testing as test
 
 from pylag.data_reader import DataReader
 from pylag.boundary_conditions import RefHorizBoundaryConditionCalculator
+from pylag.boundary_conditions import RefVertBoundaryConditionCalculator
 
 class RefHorizBoundaryConditionCalculator_test(TestCase):
     class TestDataReader(DataReader):
@@ -17,4 +18,18 @@ class RefHorizBoundaryConditionCalculator_test(TestCase):
         xpos, ypos = horiz_bc_calculator.apply(data_reader, x3, y3, x4, y4, elem)
         test.assert_almost_equal(xpos, 1.0)
         test.assert_almost_equal(ypos, 0.0)
+
+class RefVertBoundaryConditionCalculator_test(TestCase):
+
+    def test_apply_reflecting_boundary_condition_for_small_excursion(self):
+        vert_bc_calculator = RefVertBoundaryConditionCalculator()
+        zpos = 0.4; zmin = -1.0; zmax = 0.0
+        zpos_new = vert_bc_calculator.apply(zpos, zmin, zmax)
+        test.assert_almost_equal(zpos_new, -0.4)
+
+    def test_apply_reflecting_boundary_condition_for_small_excursion(self):
+        vert_bc_calculator = RefVertBoundaryConditionCalculator()
+        zpos = 1.4; zmin = -1.0; zmax = 0.0
+        zpos_new = vert_bc_calculator.apply(zpos, zmin, zmax)
+        test.assert_almost_equal(zpos_new, -0.6)
 

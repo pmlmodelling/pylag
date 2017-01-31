@@ -8,3 +8,7 @@ cdef class HorizBoundaryConditionCalculator:
     cpdef apply(self, DataReader data_reader, DTYPE_FLOAT_t x_old,
             DTYPE_FLOAT_t y_old, DTYPE_FLOAT_t x_new, DTYPE_FLOAT_t y_new,
             DTYPE_INT_t last_host)
+
+cdef class VertBoundaryConditionCalculator:
+
+     cpdef apply(self, DTYPE_FLOAT_t zpos, DTYPE_FLOAT_t zmin, DTYPE_FLOAT_t zmax)

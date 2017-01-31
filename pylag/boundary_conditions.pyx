@@ -75,8 +75,29 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
         # Return coordinates of the reflected point
         return x4_prime[0], x4_prime[1]
 
+cdef class VertBoundaryConditionCalculator:
+
+     cpdef apply(self, DTYPE_FLOAT_t zpos, DTYPE_FLOAT_t zmin, DTYPE_FLOAT_t zmax):
+        pass
+
+cdef class RefVertBoundaryConditionCalculator(VertBoundaryConditionCalculator):
+
+     cpdef apply(self, DTYPE_FLOAT_t zpos, DTYPE_FLOAT_t zmin, DTYPE_FLOAT_t zmax):
+        """Apply reflecting boundary conditions
+        
+        """
+        while zpos < zmin or zpos > zmax:
+            if zpos < zmin:
+                zpos = zmin + zmin - zpos
+            elif zpos > zmax:
+                zpos = zmax + zmax - zpos
+
+        return zpos
+
+# Factory methods
+# ---------------
+
 def get_horiz_boundary_condition_calculator(config):
-    # Return the specified numerical integrator.
     if config.get("SIMULATION", "horiz_bound_cond") == "reflecting":
         return RefHorizBoundaryConditionCalculator()
     elif config.get("SIMULATION", "horiz_bound_cond") == "None":
@@ -84,4 +105,10 @@ def get_horiz_boundary_condition_calculator(config):
     else:
         raise ValueError('Unsupported horizontal boundary condtion.')
 
-
+def get_vert_boundary_condition_calculator(config):
+    if config.get("SIMULATION", "vert_bound_cond") == "reflecting":
+        return RefVertBoundaryConditionCalculator()
+    elif config.get("SIMULATION", "vert_bound_cond") == "None":
+        return None
+    else:
+        raise ValueError('Unsupported vertical boundary condtion.')
