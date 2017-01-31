@@ -6,6 +6,7 @@ from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 from pylag.integrator import get_num_integrator
 from pylag.random_walk import get_vertical_random_walk_model, get_horizontal_random_walk_model
+from pylag.boundary_conditions import get_horiz_boundary_condition_calculator
 from pylag.particle_positions_reader import read_particle_initial_positions
 from pylag.particle import ParticleSmartPtr
 
@@ -14,6 +15,7 @@ from libcpp.vector cimport vector
 from pylag.data_reader cimport DataReader, sigma_to_cartesian_coords, cartesian_to_sigma_coords
 from pylag.integrator cimport NumIntegrator
 from pylag.random_walk cimport VerticalRandomWalk, HorizontalRandomWalk
+from pylag.boundary_conditions cimport HorizBoundaryConditionCalculator
 from pylag.delta cimport Delta, reset
 from pylag.particle cimport Particle, copy
 
@@ -55,6 +57,7 @@ cdef class FVCOMOPTModel(OPTModel):
     cdef NumIntegrator num_integrator
     cdef VerticalRandomWalk vert_rand_walk_model
     cdef HorizontalRandomWalk horiz_rand_walk_model
+    cdef HorizBoundaryConditionCalculator horiz_bc_calculator
     cdef object particle_seed_smart_ptrs
     cdef object particle_smart_ptrs
     cdef vector[Particle*] particle_ptrs
@@ -71,6 +74,9 @@ cdef class FVCOMOPTModel(OPTModel):
 
         # Initialise model data reader
         self.data_reader = data_reader
+
+        # Create boundary conditions calculator
+        self.horiz_bc_calculator = get_horiz_boundary_condition_calculator(self.config)
         
         # Create numerical integrator
         self.num_integrator = get_num_integrator(self.config)
@@ -277,11 +283,7 @@ cdef class FVCOMOPTModel(OPTModel):
                     host_err = self.num_integrator.advect(time,
                             particle_ptr, self.data_reader, &delta_X)
                             
-                    # Check for boundary crossings. These are checked for
-                    # a second time at the end of the update loop.
-                    if host_err == -1:
-                        continue
-                    elif host_err == -2:
+                    if host_err == -2:
                         particle_ptr.in_domain = False
                         continue
                 
@@ -302,10 +304,20 @@ cdef class FVCOMOPTModel(OPTModel):
                 flag, host = self.data_reader.find_host(particle_ptr.xpos,
                         particle_ptr.ypos, xpos, ypos, particle_ptr.host_horizontal_elem)
               
-                # If the particle still resides in the domain update its
-                # position. If the particle has crossed a land boundary arrest
-                # its position. If it has crossed an open boundary flag it as
-                # having left the model domain.
+                # First check for land boundary crossing
+                while flag == -1:
+                    xpos, ypos = self.horiz_bc_calculator.apply(self.data_reader,
+                            particle_ptr.xpos, particle_ptr.ypos, xpos, ypos,
+                            particle_ptr.host_horizontal_elem)
+                    flag, host = self.data_reader.find_host(particle_ptr.xpos,
+                        particle_ptr.ypos, xpos, ypos, particle_ptr.host_horizontal_elem)
+
+                # Second check for open boundary crossing
+                if flag == -2:
+                    particle_ptr.in_domain = False
+                    continue
+                
+                # If the particle still resides in the domain update its position.
                 if flag == 0:
                     # Apply reflecting surface/bottom boundary conditions
                     zmin = self.data_reader.get_zmin(time, xpos, ypos)
@@ -332,15 +344,8 @@ cdef class FVCOMOPTModel(OPTModel):
                     particle_ptr.zpos = zpos
                     particle_ptr.host_horizontal_elem = host
                     particle_ptr.host_z_layer = host_z_layer
-                elif flag == -1:
-                    # Land boundary crossed - do nothing for now.
-                    continue
-                elif flag == -2:
-                    # Open boundary crossed - flag as having left the domain.
-                    particle_ptr.in_domain = False
-                    continue
                 else:
-                    raise ValueError('Unrecognised host element {}.'.format(host))
+                    raise ValueError('Unrecognised host element flag {}.'.format(host))
 
     def get_diagnostics(self, time):
         """ Get particle diagnostics

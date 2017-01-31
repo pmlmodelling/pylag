@@ -9,10 +9,13 @@ np.import_array()
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
+from pylag.boundary_conditions import get_horiz_boundary_condition_calculator
+
 # PyLag cimports
 from particle cimport Particle
 from data_reader cimport DataReader
 from delta cimport Delta
+from pylag.boundary_conditions cimport HorizBoundaryConditionCalculator
 
 cdef class NumIntegrator:
     cdef DTYPE_INT_t advect(self, DTYPE_FLOAT_t time, Particle *particle,
@@ -29,7 +32,10 @@ cdef class RK4Integrator2D(NumIntegrator):
     """
     def __init__(self, config):
         self._time_step = config.getfloat('SIMULATION', 'time_step')
-    
+        
+        # Create horizontal boundary conditions calculator
+        self.horiz_bc_calculator = get_horiz_boundary_condition_calculator(config)
+
     cdef DTYPE_INT_t advect(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X):
         """ Advect particles forward in time.
@@ -97,7 +103,17 @@ cdef class RK4Integrator2D(NumIntegrator):
         
         flag, host = data_reader.find_host(particle.xpos, particle.ypos, xpos,
                 ypos, particle.host_horizontal_elem)
-        if flag < 0: return flag
+
+        # Check for land boundary crossing
+        while flag == -1:
+            xpos, ypos = self.horiz_bc_calculator.apply(data_reader,
+                    particle.xpos, particle.ypos, xpos, ypos, host)
+            flag, host = data_reader.find_host(particle.xpos, particle.ypos,
+                    xpos, ypos, particle.host_horizontal_elem)
+
+        # Check for open boundary crossing
+        if flag == -2: return flag
+
         zlayer = data_reader.find_zlayer(t, xpos, ypos, zpos, host, zlayer)
         data_reader.get_horizontal_velocity(t, xpos, ypos, zpos, host, zlayer, vel) 
         for i in xrange(ndim):
@@ -110,7 +126,17 @@ cdef class RK4Integrator2D(NumIntegrator):
         
         flag, host = data_reader.find_host(particle.xpos, particle.ypos, xpos,
                 ypos, particle.host_horizontal_elem)
-        if flag < 0: return flag
+
+        # Check for land boundary crossing
+        while flag == -1:
+            xpos, ypos = self.horiz_bc_calculator.apply(data_reader,
+                    particle.xpos, particle.ypos, xpos, ypos, host)
+            flag, host = data_reader.find_host(particle.xpos, particle.ypos,
+                    xpos, ypos, particle.host_horizontal_elem)
+
+        # Check for open boundary crossing
+        if flag == -2: return flag
+
         zlayer = data_reader.find_zlayer(t, xpos, ypos, zpos, host, zlayer)
         data_reader.get_horizontal_velocity(t, xpos, ypos, zpos, host, zlayer, vel) 
         for i in xrange(ndim):
@@ -123,7 +149,17 @@ cdef class RK4Integrator2D(NumIntegrator):
 
         flag, host = data_reader.find_host(particle.xpos, particle.ypos, xpos,
                 ypos, particle.host_horizontal_elem)
-        if flag < 0: return flag
+
+        # Check for land boundary crossing
+        while flag == -1:
+            xpos, ypos = self.horiz_bc_calculator.apply(data_reader,
+                    particle.xpos, particle.ypos, xpos, ypos, host)
+            flag, host = data_reader.find_host(particle.xpos, particle.ypos,
+                    xpos, ypos, particle.host_horizontal_elem)
+
+        # Check for open boundary crossing
+        if flag == -2: return flag
+
         zlayer = data_reader.find_zlayer(t, xpos, ypos, zpos, host, zlayer)
         data_reader.get_horizontal_velocity(t, xpos, ypos, zpos, host, zlayer, vel)
         for i in xrange(ndim):
@@ -224,7 +260,17 @@ cdef class RK4Integrator3D(NumIntegrator):
         
         flag, host = data_reader.find_host(particle.xpos, particle.ypos, xpos,
                 ypos, particle.host_horizontal_elem)
-        if flag < 0: return flag
+
+        # Check for land boundary crossing
+        while flag == -1:
+            xpos, ypos = self.horiz_bc_calculator.apply(data_reader,
+                    particle.xpos, particle.ypos, xpos, ypos, host)
+            flag, host = data_reader.find_host(particle.xpos, particle.ypos,
+                    xpos, ypos, particle.host_horizontal_elem)
+
+        # Check for open boundary crossing
+        if flag == -2: return flag
+
         zlayer = data_reader.find_zlayer(t, xpos, ypos, zpos, host, zlayer)
         data_reader.get_velocity(t, xpos, ypos, zpos, host, zlayer, vel) 
         for i in xrange(ndim):
@@ -246,7 +292,17 @@ cdef class RK4Integrator3D(NumIntegrator):
         
         flag, host = data_reader.find_host(particle.xpos, particle.ypos, xpos,
                 ypos, particle.host_horizontal_elem)
-        if flag < 0: return flag
+
+        # Check for land boundary crossing
+        while flag == -1:
+            xpos, ypos = self.horiz_bc_calculator.apply(data_reader,
+                    particle.xpos, particle.ypos, xpos, ypos, host)
+            flag, host = data_reader.find_host(particle.xpos, particle.ypos,
+                    xpos, ypos, particle.host_horizontal_elem)
+
+        # Check for open boundary crossing
+        if flag == -2: return flag
+
         zlayer = data_reader.find_zlayer(t, xpos, ypos, zpos, host, zlayer)
         data_reader.get_velocity(t, xpos, ypos, zpos, host, zlayer, vel) 
         for i in xrange(ndim):
@@ -268,7 +324,17 @@ cdef class RK4Integrator3D(NumIntegrator):
 
         flag, host = data_reader.find_host(particle.xpos, particle.ypos, xpos,
                 ypos, particle.host_horizontal_elem)
-        if flag < 0: return flag
+
+        # Check for land boundary crossing
+        while flag == -1:
+            xpos, ypos = self.horiz_bc_calculator.apply(data_reader,
+                    particle.xpos, particle.ypos, xpos, ypos, host)
+            flag, host = data_reader.find_host(particle.xpos, particle.ypos,
+                    xpos, ypos, particle.host_horizontal_elem)
+
+        # Check for open boundary crossing
+        if flag == -2: return flag
+
         zlayer = data_reader.find_zlayer(t, xpos, ypos, zpos, host, zlayer)
         data_reader.get_velocity(t, xpos, ypos, zpos, host, zlayer, vel) 
         for i in xrange(ndim):
