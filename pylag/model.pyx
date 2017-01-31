@@ -6,7 +6,7 @@ from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 from pylag.integrator import get_num_integrator
 from pylag.random_walk import get_vertical_random_walk_model, get_horizontal_random_walk_model
-from pylag.boundary_conditions import get_horiz_boundary_condition_calculator
+from pylag.boundary_conditions import get_horiz_boundary_condition_calculator, get_vert_boundary_condition_calculator
 from pylag.particle_positions_reader import read_particle_initial_positions
 from pylag.particle import ParticleSmartPtr
 
@@ -15,7 +15,7 @@ from libcpp.vector cimport vector
 from pylag.data_reader cimport DataReader, sigma_to_cartesian_coords, cartesian_to_sigma_coords
 from pylag.integrator cimport NumIntegrator
 from pylag.random_walk cimport VerticalRandomWalk, HorizontalRandomWalk
-from pylag.boundary_conditions cimport HorizBoundaryConditionCalculator
+from pylag.boundary_conditions cimport HorizBoundaryConditionCalculator, VertBoundaryConditionCalculator
 from pylag.delta cimport Delta, reset
 from pylag.particle cimport Particle, copy
 
@@ -58,6 +58,7 @@ cdef class FVCOMOPTModel(OPTModel):
     cdef VerticalRandomWalk vert_rand_walk_model
     cdef HorizontalRandomWalk horiz_rand_walk_model
     cdef HorizBoundaryConditionCalculator horiz_bc_calculator
+    cdef VertBoundaryConditionCalculator vert_bc_calculator
     cdef object particle_seed_smart_ptrs
     cdef object particle_smart_ptrs
     cdef vector[Particle*] particle_ptrs
@@ -75,8 +76,9 @@ cdef class FVCOMOPTModel(OPTModel):
         # Initialise model data reader
         self.data_reader = data_reader
 
-        # Create boundary conditions calculator
+        # Create boundary conditions calculators
         self.horiz_bc_calculator = get_horiz_boundary_condition_calculator(self.config)
+        self.vert_bc_calculator = get_vert_boundary_condition_calculator(self.config)
         
         # Create numerical integrator
         self.num_integrator = get_num_integrator(self.config)
@@ -319,19 +321,11 @@ cdef class FVCOMOPTModel(OPTModel):
                 
                 # If the particle still resides in the domain update its position.
                 if flag == 0:
-                    # Apply reflecting surface/bottom boundary conditions
+                    # Apply surface/bottom boundary conditions
                     zmin = self.data_reader.get_zmin(time, xpos, ypos)
                     zmax = self.data_reader.get_zmax(time, xpos, ypos)
-                    if zpos < zmin:
-                        zpos = zmin + zmin - zpos
-                    elif zpos > zmax:
-                        zpos = zmax + zmax - zpos
-
-                    # Check for valid zpos
-                    if zpos < zmin:
-                        raise ValueError("New zpos (= {}) lies below the sea floor.".format(zpos))
-                    elif zpos > zmax:
-                        raise ValueError("New zpos (= {}) lies above the free surface.".format(zpos))                
+                    if zpos < zmin or zpos > zmax:
+                        zpos = self.vert_bc_calculator.apply(zpos, zmin, zmax)            
 
                     # Determine the new host z layer
                     old_host_z_layer = particle_ptr.host_z_layer

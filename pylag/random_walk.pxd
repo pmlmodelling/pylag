@@ -3,8 +3,9 @@ from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 # PyLag cimports
 from particle cimport Particle
 from data_reader import DataReader
-from data_reader cimport DataReader
-from delta cimport Delta
+from pylag.data_reader cimport DataReader
+from pylag.delta cimport Delta
+from pylag.boundary_conditions cimport VertBoundaryConditionCalculator
 
 # Random walk base class
 cdef class RandomWalk:
@@ -15,9 +16,7 @@ cdef class RandomWalk:
 
 # Vertical random walks
 cdef class VerticalRandomWalk(RandomWalk):
-    # Grid boundary limits
-    cdef DTYPE_FLOAT_t _zmin
-    cdef DTYPE_FLOAT_t _zmax
+    cdef VertBoundaryConditionCalculator _vert_bc_calculator
 
     cdef random_walk(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X)
 

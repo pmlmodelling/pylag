@@ -4,6 +4,8 @@ from libc.math cimport sqrt
 
 cimport pylag.random as random
 
+from pylag.boundary_conditions import get_vert_boundary_condition_calculator
+
 cdef class RandomWalk:
     cdef random_walk(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
         pass
@@ -63,6 +65,8 @@ cdef class NaiveVerticalRandomWalk(VerticalRandomWalk):
 cdef class AR0VerticalRandomWalk(VerticalRandomWalk):
     def __init__(self, config):
         self._time_step = config.getfloat('SIMULATION', 'time_step')
+        
+        self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
 
     cdef random_walk(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
         """
@@ -127,11 +131,11 @@ cdef class AR0VerticalRandomWalk(VerticalRandomWalk):
         zpos_offset = zpos + 0.5 * dz_advection
         zmin = data_reader.get_zmin(t, xpos, ypos)
         zmax = data_reader.get_zmax(t, xpos, ypos)
-        if zpos_offset < zmin:
-            zpos_offset = zmin + zmin - zpos_offset
-        elif zpos_offset > zmax:
-            zpos_offset = zmax + zmax - zpos_offset
+        if zpos_offset < zmin or zpos_offset > zmax:
+            zpos_offset = self._vert_bc_calculator.apply(zpos_offset, zmin, zmax)
+
         z_layer_offset = data_reader.find_zlayer(time, xpos, ypos, zpos_offset, host, z_layer)
+
         k = data_reader.get_vertical_eddy_diffusivity(t, xpos, ypos, zpos_offset, host, z_layer_offset)
 
         # Compute the random component of the particle's motion

@@ -10,12 +10,14 @@ from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 from pylag.boundary_conditions import get_horiz_boundary_condition_calculator
+from pylag.boundary_conditions import get_vert_boundary_condition_calculator
 
 # PyLag cimports
-from particle cimport Particle
-from data_reader cimport DataReader
-from delta cimport Delta
+from pylag.particle cimport Particle
+from pylag.data_reader cimport DataReader
+from pylag.delta cimport Delta
 from pylag.boundary_conditions cimport HorizBoundaryConditionCalculator
+from pylag.boundary_conditions cimport VertBoundaryConditionCalculator
 
 cdef class NumIntegrator:
     cdef DTYPE_INT_t advect(self, DTYPE_FLOAT_t time, Particle *particle,
@@ -30,11 +32,14 @@ cdef class RK4Integrator2D(NumIntegrator):
     config : SafeConfigParser
         Configuration object.
     """
+    cdef DTYPE_FLOAT_t _time_step
+    cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
+
     def __init__(self, config):
         self._time_step = config.getfloat('SIMULATION', 'time_step')
         
         # Create horizontal boundary conditions calculator
-        self.horiz_bc_calculator = get_horiz_boundary_condition_calculator(config)
+        self._horiz_bc_calculator = get_horiz_boundary_condition_calculator(config)
 
     cdef DTYPE_INT_t advect(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X):
@@ -106,7 +111,7 @@ cdef class RK4Integrator2D(NumIntegrator):
 
         # Check for land boundary crossing
         while flag == -1:
-            xpos, ypos = self.horiz_bc_calculator.apply(data_reader,
+            xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
                     particle.xpos, particle.ypos, xpos, ypos, host)
             flag, host = data_reader.find_host(particle.xpos, particle.ypos,
                     xpos, ypos, particle.host_horizontal_elem)
@@ -129,7 +134,7 @@ cdef class RK4Integrator2D(NumIntegrator):
 
         # Check for land boundary crossing
         while flag == -1:
-            xpos, ypos = self.horiz_bc_calculator.apply(data_reader,
+            xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
                     particle.xpos, particle.ypos, xpos, ypos, host)
             flag, host = data_reader.find_host(particle.xpos, particle.ypos,
                     xpos, ypos, particle.host_horizontal_elem)
@@ -152,7 +157,7 @@ cdef class RK4Integrator2D(NumIntegrator):
 
         # Check for land boundary crossing
         while flag == -1:
-            xpos, ypos = self.horiz_bc_calculator.apply(data_reader,
+            xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
                     particle.xpos, particle.ypos, xpos, ypos, host)
             flag, host = data_reader.find_host(particle.xpos, particle.ypos,
                     xpos, ypos, particle.host_horizontal_elem)
@@ -180,8 +185,18 @@ cdef class RK4Integrator3D(NumIntegrator):
         Configuration object.
     """
 
+    cdef DTYPE_FLOAT_t _time_step
+    cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
+    cdef VertBoundaryConditionCalculator _vert_bc_calculator
+
     def __init__(self, config):
         self._time_step = config.getfloat('SIMULATION', 'time_step')
+
+        # Create horizontal boundary conditions calculator
+        self._horiz_bc_calculator = get_horiz_boundary_condition_calculator(config)
+
+        # Create vertical boundary conditions calculator
+        self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)    
     
     cdef DTYPE_INT_t advect(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X):
@@ -250,20 +265,12 @@ cdef class RK4Integrator3D(NumIntegrator):
         ypos = particle.ypos + 0.5 * k1[1]
         zpos = particle.zpos + 0.5 * k1[2]
         
-        # Impose reflecting boundary condition in z
-        zmin = data_reader.get_zmin(t, xpos, ypos)
-        zmax = data_reader.get_zmax(t, xpos, ypos)
-        if zpos < zmin:
-            zpos = zmin + zmin - zpos
-        elif zpos > zmax:
-            zpos = zmax + zmax - zpos
-        
         flag, host = data_reader.find_host(particle.xpos, particle.ypos, xpos,
                 ypos, particle.host_horizontal_elem)
 
         # Check for land boundary crossing
         while flag == -1:
-            xpos, ypos = self.horiz_bc_calculator.apply(data_reader,
+            xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
                     particle.xpos, particle.ypos, xpos, ypos, host)
             flag, host = data_reader.find_host(particle.xpos, particle.ypos,
                     xpos, ypos, particle.host_horizontal_elem)
@@ -271,7 +278,14 @@ cdef class RK4Integrator3D(NumIntegrator):
         # Check for open boundary crossing
         if flag == -2: return flag
 
+        # Impose reflecting boundary condition in z
+        zmin = data_reader.get_zmin(t, xpos, ypos)
+        zmax = data_reader.get_zmax(t, xpos, ypos)
+        if zpos < zmin or zpos > zmax:
+            zpos = self._vert_bc_calculator.apply(zpos, zmin, zmax)
+
         zlayer = data_reader.find_zlayer(t, xpos, ypos, zpos, host, zlayer)
+
         data_reader.get_velocity(t, xpos, ypos, zpos, host, zlayer, vel) 
         for i in xrange(ndim):
             k2[i] = self._time_step * vel[i]
@@ -282,20 +296,12 @@ cdef class RK4Integrator3D(NumIntegrator):
         ypos = particle.ypos + 0.5 * k2[1]
         zpos = particle.zpos + 0.5 * k2[2]
         
-        # Impose reflecting boundary condition in z
-        zmin = data_reader.get_zmin(t, xpos, ypos)
-        zmax = data_reader.get_zmax(t, xpos, ypos)
-        if zpos < zmin:
-            zpos = zmin + zmin - zpos
-        elif zpos > zmax:
-            zpos = zmax + zmax - zpos
-        
         flag, host = data_reader.find_host(particle.xpos, particle.ypos, xpos,
                 ypos, particle.host_horizontal_elem)
 
         # Check for land boundary crossing
         while flag == -1:
-            xpos, ypos = self.horiz_bc_calculator.apply(data_reader,
+            xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
                     particle.xpos, particle.ypos, xpos, ypos, host)
             flag, host = data_reader.find_host(particle.xpos, particle.ypos,
                     xpos, ypos, particle.host_horizontal_elem)
@@ -303,7 +309,14 @@ cdef class RK4Integrator3D(NumIntegrator):
         # Check for open boundary crossing
         if flag == -2: return flag
 
+        # Impose reflecting boundary condition in z
+        zmin = data_reader.get_zmin(t, xpos, ypos)
+        zmax = data_reader.get_zmax(t, xpos, ypos)
+        if zpos < zmin or zpos > zmax:
+            zpos = self._vert_bc_calculator.apply(zpos, zmin, zmax)
+
         zlayer = data_reader.find_zlayer(t, xpos, ypos, zpos, host, zlayer)
+
         data_reader.get_velocity(t, xpos, ypos, zpos, host, zlayer, vel) 
         for i in xrange(ndim):
             k3[i] = self._time_step * vel[i]
@@ -313,21 +326,13 @@ cdef class RK4Integrator3D(NumIntegrator):
         xpos = particle.xpos + k3[0]
         ypos = particle.ypos + k3[1]
         zpos = particle.zpos + k3[2]
-        
-        # Impose reflecting boundary condition in z
-        zmin = data_reader.get_zmin(t, xpos, ypos)
-        zmax = data_reader.get_zmax(t, xpos, ypos)
-        if zpos < zmin:
-            zpos = zmin + zmin - zpos
-        elif zpos > zmax:
-            zpos = zmax + zmax - zpos
 
         flag, host = data_reader.find_host(particle.xpos, particle.ypos, xpos,
                 ypos, particle.host_horizontal_elem)
 
         # Check for land boundary crossing
         while flag == -1:
-            xpos, ypos = self.horiz_bc_calculator.apply(data_reader,
+            xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
                     particle.xpos, particle.ypos, xpos, ypos, host)
             flag, host = data_reader.find_host(particle.xpos, particle.ypos,
                     xpos, ypos, particle.host_horizontal_elem)
@@ -335,7 +340,14 @@ cdef class RK4Integrator3D(NumIntegrator):
         # Check for open boundary crossing
         if flag == -2: return flag
 
+        # Impose reflecting boundary condition in z
+        zmin = data_reader.get_zmin(t, xpos, ypos)
+        zmax = data_reader.get_zmax(t, xpos, ypos)
+        if zpos < zmin or zpos > zmax:
+            zpos = self._vert_bc_calculator.apply(zpos, zmin, zmax)
+
         zlayer = data_reader.find_zlayer(t, xpos, ypos, zpos, host, zlayer)
+
         data_reader.get_velocity(t, xpos, ypos, zpos, host, zlayer, vel) 
         for i in xrange(ndim):
             k4[i] = self._time_step * vel[i]
