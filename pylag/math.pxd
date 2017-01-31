@@ -9,3 +9,6 @@ cdef inline DTYPE_INT_t int_max(DTYPE_INT_t a, DTYPE_INT_t b): return a if a >= 
 cdef inline det(DTYPE_FLOAT_t a[2], DTYPE_FLOAT_t b[2]): return a[0]*b[1] - a[1]*b[0]
 
 cdef inline inner_product(DTYPE_FLOAT_t a[2], DTYPE_FLOAT_t b[2]): return a[0]*b[0] + a[1]*b[1]
+
+cdef get_intersection_point(DTYPE_FLOAT_t x1[2], DTYPE_FLOAT_t x2[2],
+        DTYPE_FLOAT_t x3[2], DTYPE_FLOAT_t x4[2], DTYPE_FLOAT_t xi[2])

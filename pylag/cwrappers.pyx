@@ -109,6 +109,26 @@ cpdef get_horizontal_velocity(DataReader data_reader, t, x, y, z, host, zlayer):
         vel_out[i] = vel_c[i]
     return vel_out
 
+def get_intersection_point_wrapper(x1, x2, x3, x4, xi):
+    cdef DTYPE_FLOAT_t x1_c[2]
+    cdef DTYPE_FLOAT_t x2_c[2]
+    cdef DTYPE_FLOAT_t x3_c[2]
+    cdef DTYPE_FLOAT_t x4_c[2]
+    cdef DTYPE_FLOAT_t xi_c[2]
+            
+    if x1.shape[0] != 2 or x2.shape[0] != 2 or x3.shape[0] != 2 or x4.shape[0] != 2:
+        raise ValueError('1D arrays must contain two elements.')
+    
+    x1_c[:] = x1[:]
+    x2_c[:] = x2[:]
+    x3_c[:] = x3[:]
+    x4_c[:] = x4[:]
+    
+    math.get_intersection_point(x1_c, x2_c, x3_c, x4_c, xi_c)
+    for i in xrange(2):
+        xi[i] = xi_c[i]
+    return
+
 cdef class TestRK4Integrator:
     """ Test class for Fourth Order Runga Kutta numerical integration schemes
     
