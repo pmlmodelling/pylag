@@ -1,6 +1,3 @@
-# Data types used for constructing C data structures
-from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
-
 cdef class DataReader:
     cpdef setup_data_access(self, start_datetime, end_datetime):
         pass

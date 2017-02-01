@@ -1,5 +1,5 @@
 # Data types used for constructing C data structures
-from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
+from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 # C Struct describing the physical location of a particle object
 cdef struct Particle:

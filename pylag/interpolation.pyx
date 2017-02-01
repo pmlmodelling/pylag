@@ -1,11 +1,5 @@
-# Cython imports
-cimport numpy as np
-np.import_array()
-from libc.math cimport sqrt as sqrt_c
-
 # Data types used for constructing C data structures
-from data_types_python import DTYPE_INT, DTYPE_FLOAT
-from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
+from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 cdef get_barycentric_coords(DTYPE_FLOAT_t x, DTYPE_FLOAT_t y,
         DTYPE_FLOAT_t x_tri[3], DTYPE_FLOAT_t y_tri[3], DTYPE_FLOAT_t phi[3]):

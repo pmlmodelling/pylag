@@ -5,12 +5,12 @@ cimport numpy as np
 np.import_array()
 
 # Data types used for constructing C data structures
-from data_types_python import DTYPE_INT, DTYPE_FLOAT
-from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
+from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
+from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
-from data_reader cimport DataReader, sigma_to_cartesian_coords
+from pylag.data_reader cimport DataReader, sigma_to_cartesian_coords
 
-cimport interpolation as interp
+cimport pylag.interpolation as interp
 
 cdef class GOTMDataReader(DataReader):
     """ DataReader for GOTM.

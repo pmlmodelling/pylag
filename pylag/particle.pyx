@@ -1,7 +1,7 @@
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 
 # Data types
-from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
+from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 cdef class ParticleSmartPtr:
     """ Python object for managing the memory associated with Particle objects

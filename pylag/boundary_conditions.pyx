@@ -1,5 +1,3 @@
-from libc.math cimport sqrt
-
 # PyLag cimports
 from pylag.math cimport inner_product
 

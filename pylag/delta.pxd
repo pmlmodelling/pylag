@@ -1,5 +1,5 @@
 # Data types used for constructing C data structures
-from data_types_cython cimport DTYPE_FLOAT_t
+from pylag.data_types_cython cimport DTYPE_FLOAT_t
 
 cdef struct Delta:
     DTYPE_FLOAT_t x

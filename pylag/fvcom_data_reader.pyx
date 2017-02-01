@@ -1,26 +1,16 @@
 include "constants.pxi"
 
-import numpy as np
-from netCDF4 import Dataset, num2date
-import glob
-import natsort
-import datetime
 import logging
-import ConfigParser
 
-# Cython imports
-cimport numpy as np
-np.import_array()
-
-# Data types used for constructing C data structures
-from data_types_python import DTYPE_INT, DTYPE_FLOAT
-from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 from cpython cimport bool
 
-from data_reader cimport DataReader
+# Data types used for constructing C data structures
+from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
+from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
-cimport interpolation as interp
-
+# PyLag cython imports
+from pylag.data_reader cimport DataReader
+cimport pylag.interpolation as interp
 from pylag.math cimport int_min, float_min, get_intersection_point
 
 cdef class FVCOMDataReader(DataReader):

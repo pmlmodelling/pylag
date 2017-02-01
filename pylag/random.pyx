@@ -14,7 +14,7 @@ import time
 cimport cython
 from cython_gsl cimport gsl_rng, gsl_rng_alloc, gsl_rng_set, gsl_rng_mt19937, gsl_ran_gaussian, gsl_ran_flat
 
-from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
+from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 # gsl_rng_mt19937 is the Mersenne Twister pseudo random number generator
 cdef gsl_rng *r = gsl_rng_alloc(gsl_rng_mt19937)
