@@ -349,7 +349,7 @@ cdef class RK4Integrator3D(NumIntegrator):
 
 def get_num_integrator(config):
     if not config.has_option("SIMULATION", "num_integrator"):
-        if config.getboolean('GENERAL', 'full_logging'):
+        if config.get('GENERAL', 'log_level') == 'DEBUG':
             logger = logging.getLogger(__name__)
             logger.info('Configuation option num_integrator not found. The model '\
                 'will run without advection.')

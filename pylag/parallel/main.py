@@ -31,9 +31,6 @@ def main():
                 'arguments.'
             comm.Abort()
 
-        # Restrict logging in parallel mode
-        config.set('GENERAL', 'full_logging', 'False')
-
         # Create output directory if it does not exist already
         if not os.path.isdir('{}'.format(config.get('GENERAL', 'out_dir'))):
             os.mkdir('{}'.format(config.get('GENERAL', 'out_dir')))

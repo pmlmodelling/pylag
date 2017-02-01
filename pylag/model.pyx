@@ -236,7 +236,7 @@ cdef class FVCOMOPTModel(OPTModel):
                 particle_seed_smart_ptr = ParticleSmartPtr(group_id=group, in_domain=in_domain)
                 self.particle_seed_smart_ptrs.append(particle_seed_smart_ptr)
 
-        if self.config.getboolean('GENERAL', 'full_logging'):
+        if self.config.get('GENERAL', 'log_level') == 'DEBUG':
             logger = logging.getLogger(__name__)
             logger.info('{} of {} particles are located in the model domain.'.format(particles_in_domain, len(self.particle_seed_smart_ptrs)))
 

@@ -274,7 +274,7 @@ cdef class FVCOMDataReader(DataReader):
             if phi_test >= 0.0:
                 host_found = True
             elif phi_test >= -EPSILON:
-                if self.config.getboolean('GENERAL', 'full_logging'):
+                if self.config.getboolean('GENERAL', 'log_level') == 'DEBUG':
                     logger = logging.getLogger(__name__)
                     logger.warning('EPSILON applied during local host element search.')
                 host_found = True
@@ -295,7 +295,7 @@ cdef class FVCOMDataReader(DataReader):
                 else:
                     # Element has two land boundaries - mark as land and
                     # return the last element searched
-                    if self.config.getboolean('GENERAL', 'full_logging'):
+                    if self.config.getboolean('GENERAL', 'log_level') == 'DEBUG':
                         logger = logging.getLogger(__name__)
                         logger.warning('Particle prevented from entering '\
                             'element {} which has two land '\
@@ -519,7 +519,7 @@ cdef class FVCOMDataReader(DataReader):
             if phi_test >= 0.0:
                 return i
             elif phi_test >= -EPSILON:
-                if self.config.getboolean('GENERAL', 'full_logging'):
+                if self.config.get('GENERAL', 'log_level') == 'DEBUG':
                     logger = logging.getLogger(__name__)
                     logger.warning('EPSILON applied during global host element search.')
                 return i
