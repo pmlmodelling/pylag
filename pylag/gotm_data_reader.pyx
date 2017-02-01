@@ -8,7 +8,9 @@ np.import_array()
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
-from pylag.data_reader cimport DataReader, sigma_to_cartesian_coords
+from pylag.data_reader cimport DataReader
+
+from pylag.math cimport sigma_to_cartesian_coords
 
 cimport pylag.interpolation as interp
 

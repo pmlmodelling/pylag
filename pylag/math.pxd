@@ -12,3 +12,11 @@ cdef inline inner_product(DTYPE_FLOAT_t a[2], DTYPE_FLOAT_t b[2]): return a[0]*b
 
 cdef get_intersection_point(DTYPE_FLOAT_t x1[2], DTYPE_FLOAT_t x2[2],
         DTYPE_FLOAT_t x3[2], DTYPE_FLOAT_t x4[2], DTYPE_FLOAT_t xi[2])
+
+cdef inline DTYPE_FLOAT_t sigma_to_cartesian_coords(DTYPE_FLOAT_t sigma, DTYPE_FLOAT_t h,
+        DTYPE_FLOAT_t zeta):
+    return zeta + sigma * (h + zeta)
+
+cdef inline DTYPE_FLOAT_t cartesian_to_sigma_coords(DTYPE_FLOAT_t z, DTYPE_FLOAT_t h,
+        DTYPE_FLOAT_t zeta):
+    return (z - zeta) / (h + zeta)

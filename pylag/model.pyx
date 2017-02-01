@@ -12,7 +12,8 @@ from pylag.particle import ParticleSmartPtr
 
 from libcpp.vector cimport vector
 
-from pylag.data_reader cimport DataReader, sigma_to_cartesian_coords, cartesian_to_sigma_coords
+from pylag.data_reader cimport DataReader
+from pylag.math cimport sigma_to_cartesian_coords, cartesian_to_sigma_coords
 from pylag.integrator cimport NumIntegrator
 from pylag.random_walk cimport VerticalRandomWalk, HorizontalRandomWalk
 from pylag.boundary_conditions cimport HorizBoundaryConditionCalculator, VertBoundaryConditionCalculator
