@@ -1,21 +1,9 @@
 import logging
-import numpy as np
-
-# Cython imports
-cimport numpy as np
-np.import_array()
-
-# Data types used for constructing C data structures
-from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
-from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 from pylag.boundary_conditions import get_horiz_boundary_condition_calculator
 from pylag.boundary_conditions import get_vert_boundary_condition_calculator
 
 # PyLag cimports
-from pylag.particle cimport Particle
-from pylag.data_reader cimport DataReader
-from pylag.delta cimport Delta
 from pylag.boundary_conditions cimport HorizBoundaryConditionCalculator
 from pylag.boundary_conditions cimport VertBoundaryConditionCalculator
 
