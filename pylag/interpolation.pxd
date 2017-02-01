@@ -1,3 +1,5 @@
+include "constants.pxi"
+
 from libc.math cimport sqrt as sqrt_c
 
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
@@ -10,7 +12,7 @@ cdef DTYPE_FLOAT_t shepard_interpolation(DTYPE_FLOAT_t x,
         DTYPE_FLOAT_t vals[4])
 
 cdef DTYPE_FLOAT_t get_linear_fraction_safe(DTYPE_FLOAT_t var, 
-        DTYPE_FLOAT_t var1, DTYPE_FLOAT_t var2)
+        DTYPE_FLOAT_t var1, DTYPE_FLOAT_t var2) except FLOAT_ERR
 
 cpdef inline DTYPE_FLOAT_t get_linear_fraction(DTYPE_FLOAT_t var, 
         DTYPE_FLOAT_t var1, DTYPE_FLOAT_t var2):

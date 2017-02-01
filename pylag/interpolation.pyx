@@ -1,3 +1,5 @@
+include "constants.pxi"
+
 # Data types used for constructing C data structures
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
@@ -74,7 +76,7 @@ cdef DTYPE_FLOAT_t shepard_interpolation(DTYPE_FLOAT_t x,
     return sumw/sum
 
 cdef DTYPE_FLOAT_t get_linear_fraction_safe(DTYPE_FLOAT_t var, DTYPE_FLOAT_t var1,
-        DTYPE_FLOAT_t var2):
+        DTYPE_FLOAT_t var2) except FLOAT_ERR:
     """Compute the fractional linear distance of a point between two numbers.
     
     The function is deemed safe as it raises an exception if `var' does not lie
