@@ -41,7 +41,7 @@ class FileReader(object):
             except IndexError:
                 logger = logging.getLogger(__name__)
                 logger.error('Failed to find the next required input data file.')
-                raise
+                raise RuntimeError('Failed to find the next input data file.')
             self._open_data_file_for_reading()
 
         # Update time indices

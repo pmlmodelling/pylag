@@ -1,4 +1,6 @@
 import numpy as np
+import logging
+import traceback
 
 # For parallel simulations
 from mpi4py import MPI
@@ -16,7 +18,14 @@ class MPIMediator(Mediator):
         
         # Only the root process accesses the file system
         if rank == 0:
-            self.file_reader = FileReader(config)
+            try:
+                self.file_reader = FileReader(config)
+            except Exception as e:
+                logger = logging.getLogger(__name__)
+                logger.error('Caught exception when reading input file. '\
+                'Terminating all tasks ...')
+                logger.error(traceback.format_exc())
+                comm.Abort()
         else:
             self.file_reader = None
 
@@ -26,7 +35,14 @@ class MPIMediator(Mediator):
         rank = comm.Get_rank()
 
         if rank == 0:
-            self.file_reader.setup_data_access(start_datetime, end_datetime)
+            try:
+                self.file_reader.setup_data_access(start_datetime, end_datetime)
+            except Exception as e:
+                logger = logging.getLogger(__name__)
+                logger.error('Caught exception when setting up data access. '\
+                'Terminating all tasks ...')
+                logger.error(traceback.format_exc())
+                comm.Abort()
 
     def update_reading_frames(self, time):
         # MPI objects and variables
@@ -34,7 +50,14 @@ class MPIMediator(Mediator):
         rank = comm.Get_rank()
         
         if rank == 0:
-            self.file_reader.update_reading_frames(time)
+            try:
+                self.file_reader.update_reading_frames(time)
+            except Exception as e:
+                logger = logging.getLogger(__name__)
+                logger.error('Caught exception when updating reading frames. '\
+                'Terminating all tasks ...')
+                logger.error(traceback.format_exc())
+                comm.Abort()
 
     def get_dimension_variable(self, var_name):
         # MPI objects and variables
@@ -42,7 +65,14 @@ class MPIMediator(Mediator):
         rank = comm.Get_rank()
         
         if rank == 0:
-            var = self.file_reader.get_dimension_variable(var_name)
+            try:
+                var = self.file_reader.get_dimension_variable(var_name)
+            except Exception as e:
+                logger = logging.getLogger(__name__)
+                logger.error('Caught exception when getting dimension variable. '\
+                'Terminating all tasks ...')
+                logger.error(traceback.format_exc())
+                comm.Abort()
         else:
             var = None
 
@@ -56,7 +86,14 @@ class MPIMediator(Mediator):
         rank = comm.Get_rank()
         
         if rank == 0:
-            var = self.file_reader.get_grid_variable(var_name).astype(var_type)
+            try:
+                var = self.file_reader.get_grid_variable(var_name).astype(var_type)
+            except Exception as e:
+                logger = logging.getLogger(__name__)
+                logger.error('Caught exception when getting grid variable. '\
+                'Terminating all tasks ...')
+                logger.error(traceback.format_exc())
+                comm.Abort()
         else:
             var = np.empty(var_dims, dtype=var_type)
         
@@ -70,7 +107,14 @@ class MPIMediator(Mediator):
         rank = comm.Get_rank()
         
         if rank == 0:
-            time = self.file_reader.get_time_at_last_time_index()
+            try:
+                time = self.file_reader.get_time_at_last_time_index()
+            except Exception as e:
+                logger = logging.getLogger(__name__)
+                logger.error('Caught exception when getting last time index. '\
+                'Terminating all tasks ...')
+                logger.error(traceback.format_exc())
+                comm.Abort()
         else:
             time = None
         
@@ -84,7 +128,14 @@ class MPIMediator(Mediator):
         rank = comm.Get_rank()
         
         if rank == 0:
-            time = self.file_reader.get_time_at_next_time_index()
+            try:
+                time = self.file_reader.get_time_at_next_time_index()
+            except Exception as e:
+                logger = logging.getLogger(__name__)
+                logger.error('Caught exception when getting next time index. '\
+                'Terminating all tasks ...')
+                logger.error(traceback.format_exc())
+                comm.Abort()
         else:
             time = None
         
@@ -98,7 +149,14 @@ class MPIMediator(Mediator):
         rank = comm.Get_rank()
         
         if rank == 0:
-            var = self.file_reader.get_time_dependent_variable_at_last_time_index(var_name).astype(var_type)
+            try:
+                var = self.file_reader.get_time_dependent_variable_at_last_time_index(var_name).astype(var_type)
+            except Exception as e:
+                logger = logging.getLogger(__name__)
+                logger.error('Caught exception when getting time variable at '\
+                'last time index. Terminating all tasks ...')
+                logger.error(traceback.format_exc())
+                comm.Abort()
         else:
             var = np.empty(var_dims, dtype=var_type)
         
@@ -112,7 +170,14 @@ class MPIMediator(Mediator):
         rank = comm.Get_rank()
         
         if rank == 0:
-            var = self.file_reader.get_time_dependent_variable_at_next_time_index(var_name).astype(var_type)
+            try:
+                var = self.file_reader.get_time_dependent_variable_at_next_time_index(var_name).astype(var_type)
+            except Exception as e:
+                logger = logging.getLogger(__name__)
+                logger.error('Caught exception when getting time variable at '\
+                'next time index. Terminating all tasks ...')
+                logger.error(traceback.format_exc())
+                comm.Abort()
         else:
             var = np.empty(var_dims, dtype=var_type)
         
