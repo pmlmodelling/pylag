@@ -46,7 +46,7 @@ cdef get_barycentric_coords(DTYPE_FLOAT_t x, DTYPE_FLOAT_t y,
 
 cdef DTYPE_FLOAT_t shepard_interpolation(DTYPE_FLOAT_t x,
         DTYPE_FLOAT_t y, DTYPE_FLOAT_t xpts[4], DTYPE_FLOAT_t ypts[4],
-        DTYPE_FLOAT_t vals[4]):
+        DTYPE_FLOAT_t vals[4]) except FLOAT_ERR:
     """Shepard interpolation.
 
     """

@@ -9,7 +9,7 @@ cdef get_barycentric_coords(DTYPE_FLOAT_t x, DTYPE_FLOAT_t y,
 
 cdef DTYPE_FLOAT_t shepard_interpolation(DTYPE_FLOAT_t x,
         DTYPE_FLOAT_t y, DTYPE_FLOAT_t xpts[4], DTYPE_FLOAT_t[4] ypts,
-        DTYPE_FLOAT_t vals[4])
+        DTYPE_FLOAT_t vals[4]) except FLOAT_ERR
 
 cdef DTYPE_FLOAT_t get_linear_fraction_safe(DTYPE_FLOAT_t var, 
         DTYPE_FLOAT_t var1, DTYPE_FLOAT_t var2) except FLOAT_ERR

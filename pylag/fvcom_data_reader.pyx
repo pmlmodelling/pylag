@@ -1556,7 +1556,7 @@ cdef class FVCOMDataReader(DataReader):
     cdef DTYPE_FLOAT_t _get_omega_velocity(self, DTYPE_FLOAT_t time,
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos,
             DTYPE_INT_t host, DTYPE_INT_t zlayer, 
-            DTYPE_FLOAT_t phi[N_VERTICES]):
+            DTYPE_FLOAT_t phi[N_VERTICES]) except FLOAT_ERR:
         """ Get omega velocity through linear interpolation.
         
         Omega is defined at element nodes on sigma levels. Linear interpolation
@@ -1762,7 +1762,7 @@ cdef class FVCOMDataReader(DataReader):
             self._viscofh_next = self.mediator.get_time_dependent_variable_at_next_time_index('viscofh', (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
                 
     cdef void _get_phi(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos,
-            DTYPE_INT_t host, DTYPE_FLOAT_t phi[N_VERTICES]):
+            DTYPE_INT_t host, DTYPE_FLOAT_t phi[N_VERTICES]) except *:
         """ Get barycentric coordinates.
         
         Parameters:
@@ -1798,7 +1798,8 @@ cdef class FVCOMDataReader(DataReader):
         interp.get_barycentric_coords(xpos, ypos, x_tri, y_tri, phi)
 
     cdef DTYPE_FLOAT_t _interp_on_sigma_layer(self, 
-            DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_INT_t host, DTYPE_INT_t kidx):
+            DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_INT_t host,
+            DTYPE_INT_t kidx)  except FLOAT_ERR:
         """ Return the linearly interpolated value of sigma on the sigma layer.
         
         Compute sigma on the specified sigma layer within the given host 
@@ -1833,7 +1834,8 @@ cdef class FVCOMDataReader(DataReader):
         return sigma
 
     cdef DTYPE_FLOAT_t _interp_on_sigma_level(self, 
-            DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_INT_t host, DTYPE_INT_t kidx):
+            DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_INT_t host,
+            DTYPE_INT_t kidx) except FLOAT_ERR:
         """ Return the linearly interpolated value of sigma.
         
         Compute sigma on the specified sigma level within the given host 
@@ -1869,7 +1871,7 @@ cdef class FVCOMDataReader(DataReader):
 
     cdef DTYPE_FLOAT_t _interpolate_vel_between_elements(self, 
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t host, 
-            DTYPE_FLOAT_t vel_elem[N_NEIGH_ELEMS]):
+            DTYPE_FLOAT_t vel_elem[N_NEIGH_ELEMS]) except FLOAT_ERR:
         """Interpolate between elements using linear least squares interpolation.
         
         Use the a1u and a2u interpolants to compute the velocity at xpos and
@@ -1907,7 +1909,7 @@ cdef class FVCOMDataReader(DataReader):
 
     cdef void _get_z_grid_position(self, DTYPE_FLOAT_t zpos, DTYPE_INT_t host, 
             DTYPE_INT_t zlayer, DTYPE_FLOAT_t phi[N_VERTICES],
-            ZGridPosition *z_grid_pos):
+            ZGridPosition *z_grid_pos) except *:
         """ Find the sigma layers bounding the given z position.
         
         First check the upper and lower boundaries, then the centre of the 

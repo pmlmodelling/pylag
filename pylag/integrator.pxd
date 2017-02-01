@@ -1,3 +1,5 @@
+include "constants.pxi"
+
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 # PyLag cimports
@@ -7,4 +9,4 @@ from pylag.delta cimport Delta
 
 cdef class NumIntegrator:
     cdef DTYPE_INT_t advect(self, DTYPE_FLOAT_t time, Particle *particle,
-            DataReader data_reader, Delta *delta_X)
+            DataReader data_reader, Delta *delta_X) except INT_ERR

@@ -1,3 +1,5 @@
+include "constants.pxi"
+
 import logging
 
 from pylag.boundary_conditions import get_horiz_boundary_condition_calculator
@@ -9,7 +11,7 @@ from pylag.boundary_conditions cimport VertBoundaryConditionCalculator
 
 cdef class NumIntegrator:
     cdef DTYPE_INT_t advect(self, DTYPE_FLOAT_t time, Particle *particle,
-            DataReader data_reader, Delta *delta_X):
+            DataReader data_reader, Delta *delta_X) except INT_ERR:
         pass
 
 cdef class RK4Integrator2D(NumIntegrator):
@@ -30,7 +32,7 @@ cdef class RK4Integrator2D(NumIntegrator):
         self._horiz_bc_calculator = get_horiz_boundary_condition_calculator(config)
 
     cdef DTYPE_INT_t advect(self, DTYPE_FLOAT_t time, Particle *particle,
-            DataReader data_reader, Delta *delta_X):
+            DataReader data_reader, Delta *delta_X) except INT_ERR:
         """ Advect particles forward in time.
         
         Use a basic fourth order Runga Kutta scheme to compute changes in a
@@ -187,7 +189,7 @@ cdef class RK4Integrator3D(NumIntegrator):
         self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)    
     
     cdef DTYPE_INT_t advect(self, DTYPE_FLOAT_t time, Particle *particle,
-            DataReader data_reader, Delta *delta_X):
+            DataReader data_reader, Delta *delta_X) except INT_ERR:
         """ Advect particles forward in time.
         
         Use a basic fourth order Runga Kutta scheme to compute changes in a
