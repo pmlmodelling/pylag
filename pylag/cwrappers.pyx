@@ -10,7 +10,11 @@ include "constants.pxi"
 
 import numpy as np
 
+# PyLag data types
+from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
+
+# PyLag python imports
 from pylag.integrator import get_num_integrator
 from pylag.random_walk import get_vertical_random_walk_model
 
@@ -53,7 +57,7 @@ cpdef get_barycentric_coords(x, y, x_tri, y_tri):
     interp.get_barycentric_coords(x, y, x_tri_c, y_tri_c, phi_c)
     
     # Generate and pass back an array type python can understand
-    phi_out = np.empty(N_VERTICES, dtype='float32')
+    phi_out = np.empty(N_VERTICES, dtype=DTYPE_FLOAT)
     for i in xrange(N_VERTICES):
         phi_out[i] = phi_c[i]
     return phi_out
@@ -92,7 +96,7 @@ cpdef get_velocity(DataReader data_reader, t, x, y, z, host, zlayer):
     data_reader.get_velocity(t, x, y, z, host, zlayer, vel_c)
     
     # Generate and pass back an array type python can understand
-    vel_out = np.empty(N_VERTICES, dtype='float32')
+    vel_out = np.empty(N_VERTICES, dtype=DTYPE_FLOAT)
     for i in xrange(N_VERTICES):
         vel_out[i] = vel_c[i]
     return vel_out
@@ -104,7 +108,7 @@ cpdef get_horizontal_velocity(DataReader data_reader, t, x, y, z, host, zlayer):
     data_reader.get_horizontal_velocity(t, x, y, z, host, zlayer, vel_c)
     
     # Generate and pass back an array python can understand
-    vel_out = np.empty(N_VERTICES, dtype='float32')
+    vel_out = np.empty(N_VERTICES, dtype=DTYPE_FLOAT)
     for i in xrange(2):
         vel_out[i] = vel_c[i]
     return vel_out
@@ -205,21 +209,7 @@ cdef class TestVerticalRandomWalk:
         reset(&delta_X)
         
         # Advect the particle
-        self._vertical_random_walk.random_walk(time, &particle, data_reader, &delta_X)
-
-        # Apply reflecting surface/bottom boundary conditions
-        zmin = data_reader.get_zmin(time, 0.0, 0.0)
-        zmax = data_reader.get_zmax(time, 0.0, 0.0)
-        if zpos < zmin:
-            zpos = zmin + zmin - zpos
-        elif zpos > zmax:
-            zpos = zmax + zmax - zpos
-
-        # Check for valid zpos
-        if zpos < zmin:
-            raise ValueError("New zpos (= {}) lies below the sea floor.".format(zpos))
-        elif zpos > zmax:
-            raise ValueError("New zpos (= {}) lies above the free surface.".format(zpos))          
+        self._vertical_random_walk.random_walk(time, &particle, data_reader, &delta_X)     
 
         # Use Delta values to update the particle's position
         zpos_new = particle.zpos + delta_X.z
