@@ -11,6 +11,8 @@ from matplotlib import pyplot as plt
 from ConfigParser import SafeConfigParser
 
 from pylag.analytic_data_reader import TestDiffusivityDataReader
+from pylag.boundary_conditions import get_vert_boundary_condition_calculator
+
 from pylag import cwrappers
 import pylag.random as random
 
@@ -29,12 +31,16 @@ config = SafeConfigParser()
 config.add_section("SIMULATION")
 config.set("SIMULATION", "time_step", str(time_step))
 config.set("SIMULATION", "vertical_random_walk_model", "AR0")
+config.set("SIMULATION", "vert_bound_cond", "reflecting")
 
 # Create data reader
 data_reader = TestDiffusivityDataReader(config)
 
 # Create test object
 test_vrwm = cwrappers.TestVerticalRandomWalk(config)
+
+# Create vertical boundary condition calculator
+test_vert_bc_calculator = get_vert_boundary_condition_calculator(config)
 
 # z min and max values
 zmin = data_reader.get_zmin(0.0,0.0,0.0)
@@ -57,8 +63,11 @@ for t_idx, t in enumerate(time):
     for z_idx, z_pos in enumerate(z_positions):
         particle_depths[z_idx, t_idx] = z_pos
         
-        # Compute the new position
-        z_positions[z_idx] = test_vrwm.random_walk(data_reader, t, x_pos, y_pos, z_pos) 
+        # Compute the new position and apply boundary conditions as necessary
+        zpos_new = test_vrwm.random_walk(data_reader, t, x_pos, y_pos, z_pos)
+        if zpos_new < zmin or zpos_new > zmax:
+            zpos_new = test_vert_bc_calculator.apply(zpos_new, zmin, zmax)
+        z_positions[z_idx] =  zpos_new
 
 # Bin edges used for concentration calculation
 bin_edges = range(int(zmax-zmin) + 1)

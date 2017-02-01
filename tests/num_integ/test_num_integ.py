@@ -20,6 +20,7 @@ config = SafeConfigParser()
 config.add_section("SIMULATION")
 config.set("SIMULATION", "time_step", str(time_step))
 config.set("SIMULATION", "num_integrator", "RK4_2D")
+config.set("SIMULATION", "horiz_bound_cond", "None")
 
 # Create test object
 test_num_integrator = cwrappers.TestRK4Integrator(config)
