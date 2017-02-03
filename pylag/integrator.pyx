@@ -268,7 +268,7 @@ cdef class RK4Integrator3D(NumIntegrator):
         # Check for open boundary crossing
         if flag == -2: return flag
 
-        # Impose reflecting boundary condition in z
+        # Impose boundary condition in z
         zmin = data_reader.get_zmin(t, xpos, ypos)
         zmax = data_reader.get_zmax(t, xpos, ypos)
         if zpos < zmin or zpos > zmax:
@@ -299,7 +299,7 @@ cdef class RK4Integrator3D(NumIntegrator):
         # Check for open boundary crossing
         if flag == -2: return flag
 
-        # Impose reflecting boundary condition in z
+        # Impose boundary condition in z
         zmin = data_reader.get_zmin(t, xpos, ypos)
         zmax = data_reader.get_zmax(t, xpos, ypos)
         if zpos < zmin or zpos > zmax:
@@ -330,7 +330,7 @@ cdef class RK4Integrator3D(NumIntegrator):
         # Check for open boundary crossing
         if flag == -2: return flag
 
-        # Impose reflecting boundary condition in z
+        # Impose boundary condition in z
         zmin = data_reader.get_zmin(t, xpos, ypos)
         zmax = data_reader.get_zmax(t, xpos, ypos)
         if zpos < zmin or zpos > zmax:
