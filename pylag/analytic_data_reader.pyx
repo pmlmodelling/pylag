@@ -124,11 +124,11 @@ cdef class TestDiffusivityDataReader(DataReader):
         self._zmax = 40.0
 
     cpdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
-        DTYPE_FLOAT_t ypos):
+        DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
         return self._zmin
 
     cpdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
-        DTYPE_FLOAT_t ypos):
+        DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
         return self._zmax
 
     cpdef find_host(self, DTYPE_FLOAT_t xpos_old, DTYPE_FLOAT_t ypos_old,

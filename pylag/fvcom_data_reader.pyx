@@ -642,7 +642,7 @@ cdef class FVCOMDataReader(DataReader):
         raise ValueError("Particle zpos (={}) not found!".format(zpos))
 
     cpdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos):
+            DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
         """ Returns zmin.
         
         In sigma coordinates this is simply -1.0 as detailed in the FVCOM
@@ -667,7 +667,7 @@ cdef class FVCOMDataReader(DataReader):
         return self._zmin
 
     cpdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos):
+            DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
         """ Returns zmax.
         
         In sigma coordinates this is simply 0.0 as detailed in the FVCOM

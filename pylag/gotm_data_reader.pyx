@@ -221,7 +221,7 @@ cdef class GOTMDataReader(DataReader):
         raise ValueError("Particle z position (={}) not found!".format(z))
 
     cpdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos):
+            DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
         """ Returns zmin in sigma coordinates
 
         Parameters:
@@ -243,7 +243,7 @@ cdef class GOTMDataReader(DataReader):
         return -1.0
 
     cpdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos):
+            DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
         """ Returns zmax in sigma coordinates
 
         Parameters:

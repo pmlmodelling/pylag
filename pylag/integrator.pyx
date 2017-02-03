@@ -269,8 +269,8 @@ cdef class RK4Integrator3D(NumIntegrator):
         if flag == -2: return flag
 
         # Impose boundary condition in z
-        zmin = data_reader.get_zmin(t, xpos, ypos)
-        zmax = data_reader.get_zmax(t, xpos, ypos)
+        zmin = data_reader.get_zmin(t, xpos, ypos, host)
+        zmax = data_reader.get_zmax(t, xpos, ypos, host)
         if zpos < zmin or zpos > zmax:
             zpos = self._vert_bc_calculator.apply(zpos, zmin, zmax)
 
@@ -300,8 +300,8 @@ cdef class RK4Integrator3D(NumIntegrator):
         if flag == -2: return flag
 
         # Impose boundary condition in z
-        zmin = data_reader.get_zmin(t, xpos, ypos)
-        zmax = data_reader.get_zmax(t, xpos, ypos)
+        zmin = data_reader.get_zmin(t, xpos, ypos, host)
+        zmax = data_reader.get_zmax(t, xpos, ypos, host)
         if zpos < zmin or zpos > zmax:
             zpos = self._vert_bc_calculator.apply(zpos, zmin, zmax)
 
@@ -331,8 +331,8 @@ cdef class RK4Integrator3D(NumIntegrator):
         if flag == -2: return flag
 
         # Impose boundary condition in z
-        zmin = data_reader.get_zmin(t, xpos, ypos)
-        zmax = data_reader.get_zmax(t, xpos, ypos)
+        zmin = data_reader.get_zmin(t, xpos, ypos, host)
+        zmax = data_reader.get_zmax(t, xpos, ypos, host)
         if zpos < zmin or zpos > zmax:
             zpos = self._vert_bc_calculator.apply(zpos, zmin, zmax)
 
