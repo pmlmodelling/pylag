@@ -212,8 +212,8 @@ cdef class FVCOMOPTModel(OPTModel):
                     sigma = z_temp
                 
                 # Check that the given depth is valid
-                zmin = self.data_reader.get_zmin(time, x, y)
-                zmax = self.data_reader.get_zmax(time, x, y)
+                zmin = self.data_reader.get_zmin(time, x, y, host_horizontal_elem)
+                zmax = self.data_reader.get_zmax(time, x, y, host_horizontal_elem)
                 if sigma < zmin:
                     raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(z,h))
                 elif sigma > zmax:
@@ -323,8 +323,8 @@ cdef class FVCOMOPTModel(OPTModel):
                 # If the particle still resides in the domain update its position.
                 if flag == 0:
                     # Apply surface/bottom boundary conditions
-                    zmin = self.data_reader.get_zmin(time, xpos, ypos)
-                    zmax = self.data_reader.get_zmax(time, xpos, ypos)
+                    zmin = self.data_reader.get_zmin(time, xpos, ypos, host)
+                    zmax = self.data_reader.get_zmax(time, xpos, ypos, host)
                     if zpos < zmin or zpos > zmax:
                         zpos = self.vert_bc_calculator.apply(zpos, zmin, zmax)            
 
@@ -517,8 +517,8 @@ cdef class GOTMOPTModel(OPTModel):
                 sigma = z_temp
 
             # Check that the given depth is valid
-            zmin = self.data_reader.get_zmin(time, x, y)
-            zmax = self.data_reader.get_zmax(time, x, y)
+            zmin = self.data_reader.get_zmin(time, x, y, host)
+            zmax = self.data_reader.get_zmax(time, x, y, host)
             if sigma < zmin:
                 raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(sigma,zmin))
             elif sigma > zmax:
@@ -567,8 +567,8 @@ cdef class GOTMOPTModel(OPTModel):
                 zpos = particle_ptr.zpos + delta_X.z
 
                 # Apply reflecting surface/bottom boundary conditions
-                zmin = self.data_reader.get_zmin(time, 0.0, 0.0)
-                zmax = self.data_reader.get_zmax(time, 0.0, 0.0)
+                zmin = self.data_reader.get_zmin(time, 0.0, 0.0, 0)
+                zmax = self.data_reader.get_zmax(time, 0.0, 0.0, 0)
                 if zpos < zmin:
                     zpos = zmin + zmin - zpos
                 elif zpos > zmax:
