@@ -833,7 +833,7 @@ cdef class FVCOMDataReader(DataReader):
     cpdef get_horizontal_eddy_diffusivity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
             DTYPE_INT_t zlayer):
-        """ Returns the horizontal eddy diffusivity through linear interpolation.
+        """ Returns the horizontal eddy diffusivity through linear interpolation
         
         viscofh is defined at element nodes on sigma layers. Above and below the
         top and bottom sigma layers respectivey viscofh is extrapolated, taking
@@ -879,8 +879,11 @@ cdef class FVCOMDataReader(DataReader):
         # Variables used in interpolation in time      
         cdef DTYPE_FLOAT_t time_fraction
 
-        # Variables used in interpolation in z
-        cdef DTYPE_FLOAT_t sigma_fraction, sigma_lower_layer, sigma_upper_layer
+        # Variables used in z interpolation
+        cdef DTYPE_FLOAT_t sigma, sigma_fraction, sigma_lower_layer, sigma_upper_layer
+
+        # zeta and h - needed when computing sigma
+        cdef DTYPE_FLOAT_t h, zeta
         
         # Intermediate arrays - viscofh
         cdef DTYPE_FLOAT_t viscofh_tri_t_last_layer_1[N_VERTICES]
@@ -896,9 +899,14 @@ cdef class FVCOMDataReader(DataReader):
 
         # Barycentric coordinates
         self._get_phi(xpos, ypos, host, phi)
-        
-        # Set variables describing the position within the vertical grid
-        self._get_z_grid_position(zpos, host, zlayer, phi, &z_grid_pos) 
+
+        # Compute sigma
+        h = self.get_bathymetry(xpos, ypos, host)
+        zeta = self.get_bathymetry(time, xpos, ypos, host)
+        sigma = cartesian_to_sigma_coords(zpos, h, zeta)
+
+        # Use sigma to set variables describing the position within the vertical grid
+        self._get_z_grid_position(sigma, host, zlayer, phi, &z_grid_pos) 
 
         # Time fraction
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
@@ -947,7 +955,7 @@ cdef class FVCOMDataReader(DataReader):
             # Vertical interpolation
             sigma_lower_layer = self._interp_on_sigma_layer(phi, host, z_grid_pos.k_lower_layer)
             sigma_upper_layer = self._interp_on_sigma_layer(phi, host, z_grid_pos.k_upper_layer)
-            sigma_fraction = interp.get_linear_fraction_safe(zpos, sigma_lower_layer, sigma_upper_layer)
+            sigma_fraction = interp.get_linear_fraction_safe(sigma, sigma_lower_layer, sigma_upper_layer)
 
             return interp.linear_interp(sigma_fraction, viscofh_layer_1, viscofh_layer_2)
 
@@ -1031,8 +1039,11 @@ cdef class FVCOMDataReader(DataReader):
         # Time fraction used for interpolation in time        
         cdef DTYPE_FLOAT_t time_fraction
 
-        # Variables used for interpolation in sigma
-        cdef DTYPE_FLOAT_t sigma_fraction, sigma_lower_level, sigma_upper_level
+        # Variables used in z interpolation
+        cdef DTYPE_FLOAT_t sigma, sigma_fraction, sigma_lower_level, sigma_upper_level
+
+        # zeta and h - needed when computing sigma
+        cdef DTYPE_FLOAT_t h, zeta
 
         # Intermediate arrays - kh
         cdef DTYPE_FLOAT_t kh_tri_t_last_lower_level[N_VERTICES]
@@ -1040,21 +1051,11 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_FLOAT_t kh_tri_t_last_upper_level[N_VERTICES]
         cdef DTYPE_FLOAT_t kh_tri_t_next_upper_level[N_VERTICES]
         cdef DTYPE_FLOAT_t kh_tri_lower_level[N_VERTICES]
-        cdef DTYPE_FLOAT_t kh_tri_upper_level[N_VERTICES]
-        
-        # Intermediate arrays - zeta/h
-        cdef DTYPE_FLOAT_t zeta_tri_t_last[N_VERTICES]
-        cdef DTYPE_FLOAT_t zeta_tri_t_next[N_VERTICES]
-        cdef DTYPE_FLOAT_t zeta_tri[N_VERTICES]
-        cdef DTYPE_FLOAT_t h_tri[N_VERTICES]        
+        cdef DTYPE_FLOAT_t kh_tri_upper_level[N_VERTICES]      
         
         # Interpolated diffusivities on lower and upper bounding sigma levels
         cdef DTYPE_FLOAT_t kh_lower_level
         cdef DTYPE_FLOAT_t kh_upper_level
-
-        # Interpolated zeta/h
-        cdef DTYPE_FLOAT_t zeta
-        cdef DTYPE_FLOAT_t h
 
         # Compute barycentric coordinates for the given x/y coordinates
         self._get_phi(xpos, ypos, host, phi)
@@ -1066,9 +1067,6 @@ cdef class FVCOMDataReader(DataReader):
             kh_tri_t_next_lower_level[i] = self._kh_next[zlayer+1, vertex]
             kh_tri_t_last_upper_level[i] = self._kh_last[zlayer, vertex]
             kh_tri_t_next_upper_level[i] = self._kh_next[zlayer, vertex]
-            zeta_tri_t_last[i] = self._zeta_last[vertex]
-            zeta_tri_t_next[i] = self._zeta_next[vertex]
-            h_tri[i] = self._h[vertex]
 
         # Interpolate kh and zeta in time
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
@@ -1079,20 +1077,22 @@ cdef class FVCOMDataReader(DataReader):
             kh_tri_upper_level[i] = interp.linear_interp(time_fraction, 
                                                 kh_tri_t_last_upper_level[i],
                                                 kh_tri_t_next_upper_level[i])
-            zeta_tri[i] = interp.linear_interp(time_fraction, zeta_tri_t_last[i], zeta_tri_t_next[i])
 
         # Interpolate kh, zeta and h within the host
         kh_lower_level = interp.interpolate_within_element(kh_tri_lower_level, phi)
         kh_upper_level = interp.interpolate_within_element(kh_tri_upper_level, phi)
-        zeta = interp.interpolate_within_element(zeta_tri, phi)
-        h = interp.interpolate_within_element(h_tri, phi)
+
+        # Compute sigma
+        h = self.get_bathymetry(xpos, ypos, host)
+        zeta = self.get_bathymetry(time, xpos, ypos, host)
+        sigma = cartesian_to_sigma_coords(zpos, h, zeta)
 
         # Interpolate between sigma levels
         sigma_upper_level = self._interp_on_sigma_level(phi, host, zlayer)
         sigma_lower_level = self._interp_on_sigma_level(phi, host, zlayer+1)
-        sigma_fraction = interp.get_linear_fraction_safe(zpos, sigma_lower_level, sigma_upper_level)
+        sigma_fraction = interp.get_linear_fraction_safe(sigma, sigma_lower_level, sigma_upper_level)
 
-        return interp.linear_interp(sigma_fraction, kh_lower_level, kh_upper_level) / (h + zeta)**2
+        return interp.linear_interp(sigma_fraction, kh_lower_level, kh_upper_level)
 
     cpdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, 
@@ -1139,7 +1139,7 @@ cdef class FVCOMDataReader(DataReader):
         # Z layer for incremented position
         cdef DTYPE_INT_t zlayer_incremented
         
-        # Use a point arbitrarily close to zpos (in sigma coordinates) for the 
+        # Use a point that is close to zpos (in cartesian coordinates) for the 
         # gradient calculation
         zpos_increment = 1.0e-3
         
