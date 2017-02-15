@@ -12,6 +12,7 @@ from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 from pylag.data_reader cimport DataReader
 cimport pylag.interpolation as interp
 from pylag.math cimport int_min, float_min, get_intersection_point
+from pylag.math cimport cartesian_to_sigma_coords
 
 cdef class FVCOMDataReader(DataReader):
     """ DataReader for FVCOM.
@@ -1157,22 +1158,25 @@ cdef class FVCOMDataReader(DataReader):
 
         return k_prime
 
-    cdef _get_uv_velocity_using_shepard_interpolation(self, DTYPE_FLOAT_t time,
+    cdef _get_velocity_using_shepard_interpolation(self, DTYPE_FLOAT_t time,
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, 
             DTYPE_INT_t host, DTYPE_INT_t zlayer, 
-            DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_FLOAT_t vel[2]):
-        """ Return u and v components at a point using Shepard interpolation.
+            DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_FLOAT_t vel[3]):
+        """ Return (u,v,w) velocities at a point using Shepard interpolation
         
-        In FVCOM, the u and v velocity components are defined at element centres
-        on sigma layers and saved at discrete points in time. Here,
-        u(t,x,y,z) and v(t,x,y,z) are retrieved through i) linear interpolation
-        in t and z, and ii) Shepard interpolation (which is basically a 
-        special case of normalized radial basis function interpolation)
-        in x and y.
-        
+        In FVCOM, the u, v, and w velocity components are defined at element
+        centres on sigma layers and saved at discrete points in time. Here,
+        u(t,x,y,z), v(t,x,y,z) and w(t,x,y,z) are retrieved through i) linear
+        interpolation in t and z, and ii) Shepard interpolation (which is
+        basically a special case of normalized radial basis function
+        interpolation) in x and y.
+
         In Shepard interpolation, the algorithm uses velocities defined at 
         the host element's centre and its immediate neghbours (i.e. at the
         centre of those elements that share a face with the host element).
+        
+        NB - this function returns the vertical velocity in z coordinate space
+        (units m/s) and not the vertical velocity in sigma coordinate space.
         
         Parameters:
         -----------
@@ -1197,7 +1201,7 @@ cdef class FVCOMDataReader(DataReader):
         Returns:
         --------
         vel : C array, float
-            Two element array giving the u and v velocity component.
+            Three element array giving the u, v and w velocity components.
         """
         # x/y coordinates of element centres
         cdef DTYPE_FLOAT_t xc[N_NEIGH_ELEMS]
@@ -1206,24 +1210,28 @@ cdef class FVCOMDataReader(DataReader):
         # Temporary array for vel at element centres at last time point
         cdef DTYPE_FLOAT_t uc_last[N_NEIGH_ELEMS]
         cdef DTYPE_FLOAT_t vc_last[N_NEIGH_ELEMS]
+        cdef DTYPE_FLOAT_t wc_last[N_NEIGH_ELEMS]
 
         # Temporary array for vel at element centres at next time point
         cdef DTYPE_FLOAT_t uc_next[N_NEIGH_ELEMS]
         cdef DTYPE_FLOAT_t vc_next[N_NEIGH_ELEMS]
+        cdef DTYPE_FLOAT_t wc_next[N_NEIGH_ELEMS]
 
         # Vel at element centres in overlying sigma layer
         cdef DTYPE_FLOAT_t uc1[N_NEIGH_ELEMS]
         cdef DTYPE_FLOAT_t vc1[N_NEIGH_ELEMS]
+        cdef DTYPE_FLOAT_t wc1[N_NEIGH_ELEMS]
 
         # Vel at element centres in underlying sigma layer
         cdef DTYPE_FLOAT_t uc2[N_NEIGH_ELEMS]
-        cdef DTYPE_FLOAT_t vc2[N_NEIGH_ELEMS]     
+        cdef DTYPE_FLOAT_t vc2[N_NEIGH_ELEMS]
+        cdef DTYPE_FLOAT_t wc2[N_NEIGH_ELEMS]
         
         # Vel at the given location in the overlying sigma layer
-        cdef DTYPE_FLOAT_t up1, vp1
+        cdef DTYPE_FLOAT_t up1, vp1, wp1
         
         # Vel at the given location in the underlying sigma layer
-        cdef DTYPE_FLOAT_t up2, vp2
+        cdef DTYPE_FLOAT_t up2, vp2, wp2
         
         # Object describing a point's location within FVCOM's vertical grid. 
         cdef ZGridPosition z_grid_pos
@@ -1231,16 +1239,24 @@ cdef class FVCOMDataReader(DataReader):
         # Variables used in interpolation in time      
         cdef DTYPE_FLOAT_t time_fraction
 
-        # Variables used in interpolation in z
-        cdef DTYPE_FLOAT_t sigma_fraction, sigma_lower_layer, sigma_upper_layer
+        # Variables used in z interpolation
+        cdef DTYPE_FLOAT_t sigma, sigma_fraction, sigma_lower_layer, sigma_upper_layer
+
+        # zeta and h - needed when computing sigma
+        cdef DTYPE_FLOAT_t h, zeta
 
         # Array and loop indices
         cdef DTYPE_INT_t i, j, k, neighbour
         
         cdef DTYPE_INT_t nbe_min
         
+        # First compute sigma - used for finding the host z layer
+        h = self.get_bathymetry(xpos, ypos, host)
+        zeta = self.get_bathymetry(time, xpos, ypos, host)
+        sigma = cartesian_to_sigma_coords(zpos, h, zeta)
+
         # Set variables describing the position within the vertical grid
-        self._get_z_grid_position(zpos, host, zlayer, phi, &z_grid_pos)
+        self._get_z_grid_position(sigma, host, zlayer, phi, &z_grid_pos)
 
         # Time fraction
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
@@ -1251,12 +1267,15 @@ cdef class FVCOMDataReader(DataReader):
             if z_grid_pos.in_vertical_boundary_layer is True:
                 vel[0] = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_boundary, host], self._u_next[z_grid_pos.k_boundary, host])
                 vel[1] = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_boundary, host], self._v_next[z_grid_pos.k_boundary, host])
+                vel[2] = interp.linear_interp(time_fraction, self._w_last[z_grid_pos.k_boundary, host], self._w_next[z_grid_pos.k_boundary, host])
                 return
             else:
                 up1 = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_lower_layer, host], self._u_next[z_grid_pos.k_lower_layer, host])
                 vp1 = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_lower_layer, host], self._v_next[z_grid_pos.k_lower_layer, host])
+                wp1 = interp.linear_interp(time_fraction, self._w_last[z_grid_pos.k_lower_layer, host], self._w_next[z_grid_pos.k_lower_layer, host])
                 up2 = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_upper_layer, host], self._u_next[z_grid_pos.k_upper_layer, host])
                 vp2 = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_upper_layer, host], self._v_next[z_grid_pos.k_upper_layer, host])
+                wp2 = interp.linear_interp(time_fraction, self._w_last[z_grid_pos.k_upper_layer, host], self._w_next[z_grid_pos.k_upper_layer, host])
         else:
             # Non-boundary element - perform horizontal and temporal interpolation
             if z_grid_pos.in_vertical_boundary_layer is True:
@@ -1264,6 +1283,7 @@ cdef class FVCOMDataReader(DataReader):
                 yc[0] = self._yc[host]
                 uc1[0] = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_boundary, host], self._u_next[z_grid_pos.k_boundary, host])
                 vc1[0] = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_boundary, host], self._v_next[z_grid_pos.k_boundary, host])
+                wc1[0] = interp.linear_interp(time_fraction, self._w_last[z_grid_pos.k_boundary, host], self._w_next[z_grid_pos.k_boundary, host])
                 for i in xrange(3):
                     neighbour = self._nbe[i, host]
                     j = i+1 # +1 as host is 0
@@ -1271,54 +1291,64 @@ cdef class FVCOMDataReader(DataReader):
                     yc[j] = self._yc[neighbour]
                     uc1[j] = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_boundary, neighbour], self._u_next[z_grid_pos.k_boundary, neighbour])
                     vc1[j] = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_boundary, neighbour], self._v_next[z_grid_pos.k_boundary, neighbour])
+                    wc1[j] = interp.linear_interp(time_fraction, self._w_last[z_grid_pos.k_boundary, neighbour], self._w_next[z_grid_pos.k_boundary, neighbour])
                 
                 vel[0] = interp.shepard_interpolation(xpos, ypos, xc, yc, uc1)
                 vel[1] = interp.shepard_interpolation(xpos, ypos, xc, yc, vc1)
+                vel[2] = interp.shepard_interpolation(xpos, ypos, xc, yc, wc1)
                 return  
             else:
                 xc[0] = self._xc[host]
                 yc[0] = self._yc[host]
                 uc1[0] = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_lower_layer, host], self._u_next[z_grid_pos.k_lower_layer, host])
                 vc1[0] = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_lower_layer, host], self._v_next[z_grid_pos.k_lower_layer, host])
+                wc1[0] = interp.linear_interp(time_fraction, self._w_last[z_grid_pos.k_lower_layer, host], self._w_next[z_grid_pos.k_lower_layer, host])
                 uc2[0] = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_upper_layer, host], self._u_next[z_grid_pos.k_upper_layer, host])
                 vc2[0] = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_upper_layer, host], self._v_next[z_grid_pos.k_upper_layer, host])
+                wc2[0] = interp.linear_interp(time_fraction, self._w_last[z_grid_pos.k_upper_layer, host], self._w_next[z_grid_pos.k_upper_layer, host])
                 for i in xrange(3):
                     neighbour = self._nbe[i, host]
                     j = i+1 # +1 as host is 0
                     xc[j] = self._xc[neighbour] 
                     yc[j] = self._yc[neighbour]
                     uc1[j] = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_lower_layer, host], self._u_next[z_grid_pos.k_lower_layer, host])
-                    vc1[j] = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_lower_layer, host], self._v_next[z_grid_pos.k_lower_layer, host])    
+                    vc1[j] = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_lower_layer, host], self._v_next[z_grid_pos.k_lower_layer, host])
+                    wc1[j] = interp.linear_interp(time_fraction, self._w_last[z_grid_pos.k_lower_layer, host], self._w_next[z_grid_pos.k_lower_layer, host])
                     uc2[j] = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_upper_layer, host], self._u_next[z_grid_pos.k_upper_layer, host])
                     vc2[j] = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_upper_layer, host], self._v_next[z_grid_pos.k_upper_layer, host])
+                    wc2[j] = interp.linear_interp(time_fraction, self._w_last[z_grid_pos.k_upper_layer, host], self._w_next[z_grid_pos.k_upper_layer, host])
             
             # ... lower bounding sigma layer
             up1 = interp.shepard_interpolation(xpos, ypos, xc, yc, uc1)
             vp1 = interp.shepard_interpolation(xpos, ypos, xc, yc, vc1)
+            wp1 = interp.shepard_interpolation(xpos, ypos, xc, yc, wc1)
 
             # ... upper bounding sigma layer
             up2 = interp.shepard_interpolation(xpos, ypos, xc, yc, uc2)
             vp2 = interp.shepard_interpolation(xpos, ypos, xc, yc, vc2)
+            wp2 = interp.shepard_interpolation(xpos, ypos, xc, yc, wc2)
 
         # Vertical interpolation
         sigma_lower_layer = self._interp_on_sigma_layer(phi, host, z_grid_pos.k_lower_layer)
         sigma_upper_layer = self._interp_on_sigma_layer(phi, host, z_grid_pos.k_upper_layer)
-        sigma_fraction = interp.get_linear_fraction_safe(zpos, sigma_lower_layer, sigma_upper_layer)
+        sigma_fraction = interp.get_linear_fraction_safe(sigma, sigma_lower_layer, sigma_upper_layer)
 
         vel[0] = interp.linear_interp(sigma_fraction, up1, up2)
         vel[1] = interp.linear_interp(sigma_fraction, vp1, vp2)
+        vel[2] = interp.linear_interp(sigma_fraction, wp1, wp2)
         return
 
-    cdef _get_uv_velocity_using_linear_least_squares_interpolation(self, 
+    cdef _get_velocity_using_linear_least_squares_interpolation(self, 
             DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, 
             DTYPE_FLOAT_t zpos, DTYPE_INT_t host, DTYPE_INT_t zlayer, 
-            DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_FLOAT_t vel[2]):
-        """ Return u and v components at a point using LLS interpolation.
+            DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_FLOAT_t vel[3]):
+        """ Return u, v and velocity components at a point using LLS method
         
-        In FVCOM, the u and v velocity components are defined at element centres
-        on sigma layers and saved at discrete points in time. Here,
-        u(t,x,y,z) and v(t,x,y,z) are retrieved through i) linear interpolation
-        in t and z, and ii) Linear Least Squares (LLS) Interpolation in x and y.
+        In FVCOM, the u, v and w velocity components are defined at element
+        centres on sigma layers and saved at discrete points in time. Here,
+        u(t,x,y,z), v(t,x,y,z) and w(t,x,y,z) are retrieved through i) linear
+        interpolation in t and z, and ii) Linear Least Squares (LLS) 
+        Interpolation in x and y.
         
         The LLS interpolation method uses the a1u and a2u interpolants computed
         by FVCOM (see the FVCOM manual) and saved with the model output. An
@@ -1327,8 +1357,8 @@ cdef class FVCOMDataReader(DataReader):
         same velocity throughout the whole element. This velocity is that which
         is defined at the element's centroid.
         
-        This interpolation method can result in particles being pushed towards
-        and ultimately over the land boundary.
+        NB - this function returns the vertical velocity in z coordinate space
+        (units m/s) and not the vertical velocity in sigma coordinate space.
 
         Parameters:
         -----------
@@ -1353,46 +1383,58 @@ cdef class FVCOMDataReader(DataReader):
         Returns:
         --------
         vel : C array, float
-            Two element array giving the u and v velocity component.
+            Three element array giving the u, v and w velocity component.
         """
         # Temporary array for vel at element centres at last time point
         cdef DTYPE_FLOAT_t uc_last[N_NEIGH_ELEMS]
         cdef DTYPE_FLOAT_t vc_last[N_NEIGH_ELEMS]
+        cdef DTYPE_FLOAT_t wc_last[N_NEIGH_ELEMS]
 
         # Temporary array for vel at element centres at next time point
         cdef DTYPE_FLOAT_t uc_next[N_NEIGH_ELEMS]
         cdef DTYPE_FLOAT_t vc_next[N_NEIGH_ELEMS]
+        cdef DTYPE_FLOAT_t wc_next[N_NEIGH_ELEMS]
 
         # Vel at element centres in overlying sigma layer
         cdef DTYPE_FLOAT_t uc1[N_NEIGH_ELEMS]
         cdef DTYPE_FLOAT_t vc1[N_NEIGH_ELEMS]
+        cdef DTYPE_FLOAT_t wc1[N_NEIGH_ELEMS]
 
         # Vel at element centres in underlying sigma layer
         cdef DTYPE_FLOAT_t uc2[N_NEIGH_ELEMS]
-        cdef DTYPE_FLOAT_t vc2[N_NEIGH_ELEMS]     
+        cdef DTYPE_FLOAT_t vc2[N_NEIGH_ELEMS]
+        cdef DTYPE_FLOAT_t wc2[N_NEIGH_ELEMS]
         
         # Vel at the given location in the overlying sigma layer
-        cdef DTYPE_FLOAT_t up1, vp1
+        cdef DTYPE_FLOAT_t up1, vp1, wp1
         
         # Vel at the given location in the underlying sigma layer
-        cdef DTYPE_FLOAT_t up2, vp2
-
+        cdef DTYPE_FLOAT_t up2, vp2, wp2
+        
         # Object describing a point's location within FVCOM's vertical grid. 
         cdef ZGridPosition z_grid_pos
-        
+         
         # Variables used in interpolation in time      
         cdef DTYPE_FLOAT_t time_fraction
 
-        # Variables used in interpolation in z
-        cdef DTYPE_FLOAT_t sigma_fraction, sigma_lower_layer, sigma_upper_layer
+        # Variables used in z interpolation
+        cdef DTYPE_FLOAT_t sigma, sigma_fraction, sigma_lower_layer, sigma_upper_layer
+
+        # zeta and h - needed when computing sigma
+        cdef DTYPE_FLOAT_t h, zeta
 
         # Array and loop indices
         cdef DTYPE_INT_t i, j, k, neighbour
         
         cdef DTYPE_INT_t nbe_min
 
+        # First compute sigma - used for finding the host z layer
+        h = self.get_bathymetry(xpos, ypos, host)
+        zeta = self.get_bathymetry(time, xpos, ypos, host)
+        sigma = cartesian_to_sigma_coords(zpos, h, zeta)
+
         # Set variables describing the position within the vertical grid
-        self._get_z_grid_position(zpos, host, zlayer, phi, &z_grid_pos)
+        self._get_z_grid_position(sigma, host, zlayer, phi, &z_grid_pos)
 
         # Time fraction
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
@@ -1403,54 +1445,67 @@ cdef class FVCOMDataReader(DataReader):
             if z_grid_pos.in_vertical_boundary_layer is True:
                 vel[0] = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_boundary, host], self._u_next[z_grid_pos.k_boundary, host])
                 vel[1] = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_boundary, host], self._v_next[z_grid_pos.k_boundary, host])
+                vel[2] = interp.linear_interp(time_fraction, self._w_last[z_grid_pos.k_boundary, host], self._w_next[z_grid_pos.k_boundary, host])
                 return
             else:
                 up1 = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_lower_layer, host], self._u_next[z_grid_pos.k_lower_layer, host])
                 vp1 = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_lower_layer, host], self._v_next[z_grid_pos.k_lower_layer, host])
+                wp1 = interp.linear_interp(time_fraction, self._w_last[z_grid_pos.k_lower_layer, host], self._w_next[z_grid_pos.k_lower_layer, host])
                 up2 = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_upper_layer, host], self._u_next[z_grid_pos.k_upper_layer, host])
                 vp2 = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_upper_layer, host], self._v_next[z_grid_pos.k_upper_layer, host])
+                wp2 = interp.linear_interp(time_fraction, self._w_last[z_grid_pos.k_upper_layer, host], self._w_next[z_grid_pos.k_upper_layer, host])
         else:
             # Non-boundary element - perform horizontal and temporal interpolation
             if z_grid_pos.in_vertical_boundary_layer is True:
                 uc1[0] = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_boundary, host], self._u_next[z_grid_pos.k_boundary, host])
                 vc1[0] = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_boundary, host], self._v_next[z_grid_pos.k_boundary, host])
+                wc1[0] = interp.linear_interp(time_fraction, self._w_last[z_grid_pos.k_boundary, host], self._w_next[z_grid_pos.k_boundary, host])
                 for i in xrange(3):
                     neighbour = self._nbe[i, host]
                     j = i+1 # +1 as host is 0
                     uc1[j] = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_boundary, neighbour], self._u_next[z_grid_pos.k_boundary, neighbour])
                     vc1[j] = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_boundary, neighbour], self._v_next[z_grid_pos.k_boundary, neighbour])
+                    wc1[j] = interp.linear_interp(time_fraction, self._w_last[z_grid_pos.k_boundary, neighbour], self._w_next[z_grid_pos.k_boundary, neighbour])
                 
                 vel[0] = self._interpolate_vel_between_elements(xpos, ypos, host, uc1)
                 vel[1] = self._interpolate_vel_between_elements(xpos, ypos, host, vc1)
+                vel[2] = self._interpolate_vel_between_elements(xpos, ypos, host, wc1)
                 return  
             else:
                 uc1[0] = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_lower_layer, host], self._u_next[z_grid_pos.k_lower_layer, host])
                 vc1[0] = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_lower_layer, host], self._v_next[z_grid_pos.k_lower_layer, host])
+                wc1[0] = interp.linear_interp(time_fraction, self._w_last[z_grid_pos.k_lower_layer, host], self._w_next[z_grid_pos.k_lower_layer, host])
                 uc2[0] = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_upper_layer, host], self._u_next[z_grid_pos.k_upper_layer, host])
                 vc2[0] = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_upper_layer, host], self._v_next[z_grid_pos.k_upper_layer, host])
+                wc2[0] = interp.linear_interp(time_fraction, self._w_last[z_grid_pos.k_upper_layer, host], self._w_next[z_grid_pos.k_upper_layer, host])
                 for i in xrange(3):
                     neighbour = self._nbe[i, host]
                     j = i+1 # +1 as host is 0
                     uc1[j] = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_lower_layer, host], self._u_next[z_grid_pos.k_lower_layer, host])
-                    vc1[j] = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_lower_layer, host], self._v_next[z_grid_pos.k_lower_layer, host])    
+                    vc1[j] = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_lower_layer, host], self._v_next[z_grid_pos.k_lower_layer, host])
+                    wc1[j] = interp.linear_interp(time_fraction, self._w_last[z_grid_pos.k_lower_layer, host], self._w_next[z_grid_pos.k_lower_layer, host])
                     uc2[j] = interp.linear_interp(time_fraction, self._u_last[z_grid_pos.k_upper_layer, host], self._u_next[z_grid_pos.k_upper_layer, host])
                     vc2[j] = interp.linear_interp(time_fraction, self._v_last[z_grid_pos.k_upper_layer, host], self._v_next[z_grid_pos.k_upper_layer, host])
+                    wc2[j] = interp.linear_interp(time_fraction, self._w_last[z_grid_pos.k_upper_layer, host], self._w_next[z_grid_pos.k_upper_layer, host])
             
             # ... lower bounding sigma layer
             up1 = self._interpolate_vel_between_elements(xpos, ypos, host, uc1)
             vp1 = self._interpolate_vel_between_elements(xpos, ypos, host, vc1)
+            wp1 = self._interpolate_vel_between_elements(xpos, ypos, host, wc1)
 
             # ... upper bounding sigma layer
             up2 = self._interpolate_vel_between_elements(xpos, ypos, host, uc2)
             vp2 = self._interpolate_vel_between_elements(xpos, ypos, host, vc2)
+            wp2 = self._interpolate_vel_between_elements(xpos, ypos, host, wc2)
             
         # Vertical interpolation
         sigma_lower_layer = self._interp_on_sigma_layer(phi, host, z_grid_pos.k_lower_layer)
         sigma_upper_layer = self._interp_on_sigma_layer(phi, host, z_grid_pos.k_upper_layer)
-        sigma_fraction = interp.get_linear_fraction_safe(zpos, sigma_lower_layer, sigma_upper_layer)
+        sigma_fraction = interp.get_linear_fraction_safe(sigma, sigma_lower_layer, sigma_upper_layer)
 
         vel[0] = interp.linear_interp(sigma_fraction, up1, up2)
         vel[1] = interp.linear_interp(sigma_fraction, vp1, vp2)
+        vel[2] = interp.linear_interp(sigma_fraction, wp1, wp2)
         return
 
     def _read_grid(self):
@@ -1690,17 +1745,17 @@ cdef class FVCOMDataReader(DataReader):
             dudy += vel_elem[i] * self._a2u[i, host]
         return vel_elem[0] + dudx*rx + dudy*ry
 
-    cdef void _get_z_grid_position(self, DTYPE_FLOAT_t zpos, DTYPE_INT_t host, 
+    cdef void _get_z_grid_position(self, DTYPE_FLOAT_t sigma, DTYPE_INT_t host, 
             DTYPE_INT_t zlayer, DTYPE_FLOAT_t phi[N_VERTICES],
             ZGridPosition *z_grid_pos) except *:
-        """ Find the sigma layers bounding the given z position.
+        """ Find the sigma layers bounding the given sigma position.
         
         First check the upper and lower boundaries, then the centre of the 
         water columnun.
         
         Parameters:
         -----------
-        zpos : float
+        sigma : float
             The given z position in sigma coordinates.
 
         host : int
@@ -1715,7 +1770,7 @@ cdef class FVCOMDataReader(DataReader):
         Returns:
         --------
         z_grid_pos : ZGridPostion
-            Object describing the location of the given z position within 
+            Object describing the location of the given sigma position within 
             FVCOM's vertical grid.
         """
         cdef DTYPE_FLOAT_t sigma_test
@@ -1726,7 +1781,7 @@ cdef class FVCOMDataReader(DataReader):
         sigma_test = self._interp_on_sigma_layer(phi, host, zlayer)
 
         # Is zpos in the top or bottom boundary layer?
-        if (zlayer == 0 and zpos >= sigma_test) or (zlayer == self._n_siglay - 1 and zpos <= sigma_test):
+        if (zlayer == 0 and sigma >= sigma_test) or (zlayer == self._n_siglay - 1 and sigma <= sigma_test):
                 z_grid_pos.in_vertical_boundary_layer = True
                 z_grid_pos.k_boundary = zlayer
 
@@ -1734,7 +1789,7 @@ cdef class FVCOMDataReader(DataReader):
 
         # zpos bounded by upper and lower sigma layers
         z_grid_pos.in_vertical_boundary_layer = False
-        if zpos >= sigma_test:
+        if sigma >= sigma_test:
             z_grid_pos.k_upper_layer = zlayer - 1
             z_grid_pos.k_lower_layer = zlayer
         else:
