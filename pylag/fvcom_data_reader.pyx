@@ -790,12 +790,8 @@ cdef class FVCOMDataReader(DataReader):
             DTYPE_INT_t zlayer, DTYPE_FLOAT_t vel[3]):
         """ Returns the velocity u(t,x,y,z) through linear interpolation
         
-        Returns the velocity u(t,x,y,z) through linear interpolation for a 
-        particle residing in the horizontal host element `host'. The actual 
-        computation is split into two separate parts - one for computing u and 
-        v, and one for computing omega. This reflects the fact that u and v are
-        defined are element centres on sigma layers, while omega is defined at
-        element nodes on sigma levels.
+        Returns the velocity u(t,x,y,z) through interpolation for a particle 
+        residing in the horizontal host element `host'.
 
         Parameters:
         -----------
@@ -824,110 +820,14 @@ cdef class FVCOMDataReader(DataReader):
         """
         # Barycentric coordinates
         cdef DTYPE_FLOAT_t phi[N_VERTICES]
-        
-        # u/v velocity array
-        cdef DTYPE_FLOAT_t vel_uv[2]
-        
-        cdef DTYPE_INT_t i
 
-        # Barycentric coordinates - precomputed here as required for both u/v 
-        # and omega computations
+        # Barycentric coordinates
         self._get_phi(xpos, ypos, host, phi)
         
         # Compute u/v velocities and save
         self._get_uv_velocity_using_linear_least_squares_interpolation(time, 
-                xpos, ypos, zpos, host, zlayer, phi, vel_uv)
-        for i in xrange(2):
-            vel[i] = vel_uv[i]
-        
-        # Compute omega velocity and save
-        vel[2] = self._get_omega_velocity(time, xpos, ypos, zpos, host, zlayer, phi)
-        return
-
-    cdef get_horizontal_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
-            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
-            DTYPE_INT_t zlayer, DTYPE_FLOAT_t vel[2]):
-        """ Returns the u/v velocity components through linear interpolation.
-        
-        This function is effectively a wrapper for _get_uv_velocity*.
-        
-        TODO:
-        -----
-        1) Two schemes are implemented but the choice is hardcoded. Have this
-        set by a config parameter?
-        
-        Parameters:
-        -----------
-        time : float
-            Time at which to interpolate.
-        
-        xpos : float
-            x-position at which to interpolate.
-        
-        ypos : float
-            y-position at which to interpolate.
-
-        zpos : float
-            z-position at which to interpolate.
-
-        host : int
-            Host horizontal element.
-
-        zlayer : int
-            Host z layer.
-
-        Return:
-        -------
-        vel : C array, float
-            u/v velocity components stored in a C array.        
-        """
-
-        # Barycentric coordinates
-        cdef DTYPE_FLOAT_t phi[N_VERTICES]
-
-        self._get_phi(xpos, ypos, host, phi)        
-        self._get_uv_velocity_using_linear_least_squares_interpolation(time, 
                 xpos, ypos, zpos, host, zlayer, phi, vel)
         return
-    
-    cdef get_vertical_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
-            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
-            DTYPE_INT_t zlayer):
-        """ Returns the vertical velocity through linear interpolation.
-        
-        This function is effectively a wrapper for _get_vertical_velocity.
-        
-        Parameters:
-        -----------
-        time : float
-            Time at which to interpolate.
-        
-        xpos : float
-            x-position at which to interpolate.
-        
-        ypos : float
-            y-position at which to interpolate.
-
-        zpos : float
-            z-position at which to interpolate.
-
-        host : int
-            Host horizontal element.
-
-        zlayer : int
-            Host z layer.
-
-        Return:
-        -------
-        omega : float
-            Omega velocity.        
-        """
-        
-        # Barycentric coordinates
-        cdef DTYPE_FLOAT_t phi[N_VERTICES]
-
-        self._get_phi(xpos, ypos, host, phi)
-        return self._get_omega_velocity(time, xpos, ypos, zpos, host, zlayer, phi)
 
     cpdef get_horizontal_eddy_diffusivity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
@@ -1552,123 +1452,6 @@ cdef class FVCOMDataReader(DataReader):
         vel[0] = interp.linear_interp(sigma_fraction, up1, up2)
         vel[1] = interp.linear_interp(sigma_fraction, vp1, vp2)
         return
-
-    cdef DTYPE_FLOAT_t _get_omega_velocity(self, DTYPE_FLOAT_t time,
-            DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos,
-            DTYPE_INT_t host, DTYPE_INT_t zlayer, 
-            DTYPE_FLOAT_t phi[N_VERTICES]) except FLOAT_ERR:
-        """ Get omega velocity through linear interpolation.
-        
-        Omega is defined at element nodes on sigma levels. Linear interpolation
-        procedes as follows:
-        
-        1) Perform time interpolation of omega at nodes of the host element on
-        the upper and lower bounding sigma levels.
-        
-        2) Interpolate omega within the host element on the upper and lower 
-        bounding sigma levels.
-        
-        3) Perform vertical interpolation of omega between sigma levels at the
-        particle's x/y position.
-        
-        Parameters:
-        -----------
-        time : float
-            Time at which to interpolate.
-        
-        xpos : float
-            x-position at which to interpolate.
-        
-        ypos : float
-            y-position at which to interpolate.
-
-        zpos : float
-            z-position at which to interpolate.
-
-        host : int
-            Host horizontal element.
-
-        zlayer : int
-            Host z layer.
-
-        phi : C array, float
-            Barycentric coordinates of the point.
-
-        Return:
-        -------
-        omega : float
-            Omega velocity.
-        """
-        # Variables used when determining indices for the sigma levels that
-        # bound the particle's position
-        cdef DTYPE_INT_t k_lower_level, k_upper_level
-        cdef DTYPE_FLOAT_t sigma_lower_level, sigma_upper_level        
-        cdef bool particle_found
-
-        # No. of vertices and a temporary object used for determining variable
-        # values at the host element's nodes
-        cdef int i # Loop counters
-        cdef int vertex # Vertex identifier
-        
-        # Time and sigma fractions for interpolation in time and sigma        
-        cdef DTYPE_FLOAT_t time_fraction, sigma_fraction
-        
-        # Intermediate arrays - omega
-        cdef DTYPE_FLOAT_t omega_tri_t_last_lower_level[N_VERTICES]
-        cdef DTYPE_FLOAT_t omega_tri_t_next_lower_level[N_VERTICES]
-        cdef DTYPE_FLOAT_t omega_tri_t_last_upper_level[N_VERTICES]
-        cdef DTYPE_FLOAT_t omega_tri_t_next_upper_level[N_VERTICES]
-        cdef DTYPE_FLOAT_t omega_tri_lower_level[N_VERTICES]
-        cdef DTYPE_FLOAT_t omega_tri_upper_level[N_VERTICES]
-        
-        # Intermediate arrays - zeta/h
-        cdef DTYPE_FLOAT_t zeta_tri_t_last[N_VERTICES]
-        cdef DTYPE_FLOAT_t zeta_tri_t_next[N_VERTICES]
-        cdef DTYPE_FLOAT_t zeta_tri[N_VERTICES]
-        cdef DTYPE_FLOAT_t h_tri[N_VERTICES]        
-        
-        # Interpolated omegas on lower and upper bounding sigma levels
-        cdef DTYPE_FLOAT_t omega_lower_level
-        cdef DTYPE_FLOAT_t omega_upper_level
-
-        # Interpolated zeta/h
-        cdef DTYPE_FLOAT_t zeta
-        cdef DTYPE_FLOAT_t h
-
-        # Extract omega on the lower and upper bounding sigma levels, h and zeta
-        for i in xrange(N_VERTICES):
-            vertex = self._nv[i,host]
-            omega_tri_t_last_lower_level[i] = self._omega_last[zlayer+1, vertex]
-            omega_tri_t_next_lower_level[i] = self._omega_next[zlayer+1, vertex]
-            omega_tri_t_last_upper_level[i] = self._omega_last[zlayer, vertex]
-            omega_tri_t_next_upper_level[i] = self._omega_next[zlayer, vertex]
-            zeta_tri_t_last[i] = self._zeta_last[vertex]
-            zeta_tri_t_next[i] = self._zeta_next[vertex]
-            h_tri[i] = self._h[vertex]
-
-        # Interpolate omega and zeta in time
-        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
-        for i in xrange(N_VERTICES):
-            omega_tri_lower_level[i] = interp.linear_interp(time_fraction, 
-                                                omega_tri_t_last_lower_level[i],
-                                                omega_tri_t_next_lower_level[i])
-            omega_tri_upper_level[i] = interp.linear_interp(time_fraction, 
-                                                omega_tri_t_last_upper_level[i],
-                                                omega_tri_t_next_upper_level[i])
-            zeta_tri[i] = interp.linear_interp(time_fraction, zeta_tri_t_last[i], zeta_tri_t_next[i])
-
-        # Interpolate omega, zeta and h within the host
-        omega_lower_level = interp.interpolate_within_element(omega_tri_lower_level, phi)
-        omega_upper_level = interp.interpolate_within_element(omega_tri_upper_level, phi)
-        zeta = interp.interpolate_within_element(zeta_tri, phi)
-        h = interp.interpolate_within_element(h_tri, phi)
-
-        # Interpolate between sigma levels
-        sigma_lower_level = self._interp_on_sigma_level(phi, host, zlayer+1)
-        sigma_upper_level = self._interp_on_sigma_level(phi, host, zlayer)
-        sigma_fraction = interp.get_linear_fraction_safe(zpos, sigma_lower_level, sigma_upper_level)
-
-        return interp.linear_interp(sigma_fraction, omega_lower_level, omega_upper_level) / (h + zeta)
 
     def _read_grid(self):
         """ Set grid and coordinate variables.
