@@ -74,8 +74,8 @@ cdef class FVCOMDataReader(DataReader):
     cdef DTYPE_FLOAT_t[:,:] _u_next
     cdef DTYPE_FLOAT_t[:,:] _v_last
     cdef DTYPE_FLOAT_t[:,:] _v_next
-    cdef DTYPE_FLOAT_t[:,:] _omega_last
-    cdef DTYPE_FLOAT_t[:,:] _omega_next
+    cdef DTYPE_FLOAT_t[:,:] _w_last
+    cdef DTYPE_FLOAT_t[:,:] _w_next
     
     # Vertical eddy diffusivities
     cdef DTYPE_FLOAT_t[:,:] _kh_last
@@ -1531,8 +1531,8 @@ cdef class FVCOMDataReader(DataReader):
         self._u_next = self.mediator.get_time_dependent_variable_at_next_time_index('u', (self._n_siglay, self._n_elems), DTYPE_FLOAT)
         self._v_last = self.mediator.get_time_dependent_variable_at_last_time_index('v', (self._n_siglay, self._n_elems), DTYPE_FLOAT)
         self._v_next = self.mediator.get_time_dependent_variable_at_next_time_index('v', (self._n_siglay, self._n_elems), DTYPE_FLOAT)
-        self._omega_last = self.mediator.get_time_dependent_variable_at_last_time_index('omega', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)
-        self._omega_next = self.mediator.get_time_dependent_variable_at_next_time_index('omega', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)
+        self._w_last = self.mediator.get_time_dependent_variable_at_last_time_index('ww', (self._n_siglay, self._n_elems), DTYPE_FLOAT)
+        self._w_next = self.mediator.get_time_dependent_variable_at_next_time_index('ww', (self._n_siglay, self._n_elems), DTYPE_FLOAT)
         
         # Update memory views for kh
         if self.config.get('SIMULATION', 'vertical_random_walk_model') is not 'none':
