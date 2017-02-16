@@ -222,7 +222,7 @@ cdef class GOTMDataReader(DataReader):
 
     cpdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
-        """ Returns zmin in sigma coordinates
+        """ Returns the column depth
 
         Parameters:
         -----------
@@ -237,14 +237,20 @@ cdef class GOTMDataReader(DataReader):
         
         Returns:
         --------
-        zmin : float
-            z min.
+        H : float
+            The column depth.
         """
-        return -1.0
+        return -self._H
 
     cpdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
         """ Returns zmax in sigma coordinates
+
+        Returns the stored sea surface elevation that was set from the last
+        call to `read_data'. All function arguments are ignored meaning
+        interpolation is time is not performed! Please call `read_data' before
+        calling this function in order to update GotmDataReader's internal
+        state.
 
         Parameters:
         -----------
@@ -257,59 +263,6 @@ cdef class GOTMDataReader(DataReader):
         ypos : float
             y-position
         
-        Returns:
-        --------
-        zmax : float
-            z max.
-        """
-        return 0.0
-
-    cpdef get_bathymetry(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, 
-            DTYPE_INT_t host):
-        """ Returns the column depth
-        
-        Parameters:
-        -----------
-        xpos : float
-            x-position at which to interpolate (unused).
-        
-        ypos : float
-            y-position at which to interpolate (unused).
-            
-        host : int
-            Host horizontal element (unused).
-
-        Return:
-        -------
-        h : float
-            Bathymetry.
-        """
-        return self._H
-
-    cpdef get_sea_sur_elev(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
-        """ Returns the sea surface elevation.
-        
-        Returns the stored sea surface elevation that was set from the last
-        call to `read_data'. All function arguments are ignored meaning
-        interpolation is time is not performed! Please call `read_data' before
-        calling this function in order to update GotmDataReader's internal
-        state.
-
-        Parameters:
-        -----------
-        time : float
-            Time at which to interpolate (unused).
-        
-        xpos : float
-            x-position at which to interpolate (unused).
-        
-        ypos : float
-            y-position at which to interpolate (unused).
-            
-        host : int
-            Host horizontal element (unused).
-
         Return:
         -------
         zeta : float

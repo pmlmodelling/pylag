@@ -650,6 +650,10 @@ cdef class FVCOMDataReader(DataReader):
             DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
         """ Returns the bottom depth in cartesian coordinates
 
+        h is defined at element nodes. Linear interpolation in space is used
+        to compute h(x,y). NB the negative of h (which is +ve downwards) is
+        returned.
+
         Parameters:
         -----------
         time : float
@@ -669,11 +673,29 @@ cdef class FVCOMDataReader(DataReader):
         zmin : float
             The bottom depth.
         """
-        return -self.get_bathymetry(xpos, ypos, host)
+        cdef int i # Loop counters
+        cdef int vertex # Vertex identifier  
+        cdef DTYPE_FLOAT_t phi[N_VERTICES] # Barycentric coordinates 
+        cdef DTYPE_FLOAT_t h_tri[N_VERTICES] # Bathymetry at nodes
+        cdef DTYPE_FLOAT_t h # Bathymetry at (xpos, ypos)
+
+        # Barycentric coordinates
+        self._get_phi(xpos, ypos, host, phi)
+
+        for i in xrange(N_VERTICES):
+            vertex = self._nv[i,host]
+            h_tri[i] = self._h[vertex]
+
+        h = interp.interpolate_within_element(h_tri, phi)
+
+        return -h
 
     cpdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
         """ Returns the sea surface height in cartesian coordinates
+
+        zeta is defined at element nodes. Interpolation proceeds through linear
+        interpolation time followed by interpolation in space.
 
         Parameters:
         -----------
@@ -692,74 +714,6 @@ cdef class FVCOMDataReader(DataReader):
         Returns:
         --------
         zmax : float
-            Sea surface elevation.
-        """
-        return self.get_sea_sur_elev(time, xpos, ypos, host)
-
-    cpdef get_bathymetry(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos,
-            DTYPE_INT_t host):
-        """ Returns the bathymetry through linear interpolation.
-        
-        h is defined at element nodes. Linear interpolation in space is used
-        to compute h(x,y).
-        
-        Parameters:
-        -----------
-        xpos : float
-            x-position at which to interpolate.
-        
-        ypos : float
-            y-position at which to interpolate.
-            
-        host : int
-            Host horizontal element.
-
-        Return:
-        -------
-        h : float
-            Bathymetry.
-        """
-        cdef int i # Loop counters
-        cdef int vertex # Vertex identifier  
-        cdef DTYPE_FLOAT_t phi[N_VERTICES] # Barycentric coordinates 
-        cdef DTYPE_FLOAT_t h_tri[N_VERTICES] # Bathymetry at nodes
-        cdef DTYPE_FLOAT_t h # Bathymetry at (xpos, ypos)
-
-        # Barycentric coordinates
-        self._get_phi(xpos, ypos, host, phi)
-
-        for i in xrange(N_VERTICES):
-            vertex = self._nv[i,host]
-            h_tri[i] = self._h[vertex]
-
-        h = interp.interpolate_within_element(h_tri, phi)
-
-        return h
-    
-    cpdef get_sea_sur_elev(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
-        """ Returns the sea surface elevation through linear interpolation.
-        
-        zeta is defined at element nodes. Interpolation proceeds through linear
-        interpolation time followed by interpolation in space.
-        
-        Parameters:
-        -----------
-        time : float
-            Time at which to interpolate.
-        
-        xpos : float
-            x-position at which to interpolate.
-        
-        ypos : float
-            y-position at which to interpolate.
-            
-        host : int
-            Host horizontal element.
-
-        Return:
-        -------
-        zeta : float
             Sea surface elevation.
         """
         cdef int i # Loop counters
