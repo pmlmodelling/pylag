@@ -15,8 +15,8 @@ cdef get_intersection_point(DTYPE_FLOAT_t x1[2], DTYPE_FLOAT_t x2[2],
 
 cpdef inline DTYPE_FLOAT_t sigma_to_cartesian_coords(DTYPE_FLOAT_t sigma, DTYPE_FLOAT_t h,
         DTYPE_FLOAT_t zeta):
-    return zeta + sigma * (h + zeta)
+    return zeta + sigma * (zeta - h)
 
 cpdef inline DTYPE_FLOAT_t cartesian_to_sigma_coords(DTYPE_FLOAT_t z, DTYPE_FLOAT_t h,
         DTYPE_FLOAT_t zeta):
-    return (z - zeta) / (h + zeta)
+    return (z - zeta) / (zeta - h)

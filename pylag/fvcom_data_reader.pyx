@@ -636,8 +636,8 @@ cdef class FVCOMDataReader(DataReader):
         self._get_phi(xpos, ypos, host, phi)
 
         # Compute sigma
-        h = self.get_bathymetry(xpos, ypos, host)
-        zeta = self.get_bathymetry(time, xpos, ypos, host)
+        h = self.get_zmin(time, xpos, ypos, host)
+        zeta = self.get_zmax(time, xpos, ypos, host)
         sigma = cartesian_to_sigma_coords(zpos, h, zeta)
 
         # Loop over all levels to find the host z layer
@@ -673,7 +673,7 @@ cdef class FVCOMDataReader(DataReader):
         zmin : float
             The bottom depth.
         """
-        return self.get_bathymetry(xpos, ypos, host)
+        return -self.get_bathymetry(xpos, ypos, host)
 
     cpdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
@@ -834,7 +834,7 @@ cdef class FVCOMDataReader(DataReader):
         self._get_phi(xpos, ypos, host, phi)
         
         # Compute u/v velocities and save
-        self._get_uv_velocity_using_linear_least_squares_interpolation(time, 
+        self._get_velocity_using_linear_least_squares_interpolation(time, 
                 xpos, ypos, zpos, host, zlayer, phi, vel)
         return
 
@@ -909,8 +909,8 @@ cdef class FVCOMDataReader(DataReader):
         self._get_phi(xpos, ypos, host, phi)
 
         # Compute sigma
-        h = self.get_bathymetry(xpos, ypos, host)
-        zeta = self.get_bathymetry(time, xpos, ypos, host)
+        h = self.get_zmin(time, xpos, ypos, host)
+        zeta = self.get_zmax(time, xpos, ypos, host)
         sigma = cartesian_to_sigma_coords(zpos, h, zeta)
 
         # Use sigma to set variables describing the position within the vertical grid
@@ -1091,8 +1091,8 @@ cdef class FVCOMDataReader(DataReader):
         kh_upper_level = interp.interpolate_within_element(kh_tri_upper_level, phi)
 
         # Compute sigma
-        h = self.get_bathymetry(xpos, ypos, host)
-        zeta = self.get_bathymetry(time, xpos, ypos, host)
+        h = self.get_zmin(time, xpos, ypos, host)
+        zeta = self.get_zmax(time, xpos, ypos, host)
         sigma = cartesian_to_sigma_coords(zpos, h, zeta)
 
         # Interpolate between sigma levels
@@ -1259,8 +1259,8 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_INT_t nbe_min
         
         # First compute sigma - used for finding the host z layer
-        h = self.get_bathymetry(xpos, ypos, host)
-        zeta = self.get_bathymetry(time, xpos, ypos, host)
+        h = self.get_zmin(time, xpos, ypos, host)
+        zeta = self.get_zmax(time, xpos, ypos, host)
         sigma = cartesian_to_sigma_coords(zpos, h, zeta)
 
         # Set variables describing the position within the vertical grid
@@ -1437,8 +1437,8 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_INT_t nbe_min
 
         # First compute sigma - used for finding the host z layer
-        h = self.get_bathymetry(xpos, ypos, host)
-        zeta = self.get_bathymetry(time, xpos, ypos, host)
+        h = self.get_zmin(time, xpos, ypos, host)
+        zeta = self.get_zmax(time, xpos, ypos, host)
         sigma = cartesian_to_sigma_coords(zpos, h, zeta)
 
         # Set variables describing the position within the vertical grid
