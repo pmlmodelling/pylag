@@ -69,6 +69,9 @@ cdef class FVCOMOPTModel(OPTModel):
     cdef DTYPE_FLOAT_t[:] _x_positions
     cdef DTYPE_FLOAT_t[:] _y_positions
     cdef DTYPE_FLOAT_t[:] _z_positions
+    
+    # Time step
+    cdef DTYPE_FLOAT_t time_step 
 
     def __init__(self, config, data_reader, *args, **kwargs):
         # Initialise config
@@ -89,6 +92,9 @@ cdef class FVCOMOPTModel(OPTModel):
 
         # Create horizontal random walk model
         self.horiz_rand_walk_model = get_horizontal_random_walk_model(self.config)
+        
+        # Time step
+        self.time_step = self.config.getfloat('SIMULATION', 'time_step')
 
     def set_particle_data(self, group_ids, x_positions, y_positions, z_positions):
         """Initialise memory views for data describing the particle seed.
@@ -196,34 +202,29 @@ cdef class FVCOMOPTModel(OPTModel):
                 in_domain = True
 
                 # Set z depending on the specified coordinate system
+                zmin = self.data_reader.get_zmin(time, x, y, host_horizontal_elem)
+                zmax = self.data_reader.get_zmax(time, x, y, host_horizontal_elem)
                 if self.config.get("SIMULATION", "depth_coordinates") == "cartesian":
                     # z is given as the distance below the free surface. We use
                     # this and zeta to determine the distance below the mean
                     # free surface, which is then used with h to calculate sigma
-                    h = self.data_reader.get_bathymetry(x, y, host_horizontal_elem)
-                    zeta = self.data_reader.get_sea_sur_elev(time, x, y, host_horizontal_elem)
-
-                    z = z_temp + zeta
-                    sigma = cartesian_to_sigma_coords(z, h, zeta)
+                    z = z_temp + zmax
                     
                 elif self.config.get("SIMULATION", "depth_coordinates") == "sigma":
-                    # sigma ranges from 0.0 at the sea surface to -1.0 at the 
-                    # sea floor.
-                    sigma = z_temp
+                    # Convert to cartesian coords using zmin and zmax
+                    z = sigma_to_cartesian_coords(z_temp, zmin, zmax)
                 
                 # Check that the given depth is valid
-                zmin = self.data_reader.get_zmin(time, x, y, host_horizontal_elem)
-                zmax = self.data_reader.get_zmax(time, x, y, host_horizontal_elem)
-                if sigma < zmin:
-                    raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(z,h))
-                elif sigma > zmax:
-                    raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(z,zeta))
+                if z < zmin:
+                    raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(z,zmin))
+                elif z > zmax:
+                    raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(z,zmax))
 
                 # Find the host z layer
-                z_layer = self.data_reader.find_zlayer(time, x, y, sigma, host_horizontal_elem, 0)
+                z_layer = self.data_reader.find_zlayer(time, x, y, z, host_horizontal_elem, 0)
 
                 # Create particle
-                particle_seed_smart_ptr = ParticleSmartPtr(group, x, y, sigma, host_horizontal_elem, z_layer, in_domain)
+                particle_seed_smart_ptr = ParticleSmartPtr(group, x, y, z, host_horizontal_elem, z_layer, in_domain)
                 self.particle_seed_smart_ptrs.append(particle_seed_smart_ptr)
 
                 particles_in_domain += 1
@@ -323,14 +324,15 @@ cdef class FVCOMOPTModel(OPTModel):
                 # If the particle still resides in the domain update its position.
                 if flag == 0:
                     # Apply surface/bottom boundary conditions
-                    zmin = self.data_reader.get_zmin(time, xpos, ypos, host)
-                    zmax = self.data_reader.get_zmax(time, xpos, ypos, host)
+                    # NB zmin and zmax evaluated at the new time t+dt
+                    zmin = self.data_reader.get_zmin(time+self.time_step, xpos, ypos, host)
+                    zmax = self.data_reader.get_zmax(time+self.time_step, xpos, ypos, host)
                     if zpos < zmin or zpos > zmax:
                         zpos = self.vert_bc_calculator.apply(zpos, zmin, zmax)            
 
                     # Determine the new host z layer
                     old_host_z_layer = particle_ptr.host_z_layer
-                    host_z_layer = self.data_reader.find_zlayer(time, xpos, ypos, 
+                    host_z_layer = self.data_reader.find_zlayer(time+self.time_step, xpos, ypos, 
                         zpos, host, old_host_z_layer)
 
                     # Update the particle's position
@@ -361,15 +363,14 @@ cdef class FVCOMOPTModel(OPTModel):
         for particle_ptr in self.particle_ptrs:
             diags['xpos'].append(particle_ptr.xpos)
             diags['ypos'].append(particle_ptr.ypos)
+            diags['zpos'].append(particle_ptr.zpos)
             diags['host_horizontal_elem'].append(particle_ptr.host_horizontal_elem)            
             
             # Derived vars including depth, which is first converted to cartesian coords
-            h = self.data_reader.get_bathymetry(particle_ptr.xpos, particle_ptr.ypos, particle_ptr.host_horizontal_elem)
-            zeta = self.data_reader.get_sea_sur_elev(time, particle_ptr.xpos, particle_ptr.ypos, particle_ptr.host_horizontal_elem)
-            z = sigma_to_cartesian_coords(particle_ptr.zpos, h, zeta)
+            h = self.data_reader.get_zmin(time, particle_ptr.xpos, particle_ptr.ypos, particle_ptr.host_horizontal_elem)
+            zeta = self.data_reader.get_zmax(time, particle_ptr.xpos, particle_ptr.ypos, particle_ptr.host_horizontal_elem)
             diags['h'].append(h)
             diags['zeta'].append(zeta)
-            diags['zpos'].append(z)
         return diags
 
 cdef class GOTMOPTModel(OPTModel):
