@@ -88,11 +88,7 @@ cdef class FVCOMDataReader(DataReader):
     
     # Time array
     cdef DTYPE_FLOAT_t _time_last
-    cdef DTYPE_FLOAT_t _time_next
-
-    # z min/max
-    cdef DTYPE_FLOAT_t _zmin
-    cdef DTYPE_FLOAT_t _zmax    
+    cdef DTYPE_FLOAT_t _time_next  
 
     def __init__(self, config, mediator):
         self.config = config
@@ -1558,10 +1554,6 @@ cdef class FVCOMDataReader(DataReader):
         # Interpolation parameters (a1u, a2u, aw0, awx, awy)
         self._a1u = self.mediator.get_grid_variable('a1u', (4, self._n_elems), DTYPE_FLOAT)
         self._a2u = self.mediator.get_grid_variable('a2u', (4, self._n_elems), DTYPE_FLOAT)
-        
-        # z min/max
-        self._zmin = -1.0
-        self._zmax = 0.0
 
     cdef _read_time_dependent_vars(self):
         """ Update time variables and memory views for FVCOM data fields.
