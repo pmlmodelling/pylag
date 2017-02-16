@@ -652,10 +652,7 @@ cdef class FVCOMDataReader(DataReader):
 
     cpdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
-        """ Returns zmin.
-        
-        In sigma coordinates this is simply -1.0 as detailed in the FVCOM
-        manual.
+        """ Returns the bottom depth in cartesian coordinates
 
         Parameters:
         -----------
@@ -667,20 +664,20 @@ cdef class FVCOMDataReader(DataReader):
 
         ypos : float
             y-position
-        
+
+        host : int
+            Host horizontal element.
+
         Returns:
         --------
         zmin : float
-            z min.
+            The bottom depth.
         """
-        return self._zmin
+        return self.get_bathymetry(xpos, ypos, host)
 
     cpdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
-        """ Returns zmax.
-        
-        In sigma coordinates this is simply 0.0 as detailed in the FVCOM
-        manual.
+        """ Returns the sea surface height in cartesian coordinates
 
         Parameters:
         -----------
@@ -692,13 +689,16 @@ cdef class FVCOMDataReader(DataReader):
 
         ypos : float
             y-position
+
+        host : int
+            Host horizontal element.
         
         Returns:
         --------
         zmax : float
-            z max.
+            Sea surface elevation.
         """
-        return self._zmax
+        return self.get_sea_sur_elev(time, xpos, ypos, host)
 
     cpdef get_bathymetry(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos,
             DTYPE_INT_t host):
