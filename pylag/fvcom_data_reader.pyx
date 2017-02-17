@@ -1544,15 +1544,17 @@ cdef class FVCOMDataReader(DataReader):
         self._w_next = self.mediator.get_time_dependent_variable_at_next_time_index('ww', (self._n_siglay, self._n_elems), DTYPE_FLOAT)
         
         # Update memory views for kh
-        if self.config.get('SIMULATION', 'vertical_random_walk_model') is not 'none':
-            self._kh_last = self.mediator.get_time_dependent_variable_at_last_time_index('kh', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)
-            self._kh_next = self.mediator.get_time_dependent_variable_at_next_time_index('kh', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)
-        
+        if self.config.has_option("SIMULATION", "vertical_random_walk_model"):
+            if self.config.get('SIMULATION', 'vertical_random_walk_model') is not 'none':
+                self._kh_last = self.mediator.get_time_dependent_variable_at_last_time_index('kh', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)
+                self._kh_next = self.mediator.get_time_dependent_variable_at_next_time_index('kh', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)
+
         # Update memory views for viscofh
-        if self.config.get('SIMULATION', 'horizontal_random_walk_model') is not 'none':
-            self._viscofh_last = self.mediator.get_time_dependent_variable_at_last_time_index('viscofh', (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
-            self._viscofh_next = self.mediator.get_time_dependent_variable_at_next_time_index('viscofh', (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
-                
+        if self.config.has_option("SIMULATION", "horizontal_random_walk_model"):
+            if self.config.get('SIMULATION', 'horizontal_random_walk_model') is not 'none':
+                self._viscofh_last = self.mediator.get_time_dependent_variable_at_last_time_index('viscofh', (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
+                self._viscofh_next = self.mediator.get_time_dependent_variable_at_next_time_index('viscofh', (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
+
     cdef void _get_phi(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos,
             DTYPE_INT_t host, DTYPE_FLOAT_t phi[N_VERTICES]) except *:
         """ Get barycentric coordinates.
