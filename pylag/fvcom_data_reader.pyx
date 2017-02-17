@@ -952,7 +952,7 @@ cdef class FVCOMDataReader(DataReader):
 
     cpdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time,
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos,
-            DTYPE_INT_t host, DTYPE_INT_t zlayer):
+            DTYPE_INT_t host, DTYPE_INT_t zlayer) except FLOAT_ERR:
         """ Returns the vertical eddy diffusivity through linear interpolation.
         
         The vertical eddy diffusivity is defined at element nodes on sigma
@@ -1054,7 +1054,7 @@ cdef class FVCOMDataReader(DataReader):
 
     cpdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, 
-            DTYPE_INT_t host, DTYPE_INT_t zlayer):
+            DTYPE_INT_t host, DTYPE_INT_t zlayer) except FLOAT_ERR:
         """ Returns the gradient in the vertical eddy diffusivity.
         
         Return a numerical approximation of the gradient in the vertical eddy 

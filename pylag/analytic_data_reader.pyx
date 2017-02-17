@@ -1,3 +1,5 @@
+include "constants.pxi"
+
 import numpy as np
 
 # Cython imports
@@ -150,7 +152,7 @@ cdef class TestDiffusivityDataReader(DataReader):
 
     cpdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time, 
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos,
-            DTYPE_INT_t host, DTYPE_INT_t zlayer):
+            DTYPE_INT_t host, DTYPE_INT_t zlayer) except FLOAT_ERR:
         """ Returns the vertical eddy diffusivity at zpos.
         
         """  
@@ -164,7 +166,7 @@ cdef class TestDiffusivityDataReader(DataReader):
 
     cpdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time, 
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos,
-            DTYPE_INT_t host, DTYPE_INT_t zlayer):
+            DTYPE_INT_t host, DTYPE_INT_t zlayer) except FLOAT_ERR:
         """ Returns the derivative of the vertical eddy diffusivity.
 
         This is approximated numerically, as in PyLag, as opposed to being

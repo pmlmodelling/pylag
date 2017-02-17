@@ -1,3 +1,5 @@
+include "constants.pxi"
+
 cdef class DataReader:
     cpdef setup_data_access(self, start_datetime, end_datetime):
         pass
@@ -54,10 +56,10 @@ cdef class DataReader:
 
     cpdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
-            DTYPE_INT_t zlayer):
+            DTYPE_INT_t zlayer) except FLOAT_ERR:
         pass
     
     cpdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos,
-            DTYPE_INT_t host, DTYPE_INT_t zlayer):
+            DTYPE_INT_t host, DTYPE_INT_t zlayer) except FLOAT_ERR:
         pass

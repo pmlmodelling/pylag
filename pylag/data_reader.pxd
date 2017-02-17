@@ -1,3 +1,5 @@
+include "constants.pxi"
+
 # Data types used for constructing C data structures
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
@@ -45,8 +47,8 @@ cdef class DataReader:
 
     cpdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
-            DTYPE_INT_t zlayer)
+            DTYPE_INT_t zlayer) except FLOAT_ERR
 
     cpdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos,
-            DTYPE_INT_t host, DTYPE_INT_t zlayer)
+            DTYPE_INT_t host, DTYPE_INT_t zlayer) except FLOAT_ERR
