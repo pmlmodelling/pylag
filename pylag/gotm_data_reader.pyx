@@ -10,6 +10,8 @@ np.import_array()
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
+from particle cimport Particle
+
 from pylag.data_reader cimport DataReader
 
 from pylag.math cimport sigma_to_cartesian_coords
@@ -273,9 +275,8 @@ cdef class GOTMDataReader(DataReader):
         
         return interp.linear_interp(self._time_fraction, self._zeta_last, self._zeta_next)
     
-    cpdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time,
-            DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos,
-            DTYPE_INT_t host, DTYPE_INT_t zlayer) except FLOAT_ERR:
+    cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time,
+            Particle *particle) except FLOAT_ERR:
         """ Returns the vertical eddy diffusivity through linear interpolation.
         
         The vertical eddy diffusivity is defined at layer interfaces.
@@ -286,17 +287,8 @@ cdef class GOTMDataReader(DataReader):
         time : float
             Time at which to interpolate.
         
-        xpos : float
-            x-position at which to interpolate (unused).
-        
-        ypos : float
-            y-position at which to interpolate (unused).
-
-        zpos : float
-            z-position at which to interpolate.
-
-        host : int
-            Host horizontal element (unused).
+        particle: *Particle
+            Pointer to a Particle object.
         
         Returns:
         --------
@@ -307,12 +299,11 @@ cdef class GOTMDataReader(DataReader):
         cdef DTYPE_FLOAT_t z_fraction
         
         # Interpolate kh in z
-        z_fraction = interp.get_linear_fraction_safe(zpos, self._zlev[zlayer], self._zlev[zlayer+1])
-        return interp.linear_interp(z_fraction, self._kh[zlayer], self._kh[zlayer+1])
+        z_fraction = interp.get_linear_fraction_safe(particle.zpos, self._zlev[particle.host_z_layer], self._zlev[particle.host_z_layer+1])
+        return interp.linear_interp(z_fraction, self._kh[particle.host_z_layer], self._kh[particle.host_z_layer+1])
 
-    cpdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
-            DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos,
-            DTYPE_INT_t host, DTYPE_INT_t zlayer) except FLOAT_ERR:
+    cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity_derivative(self,
+            DTYPE_FLOAT_t time, Particle* particle) except FLOAT_ERR:
         """ Returns the gradient in the vertical eddy diffusivity.
         
         Return a numerical approximation of the gradient in the vertical eddy 
@@ -323,17 +314,8 @@ cdef class GOTMDataReader(DataReader):
         time : float
             Time at which to interpolate.
         
-        xpos : float
-            x-position at which to interpolate (unused).
-        
-        ypos : float
-            y-position at which to interpolate (unused).
-
-        zpos : float
-            z-position at which to interpolate.
-
-        host : int
-            Host horizontal element (unused).
+        particle : *Particle
+            Pointer to a Particle object.
         
         Returns:
         --------
@@ -352,20 +334,28 @@ cdef class GOTMDataReader(DataReader):
         # Z layer for incremented position
         cdef DTYPE_INT_t zlayer_incremented
 
-        # Use a point close to z
+        # Temporary particle object
+        cdef Particle _particle
+
+        # Create a copy of the particle
+        _particle = particle[0]
+
+        # Compute the diffusivity at the current particle's location
+        kh1 = self.get_vertical_eddy_diffusivity(time, &_particle)
+
+        # Find a point near to zpos
         zpos_increment = 1.0e-3
 
-        # Use the negative of zpos_increment at the top of the water column
-        if ((zpos + zpos_increment) > self._zeta):
+        # ... use the negative of zpos_increment at the top of the water column
+        if ((_particle.zpos + zpos_increment) > self._zeta):
             zpos_increment = -zpos_increment
 
-        # A point close to zpos
-        zpos_incremented = zpos + zpos_increment
-        zlayer_incremented = self.find_zlayer(time, xpos, ypos, zpos_incremented, host, zlayer)
+        _particle.zpos = _particle.zpos + zpos_increment
+        _particle.host_z_layer = self.find_zlayer(time, _particle.xpos,
+                _particle.ypos, _particle.zpos, _particle.host_horizontal_elem,
+                _particle.host_z_layer)
 
-        # Compute the gradient
-        kh1 = self.get_vertical_eddy_diffusivity(time, xpos, ypos, zpos, host, zlayer)
-        kh2 = self.get_vertical_eddy_diffusivity(time, xpos, ypos, zpos_incremented, host, zlayer_incremented)
+        kh2 = self.get_vertical_eddy_diffusivity(time, &_particle)
         k_prime = (kh2 - kh1) / zpos_increment
 
         return k_prime

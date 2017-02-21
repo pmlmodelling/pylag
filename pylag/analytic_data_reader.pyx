@@ -10,6 +10,8 @@ np.import_array()
 from data_types_python import DTYPE_INT, DTYPE_FLOAT
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
+from particle cimport Particle
+
 from data_reader cimport DataReader
 
 cdef class TestVelocityDataReader(DataReader):
@@ -150,13 +152,12 @@ cdef class TestDiffusivityDataReader(DataReader):
         vel[1] = 0.0
         vel[2] = 0.0
 
-    cpdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time, 
-            DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos,
-            DTYPE_INT_t host, DTYPE_INT_t zlayer) except FLOAT_ERR:
+    cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time, 
+            Particle* particle) except FLOAT_ERR:
         """ Returns the vertical eddy diffusivity at zpos.
         
         """  
-        return self._get_vertical_eddy_diffusivity(zpos)
+        return self._get_vertical_eddy_diffusivity(particle.zpos)
 
     def _get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t zpos):
         cdef DTYPE_FLOAT_t k
@@ -164,15 +165,14 @@ cdef class TestDiffusivityDataReader(DataReader):
                 8.65898e-6 * zpos**4 + 1.7623e-7 * zpos**5 - 1.40918e-9 * zpos**6
         return k
 
-    cpdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time, 
-            DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos,
-            DTYPE_INT_t host, DTYPE_INT_t zlayer) except FLOAT_ERR:
+    cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity_derivative(self, 
+            DTYPE_FLOAT_t time, Particle* particle) except FLOAT_ERR:
         """ Returns the derivative of the vertical eddy diffusivity.
 
         This is approximated numerically, as in PyLag, as opposed to being
         computed directly using the derivative of k.
         """
-        return self._get_vertical_eddy_diffusivity_derivative(zpos)
+        return self._get_vertical_eddy_diffusivity_derivative(particle.zpos)
     
     def _get_vertical_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t zpos):
         cdef DTYPE_FLOAT_t zpos_increment, zpos_incremented

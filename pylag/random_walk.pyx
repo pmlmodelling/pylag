@@ -43,21 +43,10 @@ cdef class NaiveVerticalRandomWalk(VerticalRandomWalk):
         --------
         N/A
         """
-        # Temporary containers
-        cdef DTYPE_FLOAT_t t, xpos, ypos, zpos
-        cdef DTYPE_INT_t host
-        
         # The vertical eddy diffusiviy
         cdef DTYPE_FLOAT_t D
 
-        # The vertical eddy diffusivity at the particle's current location
-        t = time
-        xpos = particle.xpos
-        ypos = particle.ypos
-        zpos = particle.zpos
-        host = particle.host_horizontal_elem
-        z_layer = particle.host_z_layer
-        D = data_reader.get_vertical_eddy_diffusivity(t, xpos, ypos, zpos, host, z_layer)
+        D = data_reader.get_vertical_eddy_diffusivity(time, particle)
         
         # Change in position
         delta_X.z += sqrt(2.0*D*self._time_step) * random.gauss(1.0)
@@ -84,8 +73,10 @@ cdef class AR0VerticalRandomWalk(VerticalRandomWalk):
         -----------
         time: float
             The current time.
-        particle: object of type Particle
-            A Particle object. The object's z position will be updated.
+
+        particle: *Particle
+            Pointer to a Particle object.
+
         data_reader: object of type DataReader
             A DataReader object. Used for reading the vertical eddy diffusivity.
             
@@ -93,34 +84,30 @@ cdef class AR0VerticalRandomWalk(VerticalRandomWalk):
         --------
         N/A
         """
+        # Temporary particle object
+        cdef Particle _particle
+        
         # Temporary containers for the particle's location
-        cdef DTYPE_FLOAT_t t, xpos, ypos, zpos
         cdef DTYPE_FLOAT_t zmin, zmax
-        cdef DTYPE_INT_t host, z_layer, z_layer_offset
         
         # Temporary containers for z position offset from the current position -
         # used in dk_dz calculations
         cdef DTYPE_FLOAT_t zpos_offset
         
         # The vertical eddy diffusiviy
-        #     k - at the location the particle is advected too
+        #     k - at the location the particle is advected to
         #     dk_dz - gradient in k
         cdef DTYPE_FLOAT_t k, dk_dz
         
         # Change in position (units can be m, or sigma)
         cdef DTYPE_FLOAT_t dz_advection, dz_random, dz
 
-        # Compute the vertical eddy diffusivity at the particle's current location
-        t = time
-        xpos = particle.xpos
-        ypos = particle.ypos
-        zpos = particle.zpos
-        host = particle.host_horizontal_elem     
-        z_layer = particle.host_z_layer
+        # Create a copy of particle
+        _particle = particle[0]
 
         # Compute an approximate value for the gradient in the vertical eddy
         # diffusivity at the particle's current location.
-        dk_dz = data_reader.get_vertical_eddy_diffusivity_derivative(t, xpos, ypos, zpos, host, z_layer)
+        dk_dz = data_reader.get_vertical_eddy_diffusivity_derivative(time, &_particle)
 
         # Compute the advective component of the random walk
         dz_advection = dk_dz * self._time_step
@@ -128,15 +115,17 @@ cdef class AR0VerticalRandomWalk(VerticalRandomWalk):
         # Compute the vertical eddy diffusivity at a position offset by a distance
         # dz_advection/2. Apply reflecting boundary condition if the computed
         # offset falls outside of the model domain
-        zpos_offset = zpos + 0.5 * dz_advection
-        zmin = data_reader.get_zmin(t, xpos, ypos, host)
-        zmax = data_reader.get_zmax(t, xpos, ypos, host)
+        zpos_offset = _particle.zpos + 0.5 * dz_advection
+        zmin = data_reader.get_zmin(time, _particle.xpos, _particle.ypos, _particle.host_horizontal_elem)
+        zmax = data_reader.get_zmax(time, _particle.xpos, _particle.ypos, _particle.host_horizontal_elem)
         if zpos_offset < zmin or zpos_offset > zmax:
             zpos_offset = self._vert_bc_calculator.apply(zpos_offset, zmin, zmax)
 
-        z_layer_offset = data_reader.find_zlayer(time, xpos, ypos, zpos_offset, host, z_layer)
-
-        k = data_reader.get_vertical_eddy_diffusivity(t, xpos, ypos, zpos_offset, host, z_layer_offset)
+        _particle.zpos = zpos_offset
+        _particle.host_z_layer = data_reader.find_zlayer(time, _particle.xpos,
+                _particle.ypos, _particle.zpos, _particle.host_horizontal_elem,
+                _particle.host_z_layer)
+        k = data_reader.get_vertical_eddy_diffusivity(time, &_particle)
 
         # Compute the random component of the particle's motion
         dz_random = sqrt(2.0*k*self._time_step) * random.gauss(1.0)
