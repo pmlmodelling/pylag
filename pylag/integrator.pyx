@@ -265,8 +265,8 @@ cdef class RK4Integrator3D(NumIntegrator):
         if flag == -2: return flag
 
         # Impose boundary condition in z
-        zmin = data_reader.get_zmin(t, _particle.xpos, _particle.ypos, _particle.host_horizontal_elem)
-        zmax = data_reader.get_zmax(t, _particle.xpos, _particle.ypos, _particle.host_horizontal_elem)
+        zmin = data_reader.get_zmin(t, &_particle)
+        zmax = data_reader.get_zmax(t, &_particle)
         if _particle.zpos < zmin or _particle.zpos > zmax:
             _particle.zpos = self._vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
 
@@ -297,8 +297,8 @@ cdef class RK4Integrator3D(NumIntegrator):
         if flag == -2: return flag
 
         # Impose boundary condition in z
-        zmin = data_reader.get_zmin(t, _particle.xpos, _particle.ypos, _particle.host_horizontal_elem)
-        zmax = data_reader.get_zmax(t, _particle.xpos, _particle.ypos, _particle.host_horizontal_elem)
+        zmin = data_reader.get_zmin(t, &_particle)
+        zmax = data_reader.get_zmax(t, &_particle)
         if _particle.zpos < zmin or _particle.zpos > zmax:
             _particle.zpos = self._vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
 
@@ -329,8 +329,8 @@ cdef class RK4Integrator3D(NumIntegrator):
         if flag == -2: return flag
 
         # Impose boundary condition in z
-        zmin = data_reader.get_zmin(t, _particle.xpos, _particle.ypos, _particle.host_horizontal_elem)
-        zmax = data_reader.get_zmax(t, _particle.xpos, _particle.ypos, _particle.host_horizontal_elem)
+        zmin = data_reader.get_zmin(t, &_particle)
+        zmax = data_reader.get_zmax(t, &_particle)
         if _particle.zpos < zmin or _particle.zpos > zmax:
             _particle.zpos = self._vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
 

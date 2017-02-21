@@ -16,40 +16,38 @@ cdef class DataReader:
             DTYPE_FLOAT_t ypos_new, DTYPE_INT_t last_host):
         pass
 
-    cdef find_zlayer(self, DTYPE_FLOAT_t time, Particle* particle):
+    cdef find_zlayer(self, DTYPE_FLOAT_t time, Particle *particle):
         pass
 
-    cpdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
+    cdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, Particle *particle):
         pass
 
-    cpdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
+    cdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, Particle *particle):
         pass
 
-    cdef get_velocity(self, DTYPE_FLOAT_t time, Particle* particle,
+    cdef get_velocity(self, DTYPE_FLOAT_t time, Particle *particle,
             DTYPE_FLOAT_t vel[3]):
         pass
 
-    cdef get_horizontal_velocity(self, DTYPE_FLOAT_t time, Particle* particle,
+    cdef get_horizontal_velocity(self, DTYPE_FLOAT_t time, Particle *particle,
             DTYPE_FLOAT_t vel[2]):
         pass
     
-    cdef get_vertical_velocity(self, DTYPE_FLOAT_t time, Particle* particle):
+    cdef get_vertical_velocity(self, DTYPE_FLOAT_t time, Particle *particle):
         pass
 
     cdef get_horizontal_eddy_diffusivity(self, DTYPE_FLOAT_t time,
-            Particle* particle):
+            Particle *particle):
         pass
 
     cdef get_horizontal_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
-            Particle* particle):
+            Particle *particle):
         pass
 
     cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time,
-            Particle* particle) except FLOAT_ERR:
+            Particle *particle) except FLOAT_ERR:
         pass
     
     cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity_derivative(self, 
-            DTYPE_FLOAT_t time, Particle* particle) except FLOAT_ERR:
+            DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR:
         pass

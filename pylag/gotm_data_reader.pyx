@@ -219,8 +219,7 @@ cdef class GOTMDataReader(DataReader):
         # Search failed
         raise ValueError("Particle z position (={}) not found!".format(particle.zpos))
 
-    cpdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
+    cdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, Particle *particle):
         """ Returns the column depth
 
         Parameters:
@@ -243,8 +242,7 @@ cdef class GOTMDataReader(DataReader):
 
         return interp.linear_interp(time_fraction, self._zlev_last[0], self._zlev_next[0])
 
-    cpdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
+    cdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, Particle *particle):
         """ Returns zmax in sigma coordinates
 
         Returns the stored sea surface elevation that was set from the last

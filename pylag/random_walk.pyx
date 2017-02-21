@@ -116,8 +116,8 @@ cdef class AR0VerticalRandomWalk(VerticalRandomWalk):
         # dz_advection/2. Apply reflecting boundary condition if the computed
         # offset falls outside of the model domain
         zpos_offset = _particle.zpos + 0.5 * dz_advection
-        zmin = data_reader.get_zmin(time, _particle.xpos, _particle.ypos, _particle.host_horizontal_elem)
-        zmax = data_reader.get_zmax(time, _particle.xpos, _particle.ypos, _particle.host_horizontal_elem)
+        zmin = data_reader.get_zmin(time, &_particle)
+        zmax = data_reader.get_zmax(time, &_particle)
         if zpos_offset < zmin or zpos_offset > zmax:
             zpos_offset = self._vert_bc_calculator.apply(zpos_offset, zmin, zmax)
 

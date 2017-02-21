@@ -631,8 +631,8 @@ cdef class FVCOMDataReader(DataReader):
         self._get_phi(particle.xpos, particle.ypos, particle.host_horizontal_elem, phi)
 
         # Compute sigma
-        h = self.get_zmin(time, particle.xpos, particle.ypos, particle.host_horizontal_elem)
-        zeta = self.get_zmax(time, particle.xpos, particle.ypos, particle.host_horizontal_elem)
+        h = self.get_zmin(time, particle)
+        zeta = self.get_zmax(time, particle)
         sigma = cartesian_to_sigma_coords(particle.zpos, h, zeta)
 
         # Loop over all levels to find the host z layer
@@ -645,8 +645,7 @@ cdef class FVCOMDataReader(DataReader):
         
         raise ValueError("Particle zpos (={}) not found! h = {}, zeta = {}.".format(particle.zpos, h, zeta))
 
-    cpdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
+    cdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, Particle *particle):
         """ Returns the bottom depth in cartesian coordinates
 
         h is defined at element nodes. Linear interpolation in space is used
@@ -658,14 +657,8 @@ cdef class FVCOMDataReader(DataReader):
         time : float
             Time.
 
-        xpos : float
-            x-position.
-
-        ypos : float
-            y-position
-
-        host : int
-            Host horizontal element.
+        particle: *Particle
+            Pointer to a Particle object.
 
         Returns:
         --------
@@ -679,18 +672,17 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_FLOAT_t h # Bathymetry at (xpos, ypos)
 
         # Barycentric coordinates
-        self._get_phi(xpos, ypos, host, phi)
+        self._get_phi(particle.xpos, particle.ypos, particle.host_horizontal_elem, phi)
 
         for i in xrange(N_VERTICES):
-            vertex = self._nv[i,host]
+            vertex = self._nv[i,particle.host_horizontal_elem]
             h_tri[i] = self._h[vertex]
 
         h = interp.interpolate_within_element(h_tri, phi)
 
         return -h
 
-    cpdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
+    cdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, Particle *particle):
         """ Returns the sea surface height in cartesian coordinates
 
         zeta is defined at element nodes. Interpolation proceeds through linear
@@ -701,14 +693,8 @@ cdef class FVCOMDataReader(DataReader):
         time : float
             Time.
 
-        xpos : float
-            x-position.
-
-        ypos : float
-            y-position
-
-        host : int
-            Host horizontal element.
+        particle: *Particle
+            Pointer to a Particle object.
         
         Returns:
         --------
@@ -726,10 +712,10 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_FLOAT_t phi[N_VERTICES]
 
         # Barycentric coordinates
-        self._get_phi(xpos, ypos, host, phi)
+        self._get_phi(particle.xpos, particle.ypos, particle.host_horizontal_elem, phi)
 
         for i in xrange(N_VERTICES):
-            vertex = self._nv[i,host]
+            vertex = self._nv[i,particle.host_horizontal_elem]
             zeta_tri_t_last[i] = self._zeta_last[vertex]
             zeta_tri_t_next[i] = self._zeta_next[vertex]
 
@@ -831,8 +817,8 @@ cdef class FVCOMDataReader(DataReader):
         self._get_phi(particle.xpos, particle.ypos, particle.host_horizontal_elem, phi)
 
         # Compute sigma
-        h = self.get_zmin(time, particle.xpos, particle.ypos, particle.host_horizontal_elem)
-        zeta = self.get_zmax(time, particle.xpos, particle.ypos, particle.host_horizontal_elem)
+        h = self.get_zmin(time, particle)
+        zeta = self.get_zmax(time, particle)
         sigma = cartesian_to_sigma_coords(particle.zpos, h, zeta)
 
         # Use sigma to set variables describing the position within the vertical grid
@@ -987,8 +973,8 @@ cdef class FVCOMDataReader(DataReader):
         kh_upper_level = interp.interpolate_within_element(kh_tri_upper_level, phi)
 
         # Compute sigma
-        h = self.get_zmin(time, particle.xpos, particle.ypos, particle.host_horizontal_elem)
-        zeta = self.get_zmax(time, particle.xpos, particle.ypos, particle.host_horizontal_elem)
+        h = self.get_zmin(time, particle)
+        zeta = self.get_zmax(time, particle)
         sigma = cartesian_to_sigma_coords(particle.zpos, h, zeta)
 
         # Interpolate between sigma levels
@@ -1138,8 +1124,8 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_INT_t nbe_min
         
         # First compute sigma - used for finding the host z layer
-        h = self.get_zmin(time, particle.xpos, particle.ypos, particle.host_horizontal_elem)
-        zeta = self.get_zmax(time, particle.xpos, particle.ypos, particle.host_horizontal_elem)
+        h = self.get_zmin(time, particle)
+        zeta = self.get_zmax(time, particle)
         sigma = cartesian_to_sigma_coords(particle.zpos, h, zeta)
 
         # Set variables describing the position within the vertical grid
@@ -1306,8 +1292,8 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_INT_t nbe_min
 
         # First compute sigma - used for finding the host z layer
-        h = self.get_zmin(time, particle.xpos, particle.ypos, particle.host_horizontal_elem)
-        zeta = self.get_zmax(time, particle.xpos, particle.ypos, particle.host_horizontal_elem)
+        h = self.get_zmin(time, particle)
+        zeta = self.get_zmax(time, particle)
         sigma = cartesian_to_sigma_coords(particle.zpos, h, zeta)
 
         # Set variables describing the position within the vertical grid

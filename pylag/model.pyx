@@ -211,8 +211,8 @@ cdef class FVCOMOPTModel(OPTModel):
                 particle_ptr = particle_seed_smart_ptr.get_ptr()
 
                 # Set z depending on the specified coordinate system
-                zmin = self.data_reader.get_zmin(time, x, y, host_horizontal_elem)
-                zmax = self.data_reader.get_zmax(time, x, y, host_horizontal_elem)
+                zmin = self.data_reader.get_zmin(time, particle_ptr)
+                zmax = self.data_reader.get_zmax(time, particle_ptr)
                 if self.config.get("SIMULATION", "depth_coordinates") == "cartesian":
                     # z is given as the distance below the free surface. We use
                     # this and zeta to determine the distance below the mean
@@ -328,21 +328,20 @@ cdef class FVCOMOPTModel(OPTModel):
                 if flag == -2:
                     particle_ptr.in_domain = False
                     continue
-                
+
                 # If the particle still resides in the domain update its position.
                 if flag == 0:
-                    # Apply surface/bottom boundary conditions
-                    # NB zmin and zmax evaluated at the new time t+dt
-                    zmin = self.data_reader.get_zmin(time+self.time_step, xpos, ypos, host)
-                    zmax = self.data_reader.get_zmax(time+self.time_step, xpos, ypos, host)
-                    if zpos < zmin or zpos > zmax:
-                        zpos = self.vert_bc_calculator.apply(zpos, zmin, zmax)            
-
                     # Update the particle's position
                     particle_ptr.xpos = xpos
                     particle_ptr.ypos = ypos
-                    particle_ptr.zpos = zpos
                     particle_ptr.host_horizontal_elem = host
+                    
+                    # Apply surface/bottom boundary conditions and set zpos
+                    # NB zmin and zmax evaluated at the new time t+dt
+                    zmin = self.data_reader.get_zmin(time+self.time_step, particle_ptr)
+                    zmax = self.data_reader.get_zmax(time+self.time_step, particle_ptr)
+                    if zpos < zmin or zpos > zmax:
+                        particle_ptr.zpos = self.vert_bc_calculator.apply(zpos, zmin, zmax)
 
                     # Determine the new host zlayer
                     particle_ptr.host_z_layer = self.data_reader.find_zlayer(time+self.time_step, particle_ptr)
@@ -372,8 +371,8 @@ cdef class FVCOMOPTModel(OPTModel):
             diags['host_horizontal_elem'].append(particle_ptr.host_horizontal_elem)            
             
             # Derived vars including depth, which is first converted to cartesian coords
-            h = self.data_reader.get_zmin(time, particle_ptr.xpos, particle_ptr.ypos, particle_ptr.host_horizontal_elem)
-            zeta = self.data_reader.get_zmax(time, particle_ptr.xpos, particle_ptr.ypos, particle_ptr.host_horizontal_elem)
+            h = self.data_reader.get_zmin(time, particle_ptr)
+            zeta = self.data_reader.get_zmax(time, particle_ptr)
             diags['h'].append(h)
             diags['zeta'].append(zeta)
         return diags
@@ -525,8 +524,8 @@ cdef class GOTMOPTModel(OPTModel):
             particle_ptr = particle_seed_smart_ptr.get_ptr()
 
             # Set z depending on the specified coordinate system
-            zmin = self.data_reader.get_zmin(time, x, y, host)
-            zmax = self.data_reader.get_zmax(time, x, y, host)
+            zmin = self.data_reader.get_zmin(time, particle_ptr)
+            zmax = self.data_reader.get_zmax(time, particle_ptr)
             if self.config.get("SIMULATION", "depth_coordinates") == "cartesian":
                 # z is given as the distance below the free surface. We use
                 # this and zeta to determine the distance below the mean
@@ -590,12 +589,8 @@ cdef class GOTMOPTModel(OPTModel):
 
                 # Apply surface/bottom boundary conditions
                 # NB zmin and zmax evaluated at the new time t+dt
-                zmin = self.data_reader.get_zmin(time+self.time_step,
-                        particle_ptr.xpos, particle_ptr.ypos,
-                        particle_ptr.host_horizontal_elem)
-                zmax = self.data_reader.get_zmax(time+self.time_step,
-                        particle_ptr.xpos, particle_ptr.ypos,
-                        particle_ptr.host_horizontal_elem)
+                zmin = self.data_reader.get_zmin(time+self.time_step, particle_ptr)
+                zmax = self.data_reader.get_zmax(time+self.time_step, particle_ptr)
                 if zpos < zmin or zpos > zmax:
                     zpos = self.vert_bc_calculator.apply(zpos, zmin, zmax)
 
@@ -625,8 +620,8 @@ cdef class GOTMOPTModel(OPTModel):
             diags['host_horizontal_elem'].append(particle_ptr.host_horizontal_elem)            
             
             # Derived vars including depth, which is first converted to cartesian coords
-            h = self.data_reader.get_zmin(time, particle_ptr.xpos, particle_ptr.ypos, particle_ptr.host_horizontal_elem)
-            zeta = self.data_reader.get_zmax(time, particle_ptr.xpos, particle_ptr.ypos, particle_ptr.host_horizontal_elem)
+            h = self.data_reader.get_zmin(time, particle_ptr)
+            zeta = self.data_reader.get_zmax(time, particle_ptr)
             diags['h'].append(h)
             diags['zeta'].append(zeta)
         return diags
