@@ -122,9 +122,7 @@ cdef class AR0VerticalRandomWalk(VerticalRandomWalk):
             zpos_offset = self._vert_bc_calculator.apply(zpos_offset, zmin, zmax)
 
         _particle.zpos = zpos_offset
-        _particle.host_z_layer = data_reader.find_zlayer(time, _particle.xpos,
-                _particle.ypos, _particle.zpos, _particle.host_horizontal_elem,
-                _particle.host_z_layer)
+        _particle.host_z_layer = data_reader.find_zlayer(time, &_particle)
         k = data_reader.get_vertical_eddy_diffusivity(time, &_particle)
 
         # Compute the random component of the particle's motion

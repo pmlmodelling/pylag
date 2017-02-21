@@ -18,7 +18,7 @@ from pylag.integrator cimport NumIntegrator
 from pylag.random_walk cimport VerticalRandomWalk, HorizontalRandomWalk
 from pylag.boundary_conditions cimport HorizBoundaryConditionCalculator, VertBoundaryConditionCalculator
 from pylag.delta cimport Delta, reset
-from pylag.particle cimport Particle, copy
+from pylag.particle cimport Particle, ParticleSmartPtr, copy
 
 cdef class OPTModel:
     def set_particle_data(self, group_ids, x_positions, y_positions, z_positions):
@@ -181,6 +181,9 @@ cdef class FVCOMOPTModel(OPTModel):
         cdef DTYPE_FLOAT_t zmin
         cdef DTYPE_FLOAT_t zmax
         
+        # Particle raw pointer
+        cdef Particle* particle_ptr
+        
         # Create particle seed - particles stored in a list object
         self.particle_seed_smart_ptrs = []
 
@@ -201,6 +204,12 @@ cdef class FVCOMOPTModel(OPTModel):
             if host_horizontal_elem >= 0:
                 in_domain = True
 
+                # Create particle
+                particle_seed_smart_ptr = ParticleSmartPtr(group_id=group,
+                        xpos=x, ypos=y, host=host_horizontal_elem,
+                        in_domain=in_domain)
+                particle_ptr = particle_seed_smart_ptr.get_ptr()
+
                 # Set z depending on the specified coordinate system
                 zmin = self.data_reader.get_zmin(time, x, y, host_horizontal_elem)
                 zmax = self.data_reader.get_zmax(time, x, y, host_horizontal_elem)
@@ -208,23 +217,22 @@ cdef class FVCOMOPTModel(OPTModel):
                     # z is given as the distance below the free surface. We use
                     # this and zeta to determine the distance below the mean
                     # free surface, which is then used with h to calculate sigma
-                    z = z_temp + zmax
+                    particle_ptr.zpos = z_temp + zmax
                     
                 elif self.config.get("SIMULATION", "depth_coordinates") == "sigma":
                     # Convert to cartesian coords using zmin and zmax
-                    z = sigma_to_cartesian_coords(z_temp, zmin, zmax)
+                    particle_ptr.zpos = sigma_to_cartesian_coords(z_temp, zmin, zmax)
                 
                 # Check that the given depth is valid
-                if z < zmin:
-                    raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(z,zmin))
-                elif z > zmax:
-                    raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(z,zmax))
+                if particle_ptr.zpos < zmin:
+                    raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(particle_ptr.zpos,zmin))
+                elif particle_ptr.zpos > zmax:
+                    raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(particle_ptr.zpos,zmax))
 
                 # Find the host z layer
-                z_layer = self.data_reader.find_zlayer(time, x, y, z, host_horizontal_elem, 0)
+                particle_ptr.host_z_layer = self.data_reader.find_zlayer(time, particle_ptr)
 
-                # Create particle
-                particle_seed_smart_ptr = ParticleSmartPtr(group, x, y, z, host_horizontal_elem, z_layer, in_domain)
+                # Add particle to the set
                 self.particle_seed_smart_ptrs.append(particle_seed_smart_ptr)
 
                 particles_in_domain += 1
@@ -330,17 +338,14 @@ cdef class FVCOMOPTModel(OPTModel):
                     if zpos < zmin or zpos > zmax:
                         zpos = self.vert_bc_calculator.apply(zpos, zmin, zmax)            
 
-                    # Determine the new host z layer
-                    old_host_z_layer = particle_ptr.host_z_layer
-                    host_z_layer = self.data_reader.find_zlayer(time+self.time_step, xpos, ypos, 
-                        zpos, host, old_host_z_layer)
-
                     # Update the particle's position
                     particle_ptr.xpos = xpos
                     particle_ptr.ypos = ypos
                     particle_ptr.zpos = zpos
                     particle_ptr.host_horizontal_elem = host
-                    particle_ptr.host_z_layer = host_z_layer
+
+                    # Determine the new host zlayer
+                    particle_ptr.host_z_layer = self.data_reader.find_zlayer(time+self.time_step, particle_ptr)
                 else:
                     raise ValueError('Unrecognised host element flag {}.'.format(host))
 
@@ -501,6 +506,9 @@ cdef class GOTMOPTModel(OPTModel):
         time : float
             The current time.
         """
+        # Particle raw pointer
+        cdef Particle* particle_ptr
+
         # Create particle seed - particles stored in a list object
         self.particle_seed_smart_ptrs = []
         for group, x, y, z_temp in zip(self._group_ids, self._x_positions,
@@ -510,6 +518,11 @@ cdef class GOTMOPTModel(OPTModel):
             
             # Host set to 0
             host = 0
+    
+            # Create particle
+            particle_seed_smart_ptr = ParticleSmartPtr(group_id=group,
+                    xpos=x, ypos=y, host=host, in_domain=in_domain)
+            particle_ptr = particle_seed_smart_ptr.get_ptr()
 
             # Set z depending on the specified coordinate system
             zmin = self.data_reader.get_zmin(time, x, y, host)
@@ -518,23 +531,22 @@ cdef class GOTMOPTModel(OPTModel):
                 # z is given as the distance below the free surface. We use
                 # this and zeta to determine the distance below the mean
                 # free surface, which is then used with h to calculate sigma
-                z = z_temp + zmax
+                particle_ptr.zpos = z_temp + zmax
 
             elif self.config.get("SIMULATION", "depth_coordinates") == "sigma":
                 # Convert to cartesian coords using zmin and zmax
-                z = sigma_to_cartesian_coords(z_temp, zmin, zmax)
+                particle_ptr.zpos = sigma_to_cartesian_coords(z_temp, zmin, zmax)
 
             # Check that the given depth is valid
-            if z < zmin:
-                raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(z,zmin))
-            elif z > zmax:
-                raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(z,zmax))
+            if particle_ptr.zpos < zmin:
+                raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(particle_ptr.zpos,zmin))
+            elif particle_ptr.zpos > zmax:
+                raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(particle_ptr.zpos,zmax))
 
             # Find the host z layer
-            z_layer = self.data_reader.find_zlayer(time, x, y, z, host, 0)
+            particle_ptr.host_z_layer = self.data_reader.find_zlayer(time, particle_ptr)
 
-            # Create particle
-            particle_seed_smart_ptr = ParticleSmartPtr(group, x, y, z, host, z_layer, in_domain)
+            # Add particle to the set
             self.particle_seed_smart_ptrs.append(particle_seed_smart_ptr)
 
     cpdef update(self, DTYPE_FLOAT_t time):
@@ -566,9 +578,7 @@ cdef class GOTMOPTModel(OPTModel):
 
                 # Find the host z layer for the current time
                 particle_ptr.host_z_layer = self.data_reader.find_zlayer(time,
-                    particle_ptr.xpos, particle_ptr.ypos, particle_ptr.zpos, 
-                    particle_ptr.host_horizontal_elem,
-                    particle_ptr.host_z_layer)
+                    particle_ptr)
 
                 # Vertical random walk
                 if self.vert_rand_walk_model is not None:

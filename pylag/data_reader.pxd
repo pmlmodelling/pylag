@@ -18,9 +18,7 @@ cdef class DataReader:
         DTYPE_FLOAT_t ypos_old, DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new,
         DTYPE_INT_t last_host)
 
-    cpdef find_zlayer(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
-        DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
-        DTYPE_INT_t guess)
+    cdef find_zlayer(self, DTYPE_FLOAT_t time, Particle* particle)
 
     cpdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
         DTYPE_FLOAT_t ypos, DTYPE_INT_t host)

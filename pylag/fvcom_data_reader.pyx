@@ -610,9 +610,7 @@ cdef class FVCOMDataReader(DataReader):
         
         raise RuntimeError('Particle path does not intersect any side of the given element.')
 
-    cpdef find_zlayer(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
-        DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
-        DTYPE_INT_t guess):
+    cdef find_zlayer(self, DTYPE_FLOAT_t time, Particle* particle):
         """ Find the host depth layer
         
         Find the depth layer containing zpos. In FVCOM, Sigma levels are counted
@@ -630,22 +628,22 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_INT_t k
 
         # Compute barycentric coordinates for the given x/y coordinates
-        self._get_phi(xpos, ypos, host, phi)
+        self._get_phi(particle.xpos, particle.ypos, particle.host_horizontal_elem, phi)
 
         # Compute sigma
-        h = self.get_zmin(time, xpos, ypos, host)
-        zeta = self.get_zmax(time, xpos, ypos, host)
-        sigma = cartesian_to_sigma_coords(zpos, h, zeta)
+        h = self.get_zmin(time, particle.xpos, particle.ypos, particle.host_horizontal_elem)
+        zeta = self.get_zmax(time, particle.xpos, particle.ypos, particle.host_horizontal_elem)
+        sigma = cartesian_to_sigma_coords(particle.zpos, h, zeta)
 
         # Loop over all levels to find the host z layer
         for k in xrange(self._n_siglay):
-            sigma_upper_level = self._interp_on_sigma_level(phi, host, k)
-            sigma_lower_level = self._interp_on_sigma_level(phi, host, k+1)
+            sigma_upper_level = self._interp_on_sigma_level(phi, particle.host_horizontal_elem, k)
+            sigma_lower_level = self._interp_on_sigma_level(phi, particle.host_horizontal_elem, k+1)
             
             if sigma <= sigma_upper_level and sigma >= sigma_lower_level:
                 return k
         
-        raise ValueError("Particle zpos (={}) not found! h = {}, zeta = {}.".format(zpos, h, zeta))
+        raise ValueError("Particle zpos (={}) not found! h = {}, zeta = {}.".format(particle.zpos, h, zeta))
 
     cpdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
@@ -1076,9 +1074,7 @@ cdef class FVCOMDataReader(DataReader):
             zpos_increment = -zpos_increment
             
         _particle.zpos = _particle.zpos + zpos_increment
-        _particle.host_z_layer = self.find_zlayer(time, _particle.xpos,
-                _particle.ypos, _particle.zpos, _particle.host_horizontal_elem,
-                _particle.host_z_layer)
+        _particle.host_z_layer = self.find_zlayer(time, &_particle)
 
         kh2 = self.get_vertical_eddy_diffusivity(time, &_particle)
         k_prime = (kh2 - kh1) / zpos_increment

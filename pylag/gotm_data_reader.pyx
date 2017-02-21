@@ -194,32 +194,30 @@ cdef class GOTMDataReader(DataReader):
             DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new, DTYPE_INT_t guess):
         return 0, 0
     
-    cpdef find_zlayer(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
-        DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
-        DTYPE_INT_t guess):
+    cdef find_zlayer(self, DTYPE_FLOAT_t time, Particle* particle):
         """ Find the host vertical layer
         
         Find the host vertical layer. Begin with a local search using `guess' as
         a starting point. If this fails search the full vertical grid.
         """
         cdef DTYPE_INT_t k
-        cdef DTYPE_FLOAT_t z, z_lower_level, z_upper_level
+        cdef DTYPE_FLOAT_t z
 
         # Start with a local search
-        for k in xrange(guess-2, guess+2, 1):
+        for k in xrange(particle.host_z_layer-2, particle.host_z_layer+2, 1):
             if k < 0 or k >= self._n_zlay:
                 continue
 
-            if zpos <= self._zlev[k+1] and zpos >= self._zlev[k]:
+            if particle.zpos <= self._zlev[k+1] and particle.zpos >= self._zlev[k]:
                 return k
 
         # Search the full vertical grid
         for k in xrange(self._n_zlay): 
-            if zpos <= self._zlev[k+1] and zpos >= self._zlev[k]:
+            if particle.zpos <= self._zlev[k+1] and particle.zpos >= self._zlev[k]:
                 return k
     
         # Search failed
-        raise ValueError("Particle z position (={}) not found!".format(zpos))
+        raise ValueError("Particle z position (={}) not found!".format(particle.zpos))
 
     cpdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos, DTYPE_INT_t host):
@@ -351,9 +349,7 @@ cdef class GOTMDataReader(DataReader):
             zpos_increment = -zpos_increment
 
         _particle.zpos = _particle.zpos + zpos_increment
-        _particle.host_z_layer = self.find_zlayer(time, _particle.xpos,
-                _particle.ypos, _particle.zpos, _particle.host_horizontal_elem,
-                _particle.host_z_layer)
+        _particle.host_z_layer = self.find_zlayer(time, &_particle)
 
         kh2 = self.get_vertical_eddy_diffusivity(time, &_particle)
         k_prime = (kh2 - kh1) / zpos_increment
