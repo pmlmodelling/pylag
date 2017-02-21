@@ -773,9 +773,8 @@ cdef class FVCOMDataReader(DataReader):
                 particle, phi, vel)
         return
 
-    cpdef get_horizontal_eddy_diffusivity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
-            DTYPE_INT_t zlayer):
+    cdef get_horizontal_eddy_diffusivity(self, DTYPE_FLOAT_t time,
+            Particle* particle):
         """ Returns the horizontal eddy diffusivity through linear interpolation
         
         viscofh is defined at element nodes on sigma layers. Above and below the
@@ -788,20 +787,8 @@ cdef class FVCOMDataReader(DataReader):
         time : float
             Time at which to interpolate.
         
-        xpos : float
-            x-position at which to interpolate.
-        
-        ypos : float
-            y-position at which to interpolate.
-
-        zpos : float
-            z-position at which to interpolate.
-
-        host : int
-            Host horizontal element.
-
-        zlayer : int
-            Host z layer.        
+        particle: *Particle
+            Pointer to a Particle object. 
         
         Returns:
         --------
@@ -841,15 +828,15 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_FLOAT_t viscofh_layer_2
 
         # Barycentric coordinates
-        self._get_phi(xpos, ypos, host, phi)
+        self._get_phi(particle.xpos, particle.ypos, particle.host_horizontal_elem, phi)
 
         # Compute sigma
-        h = self.get_zmin(time, xpos, ypos, host)
-        zeta = self.get_zmax(time, xpos, ypos, host)
-        sigma = cartesian_to_sigma_coords(zpos, h, zeta)
+        h = self.get_zmin(time, particle.xpos, particle.ypos, particle.host_horizontal_elem)
+        zeta = self.get_zmax(time, particle.xpos, particle.ypos, particle.host_horizontal_elem)
+        sigma = cartesian_to_sigma_coords(particle.zpos, h, zeta)
 
         # Use sigma to set variables describing the position within the vertical grid
-        self._get_z_grid_position(sigma, host, zlayer, phi, &z_grid_pos) 
+        self._get_z_grid_position(sigma, particle.host_horizontal_elem, particle.host_z_layer, phi, &z_grid_pos) 
 
         # Time fraction
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
@@ -859,7 +846,7 @@ cdef class FVCOMDataReader(DataReader):
         if z_grid_pos.in_vertical_boundary_layer is True:
             # Extract viscofh near to the boundary
             for i in xrange(N_VERTICES):
-                vertex = self._nv[i,host]
+                vertex = self._nv[i,particle.host_horizontal_elem]
                 viscofh_tri_t_last_layer_1[i] = self._viscofh_last[z_grid_pos.k_boundary, vertex]
                 viscofh_tri_t_next_layer_1[i] = self._viscofh_next[z_grid_pos.k_boundary, vertex]
 
@@ -875,7 +862,7 @@ cdef class FVCOMDataReader(DataReader):
         else:
             # Extract viscofh on the lower and upper bounding sigma layers
             for i in xrange(N_VERTICES):
-                vertex = self._nv[i,host]
+                vertex = self._nv[i,particle.host_horizontal_elem]
                 viscofh_tri_t_last_layer_1[i] = self._viscofh_last[z_grid_pos.k_lower_layer, vertex]
                 viscofh_tri_t_next_layer_1[i] = self._viscofh_next[z_grid_pos.k_lower_layer, vertex]
                 viscofh_tri_t_last_layer_2[i] = self._viscofh_last[z_grid_pos.k_upper_layer, vertex]
@@ -896,15 +883,14 @@ cdef class FVCOMDataReader(DataReader):
             viscofh_layer_2 = interp.interpolate_within_element(viscofh_tri_layer_2, phi)
 
             # Vertical interpolation
-            sigma_lower_layer = self._interp_on_sigma_layer(phi, host, z_grid_pos.k_lower_layer)
-            sigma_upper_layer = self._interp_on_sigma_layer(phi, host, z_grid_pos.k_upper_layer)
+            sigma_lower_layer = self._interp_on_sigma_layer(phi, particle.host_horizontal_elem, z_grid_pos.k_lower_layer)
+            sigma_upper_layer = self._interp_on_sigma_layer(phi, particle.host_horizontal_elem, z_grid_pos.k_upper_layer)
             sigma_fraction = interp.get_linear_fraction_safe(sigma, sigma_lower_layer, sigma_upper_layer)
 
             return interp.linear_interp(sigma_fraction, viscofh_layer_1, viscofh_layer_2)
 
-    cpdef get_horizontal_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
-            DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, 
-            DTYPE_INT_t host, DTYPE_INT_t zlayer):
+    cdef get_horizontal_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
+            Particle* particle):
         """ NOT YET IMPLEMENTED
         
                 Parameters:
@@ -912,20 +898,8 @@ cdef class FVCOMDataReader(DataReader):
         time : float
             Time at which to interpolate.
         
-        xpos : float
-            x-position at which to interpolate.
-        
-        ypos : float
-            y-position at which to interpolate.
-
-        zpos : float
-            z-position at which to interpolate.
-
-        host : int
-            Host horizontal element.
-
-        zlayer : int
-            Host z layer.
+        particle: *Particle
+            Pointer to a Particle object.
 
         Returns:
         --------

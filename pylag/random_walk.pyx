@@ -196,21 +196,11 @@ cdef class NaiveHorizontalRandomWalk(HorizontalRandomWalk):
         --------
         N/A
         """
-        # Temporary containers
-        cdef DTYPE_FLOAT_t t, xpos, ypos, zpos
-        cdef DTYPE_INT_t host, zlayer
-        
         # The horizontal eddy diffusiviy
         cdef DTYPE_FLOAT_t kh
 
         # The vertical eddy diffusivity at the particle's current location
-        t = time
-        xpos = particle.xpos
-        ypos = particle.ypos
-        zpos = particle.zpos
-        host = particle.host_horizontal_elem
-        zlayer = particle.host_z_layer
-        kh = data_reader.get_horizontal_eddy_diffusivity(t, xpos, ypos, zpos, host, zlayer)
+        kh = data_reader.get_horizontal_eddy_diffusivity(time, particle)
         
         # Change in position
         delta_X.x += sqrt(2.0*kh*self._time_step) * random.gauss(1.0)

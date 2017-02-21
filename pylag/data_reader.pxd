@@ -34,13 +34,11 @@ cdef class DataReader:
 
     cdef get_vertical_velocity(self, DTYPE_FLOAT_t time, Particle* particle)
 
-    cpdef get_horizontal_eddy_diffusivity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
-            DTYPE_INT_t zlayer)
+    cdef get_horizontal_eddy_diffusivity(self, DTYPE_FLOAT_t time,
+            Particle* particle)
 
-    cpdef get_horizontal_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
-            DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos,
-            DTYPE_INT_t host, DTYPE_INT_t zlayer)
+    cdef get_horizontal_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
+            Particle* particle)
 
     cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time,
             Particle* particle) except FLOAT_ERR
