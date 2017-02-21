@@ -72,9 +72,8 @@ cdef class RK4Integrator2D(NumIntegrator):
         # Calculated vel
         cdef DTYPE_FLOAT_t vel[2]
         
-        # Temporary containers
-        cdef DTYPE_FLOAT_t t, xpos, ypos, zpos
-        cdef DTYPE_INT_t flag, host, zlayer
+        # Temporary particle object
+        cdef Particle _particle
 
         # Array indices/loop counters
         cdef DTYPE_INT_t ndim = 2
@@ -82,81 +81,86 @@ cdef class RK4Integrator2D(NumIntegrator):
         
         # Stage 1
         t = time
-        xpos = particle.xpos
-        ypos = particle.ypos
-        zpos = particle.zpos
-        host = particle.host_horizontal_elem
-        zlayer = particle.host_z_layer
-        data_reader.get_horizontal_velocity(t, xpos, ypos, zpos, host, zlayer, vel) 
+        _particle = particle[0]
+        data_reader.get_horizontal_velocity(t, &_particle, vel) 
         for i in xrange(ndim):
             k1[i] = self._time_step * vel[i]
         
         # Stage 2
         t = time + 0.5 * self._time_step
-        xpos = particle.xpos + 0.5 * k1[0]
-        ypos = particle.ypos + 0.5 * k1[1]
+        _particle.xpos = particle.xpos + 0.5 * k1[0]
+        _particle.ypos = particle.ypos + 0.5 * k1[1]
         
-        flag, host = data_reader.find_host(particle.xpos, particle.ypos, xpos,
-                ypos, particle.host_horizontal_elem)
+        flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos, _particle.xpos,
+                _particle.ypos, particle.host_horizontal_elem)
 
         # Check for land boundary crossing
         while flag == -1:
-            xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
-                    particle.xpos, particle.ypos, xpos, ypos, host)
-            flag, host = data_reader.find_host(particle.xpos, particle.ypos,
-                    xpos, ypos, particle.host_horizontal_elem)
+            _particle.xpos, _particle.ypos = self._horiz_bc_calculator.apply(data_reader,
+                    particle.xpos, particle.ypos, _particle.xpos, _particle.ypos,
+                    _particle.host_horizontal_elem)
+            flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos,
+                    _particle.xpos, _particle.ypos, particle.host_horizontal_elem)
 
         # Check for open boundary crossing
         if flag == -2: return flag
 
-        zlayer = data_reader.find_zlayer(t, xpos, ypos, zpos, host, zlayer)
-        data_reader.get_horizontal_velocity(t, xpos, ypos, zpos, host, zlayer, vel) 
+        _particle.host_z_layer = data_reader.find_zlayer(t, _particle.xpos,
+                _particle.ypos, _particle.zpos, _particle.host_horizontal_elem,
+                _particle.host_z_layer)
+        data_reader.get_horizontal_velocity(t, &_particle, vel) 
         for i in xrange(ndim):
             k2[i] = self._time_step * vel[i]
 
         # Stage 3
         t = time + 0.5 * self._time_step
-        xpos = particle.xpos + 0.5 * k2[0]
-        ypos = particle.ypos + 0.5 * k2[1]
+        _particle.xpos = particle.xpos + 0.5 * k2[0]
+        _particle.ypos = particle.ypos + 0.5 * k2[1]
         
-        flag, host = data_reader.find_host(particle.xpos, particle.ypos, xpos,
-                ypos, particle.host_horizontal_elem)
+        flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos, _particle.xpos,
+                _particle.ypos, particle.host_horizontal_elem)
 
         # Check for land boundary crossing
         while flag == -1:
-            xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
-                    particle.xpos, particle.ypos, xpos, ypos, host)
-            flag, host = data_reader.find_host(particle.xpos, particle.ypos,
-                    xpos, ypos, particle.host_horizontal_elem)
+            _particle.xpos, _particle.ypos = self._horiz_bc_calculator.apply(data_reader,
+                    particle.xpos, particle.ypos, _particle.xpos, _particle.ypos,
+                    _particle.host_horizontal_elem)
+            flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos,
+                    _particle.xpos, _particle.ypos, particle.host_horizontal_elem)
 
         # Check for open boundary crossing
         if flag == -2: return flag
 
-        zlayer = data_reader.find_zlayer(t, xpos, ypos, zpos, host, zlayer)
-        data_reader.get_horizontal_velocity(t, xpos, ypos, zpos, host, zlayer, vel) 
+        _particle.host_z_layer = data_reader.find_zlayer(t, _particle.xpos,
+                _particle.ypos, _particle.zpos, _particle.host_horizontal_elem,
+                _particle.host_z_layer)
+        data_reader.get_horizontal_velocity(t, &_particle, vel)
         for i in xrange(ndim):
             k3[i] = self._time_step * vel[i]
 
         # Stage 4
         t = time + self._time_step
-        xpos = particle.xpos + k3[0]
-        ypos = particle.ypos + k3[1]
+        _particle.xpos = particle.xpos + k3[0]
+        _particle.ypos = particle.ypos + k3[1]
 
-        flag, host = data_reader.find_host(particle.xpos, particle.ypos, xpos,
-                ypos, particle.host_horizontal_elem)
+        flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos, _particle.xpos,
+                _particle.ypos, particle.host_horizontal_elem)
 
         # Check for land boundary crossing
         while flag == -1:
-            xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
-                    particle.xpos, particle.ypos, xpos, ypos, host)
-            flag, host = data_reader.find_host(particle.xpos, particle.ypos,
-                    xpos, ypos, particle.host_horizontal_elem)
+            _particle.xpos, _particle.ypos = self._horiz_bc_calculator.apply(data_reader,
+                    particle.xpos, particle.ypos, _particle.xpos, _particle.ypos,
+                    _particle.host_horizontal_elem)
+            flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos,
+                    _particle.xpos, _particle.ypos, particle.host_horizontal_elem)
 
         # Check for open boundary crossing
         if flag == -2: return flag
 
-        zlayer = data_reader.find_zlayer(t, xpos, ypos, zpos, host, zlayer)
-        data_reader.get_horizontal_velocity(t, xpos, ypos, zpos, host, zlayer, vel)
+        _particle.host_z_layer = data_reader.find_zlayer(t, _particle.xpos,
+                _particle.ypos, _particle.zpos, _particle.host_horizontal_elem,
+                _particle.host_z_layer)
+        data_reader.get_horizontal_velocity(t, &_particle, vel)
         for i in xrange(ndim):
             k4[i] = self._time_step * vel[i]
 
@@ -229,9 +233,10 @@ cdef class RK4Integrator3D(NumIntegrator):
         # Calculated vel
         cdef DTYPE_FLOAT_t vel[3]
         
-        # Temporary containers
-        cdef DTYPE_FLOAT_t t, xpos, ypos, zpos
-        cdef DTYPE_INT_t flag, host, zlayer
+        # Temporary particle object
+        cdef Particle _particle
+        
+        # For applying vertical boundary conditions
         cdef DTYPE_FLOAT_t zmin, zmax
 
         # Array indices/loop counters
@@ -240,105 +245,110 @@ cdef class RK4Integrator3D(NumIntegrator):
         
         # Stage 1
         t = time
-        xpos = particle.xpos
-        ypos = particle.ypos
-        zpos = particle.zpos
-        host = particle.host_horizontal_elem
-        zlayer = particle.host_z_layer
-        data_reader.get_velocity(t, xpos, ypos, zpos, host, zlayer, vel) 
+        _particle = particle[0]
+        data_reader.get_velocity(t, &_particle, vel) 
         for i in xrange(ndim):
             k1[i] = self._time_step * vel[i]
         
         # Stage 2
         t = time + 0.5 * self._time_step
-        xpos = particle.xpos + 0.5 * k1[0]
-        ypos = particle.ypos + 0.5 * k1[1]
-        zpos = particle.zpos + 0.5 * k1[2]
+        _particle.xpos = particle.xpos + 0.5 * k1[0]
+        _particle.ypos = particle.ypos + 0.5 * k1[1]
+        _particle.zpos = particle.zpos + 0.5 * k1[2]
         
-        flag, host = data_reader.find_host(particle.xpos, particle.ypos, xpos,
-                ypos, particle.host_horizontal_elem)
+        flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos, _particle.xpos,
+                _particle.ypos, particle.host_horizontal_elem)
 
         # Check for land boundary crossing
         while flag == -1:
-            xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
-                    particle.xpos, particle.ypos, xpos, ypos, host)
-            flag, host = data_reader.find_host(particle.xpos, particle.ypos,
-                    xpos, ypos, particle.host_horizontal_elem)
+            _particle.xpos, _particle.ypos = self._horiz_bc_calculator.apply(data_reader,
+                    particle.xpos, particle.ypos, _particle.xpos, _particle.ypos,
+                    _particle.host_horizontal_elem)
+            flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos,
+                    _particle.xpos, _particle.ypos, particle.host_horizontal_elem)
 
         # Check for open boundary crossing
         if flag == -2: return flag
 
         # Impose boundary condition in z
-        zmin = data_reader.get_zmin(t, xpos, ypos, host)
-        zmax = data_reader.get_zmax(t, xpos, ypos, host)
-        if zpos < zmin or zpos > zmax:
-            zpos = self._vert_bc_calculator.apply(zpos, zmin, zmax)
+        zmin = data_reader.get_zmin(t, _particle.xpos, _particle.ypos, _particle.host_horizontal_elem)
+        zmax = data_reader.get_zmax(t, _particle.xpos, _particle.ypos, _particle.host_horizontal_elem)
+        if _particle.zpos < zmin or _particle.zpos > zmax:
+            _particle.zpos = self._vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
 
-        zlayer = data_reader.find_zlayer(t, xpos, ypos, zpos, host, zlayer)
+        _particle.host_z_layer = data_reader.find_zlayer(t, _particle.xpos,
+                _particle.ypos, _particle.zpos, _particle.host_horizontal_elem,
+                _particle.host_z_layer)
 
-        data_reader.get_velocity(t, xpos, ypos, zpos, host, zlayer, vel) 
+        data_reader.get_velocity(t, &_particle, vel)
         for i in xrange(ndim):
             k2[i] = self._time_step * vel[i]
 
         # Stage 3
         t = time + 0.5 * self._time_step
-        xpos = particle.xpos + 0.5 * k2[0]
-        ypos = particle.ypos + 0.5 * k2[1]
-        zpos = particle.zpos + 0.5 * k2[2]
+        _particle.xpos = particle.xpos + 0.5 * k2[0]
+        _particle.ypos = particle.ypos + 0.5 * k2[1]
+        _particle.zpos = particle.zpos + 0.5 * k2[2]
         
-        flag, host = data_reader.find_host(particle.xpos, particle.ypos, xpos,
-                ypos, particle.host_horizontal_elem)
+        flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos, _particle.xpos,
+                _particle.ypos, particle.host_horizontal_elem)
 
         # Check for land boundary crossing
         while flag == -1:
-            xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
-                    particle.xpos, particle.ypos, xpos, ypos, host)
-            flag, host = data_reader.find_host(particle.xpos, particle.ypos,
-                    xpos, ypos, particle.host_horizontal_elem)
+            _particle.xpos, _particle.ypos = self._horiz_bc_calculator.apply(data_reader,
+                    particle.xpos, particle.ypos, _particle.xpos, _particle.ypos,
+                    _particle.host_horizontal_elem)
+            flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos,
+                    _particle.xpos, _particle.ypos, particle.host_horizontal_elem)
 
         # Check for open boundary crossing
         if flag == -2: return flag
 
         # Impose boundary condition in z
-        zmin = data_reader.get_zmin(t, xpos, ypos, host)
-        zmax = data_reader.get_zmax(t, xpos, ypos, host)
-        if zpos < zmin or zpos > zmax:
-            zpos = self._vert_bc_calculator.apply(zpos, zmin, zmax)
+        zmin = data_reader.get_zmin(t, _particle.xpos, _particle.ypos, _particle.host_horizontal_elem)
+        zmax = data_reader.get_zmax(t, _particle.xpos, _particle.ypos, _particle.host_horizontal_elem)
+        if _particle.zpos < zmin or _particle.zpos > zmax:
+            _particle.zpos = self._vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
 
-        zlayer = data_reader.find_zlayer(t, xpos, ypos, zpos, host, zlayer)
+        _particle.host_z_layer = data_reader.find_zlayer(t, _particle.xpos,
+                _particle.ypos, _particle.zpos, _particle.host_horizontal_elem,
+                _particle.host_z_layer)
 
-        data_reader.get_velocity(t, xpos, ypos, zpos, host, zlayer, vel) 
+        data_reader.get_velocity(t, &_particle, vel)
         for i in xrange(ndim):
             k3[i] = self._time_step * vel[i]
 
         # Stage 4
         t = time + self._time_step
-        xpos = particle.xpos + k3[0]
-        ypos = particle.ypos + k3[1]
-        zpos = particle.zpos + k3[2]
+        _particle.xpos = particle.xpos + k3[0]
+        _particle.ypos = particle.ypos + k3[1]
+        _particle.zpos = particle.zpos + k3[2]
 
-        flag, host = data_reader.find_host(particle.xpos, particle.ypos, xpos,
-                ypos, particle.host_horizontal_elem)
+        flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos, _particle.xpos,
+                _particle.ypos, particle.host_horizontal_elem)
 
         # Check for land boundary crossing
         while flag == -1:
-            xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
-                    particle.xpos, particle.ypos, xpos, ypos, host)
-            flag, host = data_reader.find_host(particle.xpos, particle.ypos,
-                    xpos, ypos, particle.host_horizontal_elem)
+            _particle.xpos, _particle.ypos = self._horiz_bc_calculator.apply(data_reader,
+                    particle.xpos, particle.ypos, _particle.xpos, _particle.ypos,
+                    _particle.host_horizontal_elem)
+            flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos,
+                    _particle.xpos, _particle.ypos, particle.host_horizontal_elem)
 
         # Check for open boundary crossing
         if flag == -2: return flag
 
         # Impose boundary condition in z
-        zmin = data_reader.get_zmin(t, xpos, ypos, host)
-        zmax = data_reader.get_zmax(t, xpos, ypos, host)
-        if zpos < zmin or zpos > zmax:
-            zpos = self._vert_bc_calculator.apply(zpos, zmin, zmax)
+        zmin = data_reader.get_zmin(t, _particle.xpos, _particle.ypos, _particle.host_horizontal_elem)
+        zmax = data_reader.get_zmax(t, _particle.xpos, _particle.ypos, _particle.host_horizontal_elem)
+        if _particle.zpos < zmin or _particle.zpos > zmax:
+            _particle.zpos = self._vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
 
-        zlayer = data_reader.find_zlayer(t, xpos, ypos, zpos, host, zlayer)
+        _particle.host_z_layer = data_reader.find_zlayer(t, _particle.xpos,
+                _particle.ypos, _particle.zpos, _particle.host_horizontal_elem,
+                _particle.host_z_layer)
 
-        data_reader.get_velocity(t, xpos, ypos, zpos, host, zlayer, vel) 
+        data_reader.get_velocity(t, &_particle, vel)
         for i in xrange(ndim):
             k4[i] = self._time_step * vel[i]
 

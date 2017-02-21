@@ -34,32 +34,28 @@ cdef class TestVelocityDataReader(DataReader):
             DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new, DTYPE_INT_t guess):
         return 0, 0
     
-    cdef get_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
-            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
-            DTYPE_INT_t zlayer, DTYPE_FLOAT_t vel[3]):
+    cdef get_velocity(self, DTYPE_FLOAT_t time, Particle* particle, 
+            DTYPE_FLOAT_t vel[3]):
         """ Return velocity field array for the given space/time coordinates.
         
         """  
-        vel[0] = self._get_u_component(xpos)
-        vel[1] = self._get_v_component(ypos)
-        vel[2] = self._get_w_component(zpos)
+        vel[0] = self._get_u_component(particle.xpos)
+        vel[1] = self._get_v_component(particle.ypos)
+        vel[2] = self._get_w_component(particle.zpos)
         
-    cdef get_horizontal_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
-            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
-            DTYPE_INT_t zlayer, DTYPE_FLOAT_t vel[2]):
+    cdef get_horizontal_velocity(self, DTYPE_FLOAT_t time, Particle* particle,
+            DTYPE_FLOAT_t vel[2]):
         """ Return horizontal velocity for the given space/time coordinates.
         
         """  
-        vel[0] = self._get_u_component(xpos)
-        vel[1] = self._get_v_component(ypos)
+        vel[0] = self._get_u_component(particle.xpos)
+        vel[1] = self._get_v_component(particle.ypos)
 
-    cdef get_vertical_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
-            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
-            DTYPE_INT_t zlayer):
+    cdef get_vertical_velocity(self, DTYPE_FLOAT_t time, Particle* particle):
         """ Return vertical velocity field for the given space/time coordinates.
         
         """ 
-        return self._get_w_component(zpos)
+        return self._get_w_component(particle.zpos)
 
     def get_velocity_analytic(self, xpos, ypos, zpos=0.0):
         """ Python friendly version of get_velocity(...).
@@ -139,14 +135,12 @@ cdef class TestDiffusivityDataReader(DataReader):
             DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new, DTYPE_INT_t guess):
         return 0, 0
     
-    cdef get_velocity(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos, 
-            DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos, DTYPE_INT_t host,
-            DTYPE_INT_t zlayer, DTYPE_FLOAT_t vel[3]):
+    cdef get_velocity(self, DTYPE_FLOAT_t time, Particle* particle,
+            DTYPE_FLOAT_t vel[3]):
         """ Returns a zeroed velocity vector.
         
         The advective velocity is used by random displacement models adapted to
-        work in non-homogenous diffusivity
-        fields.
+        work in non-homogenous diffusivity fields.
         """         
         vel[0] = 0.0
         vel[1] = 0.0

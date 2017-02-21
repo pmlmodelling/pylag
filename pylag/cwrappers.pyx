@@ -91,9 +91,16 @@ cpdef interpolate_within_element(var, phi):
 
 cpdef get_velocity(DataReader data_reader, t, x, y, z, host, zlayer):
     cdef DTYPE_FLOAT_t vel_c[N_VERTICES]
+    cdef Particle particle
     cdef DTYPE_INT_t i
+
+    particle.xpos = x
+    particle.ypos = y
+    particle.zpos = z
+    particle.host_horizontal_elem = host
+    particle.host_z_layer = zlayer
     
-    data_reader.get_velocity(t, x, y, z, host, zlayer, vel_c)
+    data_reader.get_velocity(t, &particle, vel_c)
     
     # Generate and pass back an array type python can understand
     vel_out = np.empty(N_VERTICES, dtype=DTYPE_FLOAT)
@@ -103,9 +110,16 @@ cpdef get_velocity(DataReader data_reader, t, x, y, z, host, zlayer):
 
 cpdef get_horizontal_velocity(DataReader data_reader, t, x, y, z, host, zlayer):
     cdef DTYPE_FLOAT_t vel_c[2]
+    cdef Particle particle
     cdef DTYPE_INT_t i
+
+    particle.xpos = x
+    particle.ypos = y
+    particle.zpos = z
+    particle.host_horizontal_elem = host
+    particle.host_z_layer = zlayer
     
-    data_reader.get_horizontal_velocity(t, x, y, z, host, zlayer, vel_c)
+    data_reader.get_horizontal_velocity(t, &particle, vel_c)
     
     # Generate and pass back an array python can understand
     vel_out = np.empty(N_VERTICES, dtype=DTYPE_FLOAT)
