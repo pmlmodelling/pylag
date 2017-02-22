@@ -105,6 +105,9 @@ cdef class RK4Integrator2D(NumIntegrator):
         # Check for open boundary crossing
         if flag == -2: return flag
 
+        # Update particle local coordinates
+        data_reader.set_local_coordinates(&_particle)
+
         _particle.host_z_layer = data_reader.find_zlayer(t, &_particle)
         data_reader.get_horizontal_velocity(t, &_particle, vel) 
         for i in xrange(ndim):
@@ -129,6 +132,9 @@ cdef class RK4Integrator2D(NumIntegrator):
         # Check for open boundary crossing
         if flag == -2: return flag
 
+        # Update particle local coordinates
+        data_reader.set_local_coordinates(&_particle)
+
         _particle.host_z_layer = data_reader.find_zlayer(t, &_particle)
         data_reader.get_horizontal_velocity(t, &_particle, vel)
         for i in xrange(ndim):
@@ -152,6 +158,9 @@ cdef class RK4Integrator2D(NumIntegrator):
 
         # Check for open boundary crossing
         if flag == -2: return flag
+
+        # Update particle local coordinates
+        data_reader.set_local_coordinates(&_particle)
 
         _particle.host_z_layer = data_reader.find_zlayer(t, &_particle)
         data_reader.get_horizontal_velocity(t, &_particle, vel)
@@ -264,6 +273,9 @@ cdef class RK4Integrator3D(NumIntegrator):
         # Check for open boundary crossing
         if flag == -2: return flag
 
+        # Update particle local coordinates
+        data_reader.set_local_coordinates(&_particle)
+
         # Impose boundary condition in z
         zmin = data_reader.get_zmin(t, &_particle)
         zmax = data_reader.get_zmax(t, &_particle)
@@ -296,6 +308,9 @@ cdef class RK4Integrator3D(NumIntegrator):
         # Check for open boundary crossing
         if flag == -2: return flag
 
+        # Update particle local coordinates
+        data_reader.set_local_coordinates(&_particle)
+
         # Impose boundary condition in z
         zmin = data_reader.get_zmin(t, &_particle)
         zmax = data_reader.get_zmax(t, &_particle)
@@ -327,6 +342,9 @@ cdef class RK4Integrator3D(NumIntegrator):
 
         # Check for open boundary crossing
         if flag == -2: return flag
+
+        # Update particle local coordinates
+        data_reader.set_local_coordinates(&_particle)
 
         # Impose boundary condition in z
         zmin = data_reader.get_zmin(t, &_particle)

@@ -3,9 +3,15 @@ from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 # C Struct describing the physical location of a particle object
 cdef struct Particle:
+    # Particle properties
+    # --------------------
+
     # Particle group ID
     DTYPE_INT_t group_id
     
+    # Global coordinates
+    # ------------------
+
     # Particle x-position
     DTYPE_FLOAT_t xpos
     
@@ -14,6 +20,14 @@ cdef struct Particle:
     
     # Particle z-position
     DTYPE_FLOAT_t zpos
+
+    # Local coordinates
+    # -----------------
+
+    DTYPE_FLOAT_t phi[3]
+
+    # Indices describing the particle's position within a given grid
+    # --------------------------------------------------------------
     
     # The host horizontal element
     DTYPE_INT_t host_horizontal_elem

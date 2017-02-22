@@ -11,7 +11,9 @@ cdef class ParticleSmartPtr:
     """
     
     def __cinit__(self, DTYPE_INT_t group_id=-999, DTYPE_FLOAT_t xpos=-999., 
-            DTYPE_FLOAT_t ypos=-999., DTYPE_FLOAT_t zpos=-999., DTYPE_INT_t host=-999, 
+            DTYPE_FLOAT_t ypos=-999., DTYPE_FLOAT_t zpos=-999.,
+            DTYPE_FLOAT_t phi1=-999.,  DTYPE_FLOAT_t phi2=-999.,
+            DTYPE_FLOAT_t phi3=-999., DTYPE_INT_t host=-999, 
             DTYPE_INT_t host_z_layer=-999, DTYPE_INT_t in_domain=False):
 
         self._particle = <Particle *>PyMem_Malloc(sizeof(Particle))
@@ -23,6 +25,9 @@ cdef class ParticleSmartPtr:
         self._particle.xpos = xpos
         self._particle.ypos = ypos
         self._particle.zpos = zpos
+        self._particle.phi[0] = phi1
+        self._particle.phi[1] = phi2
+        self._particle.phi[2] = phi3
         self._particle.host_horizontal_elem = host
         self._particle.host_z_layer = host_z_layer
         self._particle.in_domain = in_domain
@@ -58,6 +63,9 @@ cdef ParticleSmartPtr copy(ParticleSmartPtr particle_smart_ptr):
                             particle_ptr.xpos,
                             particle_ptr.ypos,
                             particle_ptr.zpos,
+                            particle_ptr.phi[0],
+                            particle_ptr.phi[1],
+                            particle_ptr.phi[2],
                             particle_ptr.host_horizontal_elem,
                             particle_ptr.host_z_layer,
                             particle_ptr.in_domain)

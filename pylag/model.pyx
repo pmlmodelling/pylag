@@ -210,6 +210,9 @@ cdef class FVCOMOPTModel(OPTModel):
                         in_domain=in_domain)
                 particle_ptr = particle_seed_smart_ptr.get_ptr()
 
+                # Set local coordinates
+                self.data_reader.set_local_coordinates(particle_ptr)
+
                 # Set z depending on the specified coordinate system
                 zmin = self.data_reader.get_zmin(time, particle_ptr)
                 zmax = self.data_reader.get_zmax(time, particle_ptr)
@@ -232,7 +235,7 @@ cdef class FVCOMOPTModel(OPTModel):
                 # Find the host z layer
                 particle_ptr.host_z_layer = self.data_reader.find_zlayer(time, particle_ptr)
 
-                # Add particle to the set
+                # Add particle to the particle set
                 self.particle_seed_smart_ptrs.append(particle_seed_smart_ptr)
 
                 particles_in_domain += 1
@@ -336,13 +339,16 @@ cdef class FVCOMOPTModel(OPTModel):
                     particle_ptr.ypos = ypos
                     particle_ptr.zpos = zpos
                     particle_ptr.host_horizontal_elem = host
-                    
+
+                    # Update particle local coordinates
+                    self.data_reader.set_local_coordinates(particle_ptr)
+
                     # Apply surface/bottom boundary conditions and set zpos
                     # NB zmin and zmax evaluated at the new time t+dt
                     zmin = self.data_reader.get_zmin(time+self.time_step, particle_ptr)
                     zmax = self.data_reader.get_zmax(time+self.time_step, particle_ptr)
                     if particle_ptr.zpos < zmin or particle_ptr.zpos > zmax:
-                        particle_ptr.zpos = self.vert_bc_calculator.apply(zpos, zmin, zmax)
+                        particle_ptr.zpos = self.vert_bc_calculator.apply(particle_ptr.zpos, zmin, zmax)
 
                     # Determine the new host zlayer
                     particle_ptr.host_z_layer = self.data_reader.find_zlayer(time+self.time_step, particle_ptr)

@@ -16,6 +16,9 @@ cdef class DataReader:
             DTYPE_FLOAT_t ypos_new, DTYPE_INT_t last_host):
         pass
 
+    cdef set_local_coordinates(self, Particle *particle):
+        pass
+
     cdef find_zlayer(self, DTYPE_FLOAT_t time, Particle *particle):
         pass
 

@@ -610,6 +610,22 @@ cdef class FVCOMDataReader(DataReader):
         
         raise RuntimeError('Particle path does not intersect any side of the given element.')
 
+    cdef set_local_coordinates(self, Particle *particle):
+        """ Set local coordinates
+        
+        Each particle has associated with it a set of global coordinates
+        and a set of local coordinates. FVCOMDataReader makes use of the
+        local coordinates when interpolating within elements. Here, the
+        global coordinates and the host horizontal element are used
+        to set the local coordinates.
+        
+        Parameters:
+        -----------
+        particle: *Particle
+            Pointer to a Particle struct
+        """
+        self._get_phi(particle.xpos, particle.ypos, particle.host_horizontal_elem, particle.phi)
+
     cdef find_zlayer(self, DTYPE_FLOAT_t time, Particle* particle):
         """ Find the host depth layer
         
