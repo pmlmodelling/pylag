@@ -204,19 +204,19 @@ cdef class GOTMDataReader(DataReader):
         cdef DTYPE_FLOAT_t z
 
         # Start with a local search
-        for k in xrange(particle.host_z_layer-2, particle.host_z_layer+2, 1):
+        for k in xrange(particle.k_layer-2, particle.k_layer+2, 1):
             if k < 0 or k >= self._n_zlay:
                 continue
 
             if particle.zpos <= self._zlev[k+1] and particle.zpos >= self._zlev[k]:
-                particle.host_z_layer = k
+                particle.k_layer = k
                 particle.omega_interfaces = interp.get_linear_fraction_safe(particle.zpos, self._zlev[k], self._zlev[k+1])
                 return
 
         # Search the full vertical grid
         for k in xrange(self._n_zlay): 
             if particle.zpos <= self._zlev[k+1] and particle.zpos >= self._zlev[k]:
-                particle.host_z_layer = k
+                particle.k_layer = k
                 particle.omega_interfaces = interp.get_linear_fraction_safe(particle.zpos, self._zlev[k], self._zlev[k+1])
                 return
     
@@ -296,7 +296,7 @@ cdef class GOTMDataReader(DataReader):
             The vertical eddy diffusivity.        
         
         """
-        return interp.linear_interp(particle.omega_interfaces, self._kh[particle.host_z_layer], self._kh[particle.host_z_layer+1])
+        return interp.linear_interp(particle.omega_interfaces, self._kh[particle.k_layer], self._kh[particle.k_layer+1])
 
     cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity_derivative(self,
             DTYPE_FLOAT_t time, Particle* particle) except FLOAT_ERR:

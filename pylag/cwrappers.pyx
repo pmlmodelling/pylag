@@ -98,7 +98,7 @@ cpdef get_velocity(DataReader data_reader, t, x, y, z, host, zlayer):
     particle.ypos = y
     particle.zpos = z
     particle.host_horizontal_elem = host
-    particle.host_z_layer = zlayer
+    particle.k_layer = zlayer
     
     data_reader.get_velocity(t, &particle, vel_c)
     
@@ -117,7 +117,7 @@ cpdef get_horizontal_velocity(DataReader data_reader, t, x, y, z, host, zlayer):
     particle.ypos = y
     particle.zpos = z
     particle.host_horizontal_elem = host
-    particle.host_z_layer = zlayer
+    particle.k_layer = zlayer
     
     data_reader.get_horizontal_velocity(t, &particle, vel_c)
     
@@ -168,7 +168,7 @@ cdef class TestRK4Integrator:
         # Set these properties to default values
         particle.group_id = 0
         particle.host_horizontal_elem = 0
-        particle.host_z_layer = 0
+        particle.k_layer = 0
         particle.in_domain = True
 
         # Initialise remaining particle properties using the supplied arguments
@@ -211,7 +211,7 @@ cdef class TestVerticalRandomWalk:
         # Set these properties to default values
         particle.group_id = 0
         particle.host_horizontal_elem = 0
-        particle.host_z_layer = 0
+        particle.k_layer = 0
         particle.in_domain = True
 
         # Initialise remaining particle properties using the supplied arguments

@@ -44,8 +44,8 @@ cdef struct Particle:
     # The host horizontal element
     DTYPE_INT_t host_horizontal_elem
 
-    # The host z layer
-    DTYPE_INT_t host_z_layer
+    # The host k layer
+    DTYPE_INT_t k_layer
 
     # Flag for whether the particle is in the top or bottom boundary layers
     bint in_vertical_boundary_layer
