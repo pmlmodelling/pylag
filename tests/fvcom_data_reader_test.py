@@ -122,7 +122,7 @@ class FVCOMDataReader_test(TestCase):
         host = 0
 
         time = 0.0
-        bathy = self.data_reader.get_zmin(time, xpos, ypos, host)
+        bathy = cwrappers.get_zmin(self.data_reader, time, xpos, ypos, host)
         test.assert_almost_equal(bathy, -11.0)
 
     def test_get_zmax(self):
@@ -131,11 +131,11 @@ class FVCOMDataReader_test(TestCase):
         host = 0
         
         time = 0.0
-        zeta = self.data_reader.get_zmax(time, xpos, ypos, host)
+        zeta = cwrappers.get_zmax(self.data_reader, time, xpos, ypos, host)
         test.assert_almost_equal(zeta, 1.0)
         
         time = 1800.0
-        zeta = self.data_reader.get_zmax(time, xpos, ypos, host)
+        zeta = cwrappers.get_zmax(self.data_reader, time, xpos, ypos, host)
         test.assert_almost_equal(zeta, 1.5)
 
     def test_get_velocity_in_surface_layer(self):
@@ -200,21 +200,19 @@ class FVCOMDataReader_test(TestCase):
         xpos = 365751.7
         ypos = 5323568.0
         host = 0
-        zlayer = 0
 
         zpos = -0.2
         time = 0.0
-        diffusivity = self.data_reader.get_vertical_eddy_diffusivity(time, xpos, ypos, zpos, host, zlayer)
+        diffusivity = cwrappers.get_vertical_eddy_diffusivity(self.data_reader, time, xpos, ypos, zpos, host)
         test.assert_almost_equal(diffusivity,  0.005)
 
     def test_get_vertical_eddy_diffusivity_derivative(self):
         xpos = 365751.7
         ypos = 5323568.0
         host = 0
-        zlayer = 0
 
         zpos = -0.2
         time = 0.0
 
-        diffusivity_gradient = self.data_reader.get_vertical_eddy_diffusivity_derivative(time, xpos, ypos, zpos, host, zlayer)
+        diffusivity_gradient = cwrappers.get_vertical_eddy_diffusivity_derivative(self.data_reader, time, xpos, ypos, zpos, host)
         test.assert_almost_equal(diffusivity_gradient, -0.004166666666667)
