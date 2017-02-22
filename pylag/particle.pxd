@@ -33,15 +33,31 @@ cdef struct Particle:
 
     # Indices describing the particle's position within a given grid
     # --------------------------------------------------------------
-    
+
+    # Flag identifying whether or not the particle resides within the model domain.
+    bint in_domain
+
     # The host horizontal element
     DTYPE_INT_t host_horizontal_elem
 
     # The host z layer
     DTYPE_INT_t host_z_layer
 
-    # Flag identifying whether or not the particle resides within the model domain.
-    bint in_domain
+    # Flag for whether the particle is in the top or bottom boundary layers
+    bint in_vertical_boundary_layer
+
+    # The boundary layer index, set if in_vertical_boundary_layer = True
+    DTYPE_INT_t k_boundary
+
+    # Index of the k-layer lying immediately below the particle's current
+    # position. Only set if the particle is not in the top or bottom boundary
+    # layers
+    DTYPE_INT_t k_lower_layer
+
+    # Index of the k-layer lying immediately above the particle's current
+    # position. Only set if the particle is not in the top or bottom boundary
+    # layers
+    DTYPE_INT_t k_upper_layer
 
 cdef class ParticleSmartPtr:
     cdef Particle* _particle
