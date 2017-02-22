@@ -233,7 +233,7 @@ cdef class FVCOMOPTModel(OPTModel):
                     raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(particle_ptr.zpos,zmax))
 
                 # Find the host z layer
-                particle_ptr.host_z_layer = self.data_reader.set_vertical_grid_vars(time, particle_ptr)
+                self.data_reader.set_vertical_grid_vars(time, particle_ptr)
 
                 # Add particle to the particle set
                 self.particle_seed_smart_ptrs.append(particle_seed_smart_ptr)
@@ -351,7 +351,7 @@ cdef class FVCOMOPTModel(OPTModel):
                         particle_ptr.zpos = self.vert_bc_calculator.apply(particle_ptr.zpos, zmin, zmax)
 
                     # Determine the new host zlayer
-                    particle_ptr.host_z_layer = self.data_reader.set_vertical_grid_vars(time+self.time_step, particle_ptr)
+                    self.data_reader.set_vertical_grid_vars(time+self.time_step, particle_ptr)
                 else:
                     raise ValueError('Unrecognised host element flag {}.'.format(host))
 
@@ -550,7 +550,7 @@ cdef class GOTMOPTModel(OPTModel):
                 raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(particle_ptr.zpos,zmax))
 
             # Find the host z layer
-            particle_ptr.host_z_layer = self.data_reader.set_vertical_grid_vars(time, particle_ptr)
+            self.data_reader.set_vertical_grid_vars(time, particle_ptr)
 
             # Add particle to the set
             self.particle_seed_smart_ptrs.append(particle_seed_smart_ptr)
@@ -583,8 +583,7 @@ cdef class GOTMOPTModel(OPTModel):
                 reset(&delta_X)
 
                 # Find the host z layer for the current time
-                particle_ptr.host_z_layer = self.data_reader.set_vertical_grid_vars(time,
-                    particle_ptr)
+                self.data_reader.set_vertical_grid_vars(time, particle_ptr)
 
                 # Vertical random walk
                 if self.vert_rand_walk_model is not None:

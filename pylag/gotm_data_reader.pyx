@@ -209,12 +209,14 @@ cdef class GOTMDataReader(DataReader):
                 continue
 
             if particle.zpos <= self._zlev[k+1] and particle.zpos >= self._zlev[k]:
-                return k
+                particle.host_z_layer = k
+                return
 
         # Search the full vertical grid
         for k in xrange(self._n_zlay): 
             if particle.zpos <= self._zlev[k+1] and particle.zpos >= self._zlev[k]:
-                return k
+                particle.host_z_layer = k
+                return
     
         # Search failed
         raise ValueError("Particle z position (={}) not found!".format(particle.zpos))
@@ -347,7 +349,7 @@ cdef class GOTMDataReader(DataReader):
             zpos_increment = -zpos_increment
 
         _particle.zpos = _particle.zpos + zpos_increment
-        _particle.host_z_layer = self.set_vertical_grid_vars(time, &_particle)
+        self.set_vertical_grid_vars(time, &_particle)
 
         kh2 = self.get_vertical_eddy_diffusivity(time, &_particle)
         k_prime = (kh2 - kh1) / zpos_increment

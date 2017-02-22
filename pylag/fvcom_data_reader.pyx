@@ -633,7 +633,7 @@ cdef class FVCOMDataReader(DataReader):
         up from 0 starting at the surface, where sigma = 0, and moving downwards
         to the sea floor where sigma = -1. The current sigma layer is
         found by determining the two sigma levels that bound the given z
-        position. Here, `guess' is ignored.
+        position.
         """
         cdef DTYPE_FLOAT_t sigma, sigma_upper_level, sigma_lower_level
 
@@ -652,7 +652,8 @@ cdef class FVCOMDataReader(DataReader):
             sigma_lower_level = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, k+1)
             
             if sigma <= sigma_upper_level and sigma >= sigma_lower_level:
-                return k
+                particle.host_z_layer = k
+                return
         
         raise ValueError("Particle zpos (={}) not found! h = {}, zeta = {}.".format(particle.zpos, h, zeta))
 
@@ -1019,7 +1020,7 @@ cdef class FVCOMDataReader(DataReader):
             zpos_increment = -zpos_increment
             
         _particle.zpos = _particle.zpos + zpos_increment
-        _particle.host_z_layer = self.set_vertical_grid_vars(time, &_particle)
+        self.set_vertical_grid_vars(time, &_particle)
 
         kh2 = self.get_vertical_eddy_diffusivity(time, &_particle)
         k_prime = (kh2 - kh1) / zpos_increment
