@@ -637,7 +637,7 @@ cdef class FVCOMDataReader(DataReader):
         """
         cdef DTYPE_FLOAT_t sigma, sigma_upper_level, sigma_lower_level
         
-        cdef DTYPE_FLOAT_t sigma_test
+        cdef DTYPE_FLOAT_t sigma_test, sigma_upper_layer, sigma_lower_layer
 
         cdef DTYPE_FLOAT_t h, zeta
 
@@ -657,7 +657,7 @@ cdef class FVCOMDataReader(DataReader):
                 # Host layer found
                 particle.host_z_layer = k
 
-                # The sigma level interpolation coefficient
+                # Set the sigma level interpolation coefficient
                 particle.omega_interfaces = interp.get_linear_fraction_safe(sigma, sigma_lower_level, sigma_upper_level)
 
                 # Set variables describing which half of the sigma layer the
@@ -678,6 +678,11 @@ cdef class FVCOMDataReader(DataReader):
                 else:
                     particle.k_upper_layer = k
                     particle.k_lower_layer = k + 1
+
+                # Set the sigma layer interpolation coefficient
+                sigma_lower_layer = self._interp_on_sigma_layer(particle.phi, particle.host_horizontal_elem, particle.k_lower_layer)
+                sigma_upper_layer = self._interp_on_sigma_layer(particle.phi, particle.host_horizontal_elem, particle.k_upper_layer)
+                particle.omega_layers = interp.get_linear_fraction_safe(sigma, sigma_lower_layer, sigma_upper_layer)
 
                 return
         
@@ -812,12 +817,6 @@ cdef class FVCOMDataReader(DataReader):
 
         # Variables used in interpolation in time      
         cdef DTYPE_FLOAT_t time_fraction
-
-        # Variables used in z interpolation
-        cdef DTYPE_FLOAT_t sigma, sigma_fraction, sigma_lower_layer, sigma_upper_layer
-
-        # zeta and h - needed when computing sigma
-        cdef DTYPE_FLOAT_t h, zeta
         
         # Intermediate arrays - viscofh
         cdef DTYPE_FLOAT_t viscofh_tri_t_last_layer_1[N_VERTICES]
@@ -830,11 +829,6 @@ cdef class FVCOMDataReader(DataReader):
         # Interpolated diffusivities on lower and upper bounding sigma layers
         cdef DTYPE_FLOAT_t viscofh_layer_1
         cdef DTYPE_FLOAT_t viscofh_layer_2
-
-        # Compute sigma
-        h = self.get_zmin(time, particle)
-        zeta = self.get_zmax(time, particle)
-        sigma = cartesian_to_sigma_coords(particle.zpos, h, zeta)
 
         # Time fraction
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
@@ -880,12 +874,7 @@ cdef class FVCOMDataReader(DataReader):
             viscofh_layer_1 = interp.interpolate_within_element(viscofh_tri_layer_1, particle.phi)
             viscofh_layer_2 = interp.interpolate_within_element(viscofh_tri_layer_2, particle.phi)
 
-            # Vertical interpolation
-            sigma_lower_layer = self._interp_on_sigma_layer(particle.phi, particle.host_horizontal_elem, particle.k_lower_layer)
-            sigma_upper_layer = self._interp_on_sigma_layer(particle.phi, particle.host_horizontal_elem, particle.k_upper_layer)
-            sigma_fraction = interp.get_linear_fraction_safe(sigma, sigma_lower_layer, sigma_upper_layer)
-
-            return interp.linear_interp(sigma_fraction, viscofh_layer_1, viscofh_layer_2)
+            return interp.linear_interp(particle.omega_layers, viscofh_layer_1, viscofh_layer_2)
 
     cdef get_horizontal_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
             Particle* particle):
@@ -1095,21 +1084,10 @@ cdef class FVCOMDataReader(DataReader):
         # Variables used in interpolation in time      
         cdef DTYPE_FLOAT_t time_fraction
 
-        # Variables used in z interpolation
-        cdef DTYPE_FLOAT_t sigma, sigma_fraction, sigma_lower_layer, sigma_upper_layer
-
-        # zeta and h - needed when computing sigma
-        cdef DTYPE_FLOAT_t h, zeta
-
         # Array and loop indices
         cdef DTYPE_INT_t i, j, k, neighbour
         
         cdef DTYPE_INT_t nbe_min
-        
-        # First compute sigma - used for finding the host z layer
-        h = self.get_zmin(time, particle)
-        zeta = self.get_zmax(time, particle)
-        sigma = cartesian_to_sigma_coords(particle.zpos, h, zeta)
 
         # Time fraction
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
@@ -1182,13 +1160,9 @@ cdef class FVCOMDataReader(DataReader):
             wp2 = interp.shepard_interpolation(particle.xpos, particle.ypos, xc, yc, wc2)
 
         # Vertical interpolation
-        sigma_lower_layer = self._interp_on_sigma_layer(particle.phi, particle.host_horizontal_elem, particle.k_lower_layer)
-        sigma_upper_layer = self._interp_on_sigma_layer(particle.phi, particle.host_horizontal_elem, particle.k_upper_layer)
-        sigma_fraction = interp.get_linear_fraction_safe(sigma, sigma_lower_layer, sigma_upper_layer)
-
-        vel[0] = interp.linear_interp(sigma_fraction, up1, up2)
-        vel[1] = interp.linear_interp(sigma_fraction, vp1, vp2)
-        vel[2] = interp.linear_interp(sigma_fraction, wp1, wp2)
+        vel[0] = interp.linear_interp(particle.omega_layers, up1, up2)
+        vel[1] = interp.linear_interp(particle.omega_layers, vp1, vp2)
+        vel[2] = interp.linear_interp(particle.omega_layers, wp1, wp2)
         return
 
     cdef _get_velocity_using_linear_least_squares_interpolation(self, 
@@ -1253,21 +1227,10 @@ cdef class FVCOMDataReader(DataReader):
         # Variables used in interpolation in time      
         cdef DTYPE_FLOAT_t time_fraction
 
-        # Variables used in z interpolation
-        cdef DTYPE_FLOAT_t sigma, sigma_fraction, sigma_lower_layer, sigma_upper_layer
-
-        # zeta and h - needed when computing sigma
-        cdef DTYPE_FLOAT_t h, zeta
-
         # Array and loop indices
         cdef DTYPE_INT_t i, j, k, neighbour
         
         cdef DTYPE_INT_t nbe_min
-
-        # First compute sigma - used for finding the host z layer
-        h = self.get_zmin(time, particle)
-        zeta = self.get_zmax(time, particle)
-        sigma = cartesian_to_sigma_coords(particle.zpos, h, zeta)
 
         # Time fraction
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
@@ -1332,13 +1295,9 @@ cdef class FVCOMDataReader(DataReader):
             wp2 = self._interpolate_vel_between_elements(particle.xpos, particle.ypos, particle.host_horizontal_elem, wc2)
             
         # Vertical interpolation
-        sigma_lower_layer = self._interp_on_sigma_layer(particle.phi, particle.host_horizontal_elem, particle.k_lower_layer)
-        sigma_upper_layer = self._interp_on_sigma_layer(particle.phi, particle.host_horizontal_elem, particle.k_upper_layer)
-        sigma_fraction = interp.get_linear_fraction_safe(sigma, sigma_lower_layer, sigma_upper_layer)
-
-        vel[0] = interp.linear_interp(sigma_fraction, up1, up2)
-        vel[1] = interp.linear_interp(sigma_fraction, vp1, vp2)
-        vel[2] = interp.linear_interp(sigma_fraction, wp1, wp2)
+        vel[0] = interp.linear_interp(particle.omega_layers, up1, up2)
+        vel[1] = interp.linear_interp(particle.omega_layers, vp1, vp2)
+        vel[2] = interp.linear_interp(particle.omega_layers, wp1, wp2)
         return
 
     def _read_grid(self):

@@ -31,6 +31,10 @@ cdef struct Particle:
     # between k-levels
     DTYPE_FLOAT_t omega_interfaces
 
+    # Vertical interpolation coefficient for variables defined at the mid-point
+    # of l-layers
+    DTYPE_FLOAT_t omega_layers
+
     # Indices describing the particle's position within a given grid
     # --------------------------------------------------------------
 
