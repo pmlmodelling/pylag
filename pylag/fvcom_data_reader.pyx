@@ -778,9 +778,6 @@ cdef class FVCOMDataReader(DataReader):
         viscofh : float
             The horizontal eddy diffusivity.      
         """
-        # Barycentric coordinates
-        cdef DTYPE_FLOAT_t phi[N_VERTICES]
-
         # Object describing a point's location within FVCOM's vertical grid. 
         cdef ZGridPosition z_grid_pos
 
@@ -810,16 +807,13 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_FLOAT_t viscofh_layer_1
         cdef DTYPE_FLOAT_t viscofh_layer_2
 
-        # Barycentric coordinates
-        self._get_phi(particle.xpos, particle.ypos, particle.host_horizontal_elem, phi)
-
         # Compute sigma
         h = self.get_zmin(time, particle)
         zeta = self.get_zmax(time, particle)
         sigma = cartesian_to_sigma_coords(particle.zpos, h, zeta)
 
         # Use sigma to set variables describing the position within the vertical grid
-        self._get_z_grid_position(sigma, particle.host_horizontal_elem, particle.host_z_layer, phi, &z_grid_pos) 
+        self._get_z_grid_position(sigma, particle.host_horizontal_elem, particle.host_z_layer, particle.phi, &z_grid_pos) 
 
         # Time fraction
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
@@ -840,7 +834,7 @@ cdef class FVCOMDataReader(DataReader):
                                             viscofh_tri_t_next_layer_1[i])
 
             # Interpolate viscofh within the host element
-            return interp.interpolate_within_element(viscofh_tri_layer_1, phi)
+            return interp.interpolate_within_element(viscofh_tri_layer_1, particle.phi)
 
         else:
             # Extract viscofh on the lower and upper bounding sigma layers
@@ -862,12 +856,12 @@ cdef class FVCOMDataReader(DataReader):
 
             # Interpolate viscofh within the host element on the upper and lower
             # bounding sigma layers
-            viscofh_layer_1 = interp.interpolate_within_element(viscofh_tri_layer_1, phi)
-            viscofh_layer_2 = interp.interpolate_within_element(viscofh_tri_layer_2, phi)
+            viscofh_layer_1 = interp.interpolate_within_element(viscofh_tri_layer_1, particle.phi)
+            viscofh_layer_2 = interp.interpolate_within_element(viscofh_tri_layer_2, particle.phi)
 
             # Vertical interpolation
-            sigma_lower_layer = self._interp_on_sigma_layer(phi, particle.host_horizontal_elem, z_grid_pos.k_lower_layer)
-            sigma_upper_layer = self._interp_on_sigma_layer(phi, particle.host_horizontal_elem, z_grid_pos.k_upper_layer)
+            sigma_lower_layer = self._interp_on_sigma_layer(particle.phi, particle.host_horizontal_elem, z_grid_pos.k_lower_layer)
+            sigma_upper_layer = self._interp_on_sigma_layer(particle.phi, particle.host_horizontal_elem, z_grid_pos.k_upper_layer)
             sigma_fraction = interp.get_linear_fraction_safe(sigma, sigma_lower_layer, sigma_upper_layer)
 
             return interp.linear_interp(sigma_fraction, viscofh_layer_1, viscofh_layer_2)
