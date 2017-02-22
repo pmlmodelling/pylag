@@ -89,6 +89,22 @@ cpdef interpolate_within_element(var, phi):
     
     return interp.interpolate_within_element(var_c, phi_c)
 
+cpdef get_zmin(DataReader data_reader, time, xpos, ypos, host):
+    cdef Particle particle
+    particle.xpos = xpos
+    particle.ypos = ypos
+    particle.host_horizontal_elem = host
+    
+    return data_reader.get_zmin(time, &particle)
+
+cpdef get_zmax(DataReader data_reader, time, xpos, ypos, host):
+    cdef Particle particle
+    particle.xpos = xpos
+    particle.ypos = ypos
+    particle.host_horizontal_elem = host
+    
+    return data_reader.get_zmax(time, &particle)
+
 cpdef get_velocity(DataReader data_reader, t, x, y, z, host, zlayer):
     cdef DTYPE_FLOAT_t vel_c[N_VERTICES]
     cdef Particle particle
@@ -98,8 +114,8 @@ cpdef get_velocity(DataReader data_reader, t, x, y, z, host, zlayer):
     particle.ypos = y
     particle.zpos = z
     particle.host_horizontal_elem = host
-    particle.k_layer = zlayer
     
+    data_reader.set_vertical_grid_vars(t, &particle)
     data_reader.get_velocity(t, &particle, vel_c)
     
     # Generate and pass back an array type python can understand
@@ -118,7 +134,8 @@ cpdef get_horizontal_velocity(DataReader data_reader, t, x, y, z, host, zlayer):
     particle.zpos = z
     particle.host_horizontal_elem = host
     particle.k_layer = zlayer
-    
+
+    data_reader.set_vertical_grid_vars(t, &particle)
     data_reader.get_horizontal_velocity(t, &particle, vel_c)
     
     # Generate and pass back an array python can understand
@@ -126,6 +143,26 @@ cpdef get_horizontal_velocity(DataReader data_reader, t, x, y, z, host, zlayer):
     for i in xrange(2):
         vel_out[i] = vel_c[i]
     return vel_out
+
+cpdef get_vertical_eddy_diffusivity(DataReader data_reader, time, xpos, ypos, zpos, host):
+    cdef Particle particle
+    particle.xpos = xpos
+    particle.ypos = ypos
+    particle.zpos = zpos
+    particle.host_horizontal_elem = host
+
+    data_reader.set_vertical_grid_vars(time, &particle)
+    return data_reader.get_vertical_eddy_diffusivity(time, &particle)
+
+cpdef get_vertical_eddy_diffusivity_derivative(DataReader data_reader, time, xpos, ypos, zpos, host):
+    cdef Particle particle
+    particle.xpos = xpos
+    particle.ypos = ypos
+    particle.zpos = zpos
+    particle.host_horizontal_elem = host
+
+    data_reader.set_vertical_grid_vars(time, &particle)
+    return data_reader.get_vertical_eddy_diffusivity_derivative(time, &particle)
 
 def get_intersection_point_wrapper(x1, x2, x3, x4, xi):
     cdef DTYPE_FLOAT_t x1_c[2]
