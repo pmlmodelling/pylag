@@ -320,7 +320,7 @@ cdef class FVCOMOPTModel(OPTModel):
                 while flag == -1:
                     xpos, ypos = self.horiz_bc_calculator.apply(self.data_reader,
                             particle_ptr.xpos, particle_ptr.ypos, xpos, ypos,
-                            particle_ptr.host_horizontal_elem)
+                            host)
                     flag, host = self.data_reader.find_host(particle_ptr.xpos,
                         particle_ptr.ypos, xpos, ypos, particle_ptr.host_horizontal_elem)
 
@@ -334,13 +334,14 @@ cdef class FVCOMOPTModel(OPTModel):
                     # Update the particle's position
                     particle_ptr.xpos = xpos
                     particle_ptr.ypos = ypos
+                    particle_ptr.zpos = zpos
                     particle_ptr.host_horizontal_elem = host
                     
                     # Apply surface/bottom boundary conditions and set zpos
                     # NB zmin and zmax evaluated at the new time t+dt
                     zmin = self.data_reader.get_zmin(time+self.time_step, particle_ptr)
                     zmax = self.data_reader.get_zmax(time+self.time_step, particle_ptr)
-                    if zpos < zmin or zpos > zmax:
+                    if particle_ptr.zpos < zmin or particle_ptr.zpos > zmax:
                         particle_ptr.zpos = self.vert_bc_calculator.apply(zpos, zmin, zmax)
 
                     # Determine the new host zlayer
