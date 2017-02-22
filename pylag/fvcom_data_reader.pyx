@@ -522,7 +522,7 @@ cdef class FVCOMDataReader(DataReader):
                     logger.warning('EPSILON applied during global host element search.')
                 return i
 
-        raise ValueError('Point ({}, {}) is not in the model domain.'.format(xpos, ypos))
+        return -1
 
     cpdef get_boundary_intersection(self, DTYPE_FLOAT_t xpos_old,
         DTYPE_FLOAT_t ypos_old, DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new,
