@@ -24,7 +24,12 @@ cdef struct Particle:
     # Local coordinates
     # -----------------
 
+    # Barycentric coordinates within the host element
     DTYPE_FLOAT_t phi[3]
+
+    # Vertical interpolation coefficient for variables defined at the interfaces
+    # between k-levels
+    DTYPE_FLOAT_t omega_interfaces
 
     # Indices describing the particle's position within a given grid
     # --------------------------------------------------------------

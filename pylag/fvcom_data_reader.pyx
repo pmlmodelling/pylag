@@ -652,7 +652,12 @@ cdef class FVCOMDataReader(DataReader):
             sigma_lower_level = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, k+1)
             
             if sigma <= sigma_upper_level and sigma >= sigma_lower_level:
+                # Host layer found
                 particle.host_z_layer = k
+
+                # The sigma level interpolation coefficient
+                particle.omega_interfaces = interp.get_linear_fraction_safe(sigma, sigma_lower_level, sigma_upper_level)
+
                 return
         
         raise ValueError("Particle zpos (={}) not found! h = {}, zeta = {}.".format(particle.zpos, h, zeta))
@@ -918,12 +923,6 @@ cdef class FVCOMDataReader(DataReader):
         # Time fraction used for interpolation in time        
         cdef DTYPE_FLOAT_t time_fraction
 
-        # Variables used in z interpolation
-        cdef DTYPE_FLOAT_t sigma, sigma_fraction, sigma_lower_level, sigma_upper_level
-
-        # zeta and h - needed when computing sigma
-        cdef DTYPE_FLOAT_t h, zeta
-
         # Intermediate arrays - kh
         cdef DTYPE_FLOAT_t kh_tri_t_last_lower_level[N_VERTICES]
         cdef DTYPE_FLOAT_t kh_tri_t_next_lower_level[N_VERTICES]
@@ -958,17 +957,7 @@ cdef class FVCOMDataReader(DataReader):
         kh_lower_level = interp.interpolate_within_element(kh_tri_lower_level, particle.phi)
         kh_upper_level = interp.interpolate_within_element(kh_tri_upper_level, particle.phi)
 
-        # Compute sigma
-        h = self.get_zmin(time, particle)
-        zeta = self.get_zmax(time, particle)
-        sigma = cartesian_to_sigma_coords(particle.zpos, h, zeta)
-
-        # Interpolate between sigma levels
-        sigma_upper_level = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, particle.host_z_layer)
-        sigma_lower_level = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, particle.host_z_layer+1)
-        sigma_fraction = interp.get_linear_fraction_safe(sigma, sigma_lower_level, sigma_upper_level)
-
-        return interp.linear_interp(sigma_fraction, kh_lower_level, kh_upper_level)
+        return interp.linear_interp(particle.omega_interfaces, kh_lower_level, kh_upper_level)
 
     cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity_derivative(self,
             DTYPE_FLOAT_t time, Particle* particle) except FLOAT_ERR:

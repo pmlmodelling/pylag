@@ -197,8 +197,8 @@ cdef class GOTMDataReader(DataReader):
     cdef set_vertical_grid_vars(self, DTYPE_FLOAT_t time, Particle* particle):
         """ Set variables describing the particle's position in z
         
-        Find the host vertical layer. Begin with a local search using `guess' as
-        a starting point. If this fails search the full vertical grid.
+        Find the host vertical layer. Begin with a local search using the old
+        z layer as a starting point. If this fails search the full vertical grid.
         """
         cdef DTYPE_INT_t k
         cdef DTYPE_FLOAT_t z
@@ -210,12 +210,14 @@ cdef class GOTMDataReader(DataReader):
 
             if particle.zpos <= self._zlev[k+1] and particle.zpos >= self._zlev[k]:
                 particle.host_z_layer = k
+                particle.omega_interfaces = interp.get_linear_fraction_safe(particle.zpos, self._zlev[k], self._zlev[k+1])
                 return
 
         # Search the full vertical grid
         for k in xrange(self._n_zlay): 
             if particle.zpos <= self._zlev[k+1] and particle.zpos >= self._zlev[k]:
                 particle.host_z_layer = k
+                particle.omega_interfaces = interp.get_linear_fraction_safe(particle.zpos, self._zlev[k], self._zlev[k+1])
                 return
     
         # Search failed
@@ -245,7 +247,7 @@ cdef class GOTMDataReader(DataReader):
         return interp.linear_interp(time_fraction, self._zlev_last[0], self._zlev_next[0])
 
     cdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, Particle *particle):
-        """ Returns zmax in sigma coordinates
+        """ Returns zmax in cartesian coordinates
 
         Returns the stored sea surface elevation that was set from the last
         call to `read_data'. All function arguments are ignored meaning
@@ -294,11 +296,7 @@ cdef class GOTMDataReader(DataReader):
             The vertical eddy diffusivity.        
         
         """
-        cdef DTYPE_FLOAT_t z_fraction
-        
-        # Interpolate kh in z
-        z_fraction = interp.get_linear_fraction_safe(particle.zpos, self._zlev[particle.host_z_layer], self._zlev[particle.host_z_layer+1])
-        return interp.linear_interp(z_fraction, self._kh[particle.host_z_layer], self._kh[particle.host_z_layer+1])
+        return interp.linear_interp(particle.omega_interfaces, self._kh[particle.host_z_layer], self._kh[particle.host_z_layer+1])
 
     cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity_derivative(self,
             DTYPE_FLOAT_t time, Particle* particle) except FLOAT_ERR:
