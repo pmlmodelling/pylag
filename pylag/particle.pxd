@@ -46,9 +46,6 @@ cdef struct Particle:
     # Flag for whether the particle is in the top or bottom boundary layers
     bint in_vertical_boundary_layer
 
-    # The boundary layer index, set if in_vertical_boundary_layer = True
-    DTYPE_INT_t k_boundary
-
     # Index of the k-layer lying immediately below the particle's current
     # position. Only set if the particle is not in the top or bottom boundary
     # layers
