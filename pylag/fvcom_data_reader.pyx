@@ -540,7 +540,7 @@ cdef class FVCOMDataReader(DataReader):
             x-position at the last time point.
 
         ypos_old : float
-            y-position at the next time point.
+            y-position at the last time point.
 
         xpos_new : float
             x-position at the next time point that lies outside of the domain.
@@ -764,15 +764,9 @@ cdef class FVCOMDataReader(DataReader):
         vel : C array, float
             u/v/w velocity components stored in a C array.           
         """
-        # Barycentric coordinates
-        cdef DTYPE_FLOAT_t phi[N_VERTICES]
-
-        # Barycentric coordinates
-        self._get_phi(particle.xpos, particle.ypos, particle.host_horizontal_elem, phi)
-        
         # Compute u/v velocities and save
         self._get_velocity_using_linear_least_squares_interpolation(time, 
-                particle, phi, vel)
+                particle, vel)
         return
 
     cdef get_horizontal_eddy_diffusivity(self, DTYPE_FLOAT_t time,
@@ -1058,8 +1052,7 @@ cdef class FVCOMDataReader(DataReader):
         return k_prime
 
     cdef _get_velocity_using_shepard_interpolation(self, DTYPE_FLOAT_t time,
-            Particle* particle, DTYPE_FLOAT_t phi[N_VERTICES],
-            DTYPE_FLOAT_t vel[3]):
+            Particle* particle, DTYPE_FLOAT_t vel[3]):
         """ Return (u,v,w) velocities at a point using Shepard interpolation
         
         In FVCOM, the u, v, and w velocity components are defined at element
@@ -1083,9 +1076,6 @@ cdef class FVCOMDataReader(DataReader):
         
         particle: *Particle
             Pointer to a Particle object.
-
-        phi : C array, float
-            Barycentric coordinates of the point.
         
         Returns:
         --------
@@ -1145,7 +1135,7 @@ cdef class FVCOMDataReader(DataReader):
         sigma = cartesian_to_sigma_coords(particle.zpos, h, zeta)
 
         # Set variables describing the position within the vertical grid
-        self._get_z_grid_position(sigma, particle.host_horizontal_elem, particle.host_z_layer, phi, &z_grid_pos)
+        self._get_z_grid_position(sigma, particle.host_horizontal_elem, particle.host_z_layer, particle.phi, &z_grid_pos)
 
         # Time fraction
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
@@ -1218,8 +1208,8 @@ cdef class FVCOMDataReader(DataReader):
             wp2 = interp.shepard_interpolation(particle.xpos, particle.ypos, xc, yc, wc2)
 
         # Vertical interpolation
-        sigma_lower_layer = self._interp_on_sigma_layer(phi, particle.host_horizontal_elem, z_grid_pos.k_lower_layer)
-        sigma_upper_layer = self._interp_on_sigma_layer(phi, particle.host_horizontal_elem, z_grid_pos.k_upper_layer)
+        sigma_lower_layer = self._interp_on_sigma_layer(particle.phi, particle.host_horizontal_elem, z_grid_pos.k_lower_layer)
+        sigma_upper_layer = self._interp_on_sigma_layer(particle.phi, particle.host_horizontal_elem, z_grid_pos.k_upper_layer)
         sigma_fraction = interp.get_linear_fraction_safe(sigma, sigma_lower_layer, sigma_upper_layer)
 
         vel[0] = interp.linear_interp(sigma_fraction, up1, up2)
@@ -1228,8 +1218,7 @@ cdef class FVCOMDataReader(DataReader):
         return
 
     cdef _get_velocity_using_linear_least_squares_interpolation(self, 
-            DTYPE_FLOAT_t time, Particle* particle, 
-            DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_FLOAT_t vel[3]):
+            DTYPE_FLOAT_t time, Particle* particle, DTYPE_FLOAT_t vel[3]):
         """ Return u, v and velocity components at a point using LLS method
         
         In FVCOM, the u, v and w velocity components are defined at element
@@ -1255,9 +1244,6 @@ cdef class FVCOMDataReader(DataReader):
         
         particle: *Particle
             Pointer to a Particle object.
-
-        phi : C array, float
-            Barycentric coordinates of the point.
         
         Returns:
         --------
@@ -1313,7 +1299,7 @@ cdef class FVCOMDataReader(DataReader):
         sigma = cartesian_to_sigma_coords(particle.zpos, h, zeta)
 
         # Set variables describing the position within the vertical grid
-        self._get_z_grid_position(sigma, particle.host_horizontal_elem, particle.host_z_layer, phi, &z_grid_pos)
+        self._get_z_grid_position(sigma, particle.host_horizontal_elem, particle.host_z_layer, particle.phi, &z_grid_pos)
 
         # Time fraction
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
@@ -1378,8 +1364,8 @@ cdef class FVCOMDataReader(DataReader):
             wp2 = self._interpolate_vel_between_elements(particle.xpos, particle.ypos, particle.host_horizontal_elem, wc2)
             
         # Vertical interpolation
-        sigma_lower_layer = self._interp_on_sigma_layer(phi, particle.host_horizontal_elem, z_grid_pos.k_lower_layer)
-        sigma_upper_layer = self._interp_on_sigma_layer(phi, particle.host_horizontal_elem, z_grid_pos.k_upper_layer)
+        sigma_lower_layer = self._interp_on_sigma_layer(particle.phi, particle.host_horizontal_elem, z_grid_pos.k_lower_layer)
+        sigma_upper_layer = self._interp_on_sigma_layer(particle.phi, particle.host_horizontal_elem, z_grid_pos.k_upper_layer)
         sigma_fraction = interp.get_linear_fraction_safe(sigma, sigma_lower_layer, sigma_upper_layer)
 
         vel[0] = interp.linear_interp(sigma_fraction, up1, up2)
