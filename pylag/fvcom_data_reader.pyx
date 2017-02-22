@@ -994,6 +994,9 @@ cdef class FVCOMDataReader(DataReader):
         # Z layer for incremented position
         cdef DTYPE_INT_t zlayer_incremented
 
+        # Z max
+        cdef DTYPE_FLOAT_t zmax
+
         # Temporary particle object
         cdef Particle _particle
 
@@ -1008,7 +1011,8 @@ cdef class FVCOMDataReader(DataReader):
         zpos_increment = 1.0e-3
         
         # Use the negative of zpos_increment at the top of the water column
-        if ((_particle.zpos + zpos_increment) > 0.0):
+        zmax = self.get_zmax(time, &_particle)
+        if ((_particle.zpos + zpos_increment) > zmax):
             zpos_increment = -zpos_increment
             
         _particle.zpos = _particle.zpos + zpos_increment
