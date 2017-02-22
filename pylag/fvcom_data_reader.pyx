@@ -626,7 +626,7 @@ cdef class FVCOMDataReader(DataReader):
         """
         self._get_phi(particle.xpos, particle.ypos, particle.host_horizontal_elem, particle.phi)
 
-    cdef find_zlayer(self, DTYPE_FLOAT_t time, Particle* particle):
+    cdef set_vertical_grid_vars(self, DTYPE_FLOAT_t time, Particle* particle):
         """ Find the host depth layer
         
         Find the depth layer containing zpos. In FVCOM, Sigma levels are counted
@@ -1019,7 +1019,7 @@ cdef class FVCOMDataReader(DataReader):
             zpos_increment = -zpos_increment
             
         _particle.zpos = _particle.zpos + zpos_increment
-        _particle.host_z_layer = self.find_zlayer(time, &_particle)
+        _particle.host_z_layer = self.set_vertical_grid_vars(time, &_particle)
 
         kh2 = self.get_vertical_eddy_diffusivity(time, &_particle)
         k_prime = (kh2 - kh1) / zpos_increment

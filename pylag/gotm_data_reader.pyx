@@ -194,8 +194,8 @@ cdef class GOTMDataReader(DataReader):
             DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new, DTYPE_INT_t guess):
         return 0, 0
     
-    cdef find_zlayer(self, DTYPE_FLOAT_t time, Particle* particle):
-        """ Find the host vertical layer
+    cdef set_vertical_grid_vars(self, DTYPE_FLOAT_t time, Particle* particle):
+        """ Set variables describing the particle's position in z
         
         Find the host vertical layer. Begin with a local search using `guess' as
         a starting point. If this fails search the full vertical grid.
@@ -347,7 +347,7 @@ cdef class GOTMDataReader(DataReader):
             zpos_increment = -zpos_increment
 
         _particle.zpos = _particle.zpos + zpos_increment
-        _particle.host_z_layer = self.find_zlayer(time, &_particle)
+        _particle.host_z_layer = self.set_vertical_grid_vars(time, &_particle)
 
         kh2 = self.get_vertical_eddy_diffusivity(time, &_particle)
         k_prime = (kh2 - kh1) / zpos_increment

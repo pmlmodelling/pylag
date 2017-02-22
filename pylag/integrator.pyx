@@ -108,7 +108,7 @@ cdef class RK4Integrator2D(NumIntegrator):
         # Update particle local coordinates
         data_reader.set_local_coordinates(&_particle)
 
-        _particle.host_z_layer = data_reader.find_zlayer(t, &_particle)
+        _particle.host_z_layer = data_reader.set_vertical_grid_vars(t, &_particle)
         data_reader.get_horizontal_velocity(t, &_particle, vel) 
         for i in xrange(ndim):
             k2[i] = self._time_step * vel[i]
@@ -135,7 +135,7 @@ cdef class RK4Integrator2D(NumIntegrator):
         # Update particle local coordinates
         data_reader.set_local_coordinates(&_particle)
 
-        _particle.host_z_layer = data_reader.find_zlayer(t, &_particle)
+        _particle.host_z_layer = data_reader.set_vertical_grid_vars(t, &_particle)
         data_reader.get_horizontal_velocity(t, &_particle, vel)
         for i in xrange(ndim):
             k3[i] = self._time_step * vel[i]
@@ -162,7 +162,7 @@ cdef class RK4Integrator2D(NumIntegrator):
         # Update particle local coordinates
         data_reader.set_local_coordinates(&_particle)
 
-        _particle.host_z_layer = data_reader.find_zlayer(t, &_particle)
+        _particle.host_z_layer = data_reader.set_vertical_grid_vars(t, &_particle)
         data_reader.get_horizontal_velocity(t, &_particle, vel)
         for i in xrange(ndim):
             k4[i] = self._time_step * vel[i]
@@ -282,7 +282,7 @@ cdef class RK4Integrator3D(NumIntegrator):
         if _particle.zpos < zmin or _particle.zpos > zmax:
             _particle.zpos = self._vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
 
-        _particle.host_z_layer = data_reader.find_zlayer(t, &_particle)
+        _particle.host_z_layer = data_reader.set_vertical_grid_vars(t, &_particle)
 
         data_reader.get_velocity(t, &_particle, vel)
         for i in xrange(ndim):
@@ -317,7 +317,7 @@ cdef class RK4Integrator3D(NumIntegrator):
         if _particle.zpos < zmin or _particle.zpos > zmax:
             _particle.zpos = self._vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
 
-        _particle.host_z_layer = data_reader.find_zlayer(t, &_particle)
+        _particle.host_z_layer = data_reader.set_vertical_grid_vars(t, &_particle)
 
         data_reader.get_velocity(t, &_particle, vel)
         for i in xrange(ndim):
@@ -352,7 +352,7 @@ cdef class RK4Integrator3D(NumIntegrator):
         if _particle.zpos < zmin or _particle.zpos > zmax:
             _particle.zpos = self._vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
 
-        _particle.host_z_layer = data_reader.find_zlayer(t, &_particle)
+        _particle.host_z_layer = data_reader.set_vertical_grid_vars(t, &_particle)
 
         data_reader.get_velocity(t, &_particle, vel)
         for i in xrange(ndim):

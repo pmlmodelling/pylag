@@ -19,7 +19,7 @@ cdef class DataReader:
     cdef set_local_coordinates(self, Particle *particle):
         pass
 
-    cdef find_zlayer(self, DTYPE_FLOAT_t time, Particle *particle):
+    cdef set_vertical_grid_vars(self, DTYPE_FLOAT_t time, Particle *particle):
         pass
 
     cdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, Particle *particle):
