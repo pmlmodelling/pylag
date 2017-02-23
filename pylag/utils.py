@@ -111,12 +111,12 @@ def sort_adjacency_array(nv, nbe):
     for i in range(n_elems):
         side1, side2, side3 = _get_empty_arrays()
 
-        side1[0] = nv[2,i]
-        side1[1] = nv[0,i]
-        side2[0] = nv[0,i]
-        side2[1] = nv[1,i]
-        side3[0] = nv[1,i]
-        side3[1] = nv[2,i]
+        side1[0] = nv[1,i]
+        side1[1] = nv[2,i]
+        side2[0] = nv[2,i]
+        side2[1] = nv[0,i]
+        side3[0] = nv[0,i]
+        side3[1] = nv[1,i]
 
         index_side1 = -1
         index_side2 = -1
