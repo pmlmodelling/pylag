@@ -20,7 +20,7 @@ class FVCOMDataReader_test(TestCase):
         config.set('SIMULATION', 'start_datetime', '2013-01-06 00:00:00')
         config.set('SIMULATION', 'end_datetime', '2013-01-06 01:00:00')
         config.set('SIMULATION', 'vertical_random_walk_model', 'AR0')
-        config.set('SIMULATION', 'horizontal_random_walk_model', 'AR0')
+        config.set('SIMULATION', 'horizontal_random_walk_model', 'none')
         config.set('OCEAN_CIRCULATION_MODEL', 'data_dir', '../resources/')
         config.set('OCEAN_CIRCULATION_MODEL', 'grid_metrics_file', '../resources/fvcom_grid_metrics_test.nc')
         config.set('OCEAN_CIRCULATION_MODEL', 'data_file_stem', 'fvcom_data_test')
@@ -144,12 +144,12 @@ class FVCOMDataReader_test(TestCase):
         host = 0
         zlayer = 0
 
-        zpos = 1.0
+        zpos = 0.999
         time = 0.0
         vel = cwrappers.get_velocity(self.data_reader, time, xpos, ypos, zpos, host, zlayer)
         test.assert_array_almost_equal(vel, [2.0, 2.0, 2.0])
 
-        zpos = 1.5
+        zpos = 1.499
         time = 1800.0
         vel = cwrappers.get_velocity(self.data_reader, time, xpos, ypos, zpos, host, zlayer)
         test.assert_array_almost_equal(vel, [3.0, 3.0, 3.0])
@@ -181,12 +181,12 @@ class FVCOMDataReader_test(TestCase):
         host = 0
         zlayer = 2
 
-        zpos = -11.0
+        zpos = -10.999
         time = 0.0
         vel = cwrappers.get_velocity(self.data_reader, time, xpos, ypos, zpos, host, zlayer)
         test.assert_array_almost_equal(vel, [0.0, 0.0, 0.0])
 
-        zpos = -11.0
+        zpos = -10.999
         time = 1800.0
         vel = cwrappers.get_velocity(self.data_reader, time, xpos, ypos, zpos, host, zlayer)
         test.assert_array_almost_equal(vel, [0.0, 0.0, 0.0])
