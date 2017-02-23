@@ -9,10 +9,10 @@ from pylag import cwrappers
 def test_get_barycentric_coords():
     xpos = 1.0
     ypos = 1.0
-    x_tri = np.array([0.0, 2.0, 0.0], dtype=DTYPE_FLOAT)
-    y_tri = np.array([0.0, 0.0, 2.0], dtype=DTYPE_FLOAT)
+    x_tri = np.array([0.0, 0.0, 2.0], dtype=DTYPE_FLOAT)
+    y_tri = np.array([0.0, 2.0, 0.0], dtype=DTYPE_FLOAT)
     phi = cwrappers.get_barycentric_coords(xpos, ypos, x_tri, y_tri)
-    test.assert_array_almost_equal(phi, [0.5, 0.5, 0.0])
+    test.assert_array_almost_equal(phi, [0.0, 0.5, 0.5])
 
 def test_shephard_interpolation():
     xpts = np.array([-2.0, -1.0, 1.0, 2.0], dtype=DTYPE_FLOAT)
@@ -48,10 +48,10 @@ def test_linear_interpolation():
 def test_interpolate_within_element():
     var = np.array([0.0, 1.0, 2.0])
 
-    phi = np.array([0.5, 0.5, 0.])
+    phi = np.array([0.0, 0.5, 0.5])
     val = cwrappers.interpolate_within_element(var, phi)
     test.assert_almost_equal(val, 1.5)
 
     phi = np.array([0., 0., 1.])
     val = cwrappers.interpolate_within_element(var, phi)
-    test.assert_almost_equal(val, 0.0)
+    test.assert_almost_equal(val, 2.0)

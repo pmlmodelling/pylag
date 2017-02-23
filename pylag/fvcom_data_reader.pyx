@@ -402,7 +402,7 @@ cdef class FVCOMDataReader(DataReader):
         
         x1_indices = [0,1,2]
         x2_indices = [1,2,0]
-        nbe_indices = [1,2,0]
+        nbe_indices = [2,0,1]
         
         # Construct arrays to hold the coordinates of the particle's previous
         # position vector and its new position vector
@@ -583,7 +583,7 @@ cdef class FVCOMDataReader(DataReader):
         
         x1_indices = [0,1,2]
         x2_indices = [1,2,0]
-        nbe_indices = [1,2,0]
+        nbe_indices = [2,0,1]
         
         # Construct arrays to hold the coordinates of the particle's previous
         # position vector and its new position vector

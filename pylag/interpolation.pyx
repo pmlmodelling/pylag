@@ -28,21 +28,20 @@ cdef get_barycentric_coords(DTYPE_FLOAT_t x, DTYPE_FLOAT_t y,
         Barycentric coordinates.
     """
 
-    cdef DTYPE_FLOAT_t a11, a12, a21, a22, det
+    cdef DTYPE_FLOAT_t a1, a2, a3, a4, det
 
-    # Array elements
-    a11 = y_tri[2] - y_tri[0]
-    a12 = x_tri[0] - x_tri[2]
-    a21 = y_tri[0] - y_tri[1]
-    a22 = x_tri[1] - x_tri[0]
+    a1 = x_tri[1] - x_tri[0]
+    a2 = y_tri[2] - y_tri[0]
+    a3 = y_tri[1] - y_tri[0]
+    a4 = x_tri[2] - x_tri[0]
 
     # Determinant
-    det = a11 * a22 - a12 * a21
+    det = a1 * a2 - a3 * a4
 
     # Transformation to barycentric coordinates
-    phi[0] = (a11*(x - x_tri[0]) + a12*(y - y_tri[0]))/det
-    phi[1] = (a21*(x - x_tri[0]) + a22*(y - y_tri[0]))/det
-    phi[2] = 1.0 - phi[0] - phi[1]
+    phi[2] = (a1*(y - y_tri[0]) - a3*(x - x_tri[0]))/det
+    phi[1] = (a2*(x - x_tri[2]) - a4*(y - y_tri[2]))/det
+    phi[0] = 1.0 - phi[1] - phi[2]
 
 cdef DTYPE_FLOAT_t shepard_interpolation(DTYPE_FLOAT_t x,
         DTYPE_FLOAT_t y, DTYPE_FLOAT_t xpts[4], DTYPE_FLOAT_t ypts[4],
