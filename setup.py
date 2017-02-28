@@ -22,9 +22,9 @@ def git_version():
             if v is not None:
                 env[k] = v
         # LANGUAGE is used on win32
-        env['LANGUAGE'] = 'C'
-        env['LANG'] = 'C'
-        env['LC_ALL'] = 'C'
+        env['LANGUAGE'] = 'C++'
+        env['LANG'] = 'C++'
+        env['LC_ALL'] = 'C++'
         out = subprocess.Popen(cmd, stdout = subprocess.PIPE, env=env).communicate()[0]
         return out
 
@@ -107,7 +107,7 @@ def makeExtension(extName, file_type):
         )
 
 # Get a list of source files
-file_type = '.pyx' if os.path.isdir('./.git') and glob.glob('./pylag/*.pyx') else '.c'
+file_type = '.pyx' if os.path.isdir('./.git') and glob.glob('./pylag/*.pyx') else '.cpp'
 
 # Get the list of extensions
 extNames = scandir("pylag", file_type)
@@ -121,7 +121,7 @@ if file_type == '.pyx':
           #compiler_directives={'profile': True, 
           #'linetrace': True, 'boundscheck': True,
           #'cdivision_warnings': True, 'initializedcheck': True})
-elif file_type == '.c':
+elif file_type == '.cpp':
     ext_modules = extensions
 
 # Rewrite the version file everytime
