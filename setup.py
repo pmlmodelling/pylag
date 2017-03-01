@@ -102,9 +102,8 @@ def makeExtension(extName, file_type):
         [extPath],
         language="c++",
         extra_compile_args=["-std=c++11"],
-        libraries=["stdc++"] + cython_gsl.get_libraries(),
-        library_dirs=[cython_gsl.get_library_dir()],
-        include_dirs=[cython_gsl.get_cython_include_dir(), '.'],
+        libraries=["stdc++"],
+        include_dirs=['.'],
         )
 
 # Get a list of source files
