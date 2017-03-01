@@ -5,7 +5,6 @@ import glob
 from setuptools import setup
 from setuptools.extension import Extension
 from Cython.Build import cythonize
-import cython_gsl
 
 MAJOR               = 0
 MINOR               = 1
