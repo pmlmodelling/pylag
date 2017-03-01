@@ -20,7 +20,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # No. of particles to simulate
-n_particles = 400
+n_particles = 4000
 
 # No. of time steps
 n_time_steps = 1000
@@ -44,7 +44,7 @@ for i in xrange(n_particles):
     for j in xrange(n_time_steps):
         displacement[i,j] = x
 
-        x = x + np.sqrt(2.0*K*dt) * random.gauss(1.0)
+        x = x + np.sqrt(2.0*K*dt) * random.gauss(0.0, 1.0)
 
 # Variance growth
 var = np.var(displacement, axis=0)

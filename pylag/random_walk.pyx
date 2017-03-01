@@ -49,7 +49,7 @@ cdef class NaiveVerticalRandomWalk(VerticalRandomWalk):
         D = data_reader.get_vertical_eddy_diffusivity(time, particle)
         
         # Change in position
-        delta_X.z += sqrt(2.0*D*self._time_step) * random.gauss(1.0)
+        delta_X.z += sqrt(2.0*D*self._time_step) * random.gauss(0.0, 1.0)
 
 cdef class AR0VerticalRandomWalk(VerticalRandomWalk):
     def __init__(self, config):
@@ -126,7 +126,7 @@ cdef class AR0VerticalRandomWalk(VerticalRandomWalk):
         k = data_reader.get_vertical_eddy_diffusivity(time, &_particle)
 
         # Compute the random component of the particle's motion
-        dz_random = sqrt(2.0*k*self._time_step) * random.gauss(1.0)
+        dz_random = sqrt(2.0*k*self._time_step) * random.gauss(0.0, 1.0)
 
         # Change in position
         delta_X.z = dz_advection + dz_random
@@ -170,8 +170,8 @@ cdef class ConstantHorizontalRandomWalk(HorizontalRandomWalk):
         N/A
         """
         # Change in position
-        delta_X.x += sqrt(2.0*self._kh*self._time_step) * random.gauss(1.0)
-        delta_X.y += sqrt(2.0*self._kh*self._time_step) * random.gauss(1.0)
+        delta_X.x += sqrt(2.0*self._kh*self._time_step) * random.gauss(0.0, 1.0)
+        delta_X.y += sqrt(2.0*self._kh*self._time_step) * random.gauss(0.0, 1.0)
 
 cdef class NaiveHorizontalRandomWalk(HorizontalRandomWalk):
     def __init__(self, config):
@@ -203,8 +203,8 @@ cdef class NaiveHorizontalRandomWalk(HorizontalRandomWalk):
         kh = data_reader.get_horizontal_eddy_diffusivity(time, particle)
         
         # Change in position
-        delta_X.x += sqrt(2.0*kh*self._time_step) * random.gauss(1.0)
-        delta_X.y += sqrt(2.0*kh*self._time_step) * random.gauss(1.0)
+        delta_X.x += sqrt(2.0*kh*self._time_step) * random.gauss(0.0, 1.0)
+        delta_X.y += sqrt(2.0*kh*self._time_step) * random.gauss(0.0, 1.0)
 
 cdef class AR0HorizontalRandomWalk(HorizontalRandomWalk):
     def __init__(self, config):
