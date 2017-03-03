@@ -75,12 +75,14 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
 
 cdef class VertBoundaryConditionCalculator:
 
-     cpdef apply(self, DTYPE_FLOAT_t zpos, DTYPE_FLOAT_t zmin, DTYPE_FLOAT_t zmax):
+     cpdef DTYPE_FLOAT_t apply(self, DTYPE_FLOAT_t zpos, DTYPE_FLOAT_t zmin,
+             DTYPE_FLOAT_t zmax):
         pass
 
 cdef class RefVertBoundaryConditionCalculator(VertBoundaryConditionCalculator):
 
-     cpdef apply(self, DTYPE_FLOAT_t zpos, DTYPE_FLOAT_t zmin, DTYPE_FLOAT_t zmax):
+     cpdef DTYPE_FLOAT_t apply(self, DTYPE_FLOAT_t zpos, DTYPE_FLOAT_t zmin,
+             DTYPE_FLOAT_t zmax):
         """Apply reflecting boundary conditions
         
         """
