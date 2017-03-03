@@ -651,13 +651,13 @@ cdef class FVCOMDataReader(DataReader):
         for k in xrange(self._n_siglay):
             sigma_upper_level = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, k)
             sigma_lower_level = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, k+1)
-            
+
             if sigma <= (sigma_upper_level + EPSILON) and sigma >= (sigma_lower_level - EPSILON):
                 # Host layer found
                 particle.k_layer = k
 
                 # Set the sigma level interpolation coefficient
-                particle.omega_interfaces = interp.get_linear_fraction_safe(sigma, sigma_lower_level, sigma_upper_level)
+                particle.omega_interfaces = interp.get_linear_fraction(sigma, sigma_lower_level, sigma_upper_level)
 
                 # Set variables describing which half of the sigma layer the
                 # particle sits in and whether or not it resides in a boundary
@@ -681,7 +681,7 @@ cdef class FVCOMDataReader(DataReader):
                 # Set the sigma layer interpolation coefficient
                 sigma_lower_layer = self._interp_on_sigma_layer(particle.phi, particle.host_horizontal_elem, particle.k_lower_layer)
                 sigma_upper_layer = self._interp_on_sigma_layer(particle.phi, particle.host_horizontal_elem, particle.k_upper_layer)
-                particle.omega_layers = interp.get_linear_fraction_safe(sigma, sigma_lower_layer, sigma_upper_layer)
+                particle.omega_layers = interp.get_linear_fraction(sigma, sigma_lower_layer, sigma_upper_layer)
 
                 return
         

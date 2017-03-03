@@ -87,7 +87,7 @@ cdef DTYPE_FLOAT_t get_linear_fraction_safe(DTYPE_FLOAT_t var, DTYPE_FLOAT_t var
     
     frac = get_linear_fraction(var, var1, var2)
     
-    if frac >= (-EPSILON) and frac <= (1.0 + EPSILON):
+    if frac >= 0.0 and frac <= 1.0:
         return frac
     else:
         raise ValueError('{} does not lie between {} and {}.'.format(var, var1, var2))
