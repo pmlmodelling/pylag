@@ -110,7 +110,6 @@ cpdef get_zmax(DataReader data_reader, time, xpos, ypos, host):
 cpdef get_velocity(DataReader data_reader, t, x, y, z, host, zlayer):
     cdef DTYPE_FLOAT_t vel_c[N_VERTICES]
     cdef Particle particle
-    cdef DTYPE_INT_t i
 
     particle.xpos = x
     particle.ypos = y
