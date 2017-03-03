@@ -1,4 +1,5 @@
 import logging
+import traceback
 import numpy as np
 
 from mpi4py import MPI
@@ -125,12 +126,16 @@ class TraceSimulator(Simulator):
             # The main update loop
             if rank == 0: logger.info('Starting ensemble member {} ...'.format(self.time_manager.current_release))
             while self.time_manager.time < self.time_manager.time_end:
-                self.model.update(self.time_manager.time)
-                self.time_manager.update_current_time()
-                if self.time_manager.write_output_to_file() == 1:
-                    particle_diagnostics = self.model.get_diagnostics(self.time_manager.time)
-                    self._record(self.time_manager.time, particle_diagnostics)
-                self.model.read_input_data(self.time_manager.time)
+                try:
+                    self.model.update(self.time_manager.time)
+                    self.time_manager.update_current_time()
+                    if self.time_manager.write_output_to_file() == 1:
+                        particle_diagnostics = self.model.get_diagnostics(self.time_manager.time)
+                        self._record(self.time_manager.time, particle_diagnostics)
+                    self.model.read_input_data(self.time_manager.time)
+                except Exception as e:
+                    print traceback.format_exc()
+                    comm.Abort()
 
             # Close the current data logger
             if rank == 0:
