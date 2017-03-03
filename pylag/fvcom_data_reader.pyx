@@ -652,7 +652,7 @@ cdef class FVCOMDataReader(DataReader):
             sigma_upper_level = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, k)
             sigma_lower_level = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, k+1)
             
-            if sigma <= sigma_upper_level and sigma >= sigma_lower_level:
+            if sigma <= (sigma_upper_level + EPSILON) and sigma >= (sigma_lower_level - EPSILON):
                 # Host layer found
                 particle.k_layer = k
 
@@ -685,7 +685,7 @@ cdef class FVCOMDataReader(DataReader):
 
                 return
         
-        raise ValueError("Particle zpos (={}) not found! h = {}, zeta = {}.".format(particle.zpos, h, zeta))
+        raise ValueError("Particle zpos (={:0.20f}) not found! h = {:0.20f}, zeta = {:0.20f}, sigma = {:0.20f}.".format(particle.zpos, h, zeta, sigma))
 
     cdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, Particle *particle):
         """ Returns the bottom depth in cartesian coordinates

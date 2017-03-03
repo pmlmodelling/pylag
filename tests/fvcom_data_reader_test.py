@@ -144,12 +144,12 @@ class FVCOMDataReader_test(TestCase):
         host = 0
         zlayer = 0
 
-        zpos = 0.999
+        zpos = 1.0
         time = 0.0
         vel = cwrappers.get_velocity(self.data_reader, time, xpos, ypos, zpos, host, zlayer)
         test.assert_array_almost_equal(vel, [2.0, 2.0, 2.0])
 
-        zpos = 1.499
+        zpos = 1.5
         time = 1800.0
         vel = cwrappers.get_velocity(self.data_reader, time, xpos, ypos, zpos, host, zlayer)
         test.assert_array_almost_equal(vel, [3.0, 3.0, 3.0])

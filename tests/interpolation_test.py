@@ -2,7 +2,7 @@ import numpy as np
 import numpy.testing as test
 
 #import pylag.interpolation as interp
-from pylag.data_types_python import DTYPE_FLOAT, DTYPE_INT
+from pylag.data_types_python import DTYPE_FLOAT
 from pylag import interpolation as interp
 from pylag import cwrappers
 
@@ -38,12 +38,36 @@ def test_get_linear_fraction():
     val = interp.get_linear_fraction(var, var1, var2)
     test.assert_almost_equal(val, 0.5)
 
+    var = 1.0
+    val = interp.get_linear_fraction(var, var1, var2)
+    test.assert_almost_equal(val, 0.0)
+
+    var = 2.0
+    val = interp.get_linear_fraction(var, var1, var2)
+    test.assert_almost_equal(val, 1.0)
+
 def test_linear_interpolation():
     fraction = 0.5
     val_last = 1.0
     val_next = 2.0
     val = interp.linear_interp(fraction, val_last, val_next)
     test.assert_almost_equal(val, 1.5)
+
+    fraction = 0.0
+    val = interp.linear_interp(fraction, val_last, val_next)
+    test.assert_almost_equal(val, 1.0)
+
+    fraction = 1.0
+    val = interp.linear_interp(fraction, val_last, val_next)
+    test.assert_almost_equal(val, 2.0)
+
+    fraction = 0.0-1e-10
+    val = interp.linear_interp(fraction, val_last, val_next)
+    test.assert_almost_equal(val, 1.0)
+
+    fraction = 1.0+1e-10
+    val = interp.linear_interp(fraction, val_last, val_next)
+    test.assert_almost_equal(val, 2.0)
 
 def test_interpolate_within_element():
     var = np.array([0.0, 1.0, 2.0])
