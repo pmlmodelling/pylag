@@ -107,6 +107,27 @@ cpdef get_zmax(DataReader data_reader, time, xpos, ypos, host):
     data_reader.set_local_coordinates(&particle)
     return data_reader.get_zmax(time, &particle)
 
+cpdef set_vertical_grid_vars(DataReader data_reader, t, x, y, z, host):
+    cdef Particle particle
+
+    particle.xpos = x
+    particle.ypos = y
+    particle.zpos = z
+    particle.host_horizontal_elem = host
+
+    data_reader.set_local_coordinates(&particle)
+    data_reader.set_vertical_grid_vars(t, &particle)
+    
+    grid_vars = {}
+    grid_vars['k_layer'] = particle.k_layer
+    grid_vars['k_lower_layer'] = particle.k_lower_layer
+    grid_vars['k_upper_layer'] = particle.k_upper_layer
+    grid_vars['in_vertical_boundary_layer'] = particle.in_vertical_boundary_layer
+    grid_vars['omega_interfaces'] = particle.omega_interfaces
+    grid_vars['omega_layers'] = particle.omega_layers
+    
+    return grid_vars
+
 cpdef get_velocity(DataReader data_reader, t, x, y, z, host, zlayer):
     cdef DTYPE_FLOAT_t vel_c[N_VERTICES]
     cdef Particle particle

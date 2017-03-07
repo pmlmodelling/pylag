@@ -138,6 +138,75 @@ class FVCOMDataReader_test(TestCase):
         zeta = cwrappers.get_zmax(self.data_reader, time, xpos, ypos, host)
         test.assert_almost_equal(zeta, 1.5)
 
+    def test_set_vertical_grid_vars_for_a_particle_on_the_sea_surface(self):
+        time = 0.0
+        xpos = 365751.7
+        ypos = 5323568.0
+        zpos = 1.0
+        host = 0
+
+        grid_vars = cwrappers.set_vertical_grid_vars(self.data_reader, time, xpos, ypos, zpos, host)
+        
+        test.assert_equal(grid_vars['k_layer'], 0)
+        test.assert_equal(grid_vars['in_vertical_boundary_layer'], True)
+        test.assert_almost_equal(grid_vars['omega_interfaces'], 1.0)
+
+    def test_set_vertical_grid_vars_for_a_particle_on_the_sea_floor(self):
+        time = 0.0
+        xpos = 365751.7
+        ypos = 5323568.0
+        zpos = -11.0
+        host = 0
+
+        grid_vars = cwrappers.set_vertical_grid_vars(self.data_reader, time, xpos, ypos, zpos, host)
+        
+        test.assert_equal(grid_vars['k_layer'], 2)
+        test.assert_equal(grid_vars['in_vertical_boundary_layer'], True)
+        test.assert_almost_equal(grid_vars['omega_interfaces'], 0.0)
+
+
+    def test_set_vertical_grid_vars_for_a_particle_in_the_surface_boundary_layer(self):
+        time = 0.0
+        xpos = 365751.7
+        ypos = 5323568.0
+        zpos = 0.4 # this is 25% of the way between the top and bottom sigma levels
+        host = 0
+
+        grid_vars = cwrappers.set_vertical_grid_vars(self.data_reader, time, xpos, ypos, zpos, host)
+        
+        test.assert_equal(grid_vars['k_layer'], 0)
+        test.assert_equal(grid_vars['in_vertical_boundary_layer'], True)
+        test.assert_almost_equal(grid_vars['omega_interfaces'], 0.75)
+
+    def test_set_vertical_grid_vars_for_a_particle_in_the_bottom_boundary_layer(self):
+        time = 0.0
+        xpos = 365751.7
+        ypos = 5323568.0
+        zpos = -10.4
+        host = 0
+
+        grid_vars = cwrappers.set_vertical_grid_vars(self.data_reader, time, xpos, ypos, zpos, host)
+        
+        test.assert_equal(grid_vars['k_layer'], 2)
+        test.assert_equal(grid_vars['in_vertical_boundary_layer'], True)
+        test.assert_almost_equal(grid_vars['omega_interfaces'], 0.25)
+
+    def test_set_vertical_grid_vars_for_a_particle_in_the_middle_of_the_water_column(self):
+        time = 0.0
+        xpos = 365751.7
+        ypos = 5323568.0
+        zpos = -2.6
+        host = 0
+
+        grid_vars = cwrappers.set_vertical_grid_vars(self.data_reader, time, xpos, ypos, zpos, host)
+        
+        test.assert_equal(grid_vars['k_layer'], 1)
+        test.assert_equal(grid_vars['in_vertical_boundary_layer'], False)
+        test.assert_equal(grid_vars['k_upper_layer'], 0)
+        test.assert_equal(grid_vars['k_lower_layer'], 1)
+        test.assert_almost_equal(grid_vars['omega_interfaces'], 0.83333333333)
+        test.assert_almost_equal(grid_vars['omega_layers'], 0.5)
+
     def test_get_velocity_in_surface_layer(self):
         xpos = 365751.7
         ypos = 5323568.0

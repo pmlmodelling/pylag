@@ -652,6 +652,9 @@ cdef class FVCOMDataReader(DataReader):
             sigma_upper_level = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, k)
             sigma_lower_level = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, k+1)
 
+            # We could implement a better floating pt comparison here, but I am
+            # not convinced it would yield much in the way of benefits. The
+            # worst offences (sigma = 0.0 or sigma = -1.0) pass unit testing.
             if sigma <= (sigma_upper_level + EPSILON) and sigma >= (sigma_lower_level - EPSILON):
                 # Host layer found
                 particle.k_layer = k
