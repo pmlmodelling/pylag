@@ -216,15 +216,15 @@ cdef class FVCOMOPTModel(OPTModel):
                 # Set z depending on the specified coordinate system
                 zmin = self.data_reader.get_zmin(time, particle_ptr)
                 zmax = self.data_reader.get_zmax(time, particle_ptr)
-                if self.config.get("SIMULATION", "depth_coordinates") == "cartesian":
-                    # z is given as the distance below the free surface. We use
-                    # this and zeta to determine the distance below the mean
-                    # free surface, which is then used with h to calculate sigma
+                if self.config.get("SIMULATION", "depth_coordinates") == "depth_below_surface":
+                    # z_temp is given as the depth below the moving free surface
+                    # Use this and zeta (zmax) to compute z
                     particle_ptr.zpos = z_temp + zmax
                     
-                elif self.config.get("SIMULATION", "depth_coordinates") == "sigma":
-                    # Convert to cartesian coords using zmin and zmax
-                    particle_ptr.zpos = sigma_to_cartesian_coords(z_temp, zmin, zmax)
+                elif self.config.get("SIMULATION", "depth_coordinates") == "height_above_bottom":
+                    # z_temp is given as the heigh above the sea floor. Use this
+                    # and h (zmin) to compute z
+                    particle_ptr.zpos = z_temp + zmin
                 
                 # Check that the given depth is valid
                 if particle_ptr.zpos < zmin:
@@ -533,15 +533,15 @@ cdef class GOTMOPTModel(OPTModel):
             # Set z depending on the specified coordinate system
             zmin = self.data_reader.get_zmin(time, particle_ptr)
             zmax = self.data_reader.get_zmax(time, particle_ptr)
-            if self.config.get("SIMULATION", "depth_coordinates") == "cartesian":
-                # z is given as the distance below the free surface. We use
-                # this and zeta to determine the distance below the mean
-                # free surface, which is then used with h to calculate sigma
+            if self.config.get("SIMULATION", "depth_coordinates") == "depth_below_surface":
+                # z_temp is given as the depth below the moving free surface
+                # Use this and zeta (zmax) to compute z
                 particle_ptr.zpos = z_temp + zmax
 
-            elif self.config.get("SIMULATION", "depth_coordinates") == "sigma":
-                # Convert to cartesian coords using zmin and zmax
-                particle_ptr.zpos = sigma_to_cartesian_coords(z_temp, zmin, zmax)
+            elif self.config.get("SIMULATION", "depth_coordinates") == "height_above_bottom":
+                # z_temp is given as the heigh above the sea floor. Use this
+                # and h (zmin) to compute z
+                particle_ptr.zpos = z_temp + zmin
 
             # Check that the given depth is valid
             if particle_ptr.zpos < zmin:
