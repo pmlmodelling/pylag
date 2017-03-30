@@ -17,6 +17,7 @@ from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 # PyLag python imports
 from pylag.integrator import get_num_integrator
 from pylag.random_walk import get_vertical_random_walk_model
+from pylag.boundary_conditions import get_vert_boundary_condition_calculator
 
 # PyLag cimports
 cimport pylag.math as math
@@ -26,6 +27,7 @@ from pylag.particle cimport Particle
 from pylag.delta cimport Delta, reset
 from pylag.integrator cimport NumIntegrator
 from pylag.random_walk cimport VerticalRandomWalk
+from pylag.boundary_conditions cimport VertBoundaryConditionCalculator
 
 def det_wrapper(a, b):
     cdef DTYPE_FLOAT_t a_c[2]
@@ -264,34 +266,63 @@ cdef class TestVerticalRandomWalk:
         Configuration object.
     """
     cdef VerticalRandomWalk _vertical_random_walk
+    cdef VertBoundaryConditionCalculator _vert_bc_calculator
     
     def __init__(self, config):
-        
+
         self._vertical_random_walk = get_vertical_random_walk_model(config)
+
+        self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
     
-    def random_walk(self, data_reader, time, xpos, ypos, zpos):
+    def random_walk(self, DataReader data_reader, DTYPE_FLOAT_t time, 
+            DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, zpos_arr, DTYPE_INT_t host):
         cdef Particle particle
         cdef Delta delta_X
+        
+        cdef DTYPE_FLOAT_t zpos_new, zmin, zmax
+        
+        cdef DTYPE_INT_t i, n_zpos
 
-        # Set these properties to default values
-        particle.group_id = 0
-        particle.host_horizontal_elem = 0
-        particle.k_layer = 0
+        # Set default particle properties
         particle.in_domain = True
+        particle.group_id = 0
 
-        # Initialise remaining particle properties using the supplied arguments
+        # Use supplied args to set the host, x and y positions
+        particle.host_horizontal_elem = host
         particle.xpos = xpos
         particle.ypos = ypos
-        particle.zpos = zpos
-        
-        # Reset Delta object
-        reset(&delta_X)
-        
-        # Advect the particle
-        self._vertical_random_walk.random_walk(time, &particle, data_reader, &delta_X)     
 
-        # Use Delta values to update the particle's position
-        zpos_new = particle.zpos + delta_X.z
+        # Number of z positions
+        n_zpos = len(zpos_arr)
+        
+        # Array in which to store updated z positions
+        zpos_new_arr = np.empty(n_zpos, dtype=DTYPE_FLOAT)
+        
+        # Loop over the particle set
+        for i in xrange(n_zpos):
+            # Set zpos, local coordinates and variables that define the location
+            # of the particle within the vertical grid
+            particle.zpos = zpos_arr[i]
+            data_reader.set_local_coordinates(&particle)
+            data_reader.set_vertical_grid_vars(time, &particle)
+
+            # Reset Delta object
+            reset(&delta_X)
+
+            # Apply the stochastic model
+            self._vertical_random_walk.random_walk(time, &particle, data_reader, &delta_X)
+
+            # Use Delta values to update the particle's position
+            zpos_new = particle.zpos + delta_X.z
+            
+            # Apply boundary conditions
+            zmin = data_reader.get_zmin(time, &particle)
+            zmax = data_reader.get_zmax(time, &particle)
+            if zpos_new < zmin or zpos_new > zmax:
+                zpos_new = self._vert_bc_calculator.apply(zpos_new, zmin, zmax)
+            
+            # Set new z position
+            zpos_new_arr[i] = zpos_new 
 
         # Return the updated position
-        return zpos_new
+        return zpos_new_arr
