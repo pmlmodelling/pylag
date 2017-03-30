@@ -1,3 +1,5 @@
+include "constants.pxi"
+
 """
 This Cython module has the purpose of providing clients with rapid access to 
 pseudo random numbers generated the Mersenne Twister pseudo RNG.
@@ -57,7 +59,7 @@ def seed(seed=None):
     # Set the seed for the RNG
     generator = Pymt19937(_seed)
         
-cpdef DTYPE_FLOAT_t gauss(DTYPE_FLOAT_t mean = 0.0, DTYPE_FLOAT_t std = 1.0):
+cpdef DTYPE_FLOAT_t gauss(DTYPE_FLOAT_t mean = 0.0, DTYPE_FLOAT_t std = 1.0) except FLOAT_ERR:
     """
     Generate a random Gaussian variate. The Gaussian distribution has a standard
     deviation of std, and a mean of 0.0.
@@ -74,10 +76,13 @@ cpdef DTYPE_FLOAT_t gauss(DTYPE_FLOAT_t mean = 0.0, DTYPE_FLOAT_t std = 1.0):
     """
     global generator
 
+    if generator is None:
+        raise RuntimeError('PRNG has not been initialised. Try calling seed() first.')
+
     cdef crandom.normal_distribution[DTYPE_FLOAT_t] dist = crandom.normal_distribution[DTYPE_FLOAT_t](mean, std)
     return dist(generator.c_mt19937)
 
-cpdef DTYPE_FLOAT_t uniform(DTYPE_FLOAT_t a = -1.0, DTYPE_FLOAT_t b = 1.0):
+cpdef DTYPE_FLOAT_t uniform(DTYPE_FLOAT_t a = -1.0, DTYPE_FLOAT_t b = 1.0) except FLOAT_ERR:
     """
     Generate a random variate within the range [a, b].
     
@@ -94,6 +99,9 @@ cpdef DTYPE_FLOAT_t uniform(DTYPE_FLOAT_t a = -1.0, DTYPE_FLOAT_t b = 1.0):
         Random variate
     """
     global generator
+
+    if generator is None:
+        raise RuntimeError('PRNG has not been initialised. Try calling seed() first.')
 
     cdef crandom.uniform_real_distribution[DTYPE_FLOAT_t] dist = crandom.uniform_real_distribution[DTYPE_FLOAT_t](a, b)
     return dist(generator.c_mt19937)
