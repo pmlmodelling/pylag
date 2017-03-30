@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from ConfigParser import SafeConfigParser
 
 from pylag.analytic_data_reader import TestDiffusivityDataReader
+from pylag.cwrappers import get_vertical_eddy_diffusivity
 
 # (Unused) variables passed in as function arguments. In real applications
 # these would be used for interpolating a gridded diffusivity field to a
@@ -32,8 +33,6 @@ dz = 0.1
 # Config - needed for creation of NaiveVerticalRandomWalk
 config = SafeConfigParser()
 config.add_section("OCEAN_CIRCULATION_MODEL")
-config.set("OCEAN_CIRCULATION_MODEL", "zmin", str(zmin))
-config.set("OCEAN_CIRCULATION_MODEL", "zmax", str(zmax))
 
 # Diffusivity data reader
 data_reader = TestDiffusivityDataReader(config)
@@ -46,7 +45,7 @@ K = np.empty_like(z)
 
 # Compute K
 for i, zpos in enumerate(z):
-    K[i] = data_reader.get_vertical_eddy_diffusivity(t, xpos, ypos, zpos, host, zlayer)
+    K[i] = get_vertical_eddy_diffusivity(data_reader, t, xpos, ypos, zpos, host)
 
 # Plot
 plt.figure()
