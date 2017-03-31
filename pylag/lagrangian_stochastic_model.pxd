@@ -14,7 +14,7 @@ cdef class LSM:
 
 
 # LSM for computing vertical movement
-cdef class VerticalLSM(LSM):
+cdef class OneDLSM(LSM):
     cdef VertBoundaryConditionCalculator _vert_bc_calculator
 
     cdef apply(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X)

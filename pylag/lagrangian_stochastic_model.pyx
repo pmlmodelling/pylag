@@ -13,21 +13,21 @@ cdef class LSM:
  # Vertical Lagrangian Stochastic Models
  # -------------------------------------
  
-cdef class VerticalLSM(LSM):
+cdef class OneDLSM(LSM):
     cdef apply(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
         pass
 
-cdef class NaiveVerticalLSM(VerticalLSM):
+cdef class NaiveOneDLSM(OneDLSM):
     def __init__(self, config):
         self._time_step = config.getfloat('SIMULATION', 'time_step')
 
     cdef apply(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
         """
-        Apply the naive vertical lagrangian stochastic model. This method should
-        only be used when the vertical eddy diffusivity field is homogenous.
-        When it is not, particles will accumulate in regions of low diffusivity.
-        In this situation a more sophisticated scheme should be used
-        (e.g. AR0VerticalLSM).
+        Apply the naive LSM in 1D, which is taken to be the vertical dimension.
+        This method should only be used when the vertical eddy diffusivity field
+        is homogenous. When it is not, particles will accumulate in regions of
+        low diffusivity. In this situation a more sophisticated scheme should be
+        used (e.g. VisserOneDLSM).
         
         Parameters:
         -----------
@@ -52,7 +52,7 @@ cdef class NaiveVerticalLSM(VerticalLSM):
         # Change in position
         delta_X.z += sqrt(2.0*D*self._time_step) * random.gauss(0.0, 1.0)
 
-cdef class AR0VerticalLSM(VerticalLSM):
+cdef class VisserOneDLSM(OneDLSM):
     def __init__(self, config):
         self._time_step = config.getfloat('SIMULATION', 'time_step')
         
@@ -60,11 +60,11 @@ cdef class AR0VerticalLSM(VerticalLSM):
 
     cdef apply(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
         """
-        Apply the AR0 vertical lagrangian stochastic model. The model includes
-        a deterministic advective terms that counteracts the tendency for
-        particles to accumulate in regions of low diffusivity (c.f. the Naive
-        LSM). See Visser (1997) and Ross and Sharples (2004) for a more detailed
-        discussion.
+        Apply the Visser LSM in 1D, which is assumed to be the vertical dimension.
+        The model includes a deterministic advective terms that counteracts the
+        tendency for particles to accumulate in regions of low diffusivity
+        (c.f. the Naive LSM). See Visser (1997) and Ross and Sharples (2004) 
+        for a more detailed discussion.
         
         Parameters:
         -----------
@@ -128,7 +128,7 @@ cdef class AR0VerticalLSM(VerticalLSM):
         # Change in position
         delta_X.z = dz_advection + dz_random
 
-cdef class AR0VerticalLSMWithSpline(VerticalLSM):
+cdef class VisserSplineOneDLSM(OneDLSM):
     def __init__(self, config):
         pass
 
@@ -224,9 +224,9 @@ def get_vertical_lsm(config):
 
     # Return the specified vertical lagrangian stochastic model.
     if config.get("SIMULATION", "vertical_lsm") == "naive":
-        return NaiveVerticalLSM(config)
-    elif config.get("SIMULATION", "vertical_lsm") == "AR0":
-        return AR0VerticalLSM(config)
+        return NaiveOneDLSM(config)
+    elif config.get("SIMULATION", "vertical_lsm") == "visser":
+        return VisserOneDLSM(config)
     elif config.get("SIMULATION", "vertical_lsm") == "none":
         return None
     else:

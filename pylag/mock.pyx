@@ -19,7 +19,7 @@ from particle cimport Particle
 from data_reader cimport DataReader
 from pylag.delta cimport Delta, reset
 from pylag.integrator cimport NumIntegrator
-from pylag.lagrangian_stochastic_model cimport VerticalLSM
+from pylag.lagrangian_stochastic_model cimport OneDLSM
 from pylag.boundary_conditions cimport VertBoundaryConditionCalculator
 
 cdef class MockVelocityDataReader(DataReader):
@@ -234,7 +234,7 @@ cdef class MockRK4Integrator:
         # Return the updated position
         return xpos_new, ypos_new, zpos_new
 
-cdef class MockVerticalLSM:
+cdef class MockOneDLSM:
     """ Test class for vertical lagrangian stochastic models.
     
     Parameters:
@@ -242,7 +242,7 @@ cdef class MockVerticalLSM:
     config : SafeConfigParser
         Configuration object.
     """
-    cdef VerticalLSM _vertical_lsm
+    cdef OneDLSM _vertical_lsm
     cdef VertBoundaryConditionCalculator _vert_bc_calculator
     
     def __init__(self, config):

@@ -15,7 +15,7 @@ from libcpp.vector cimport vector
 from pylag.data_reader cimport DataReader
 from pylag.math cimport sigma_to_cartesian_coords, cartesian_to_sigma_coords
 from pylag.integrator cimport NumIntegrator
-from pylag.lagrangian_stochastic_model cimport VerticalLSM, HorizontalLSM
+from pylag.lagrangian_stochastic_model cimport OneDLSM, HorizontalLSM
 from pylag.boundary_conditions cimport HorizBoundaryConditionCalculator, VertBoundaryConditionCalculator
 from pylag.delta cimport Delta, reset
 from pylag.particle cimport Particle, ParticleSmartPtr, copy
@@ -56,7 +56,7 @@ cdef class FVCOMOPTModel(OPTModel):
     cdef object config
     cdef DataReader data_reader
     cdef NumIntegrator num_integrator
-    cdef VerticalLSM vert_lsm
+    cdef OneDLSM vert_lsm
     cdef HorizontalLSM horiz_lsm
     cdef HorizBoundaryConditionCalculator horiz_bc_calculator
     cdef VertBoundaryConditionCalculator vert_bc_calculator
@@ -400,7 +400,7 @@ cdef class GOTMOPTModel(OPTModel):
     """
     cdef object config
     cdef DataReader data_reader
-    cdef VerticalLSM vert_lsm
+    cdef OneDLSM vert_lsm
     cdef VertBoundaryConditionCalculator vert_bc_calculator
     cdef object particle_seed_smart_ptrs
     cdef object particle_smart_ptrs
