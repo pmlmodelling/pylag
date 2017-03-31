@@ -52,6 +52,66 @@ cdef class NaiveOneDLSM(OneDLSM):
         # Change in position
         delta_X.z += sqrt(2.0*D*self._time_step) * random.gauss(0.0, 1.0)
 
+cdef class EulerOneDLSM(OneDLSM):
+    def __init__(self, config):
+        self._time_step = config.getfloat('SIMULATION', 'time_step')
+        
+        self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
+
+    cdef apply(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
+        """
+        Apply the Euler LSM in 1D, which is assumed to be the vertical dimension.
+        The model includes a deterministic advective term that counteracts the
+        tendency for particles to accumulate in regions of low diffusivity
+        (c.f. the Naive LSM). See Grawe (2012) for more details.
+        
+        Parameters:
+        -----------
+        time: float
+            The current time.
+
+        particle: *Particle
+            Pointer to a Particle object.
+
+        data_reader: object of type DataReader
+            A DataReader object. Used for reading the vertical eddy diffusivity.
+            
+        Returns:
+        --------
+        N/A
+        """
+        # Temporary particle object
+        cdef Particle _particle
+        
+        # The vertical eddy diffusiviy
+        #     k - at the advected location
+        #     dk_dz - gradient in k
+        cdef DTYPE_FLOAT_t k, dk_dz
+
+        # Change in position (units: m)
+        cdef DTYPE_FLOAT_t dz_advection, dz_random
+
+        # Create a copy of particle
+        _particle = particle[0]
+
+        # Compute the vertical eddy diffusivity at the particle's current location.
+        k = data_reader.get_vertical_eddy_diffusivity(time, &_particle)
+
+        # Compute an approximate value for the gradient in the vertical eddy
+        # diffusivity at the particle's current location.
+        dk_dz = data_reader.get_vertical_eddy_diffusivity_derivative(time, &_particle)
+
+        # Compute the random displacement
+        dz_random = sqrt(2.0*k*self._time_step) * random.gauss(0.0, 1.0)
+
+        # Compute the advective displacement for inhomogenous turbluence. This
+        # assumes advection due to the resolved flow is computed elsewhere or
+        # is zero.
+        dz_advection = dk_dz * self._time_step
+
+        # Change in position
+        delta_X.z = dz_advection + dz_random
+
 cdef class VisserOneDLSM(OneDLSM):
     def __init__(self, config):
         self._time_step = config.getfloat('SIMULATION', 'time_step')
@@ -100,8 +160,8 @@ cdef class VisserOneDLSM(OneDLSM):
         cdef DTYPE_FLOAT_t vel[3]
         vel[:] = [0.0, 0.0, 0.0]
 
-        # Change in position (units can be m, or sigma)
-        cdef DTYPE_FLOAT_t dz_advection, dz_random, dz
+        # Change in position (units: m)
+        cdef DTYPE_FLOAT_t dz_advection, dz_random
 
         # Create a copy of particle
         _particle = particle[0]
@@ -113,8 +173,9 @@ cdef class VisserOneDLSM(OneDLSM):
         # Compute the velocity at the particle's current location
         data_reader.get_velocity(time, &_particle, vel)
         
-        # Compute the vertical eddy diffusivity at a position that roughly lies
-        # between the current particle's position and . Apply reflecting boundary condition if the computed
+        # Compute the vertical eddy diffusivity at a position that lies roughly
+        # between the current particle's position and the position it would be
+        # advected too. Apply reflecting boundary condition if the computed
         # offset falls outside of the model domain
         zpos_offset = _particle.zpos + 0.5 * (vel[2] + dk_dz) * self._time_step
         zmin = data_reader.get_zmin(time, &_particle)
@@ -234,6 +295,8 @@ def get_vertical_lsm(config):
     # Return the specified vertical lagrangian stochastic model.
     if config.get("SIMULATION", "vertical_lsm") == "naive":
         return NaiveOneDLSM(config)
+    elif config.get("SIMULATION", "vertical_lsm") == "euler":
+        return EulerOneDLSM(config)
     elif config.get("SIMULATION", "vertical_lsm") == "visser":
         return VisserOneDLSM(config)
     elif config.get("SIMULATION", "vertical_lsm") == "none":
