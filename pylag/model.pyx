@@ -5,7 +5,7 @@ from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 from pylag.integrator import get_num_integrator
-from pylag.random_walk import get_vertical_lsm, get_horizontal_lsm
+from pylag.lagrangian_stochastic_model import get_vertical_lsm, get_horizontal_lsm
 from pylag.boundary_conditions import get_horiz_boundary_condition_calculator, get_vert_boundary_condition_calculator
 from pylag.particle_positions_reader import read_particle_initial_positions
 from pylag.particle import ParticleSmartPtr
@@ -15,7 +15,7 @@ from libcpp.vector cimport vector
 from pylag.data_reader cimport DataReader
 from pylag.math cimport sigma_to_cartesian_coords, cartesian_to_sigma_coords
 from pylag.integrator cimport NumIntegrator
-from pylag.random_walk cimport VerticalLSM, HorizontalLSM
+from pylag.lagrangian_stochastic_model cimport VerticalLSM, HorizontalLSM
 from pylag.boundary_conditions cimport HorizBoundaryConditionCalculator, VertBoundaryConditionCalculator
 from pylag.delta cimport Delta, reset
 from pylag.particle cimport Particle, ParticleSmartPtr, copy

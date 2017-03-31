@@ -16,7 +16,7 @@ from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 # PyLag python imports
 from pylag.integrator import get_num_integrator
-from pylag.random_walk import get_vertical_lsm
+from pylag.lagrangian_stochastic_model import get_vertical_lsm
 from pylag.boundary_conditions import get_vert_boundary_condition_calculator
 
 # PyLag cimports
@@ -26,7 +26,7 @@ from pylag.data_reader cimport DataReader
 from pylag.particle cimport Particle
 from pylag.delta cimport Delta, reset
 from pylag.integrator cimport NumIntegrator
-from pylag.random_walk cimport VerticalLSM
+from pylag.lagrangian_stochastic_model cimport VerticalLSM
 from pylag.boundary_conditions cimport VertBoundaryConditionCalculator
 
 def det_wrapper(a, b):
