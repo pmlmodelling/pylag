@@ -14,7 +14,7 @@ from particle cimport Particle
 
 from data_reader cimport DataReader
 
-cdef class TestVelocityDataReader(DataReader):
+cdef class MockVelocityDataReader(DataReader):
     """ Test data reader for numerical integration schemes.
     
     Object passes back u/v/w velocity components for the system of ODEs:
@@ -91,7 +91,7 @@ cdef class TestVelocityDataReader(DataReader):
     def _get_w_component(self, DTYPE_FLOAT_t zpos):
         return 0.0
 
-cdef class TestDiffusivityDataReader(DataReader):
+cdef class MockDiffusivityDataReader(DataReader):
     """Test data reader for random displacement models.
     
     Typically these use the vertical or horizontal eddy diffusivity to compute
