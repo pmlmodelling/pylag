@@ -1384,14 +1384,14 @@ cdef class FVCOMDataReader(DataReader):
         self._w_next = self.mediator.get_time_dependent_variable_at_next_time_index('ww', (self._n_siglay, self._n_elems), DTYPE_FLOAT)
         
         # Update memory views for kh
-        if self.config.has_option("SIMULATION", "vertical_random_walk_model"):
-            if self.config.get('SIMULATION', 'vertical_random_walk_model') != "none":
+        if self.config.has_option("SIMULATION", "vertical_lsm"):
+            if self.config.get('SIMULATION', 'vertical_lsm') != "none":
                 self._kh_last = self.mediator.get_time_dependent_variable_at_last_time_index('kh', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)
                 self._kh_next = self.mediator.get_time_dependent_variable_at_next_time_index('kh', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)
 
         # Update memory views for viscofh
-        if self.config.has_option("SIMULATION", "horizontal_random_walk_model"):
-            if self.config.get('SIMULATION', 'horizontal_random_walk_model') != "none":
+        if self.config.has_option("SIMULATION", "horizontal_lsm"):
+            if self.config.get('SIMULATION', 'horizontal_lsm') != "none":
                 self._viscofh_last = self.mediator.get_time_dependent_variable_at_last_time_index('viscofh', (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
                 self._viscofh_next = self.mediator.get_time_dependent_variable_at_next_time_index('viscofh', (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
 

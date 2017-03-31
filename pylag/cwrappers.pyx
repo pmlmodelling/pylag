@@ -16,7 +16,7 @@ from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 # PyLag python imports
 from pylag.integrator import get_num_integrator
-from pylag.random_walk import get_vertical_random_walk_model
+from pylag.random_walk import get_vertical_lsm
 from pylag.boundary_conditions import get_vert_boundary_condition_calculator
 
 # PyLag cimports
@@ -26,7 +26,7 @@ from pylag.data_reader cimport DataReader
 from pylag.particle cimport Particle
 from pylag.delta cimport Delta, reset
 from pylag.integrator cimport NumIntegrator
-from pylag.random_walk cimport VerticalRandomWalk
+from pylag.random_walk cimport VerticalLSM
 from pylag.boundary_conditions cimport VertBoundaryConditionCalculator
 
 def det_wrapper(a, b):
@@ -257,24 +257,24 @@ cdef class TestRK4Integrator:
         # Return the updated position
         return xpos_new, ypos_new, zpos_new
 
-cdef class TestVerticalRandomWalk:
-    """ Test class for vertical random walk models.
+cdef class TestVerticalLSM:
+    """ Test class for vertical lagrangian stochastic models.
     
     Parameters:
     -----------
     config : SafeConfigParser
         Configuration object.
     """
-    cdef VerticalRandomWalk _vertical_random_walk
+    cdef VerticalLSM _vertical_lsm
     cdef VertBoundaryConditionCalculator _vert_bc_calculator
     
     def __init__(self, config):
 
-        self._vertical_random_walk = get_vertical_random_walk_model(config)
+        self._vertical_lsm = get_vertical_lsm(config)
 
         self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
     
-    def random_walk(self, DataReader data_reader, DTYPE_FLOAT_t time, 
+    def apply(self, DataReader data_reader, DTYPE_FLOAT_t time, 
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, zpos_arr, DTYPE_INT_t host):
         cdef Particle particle
         cdef Delta delta_X
@@ -309,8 +309,8 @@ cdef class TestVerticalRandomWalk:
             # Reset Delta object
             reset(&delta_X)
 
-            # Apply the stochastic model
-            self._vertical_random_walk.random_walk(time, &particle, data_reader, &delta_X)
+            # Apply the vertical lagrangian stochastic model
+            self._vertical_lsm.apply(time, &particle, data_reader, &delta_X)
 
             # Use Delta values to update the particle's position
             zpos_new = particle.zpos + delta_X.z

@@ -6,27 +6,28 @@ cimport pylag.random as random
 
 from pylag.boundary_conditions import get_vert_boundary_condition_calculator
 
-cdef class RandomWalk:
-    cdef random_walk(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
+cdef class LSM:
+    cdef apply(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
         pass
 
- # Vertical Random Walks
- # ---------------------
+ # Vertical Lagrangian Stochastic Models
+ # -------------------------------------
  
-cdef class VerticalRandomWalk(RandomWalk):
-    cdef random_walk(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
+cdef class VerticalLSM(LSM):
+    cdef apply(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
         pass
 
-cdef class NaiveVerticalRandomWalk(VerticalRandomWalk):
+cdef class NaiveVerticalLSM(VerticalLSM):
     def __init__(self, config):
         self._time_step = config.getfloat('SIMULATION', 'time_step')
 
-    cdef random_walk(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
+    cdef apply(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
         """
-        Naive vertical random walk. This method should only be used when
-        the vertical eddy diffusivity is homogenous. When it is not, particles
-        will accumulate in regions of low diffusivity. In this situation a more
-        sophisticated scheme should be used (e.g. AR0VerticalRandomWalk).
+        Apply the naive vertical lagrangian stochastic model. This method should
+        only be used when the vertical eddy diffusivity field is homogenous.
+        When it is not, particles will accumulate in regions of low diffusivity.
+        In this situation a more sophisticated scheme should be used
+        (e.g. AR0VerticalLSM).
         
         Parameters:
         -----------
@@ -51,23 +52,19 @@ cdef class NaiveVerticalRandomWalk(VerticalRandomWalk):
         # Change in position
         delta_X.z += sqrt(2.0*D*self._time_step) * random.gauss(0.0, 1.0)
 
-cdef class AR0VerticalRandomWalk(VerticalRandomWalk):
+cdef class AR0VerticalLSM(VerticalLSM):
     def __init__(self, config):
         self._time_step = config.getfloat('SIMULATION', 'time_step')
         
         self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
 
-    cdef random_walk(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
+    cdef apply(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
         """
-        AR0 vertical random walk. This method is an extension of the
-        NaiveVerticalRandomWalk model to situations in which the eddy diffusivity
-        is not necessarily homogenous. The extension prevents the articifical
-        accumulation of particles in regions of low diffusivity. See Visser (1997)
-        and Ross and Sharples (2004) for a more detailed discussion.
-        
-        The method is independent of the vertical coordiante system - DataReader
-        objects are expected to provide diffusivities that are consistent in
-        terms of their units.
+        Apply the AR0 vertical lagrangian stochastic model. The model includes
+        a deterministic advective terms that counteracts the tendency for
+        particles to accumulate in regions of low diffusivity (c.f. the Naive
+        LSM). See Visser (1997) and Ross and Sharples (2004) for a more detailed
+        discussion.
         
         Parameters:
         -----------
@@ -109,7 +106,7 @@ cdef class AR0VerticalRandomWalk(VerticalRandomWalk):
         # diffusivity at the particle's current location.
         dk_dz = data_reader.get_vertical_eddy_diffusivity_derivative(time, &_particle)
 
-        # Compute the advective component of the random walk
+        # Compute the advective component of the lagrangian stochastic model
         dz_advection = dk_dz * self._time_step
         
         # Compute the vertical eddy diffusivity at a position offset by a distance
@@ -131,37 +128,39 @@ cdef class AR0VerticalRandomWalk(VerticalRandomWalk):
         # Change in position
         delta_X.z = dz_advection + dz_random
 
-cdef class AR0VerticalRandomWalkWithSpline(VerticalRandomWalk):
+cdef class AR0VerticalLSMWithSpline(VerticalLSM):
     def __init__(self, config):
         pass
 
-    cdef random_walk(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
+    cdef apply(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
         pass
 
 
-# Horizontal Random Walks
-# -----------------------
+# Horizontal Lagrangian Stochastic Models
+# ---------------------------------------
  
-cdef class HorizontalRandomWalk(RandomWalk):
-    cdef random_walk(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
+cdef class HorizontalLSM(LSM):
+    cdef apply(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
         pass  
 
-cdef class ConstantHorizontalRandomWalk(HorizontalRandomWalk):
+cdef class ConstantHorizontalLSM(HorizontalLSM):
     def __init__(self, config):
         self._time_step = config.getfloat('SIMULATION', 'time_step')
         self._kh = config.getfloat("SIMULATION", "horizontal_eddy_diffusivity_constant")
 
-    cdef random_walk(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
+    cdef apply(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
         """
-        Horizontal random walk using a constant value for the horizontal eddy 
-        diffusivity that is provided as a parameter value.
+        Horizontal lagrangian stochastic model using a constant value for the
+        horizontal eddy diffusivity that is provided as a parameter.
         
         Parameters:
         -----------
         time: float
             The current time.
+
         particle: object of type Particle
             A Particle object. The object's z position will be updated.
+
         data_reader: object of type DataReader
             A DataReader object. Used for reading the vertical eddy diffusivity.
             
@@ -173,22 +172,24 @@ cdef class ConstantHorizontalRandomWalk(HorizontalRandomWalk):
         delta_X.x += sqrt(2.0*self._kh*self._time_step) * random.gauss(0.0, 1.0)
         delta_X.y += sqrt(2.0*self._kh*self._time_step) * random.gauss(0.0, 1.0)
 
-cdef class NaiveHorizontalRandomWalk(HorizontalRandomWalk):
+cdef class NaiveHorizontalLSM(HorizontalLSM):
     def __init__(self, config):
         self._time_step = config.getfloat('SIMULATION', 'time_step')
 
-    cdef random_walk(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
+    cdef apply(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
         """
-        Naive horizontal random walk. This method should only be used when
-        the horizontal eddy diffusivity is both homogenous and isotropic in x
-        and y.
+        Naive horizontal lagrangian stochastic model. This method should only be
+        used when the horizontal eddy diffusivity is both homogenous and
+        isotropic in x and y.
         
         Parameters:
         -----------
         time: float
             The current time.
+
         particle: object of type Particle
             A Particle object. The object's z position will be updated.
+
         data_reader: object of type DataReader
             A DataReader object. Used for reading the vertical eddy diffusivity.
             
@@ -206,45 +207,45 @@ cdef class NaiveHorizontalRandomWalk(HorizontalRandomWalk):
         delta_X.x += sqrt(2.0*kh*self._time_step) * random.gauss(0.0, 1.0)
         delta_X.y += sqrt(2.0*kh*self._time_step) * random.gauss(0.0, 1.0)
 
-cdef class AR0HorizontalRandomWalk(HorizontalRandomWalk):
+cdef class AR0HorizontalLSM(HorizontalLSM):
     def __init__(self, config):
         pass
 
-    cdef random_walk(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
+    cdef apply(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
         pass
 
-def get_vertical_random_walk_model(config):
-    if not config.has_option("SIMULATION", "vertical_random_walk_model"):
+def get_vertical_lsm(config):
+    if not config.has_option("SIMULATION", "vertical_lsm"):
         if config.get('GENERAL', 'log_level') == 'DEBUG':
             logger = logging.getLogger(__name__)
-            logger.info('Configuation option vertical_random_walk_model not found. '\
-            'The model will run without vertical random walk.')
+            logger.info('Configuation option vertical_lsm not found. '\
+            'The model will run without vertical lagrangian stochastic model.')
         return None
 
-    # Return the specified vertical random walk model.
-    if config.get("SIMULATION", "vertical_random_walk_model") == "naive":
-        return NaiveVerticalRandomWalk(config)
-    elif config.get("SIMULATION", "vertical_random_walk_model") == "AR0":
-        return AR0VerticalRandomWalk(config)
-    elif config.get("SIMULATION", "vertical_random_walk_model") == "none":
+    # Return the specified vertical lagrangian stochastic model.
+    if config.get("SIMULATION", "vertical_lsm") == "naive":
+        return NaiveVerticalLSM(config)
+    elif config.get("SIMULATION", "vertical_lsm") == "AR0":
+        return AR0VerticalLSM(config)
+    elif config.get("SIMULATION", "vertical_lsm") == "none":
         return None
     else:
-        raise ValueError('Unrecognised vertical random walk model.')
+        raise ValueError('Unrecognised vertical lagrangian stochastic model.')
     
-def get_horizontal_random_walk_model(config):
-    if not config.has_option("SIMULATION", "horizontal_random_walk_model"):
+def get_horizontal_lsm(config):
+    if not config.has_option("SIMULATION", "horizontal_lsm"):
         if config.get('GENERAL', 'log_level') == 'DEBUG':
             logger = logging.getLogger(__name__)
-            logger.info('Configuation option horizontal_random_walk_model not found. '\
-                'The model will run without horizontal random walk.')
+            logger.info('Configuation option horizontal_lsm not found. '\
+                'The model will run without horizontal lagrangian stochastic model.')
         return None
 
-    # Return the specified horizontal random walk model.
-    if config.get("SIMULATION", "horizontal_random_walk_model") == "constant":
-        return ConstantHorizontalRandomWalk(config)
-    elif config.get("SIMULATION", "horizontal_random_walk_model") == "naive":
-        return NaiveHorizontalRandomWalk(config)
-    elif config.get("SIMULATION", "horizontal_random_walk_model") == "none":
+    # Return the specified horizontal lagrangian stochastic model.
+    if config.get("SIMULATION", "horizontal_lsm") == "constant":
+        return ConstantHorizontalLSM(config)
+    elif config.get("SIMULATION", "horizontal_lsm") == "naive":
+        return NaiveHorizontalLSM(config)
+    elif config.get("SIMULATION", "horizontal_lsm") == "none":
         return None
     else:
-        raise ValueError('Unrecognised horizontal random walk model.')
+        raise ValueError('Unrecognised horizontal lagrangian stochastic model.')

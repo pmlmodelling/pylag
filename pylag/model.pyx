@@ -5,7 +5,7 @@ from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 from pylag.integrator import get_num_integrator
-from pylag.random_walk import get_vertical_random_walk_model, get_horizontal_random_walk_model
+from pylag.random_walk import get_vertical_lsm, get_horizontal_lsm
 from pylag.boundary_conditions import get_horiz_boundary_condition_calculator, get_vert_boundary_condition_calculator
 from pylag.particle_positions_reader import read_particle_initial_positions
 from pylag.particle import ParticleSmartPtr
@@ -15,7 +15,7 @@ from libcpp.vector cimport vector
 from pylag.data_reader cimport DataReader
 from pylag.math cimport sigma_to_cartesian_coords, cartesian_to_sigma_coords
 from pylag.integrator cimport NumIntegrator
-from pylag.random_walk cimport VerticalRandomWalk, HorizontalRandomWalk
+from pylag.random_walk cimport VerticalLSM, HorizontalLSM
 from pylag.boundary_conditions cimport HorizBoundaryConditionCalculator, VertBoundaryConditionCalculator
 from pylag.delta cimport Delta, reset
 from pylag.particle cimport Particle, ParticleSmartPtr, copy
@@ -56,8 +56,8 @@ cdef class FVCOMOPTModel(OPTModel):
     cdef object config
     cdef DataReader data_reader
     cdef NumIntegrator num_integrator
-    cdef VerticalRandomWalk vert_rand_walk_model
-    cdef HorizontalRandomWalk horiz_rand_walk_model
+    cdef VerticalLSM vert_lsm
+    cdef HorizontalLSM horiz_lsm
     cdef HorizBoundaryConditionCalculator horiz_bc_calculator
     cdef VertBoundaryConditionCalculator vert_bc_calculator
     cdef object particle_seed_smart_ptrs
@@ -87,11 +87,11 @@ cdef class FVCOMOPTModel(OPTModel):
         # Create numerical integrator
         self.num_integrator = get_num_integrator(self.config)
 
-        # Create vertical random walk model
-        self.vert_rand_walk_model = get_vertical_random_walk_model(self.config)
+        # Create vertical lagrangian stochastic model
+        self.vert_lsm = get_vertical_lsm(self.config)
 
-        # Create horizontal random walk model
-        self.horiz_rand_walk_model = get_horizontal_random_walk_model(self.config)
+        # Create horizontal lagrangian stochastic model
+        self.horiz_lsm = get_horizontal_lsm(self.config)
         
         # Time step
         self.time_step = self.config.getfloat('SIMULATION', 'time_step')
@@ -303,13 +303,13 @@ cdef class FVCOMOPTModel(OPTModel):
                         continue
                 
                 # Vertical random walk
-                if self.vert_rand_walk_model is not None:
-                    self.vert_rand_walk_model.random_walk(time, particle_ptr, 
+                if self.vert_lsm is not None:
+                    self.vert_lsm.apply(time, particle_ptr, 
                             self.data_reader, &delta_X)
 
                 # Horizontal random walk
-                if self.horiz_rand_walk_model is not None:
-                    self.horiz_rand_walk_model.random_walk(time, particle_ptr, 
+                if self.horiz_lsm is not None:
+                    self.horiz_lsm.apply(time, particle_ptr, 
                             self.data_reader, &delta_X)  
                 
                 # Sum contributions
@@ -400,7 +400,7 @@ cdef class GOTMOPTModel(OPTModel):
     """
     cdef object config
     cdef DataReader data_reader
-    cdef VerticalRandomWalk vert_rand_walk_model
+    cdef VerticalLSM vert_lsm
     cdef VertBoundaryConditionCalculator vert_bc_calculator
     cdef object particle_seed_smart_ptrs
     cdef object particle_smart_ptrs
@@ -422,8 +422,8 @@ cdef class GOTMOPTModel(OPTModel):
         # Initialise model data reader
         self.data_reader = data_reader
 
-        # Create vertical random walk model
-        self.vert_rand_walk_model = get_vertical_random_walk_model(self.config)
+        # Create vertical lagrangian stochastic model
+        self.vert_lsm = get_vertical_lsm(self.config)
 
         # Create vertical boundary conditions calculator
         self.vert_bc_calculator = get_vert_boundary_condition_calculator(self.config)
@@ -586,8 +586,8 @@ cdef class GOTMOPTModel(OPTModel):
                 self.data_reader.set_vertical_grid_vars(time, particle_ptr)
 
                 # Vertical random walk
-                if self.vert_rand_walk_model is not None:
-                    self.vert_rand_walk_model.random_walk(time, particle_ptr, 
+                if self.vert_lsm is not None:
+                    self.vert_lsm.apply(time, particle_ptr, 
                             self.data_reader, &delta_X)
 
                 # Sum contributions
