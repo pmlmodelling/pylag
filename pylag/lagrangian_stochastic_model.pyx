@@ -205,6 +205,63 @@ cdef class VisserSplineOneDLSM(OneDLSM):
     cdef apply(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
         pass
 
+cdef class MilsteinOneDLSM(OneDLSM):
+    def __init__(self, config):
+        self._time_step = config.getfloat('SIMULATION', 'time_step')
+        
+        self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
+
+    cdef apply(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
+        """
+        Apply the Milstein LSM in 1D, which is assumed to be the vertical
+        dimension. This scheme was highlighted by Grawe (2012) as being more
+        accurate that the Euler or Visser schemes, but still computationally
+        efficient.
+        
+        Parameters:
+        -----------
+        time: float
+            The current time.
+
+        particle: *Particle
+            Pointer to a Particle object.
+
+        data_reader: object of type DataReader
+            A DataReader object. Used for reading the vertical eddy diffusivity.
+            
+        Returns:
+        --------
+        N/A
+        """
+        # Temporary particle object
+        cdef Particle _particle
+        
+        # Random deviate
+        cdef DTYPE_FLOAT_t deviate
+        
+        # The vertical eddy diffusiviy
+        #     k - at the advected location
+        #     dk_dz - gradient in k
+        cdef DTYPE_FLOAT_t k, dk_dz
+
+        # Create a copy of particle
+        _particle = particle[0]
+
+        # Compute the random deviate for the update. It is Gaussian, with zero
+        # mean and standard deviation equal to 1.0. It is transformed into a
+        # Wiener increment later. Not doing this hear minimises the number of
+        # square root operations we need to perform.
+        deviate = random.gauss(0.0, 1.0)
+
+        # Compute the vertical eddy diffusivity at the particle's current location.
+        k = data_reader.get_vertical_eddy_diffusivity(time, &_particle)
+
+        # Compute an approximate value for the gradient in the vertical eddy
+        # diffusivity at the particle's current location.
+        dk_dz = data_reader.get_vertical_eddy_diffusivity_derivative(time, &_particle)
+
+        # Compute the random displacement
+        delta_X.z  = 0.5 * dk_dz * self._time_step * (deviate*deviate + 1.0) + sqrt(2.0 * k * self._time_step) * deviate
 
 # Horizontal Lagrangian Stochastic Models
 # ---------------------------------------
@@ -299,6 +356,8 @@ def get_vertical_lsm(config):
         return EulerOneDLSM(config)
     elif config.get("SIMULATION", "vertical_lsm") == "visser":
         return VisserOneDLSM(config)
+    elif config.get("SIMULATION", "vertical_lsm") == "milstein":
+        return MilsteinOneDLSM(config)
     elif config.get("SIMULATION", "vertical_lsm") == "none":
         return None
     else:
