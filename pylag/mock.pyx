@@ -10,9 +10,17 @@ np.import_array()
 from data_types_python import DTYPE_INT, DTYPE_FLOAT
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
-from particle cimport Particle
+# PyLag python imports
+from pylag.integrator import get_num_integrator
+from pylag.lagrangian_stochastic_model import get_vertical_lsm
+from pylag.boundary_conditions import get_vert_boundary_condition_calculator
 
+from particle cimport Particle
 from data_reader cimport DataReader
+from pylag.delta cimport Delta, reset
+from pylag.integrator cimport NumIntegrator
+from pylag.lagrangian_stochastic_model cimport VerticalLSM
+from pylag.boundary_conditions cimport VertBoundaryConditionCalculator
 
 cdef class MockVelocityDataReader(DataReader):
     """ Test data reader for numerical integration schemes.
@@ -182,3 +190,116 @@ cdef class MockDiffusivityDataReader(DataReader):
         k2 = self._get_vertical_eddy_diffusivity(zpos_incremented)
         
         return (k2 - k1) / zpos_increment
+
+cdef class MockRK4Integrator:
+    """ Test class for Fourth Order Runga Kutta numerical integration schemes
+    
+    Parameters:
+    -----------
+    config : SafeConfigParser
+        Configuration object.
+    """
+    cdef NumIntegrator _num_integrator
+    
+    def __init__(self, config):
+        
+        self._num_integrator = get_num_integrator(config)
+    
+    def advect(self, data_reader, time, xpos, ypos, zpos):
+        cdef Particle particle
+        cdef Delta delta_X
+
+        # Set these properties to default values
+        particle.group_id = 0
+        particle.host_horizontal_elem = 0
+        particle.k_layer = 0
+        particle.in_domain = True
+
+        # Initialise remaining particle properties using the supplied arguments
+        particle.xpos = xpos
+        particle.ypos = ypos
+        particle.zpos = zpos
+        
+        # Reset Delta object
+        reset(&delta_X)
+        
+        # Advect the particle
+        self._num_integrator.advect(time, &particle, data_reader, &delta_X)
+        
+        # Used Delta values to update the particle's position
+        xpos_new = particle.xpos + delta_X.x
+        ypos_new = particle.ypos + delta_X.y
+        zpos_new = particle.zpos + delta_X.z
+
+        # Return the updated position
+        return xpos_new, ypos_new, zpos_new
+
+cdef class MockVerticalLSM:
+    """ Test class for vertical lagrangian stochastic models.
+    
+    Parameters:
+    -----------
+    config : SafeConfigParser
+        Configuration object.
+    """
+    cdef VerticalLSM _vertical_lsm
+    cdef VertBoundaryConditionCalculator _vert_bc_calculator
+    
+    def __init__(self, config):
+
+        self._vertical_lsm = get_vertical_lsm(config)
+
+        self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
+    
+    def apply(self, DataReader data_reader, DTYPE_FLOAT_t time, 
+            DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, zpos_arr, DTYPE_INT_t host):
+        cdef Particle particle
+        cdef Delta delta_X
+        
+        cdef DTYPE_FLOAT_t zpos_new, zmin, zmax
+        
+        cdef DTYPE_INT_t i, n_zpos
+
+        # Set default particle properties
+        particle.in_domain = True
+        particle.group_id = 0
+
+        # Use supplied args to set the host, x and y positions
+        particle.host_horizontal_elem = host
+        particle.xpos = xpos
+        particle.ypos = ypos
+
+        # Number of z positions
+        n_zpos = len(zpos_arr)
+        
+        # Array in which to store updated z positions
+        zpos_new_arr = np.empty(n_zpos, dtype=DTYPE_FLOAT)
+        
+        # Loop over the particle set
+        for i in xrange(n_zpos):
+            # Set zpos, local coordinates and variables that define the location
+            # of the particle within the vertical grid
+            particle.zpos = zpos_arr[i]
+            data_reader.set_local_coordinates(&particle)
+            data_reader.set_vertical_grid_vars(time, &particle)
+
+            # Reset Delta object
+            reset(&delta_X)
+
+            # Apply the vertical lagrangian stochastic model
+            self._vertical_lsm.apply(time, &particle, data_reader, &delta_X)
+
+            # Use Delta values to update the particle's position
+            zpos_new = particle.zpos + delta_X.z
+            
+            # Apply boundary conditions
+            zmin = data_reader.get_zmin(time, &particle)
+            zmax = data_reader.get_zmax(time, &particle)
+            if zpos_new < zmin or zpos_new > zmax:
+                zpos_new = self._vert_bc_calculator.apply(zpos_new, zmin, zmax)
+            
+            # Set new z position
+            zpos_new_arr[i] = zpos_new 
+
+        # Return the updated position
+        return zpos_new_arr
