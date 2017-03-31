@@ -92,10 +92,14 @@ cdef class VisserOneDLSM(OneDLSM):
         cdef DTYPE_FLOAT_t zpos_offset
         
         # The vertical eddy diffusiviy
-        #     k - at the location the particle is advected to
+        #     k - at the advected location
         #     dk_dz - gradient in k
         cdef DTYPE_FLOAT_t k, dk_dz
-        
+
+        # The velocity at the particle's current location
+        cdef DTYPE_FLOAT_t vel[3]
+        vel[:] = [0.0, 0.0, 0.0]
+
         # Change in position (units can be m, or sigma)
         cdef DTYPE_FLOAT_t dz_advection, dz_random, dz
 
@@ -105,14 +109,14 @@ cdef class VisserOneDLSM(OneDLSM):
         # Compute an approximate value for the gradient in the vertical eddy
         # diffusivity at the particle's current location.
         dk_dz = data_reader.get_vertical_eddy_diffusivity_derivative(time, &_particle)
-
-        # Compute the advective component of the lagrangian stochastic model
-        dz_advection = dk_dz * self._time_step
         
-        # Compute the vertical eddy diffusivity at a position offset by a distance
-        # dz_advection/2. Apply reflecting boundary condition if the computed
+        # Compute the velocity at the particle's current location
+        data_reader.get_velocity(time, &_particle, vel)
+        
+        # Compute the vertical eddy diffusivity at a position that roughly lies
+        # between the current particle's position and . Apply reflecting boundary condition if the computed
         # offset falls outside of the model domain
-        zpos_offset = _particle.zpos + 0.5 * dz_advection
+        zpos_offset = _particle.zpos + 0.5 * (vel[2] + dk_dz) * self._time_step
         zmin = data_reader.get_zmin(time, &_particle)
         zmax = data_reader.get_zmax(time, &_particle)
         if zpos_offset < zmin or zpos_offset > zmax:
@@ -122,8 +126,13 @@ cdef class VisserOneDLSM(OneDLSM):
         data_reader.set_vertical_grid_vars(time, &_particle)
         k = data_reader.get_vertical_eddy_diffusivity(time, &_particle)
 
-        # Compute the random component of the particle's motion
+        # Compute the random displacement
         dz_random = sqrt(2.0*k*self._time_step) * random.gauss(0.0, 1.0)
+
+        # Compute the advective displacement for inhomogenous turbluence. This
+        # assumes advection due to the resolved flow is computed elsewhere or
+        # is zero.
+        dz_advection = dk_dz * self._time_step
 
         # Change in position
         delta_X.z = dz_advection + dz_random
