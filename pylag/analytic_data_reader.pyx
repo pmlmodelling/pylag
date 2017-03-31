@@ -119,7 +119,7 @@ cdef class TestDiffusivityDataReader(DataReader):
     cdef DTYPE_FLOAT_t _zmin
     cdef DTYPE_FLOAT_t _zmax
     
-    def __init__(self, config):
+    def __init__(self):
         self._zmin = 0.0
         self._zmax = 40.0
 
