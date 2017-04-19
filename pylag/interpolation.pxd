@@ -15,7 +15,7 @@ cdef DTYPE_FLOAT_t get_linear_fraction_safe(DTYPE_FLOAT_t var,
         DTYPE_FLOAT_t var1, DTYPE_FLOAT_t var2) except FLOAT_ERR
 
 cpdef inline DTYPE_FLOAT_t get_linear_fraction(DTYPE_FLOAT_t var, 
-        DTYPE_FLOAT_t var1, DTYPE_FLOAT_t var2):
+        DTYPE_FLOAT_t var1, DTYPE_FLOAT_t var2) except FLOAT_ERR:
     return (var - var1) / (var2 - var1)
 
 cpdef inline DTYPE_FLOAT_t linear_interp(DTYPE_FLOAT_t fraction,
