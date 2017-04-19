@@ -12,14 +12,14 @@ from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 # PyLag python imports
 from pylag.integrator import get_num_integrator
-from pylag.lagrangian_stochastic_model import get_vertical_lsm
+from pylag.lagrangian_stochastic_model import get_vertical_lsm, get_horizontal_lsm
 from pylag.boundary_conditions import get_vert_boundary_condition_calculator
 
 from particle cimport Particle
 from data_reader cimport DataReader
 from pylag.delta cimport Delta, reset
 from pylag.integrator cimport NumIntegrator
-from pylag.lagrangian_stochastic_model cimport OneDLSM
+from pylag.lagrangian_stochastic_model cimport LSM, OneDLSM
 from pylag.boundary_conditions cimport VertBoundaryConditionCalculator
 
 cdef class MockVelocityDataReader(DataReader):
@@ -303,3 +303,53 @@ cdef class MockOneDLSM:
 
         # Return the updated position
         return zpos_new_arr
+    
+cdef class MockTwoDLSM:
+    """ Test class for 2D lagrangian stochastic models.
+    
+    Parameters:
+    -----------
+    config : SafeConfigParser
+        Configuration object.
+    """
+    cdef LSM _lsm
+    
+    def __init__(self, config):
+
+        self._lsm = get_horizontal_lsm(config)
+    
+    def apply(self, DataReader data_reader, DTYPE_FLOAT_t time, 
+            DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos,
+            DTYPE_INT_t host):
+        cdef Particle particle
+        cdef Delta delta_X
+        
+        cdef DTYPE_FLOAT_t xpos_new, ypos_new
+
+        # Set default particle properties
+        particle.in_domain = True
+        particle.group_id = 0
+
+        # Use supplied args to set the host, x and y positions
+        particle.host_horizontal_elem = host
+        particle.xpos = xpos
+        particle.ypos = ypos
+        particle.zpos = zpos
+
+        # Set local coordinates and variables defining the particle's position
+        # in the vertical grid
+        data_reader.set_local_coordinates(&particle)
+        data_reader.set_vertical_grid_vars(time, &particle)
+
+        # Reset Delta object
+        reset(&delta_X)
+
+        # Apply the vertical lagrangian stochastic model
+        self._lsm.apply(time, &particle, data_reader, &delta_X)
+
+        # Use Delta values to update the particle's position
+        xpos_new = particle.xpos + delta_X.x
+        ypos_new = particle.ypos + delta_X.y
+
+        # Return the updated position
+        return xpos_new, ypos_new
