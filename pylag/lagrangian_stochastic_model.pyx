@@ -271,6 +271,8 @@ cdef class HorizontalLSM(LSM):
         pass  
 
 cdef class ConstantHorizontalLSM(HorizontalLSM):
+    cdef DTYPE_FLOAT_t _kh
+    
     def __init__(self, config):
         self._time_step = config.getfloat('SIMULATION', 'time_step')
         self._kh = config.getfloat("SIMULATION", "horizontal_eddy_diffusivity_constant")
