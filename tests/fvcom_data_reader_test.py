@@ -19,12 +19,12 @@ class FVCOMDataReader_test(TestCase):
         config.set('GENERAL', 'log_level', 'INFO')
         config.set('SIMULATION', 'start_datetime', '2013-01-06 00:00:00')
         config.set('SIMULATION', 'end_datetime', '2013-01-06 01:00:00')
-        config.set('SIMULATION', 'vertical_lsm', 'AR0')
-        config.set('SIMULATION', 'horizontal_lsm', 'none')
         config.set('OCEAN_CIRCULATION_MODEL', 'data_dir', '../resources/')
         config.set('OCEAN_CIRCULATION_MODEL', 'grid_metrics_file', '../resources/fvcom_grid_metrics_test.nc')
         config.set('OCEAN_CIRCULATION_MODEL', 'data_file_stem', 'fvcom_data_test')
         config.set('OCEAN_CIRCULATION_MODEL', 'rounding_interval', '3600')
+        config.set('OCEAN_CIRCULATION_MODEL', 'has_Kh', 'True')
+        config.set('OCEAN_CIRCULATION_MODEL', 'has_Ah', 'True')
 
         
         # Create mediator
