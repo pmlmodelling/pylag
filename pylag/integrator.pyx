@@ -378,7 +378,7 @@ def get_num_integrator(config):
         return RK4Integrator2D(config)
     elif config.get("SIMULATION", "num_integrator") == "RK4_3D":
         return RK4Integrator3D(config)
-    elif config.get("SIMULATION", "num_integrator") == "None":
+    elif config.get("SIMULATION", "num_integrator") == "none":
         return None
     else:
         raise ValueError('Unsupported numerical integration scheme.')
