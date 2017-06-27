@@ -19,7 +19,7 @@ cdef class OneDLSM(LSM):
 
 cdef class NaiveOneDLSM(OneDLSM):
     def __init__(self, config):
-        self._time_step = config.getfloat('SIMULATION', 'time_step')
+        self._time_step = config.getfloat('NUMERICS', 'time_step')
 
     cdef apply(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
         """
@@ -54,7 +54,7 @@ cdef class NaiveOneDLSM(OneDLSM):
 
 cdef class EulerOneDLSM(OneDLSM):
     def __init__(self, config):
-        self._time_step = config.getfloat('SIMULATION', 'time_step')
+        self._time_step = config.getfloat('NUMERICS', 'time_step')
         
         self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
 
@@ -114,7 +114,7 @@ cdef class EulerOneDLSM(OneDLSM):
 
 cdef class VisserOneDLSM(OneDLSM):
     def __init__(self, config):
-        self._time_step = config.getfloat('SIMULATION', 'time_step')
+        self._time_step = config.getfloat('NUMERICS', 'time_step')
         
         self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
 
@@ -207,7 +207,7 @@ cdef class VisserSplineOneDLSM(OneDLSM):
 
 cdef class MilsteinOneDLSM(OneDLSM):
     def __init__(self, config):
-        self._time_step = config.getfloat('SIMULATION', 'time_step')
+        self._time_step = config.getfloat('NUMERICS', 'time_step')
         
         self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
 
@@ -274,7 +274,7 @@ cdef class ConstantHorizontalLSM(HorizontalLSM):
     cdef DTYPE_FLOAT_t _kh
     
     def __init__(self, config):
-        self._time_step = config.getfloat('SIMULATION', 'time_step')
+        self._time_step = config.getfloat('NUMERICS', 'time_step')
         self._kh = config.getfloat("SIMULATION", "horizontal_eddy_diffusivity_constant")
 
     cdef apply(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
@@ -303,7 +303,7 @@ cdef class ConstantHorizontalLSM(HorizontalLSM):
 
 cdef class NaiveHorizontalLSM(HorizontalLSM):
     def __init__(self, config):
-        self._time_step = config.getfloat('SIMULATION', 'time_step')
+        self._time_step = config.getfloat('NUMERICS', 'time_step')
 
     cdef apply(self, DTYPE_FLOAT_t time, Particle *particle, DataReader data_reader, Delta *delta_X):
         """

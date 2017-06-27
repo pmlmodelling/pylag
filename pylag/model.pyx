@@ -4,6 +4,7 @@ import logging
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
+from pylag.numerics import get_num_method
 from pylag.integrator import get_num_integrator
 from pylag.lagrangian_stochastic_model import get_vertical_lsm, get_horizontal_lsm
 from pylag.boundary_conditions import get_horiz_boundary_condition_calculator, get_vert_boundary_condition_calculator
@@ -14,6 +15,7 @@ from libcpp.vector cimport vector
 
 from pylag.data_reader cimport DataReader
 from pylag.math cimport sigma_to_cartesian_coords, cartesian_to_sigma_coords
+from pylag.numerics cimport NumMethod
 from pylag.integrator cimport NumIntegrator
 from pylag.lagrangian_stochastic_model cimport OneDLSM, HorizontalLSM
 from pylag.boundary_conditions cimport HorizBoundaryConditionCalculator, VertBoundaryConditionCalculator
@@ -55,6 +57,7 @@ cdef class FVCOMOPTModel(OPTModel):
     """
     cdef object config
     cdef DataReader data_reader
+    cdef NumMethod num_method
     cdef NumIntegrator num_integrator
     cdef OneDLSM vert_lsm
     cdef HorizontalLSM horiz_lsm
@@ -83,6 +86,9 @@ cdef class FVCOMOPTModel(OPTModel):
         # Create boundary conditions calculators
         self.horiz_bc_calculator = get_horiz_boundary_condition_calculator(self.config)
         self.vert_bc_calculator = get_vert_boundary_condition_calculator(self.config)
+
+        # Create num method object
+        self.num_method = get_num_method(self.config)
         
         # Create numerical integrator
         self.num_integrator = get_num_integrator(self.config)
@@ -94,7 +100,7 @@ cdef class FVCOMOPTModel(OPTModel):
         self.horiz_lsm = get_horizontal_lsm(self.config)
         
         # Time step
-        self.time_step = self.config.getfloat('SIMULATION', 'time_step')
+        self.time_step = self.config.getfloat('NUMERICS', 'time_step')
 
     def set_particle_data(self, group_ids, x_positions, y_positions, z_positions):
         """Initialise memory views for data describing the particle seed.
@@ -400,6 +406,7 @@ cdef class GOTMOPTModel(OPTModel):
     """
     cdef object config
     cdef DataReader data_reader
+    cdef NumMethod num_method
     cdef OneDLSM vert_lsm
     cdef VertBoundaryConditionCalculator vert_bc_calculator
     cdef object particle_seed_smart_ptrs
@@ -422,6 +429,9 @@ cdef class GOTMOPTModel(OPTModel):
         # Initialise model data reader
         self.data_reader = data_reader
 
+        # Create num method object
+        self.num_method = get_num_method(self.config)
+
         # Create vertical lagrangian stochastic model
         self.vert_lsm = get_vertical_lsm(self.config)
 
@@ -429,7 +439,7 @@ cdef class GOTMOPTModel(OPTModel):
         self.vert_bc_calculator = get_vert_boundary_condition_calculator(self.config)
 
         # Time step
-        self.time_step = self.config.getfloat('SIMULATION', 'time_step')
+        self.time_step = self.config.getfloat('NUMERICS', 'time_step')
 
     def set_particle_data(self, group_ids, x_positions, y_positions, z_positions):
         """Initialise memory views for data describing the particle seed.

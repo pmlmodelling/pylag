@@ -44,7 +44,7 @@ cdef class TimeManager(object):
         self._particle_release_interval_in_hours = config.getfloat("SIMULATION", "particle_release_interval_in_hours")
         
         # Simulation time step
-        self._time_step = config.getfloat("SIMULATION", "time_step")
+        self._time_step = config.getfloat('NUMERICS', 'time_step')
         
         # Period at which data is written to file
         self._output_frequency = config.getfloat("SIMULATION", "output_frequency")

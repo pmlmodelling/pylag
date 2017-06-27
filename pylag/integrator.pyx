@@ -26,7 +26,7 @@ cdef class RK4Integrator2D(NumIntegrator):
     cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
 
     def __init__(self, config):
-        self._time_step = config.getfloat('SIMULATION', 'time_step')
+        self._time_step = config.getfloat('NUMERICS', 'time_step')
         
         # Create horizontal boundary conditions calculator
         self._horiz_bc_calculator = get_horiz_boundary_condition_calculator(config)
@@ -187,7 +187,7 @@ cdef class RK4Integrator3D(NumIntegrator):
     cdef VertBoundaryConditionCalculator _vert_bc_calculator
 
     def __init__(self, config):
-        self._time_step = config.getfloat('SIMULATION', 'time_step')
+        self._time_step = config.getfloat('NUMERICS', 'time_step')
 
         # Create horizontal boundary conditions calculator
         self._horiz_bc_calculator = get_horiz_boundary_condition_calculator(config)
