@@ -21,7 +21,7 @@ from pylag.boundary_conditions cimport VertBoundaryConditionCalculator
 cdef class NumMethod:
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
-            Particle *particle, Delta *delta_X) except INT_ERR:
+            Particle *particle) except INT_ERR:
         pass
 
 
@@ -42,7 +42,7 @@ cdef class AdvNumMethod(NumMethod):
         self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
-            Particle *particle, Delta *delta_X) except INT_ERR:
+            Particle *particle) except INT_ERR:
         pass
 
 
@@ -63,7 +63,7 @@ cdef class DiffNumMethod(NumMethod):
         self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
-            Particle *particle, Delta *delta_X) except INT_ERR:
+            Particle *particle) except INT_ERR:
         pass
 
 # Advection-diffusion numerical method that combines the two without using
@@ -84,7 +84,7 @@ cdef class AdvDiffNumMethod(NumMethod):
         self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
-            Particle *particle, Delta *delta_X) except INT_ERR:
+            Particle *particle) except INT_ERR:
         pass
 
 
@@ -108,7 +108,7 @@ cdef class OS0NumMethod(NumMethod):
         self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
-            Particle *particle, Delta *delta_X) except INT_ERR:
+            Particle *particle) except INT_ERR:
         pass
 
 
@@ -132,7 +132,7 @@ cdef class OS1NumMethod(NumMethod):
         self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
-            Particle *particle, Delta *delta_X) except INT_ERR:
+            Particle *particle) except INT_ERR:
         pass
 
 def get_num_method(config):
