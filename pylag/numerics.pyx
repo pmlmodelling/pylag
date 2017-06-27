@@ -1,11 +1,12 @@
 include "constants.pxi"
 
-from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
+import logging
+
+from pylag.boundary_conditions import get_horiz_boundary_condition_calculator
+from pylag.boundary_conditions import get_vert_boundary_condition_calculator
 
 # PyLag cimports
-from particle cimport Particle
-from pylag.data_reader cimport DataReader
-from pylag.delta cimport Delta
+from pylag.boundary_conditions cimport HorizBoundaryConditionCalculator
 from pylag.boundary_conditions cimport VertBoundaryConditionCalculator
 
 # Objects of type NumMethod
