@@ -30,10 +30,16 @@ cdef class AdvNumMethod(NumMethod):
     cdef DTYPE_FLOAT_t _time_step
 
     cdef DetItMethod _iterative_method
+    cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
+    cdef VertBoundaryConditionCalculator _vert_bc_calculator
 
     def __init__(self, config):
         self._time_step = config.getfloat('NUMERICS', 'time_step')
+
         self._iterative_method = get_deterministic_iterative_method(config)
+        
+        self._horiz_bc_calculator = get_horiz_boundary_condition_calculator(config)
+        self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
             Particle *particle, Delta *delta_X) except INT_ERR:
@@ -45,10 +51,16 @@ cdef class DiffNumMethod(NumMethod):
     cdef DTYPE_FLOAT_t _time_step
 
     cdef StocItMethod _iterative_method
+    cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
+    cdef VertBoundaryConditionCalculator _vert_bc_calculator
 
     def __init__(self, config):
         self._time_step = config.getfloat('NUMERICS', 'time_step')
+        
         self._iterative_method = get_stochastic_iterative_method(config)
+        
+        self._horiz_bc_calculator = get_horiz_boundary_condition_calculator(config)
+        self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
             Particle *particle, Delta *delta_X) except INT_ERR:
@@ -60,10 +72,16 @@ cdef class AdvDiffNumMethod(NumMethod):
     cdef DTYPE_FLOAT_t _time_step
 
     cdef DetStocItMethod _iterative_method
+    cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
+    cdef VertBoundaryConditionCalculator _vert_bc_calculator
 
     def __init__(self, config):
         self._time_step = config.getfloat('NUMERICS', 'time_step')
+
         self._iterative_method = get_deterministic_stochastic_iterative_method(config)
+        
+        self._horiz_bc_calculator = get_horiz_boundary_condition_calculator(config)
+        self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
             Particle *particle, Delta *delta_X) except INT_ERR:
@@ -77,11 +95,17 @@ cdef class OS0NumMethod(NumMethod):
 
     cdef DetItMethod _det_iterative_method
     cdef StocItMethod _stoc_iterative_method
+    cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
+    cdef VertBoundaryConditionCalculator _vert_bc_calculator
 
     def __init__(self, config):
         self._time_step = config.getfloat('NUMERICS', 'time_step')
+
         self._det_iterative_method = get_deterministic_iterative_method(config)
         self._stoc_iterative_method = get_stochastic_iterative_method(config)
+        
+        self._horiz_bc_calculator = get_horiz_boundary_condition_calculator(config)
+        self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
             Particle *particle, Delta *delta_X) except INT_ERR:
@@ -95,11 +119,17 @@ cdef class OS1NumMethod(NumMethod):
 
     cdef DetItMethod _det_iterative_method
     cdef StocItMethod _stoc_iterative_method
+    cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
+    cdef VertBoundaryConditionCalculator _vert_bc_calculator
 
     def __init__(self, config):
         self._time_step = config.getfloat('NUMERICS', 'time_step')
+
         self._det_iterative_method = get_deterministic_iterative_method(config)
         self._stoc_iterative_method = get_stochastic_iterative_method(config)
+
+        self._horiz_bc_calculator = get_horiz_boundary_condition_calculator(config)
+        self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
             Particle *particle, Delta *delta_X) except INT_ERR:
