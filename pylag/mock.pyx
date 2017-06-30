@@ -11,15 +11,13 @@ from data_types_python import DTYPE_INT, DTYPE_FLOAT
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 # PyLag python imports
-from pylag.integrator import get_num_integrator
-from pylag.lagrangian_stochastic_model import get_vertical_lsm, get_horizontal_lsm
+from pylag.numerics import get_adv_iterative_method, get_diff_iterative_method
 from pylag.boundary_conditions import get_vert_boundary_condition_calculator
 
 from particle cimport Particle
 from data_reader cimport DataReader
 from pylag.delta cimport Delta, reset
-from pylag.integrator cimport NumIntegrator
-from pylag.lagrangian_stochastic_model cimport LSM, OneDLSM
+from pylag.numerics cimport ItMethod
 from pylag.boundary_conditions cimport VertBoundaryConditionCalculator
 
 cdef class MockVelocityDataReader(DataReader):
@@ -191,21 +189,21 @@ cdef class MockDiffusivityDataReader(DataReader):
         
         return (k2 - k1) / zpos_increment
 
-cdef class MockRK4Integrator:
-    """ Test class for Fourth Order Runga Kutta numerical integration schemes
+cdef class MockAdvIterator:
+    """ Test class for iterative methods that deal with pure advection
     
     Parameters:
     -----------
-    config : SafeConfigParser
+    config : ConfigParser
         Configuration object.
     """
-    cdef NumIntegrator _num_integrator
+    cdef ItMethod _iterator
     
     def __init__(self, config):
         
-        self._num_integrator = get_num_integrator(config)
+        self._iterator = get_adv_iterative_method(config)
     
-    def advect(self, data_reader, time, xpos, ypos, zpos):
+    def step(self, data_reader, time, xpos, ypos, zpos):
         cdef Particle particle
         cdef Delta delta_X
 
@@ -223,8 +221,8 @@ cdef class MockRK4Integrator:
         # Reset Delta object
         reset(&delta_X)
         
-        # Advect the particle
-        self._num_integrator.advect(time, &particle, data_reader, &delta_X)
+        # Perform a single step
+        self._iterator.step(time, &particle, data_reader, &delta_X)
         
         # Used Delta values to update the particle's position
         xpos_new = particle.xpos + delta_X.x
@@ -235,23 +233,23 @@ cdef class MockRK4Integrator:
         return xpos_new, ypos_new, zpos_new
 
 cdef class MockOneDLSM:
-    """ Test class for vertical lagrangian stochastic models.
+    """ Test class for 1D lagrangian stochastic models.
     
     Parameters:
     -----------
-    config : SafeConfigParser
+    config : ConfigParser
         Configuration object.
     """
-    cdef OneDLSM _vertical_lsm
+    cdef ItMethod _iterator
     cdef VertBoundaryConditionCalculator _vert_bc_calculator
     
     def __init__(self, config):
 
-        self._vertical_lsm = get_vertical_lsm(config)
+        self._iterator = get_diff_iterative_method(config)
 
         self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
     
-    def apply(self, DataReader data_reader, DTYPE_FLOAT_t time, 
+    def step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, zpos_arr, DTYPE_INT_t host):
         cdef Particle particle
         cdef Delta delta_X
@@ -287,7 +285,7 @@ cdef class MockOneDLSM:
             reset(&delta_X)
 
             # Apply the vertical lagrangian stochastic model
-            self._vertical_lsm.apply(time, &particle, data_reader, &delta_X)
+            self._iterator.step(time, &particle, data_reader, &delta_X)
 
             # Use Delta values to update the particle's position
             zpos_new = particle.zpos + delta_X.z
@@ -309,16 +307,16 @@ cdef class MockTwoDLSM:
     
     Parameters:
     -----------
-    config : SafeConfigParser
+    config : ConfigParser
         Configuration object.
     """
-    cdef LSM _lsm
+    cdef ItMethod _iterator
     
     def __init__(self, config):
 
-        self._lsm = get_horizontal_lsm(config)
+        self._iterator = get_diff_iterative_method(config)
     
-    def apply(self, DataReader data_reader, DTYPE_FLOAT_t time, 
+    def step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos,
             DTYPE_INT_t host):
         cdef Particle particle
@@ -345,7 +343,7 @@ cdef class MockTwoDLSM:
         reset(&delta_X)
 
         # Apply the vertical lagrangian stochastic model
-        self._lsm.apply(time, &particle, data_reader, &delta_X)
+        self._iterator.step(time, &particle, data_reader, &delta_X)
 
         # Use Delta values to update the particle's position
         xpos_new = particle.xpos + delta_X.x
