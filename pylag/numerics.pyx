@@ -14,9 +14,7 @@ from delta cimport reset
 # -------------------------
 #
 # Different types of NumMethod object encode different approaches to combining
-# the effects of advection and diffusion. Types that represent just the
-# contribution of advection or just the contribution of diffusion are also
-# included.
+# the effects of advection and diffusion.
 
 # Base class for NumMethod objects
 cdef class NumMethod:
@@ -25,19 +23,18 @@ cdef class NumMethod:
             Particle *particle) except INT_ERR:
         pass
 
-
-# Advection only numerical method
-cdef class AdvNumMethod(NumMethod):
+# Standard numerical method without operator splitting
+cdef class StdNumMethod(NumMethod):
     cdef DTYPE_FLOAT_t _time_step
 
-    cdef DetItMethod _iterative_method
+    cdef ItMethod _iterative_method
     cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
     cdef VertBoundaryConditionCalculator _vert_bc_calculator
 
     def __init__(self, config):
         self._time_step = config.getfloat('NUMERICS', 'time_step')
 
-        self._iterative_method = get_deterministic_iterative_method(config)
+        self._iterative_method = get_iterative_method(config)
         
         self._horiz_bc_calculator = get_horiz_boundary_condition_calculator(config)
         self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
@@ -117,64 +114,21 @@ cdef class AdvNumMethod(NumMethod):
 
         return flag
 
-
-# Diffusion only numerical method
-cdef class DiffNumMethod(NumMethod):
-    cdef DTYPE_FLOAT_t _time_step
-
-    cdef StocItMethod _iterative_method
-    cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
-    cdef VertBoundaryConditionCalculator _vert_bc_calculator
-
-    def __init__(self, config):
-        self._time_step = config.getfloat('NUMERICS', 'time_step')
-        
-        self._iterative_method = get_stochastic_iterative_method(config)
-        
-        self._horiz_bc_calculator = get_horiz_boundary_condition_calculator(config)
-        self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
-
-    cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
-            Particle *particle) except INT_ERR:
-        pass
-
-# Advection-diffusion numerical method that combines the two without using
-# operator splitting
-cdef class AdvDiffNumMethod(NumMethod):
-    cdef DTYPE_FLOAT_t _time_step
-
-    cdef DetStocItMethod _iterative_method
-    cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
-    cdef VertBoundaryConditionCalculator _vert_bc_calculator
-
-    def __init__(self, config):
-        self._time_step = config.getfloat('NUMERICS', 'time_step')
-
-        self._iterative_method = get_deterministic_stochastic_iterative_method(config)
-        
-        self._horiz_bc_calculator = get_horiz_boundary_condition_calculator(config)
-        self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
-
-    cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
-            Particle *particle) except INT_ERR:
-        pass
-
-
 # Advection-diffusion numerical method that uses a form of operator splitting - 
-# first the advection  step is computed, then the diffusion step.
+# first the advection step is computed, then the diffusion step.
 cdef class OS0NumMethod(NumMethod):
     cdef DTYPE_FLOAT_t _time_step
 
-    cdef DetItMethod _det_iterative_method
-    cdef StocItMethod _stoc_iterative_method
+    cdef ItMethod _adv_iterative_method
+    cdef ItMethod _diff_iterative_method
     cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
     cdef VertBoundaryConditionCalculator _vert_bc_calculator
 
     def __init__(self, config):
         self._time_step = config.getfloat('NUMERICS', 'time_step')
 
-        self._det_iterative_method = get_deterministic_iterative_method(config)
-        self._stoc_iterative_method = get_stochastic_iterative_method(config)
+        self._adv_iterative_method = get_adv_iterative_method(config)
+        self._diff_iterative_method = get_diff_iterative_method(config)
         
         self._horiz_bc_calculator = get_horiz_boundary_condition_calculator(config)
         self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
@@ -189,16 +143,16 @@ cdef class OS0NumMethod(NumMethod):
 cdef class OS1NumMethod(NumMethod):
     cdef DTYPE_FLOAT_t _time_step
 
-    cdef DetItMethod _det_iterative_method
-    cdef StocItMethod _stoc_iterative_method
+    cdef ItMethod _adv_iterative_method
+    cdef ItMethod _diff_iterative_method
     cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
     cdef VertBoundaryConditionCalculator _vert_bc_calculator
 
     def __init__(self, config):
         self._time_step = config.getfloat('NUMERICS', 'time_step')
 
-        self._det_iterative_method = get_deterministic_iterative_method(config)
-        self._stoc_iterative_method = get_stochastic_iterative_method(config)
+        self._adv_iterative_method = get_adv_iterative_method(config)
+        self._diff_iterative_method = get_diff_iterative_method(config)
 
         self._horiz_bc_calculator = get_horiz_boundary_condition_calculator(config)
         self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
@@ -210,34 +164,30 @@ cdef class OS1NumMethod(NumMethod):
 def get_num_method(config):
     if not config.has_option("NUMERICS", "num_method"):
         raise ValueError("Failed to find the option `num_method' in the "\
-                "supplied configuration file. This option is deemed mandatory "\
-                "since without it particle positions would not be updated.")
+                "supplied configuration file.")
     
     # Return the specified numerical integrator.
-    if config.get("NUMERICS", "num_method") == "adv_only":
-        return AdvNumMethod(config)
-    elif config.get("NUMERICS", "num_method") == "diff_only":
-        return DiffNumMethod(config)
-    elif config.get("NUMERICS", "num_method") == "adv_diff":
-        return AdvDiffNumMethod(config)
+    if config.get("NUMERICS", "num_method") == "standard":
+        return StdNumMethod(config)
     elif config.get("NUMERICS", "num_method") == "operator_split_0":
         return OS0NumMethod(config)
     elif config.get("NUMERICS", "num_method") == "operator_split_1":
         return OS1NumMethod(config)
     else:
         raise ValueError('Unsupported numerical method specified.')
-    
 
-# Objects of type DetItMethod
-# ---------------------------
+# Base class for ItMethod objects
+# -------------------------------
 
-# Base class for DetItMethod objects
-cdef class DetItMethod:
+cdef class ItMethod:
     cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X) except INT_ERR:
         pass
 
-cdef class RK4_2D_DetItMethod(DetItMethod):
+# Iterative methods for pure advection
+# ------------------------------------
+
+cdef class AdvRK42DItMethod(ItMethod):
     """ 2D deterministic Fourth Order Runga Kutta numerical integration scheme.
     
     Parameters:
@@ -396,7 +346,7 @@ cdef class RK4_2D_DetItMethod(DetItMethod):
     
         return flag
 
-cdef class RK4_3D_DetItMethod(DetItMethod):
+cdef class AdvRK43DItMethod(ItMethod):
     """ 3D deterministic Fourth Order Runga Kutta numerical integration scheme.
     
     Parameters:
@@ -588,100 +538,141 @@ cdef class RK4_3D_DetItMethod(DetItMethod):
 
         return flag
 
-def get_deterministic_iterative_method(config):
-    if not config.has_option("NUMERICS", "det_iterative_method"):
-        raise ValueError("Failed to find the option `det_iterative_method' in the "\
-                "supplied configuration file.")
+# Iterative methods for pure diffusion
+# ------------------------------------
+
+cdef class DiffNaive1DItMethod(ItMethod):
+    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
+            DataReader data_reader, Delta *delta_X) except INT_ERR:
+        pass
+
+cdef class DiffEuler1DItMethod(ItMethod):
+    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
+            DataReader data_reader, Delta *delta_X) except INT_ERR:
+        pass
+
+cdef class DiffVisser1DItMethod(ItMethod):
+    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
+            DataReader data_reader, Delta *delta_X) except INT_ERR:
+        pass
+
+cdef class DiffMilstein1DItMethod(ItMethod):
+    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
+            DataReader data_reader, Delta *delta_X) except INT_ERR:
+        pass
+
+cdef class DiffMilstein2DItMethod(ItMethod):
+    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
+            DataReader data_reader, Delta *delta_X) except INT_ERR:
+        pass
+
+cdef class DiffMilstein3DItMethod(ItMethod):
+    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
+            DataReader data_reader, Delta *delta_X) except INT_ERR:
+        pass
+
+# Iterative methods for advection and diffusion
+# -----------------------------------------
+cdef class AdvDiffMilstein3DItMethod(ItMethod):
+    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
+            DataReader data_reader, Delta *delta_X) except INT_ERR:
+        pass
+
+def get_iterative_method(config):
+    """ Factory method for iterative methods
     
-    # Return the specified numerical integrator.
-    if config.get("NUMERICS", "det_iterative_method") == "RK4_2D":
-        return RK4_2D_DetItMethod(config)
-    elif config.get("NUMERICS", "det_iterative_method") == "RK4_3D":
-        return RK4_3D_DetItMethod(config)
-    else:
-        raise ValueError('Unsupported deterministic iterative method.')
-
-# Objects of type StocItMethod
-# ---------------------------
-                
-# Base class for StocItMethod objects
-cdef class StocItMethod:
-    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
-            DataReader data_reader, Delta *delta_X) except INT_ERR:
-        pass
-
-cdef class Naive_1D_StocItMethod(StocItMethod):
-    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
-            DataReader data_reader, Delta *delta_X) except INT_ERR:
-        pass
-
-cdef class Euler_1D_StocItMethod(StocItMethod):
-    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
-            DataReader data_reader, Delta *delta_X) except INT_ERR:
-        pass
-
-cdef class Visser_1D_StocItMethod(StocItMethod):
-    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
-            DataReader data_reader, Delta *delta_X) except INT_ERR:
-        pass
-
-cdef class Milstein_1D_StocItMethod(StocItMethod):
-    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
-            DataReader data_reader, Delta *delta_X) except INT_ERR:
-        pass
-
-cdef class Milstein_2D_StocItMethod(StocItMethod):
-    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
-            DataReader data_reader, Delta *delta_X) except INT_ERR:
-        pass
-
-cdef class Milstein_3D_StocItMethod(StocItMethod):
-    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
-            DataReader data_reader, Delta *delta_X) except INT_ERR:
-        pass
-
-def get_stochastic_iterative_method(config):
-    if not config.has_option("NUMERICS", "stoc_iterative_method"):
-        raise ValueError("Failed to find the option `stoc_iterative_method' in the "\
-                "supplied configuration file.")
+    The type of iterative method to be constructed is read from an object of
+    type ConfigParser which is passed in as a function argument. All types of
+    ItMethod object are supported.
     
-    # Return the specified numerical integrator.
-    if config.get("NUMERICS", "stoc_iterative_method") == "naive_1D":
-        return Naive_1D_StocItMethod(config)
-    elif config.get("NUMERICS", "stoc_iterative_method") == "euler_1D":
-        return Euler_1D_StocItMethod(config)
-    elif config.get("NUMERICS", "stoc_iterative_method") == "visser_1D":
-        return Visser_1D_StocItMethod(config)
-    elif config.get("NUMERICS", "stoc_iterative_method") == "milstein_1D":
-        return Milstein_1D_StocItMethod(config)
-    elif config.get("NUMERICS", "stoc_iterative_method") == "milstein_2D":
-        return Milstein_2D_StocItMethod(config)
-    elif config.get("NUMERICS", "stoc_iterative_method") == "milstein_3D":
-        return Milstein_3D_StocItMethod(config)
-    else:
-        raise ValueError('Unsupported stochastic iterative method.')
-
-# Objects of type DetStocItMethod
-# ---------------------------
-
-# Base class for DetStocItMethod objects
-cdef class DetStocItMethod:
-    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
-            DataReader data_reader, Delta *delta_X) except INT_ERR:
-        pass
-
-cdef class Milstein_3D_DetStocItMethod(DetStocItMethod):
-    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
-            DataReader data_reader, Delta *delta_X) except INT_ERR:
-        pass
-
-def get_deterministic_stochastic_iterative_method(config):
-    if not config.has_option("NUMERICS", "det_stoc_iterative_method"):
-        raise ValueError("Failed to find the option `det_stoc_iterative_method' in the "\
+    Parameters:
+    -----------
+    config : ConfigParser
+        Object of type ConfigParser.
+    
+    """
+    
+    if not config.has_option("NUMERICS", "iterative_method"):
+        raise ValueError("Failed to find the option `iterative_method' in the "\
                 "supplied configuration file.")
     
     # Return the specified iterative method
-    if config.get("NUMERICS", "det_stoc_iterative_method") == "milstein_3D":
-        return Milstein_3D_DetStocItMethod(config)
+    if config.get("NUMERICS", "iterative_method") == "Adv_RK4_2D":
+        return AdvRK42DItMethod(config)
+    elif config.get("NUMERICS", "iterative_method") == "Adv_RK4_3D":
+        return AdvRK43DItMethod(config)
+    elif config.get("NUMERICS", "iterative_method") == "Diff_Naive_1D":
+        return DiffNaive1DItMethod(config)
+    elif config.get("NUMERICS", "iterative_method") == "Diff_Euler_1D":
+        return DiffEuler1DItMethod(config)
+    elif config.get("NUMERICS", "iterative_method") == "Diff_Visser_1D":
+        return DiffVisser1DItMethod(config)
+    elif config.get("NUMERICS", "iterative_method") == "Diff_Milstein_1D":
+        return DiffMilstein1DItMethod(config)
+    elif config.get("NUMERICS", "iterative_method") == "Diff_Milstein_2D":
+        return DiffMilstein2DItMethod(config)
+    elif config.get("NUMERICS", "iterative_method") == "Diff_Milstein_3D":
+        return DiffMilstein3DItMethod(config)
+    elif config.get("NUMERICS", "iterative_method") == "AdvDiff_Milstein_3D":
+        return AdvDiffMilstein3DItMethod(config)
     else:
         raise ValueError('Unsupported deterministic-stochastic iterative method.')
+
+def get_adv_iterative_method(config):
+    """ Factory method for iterative methods that handle advection only
+    
+    The type of iterative method to be constructed is read from an object of
+    type ConfigParser which is passed in as a function argument. The method will
+    only create types that handle pure advection.
+    
+    Parameters:
+    -----------
+    config : ConfigParser
+        Object of type ConfigParser.
+    
+    """
+
+    if not config.has_option("NUMERICS", "adv_iterative_method"):
+        raise ValueError("Failed to find the option `det_iterative_method' in "\
+                "the supplied configuration file.")
+    
+    # Return the specified numerical integrator.
+    if config.get("NUMERICS", "adv_iterative_method") == "Adv_RK4_2D":
+        return AdvRK42DItMethod(config)
+    elif config.get("NUMERICS", "adv_iterative_method") == "Adv_RK4_3D":
+        return AdvRK43DItMethod(config)
+    else:
+        raise ValueError('Unsupported deterministic iterative method.')
+
+def get_diff_iterative_method(config):
+    """ Factory method for iterative methods that handle diffusion only
+    
+    The type of iterative method to be constructed is read from an object of
+    type ConfigParser which is passed in as a function argument. The method will
+    only create types that handle pure diffusion.
+    
+    Parameters:
+    -----------
+    config : ConfigParser
+        Object of type ConfigParser.
+    
+    """
+    if not config.has_option("NUMERICS", "diff_iterative_method"):
+        raise ValueError("Failed to find the option `diff_iterative_method' in"\
+                " the supplied configuration file.")
+    
+    # Return the specified numerical integrator.
+    if config.get("NUMERICS", "diff_iterative_method") == "Diff_Naive_1D":
+        return DiffNaive1DItMethod(config)
+    elif config.get("NUMERICS", "diff_iterative_method") == "Diff_Euler_1D":
+        return DiffEuler1DItMethod(config)
+    elif config.get("NUMERICS", "diff_iterative_method") == "Diff_Visser_1D":
+        return DiffVisser1DItMethod(config)
+    elif config.get("NUMERICS", "diff_iterative_method") == "Diff_Milstein_1D":
+        return DiffMilstein1DItMethod(config)
+    elif config.get("NUMERICS", "diff_iterative_method") == "Diff_Milstein_2D":
+        return DiffMilstein2DItMethod(config)
+    elif config.get("NUMERICS", "diff_iterative_method") == "Diff_Milstein_3D":
+        return DiffMilstein3DItMethod(config)
+    else:
+        raise ValueError('Unsupported iterative method specified.')

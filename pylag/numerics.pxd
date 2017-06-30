@@ -14,18 +14,6 @@ cdef class NumMethod:
 
 
 # Base class for DetItMethod objects
-cdef class DetItMethod:
-    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
-            DataReader data_reader, Delta *delta_X) except INT_ERR
-
-
-# Base class for StocItMethod objects
-cdef class StocItMethod:
-    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
-            DataReader data_reader, Delta *delta_X) except INT_ERR
-
-
-# Base class for DetStocItMethod objects
-cdef class DetStocItMethod:
+cdef class ItMethod:
     cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X) except INT_ERR
