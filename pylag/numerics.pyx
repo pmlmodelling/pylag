@@ -1,5 +1,7 @@
 include "constants.pxi"
 
+from libc.math cimport sqrt
+
 import logging
 
 from pylag.boundary_conditions import get_horiz_boundary_condition_calculator
@@ -9,6 +11,7 @@ from pylag.boundary_conditions import get_vert_boundary_condition_calculator
 from pylag.boundary_conditions cimport HorizBoundaryConditionCalculator
 from pylag.boundary_conditions cimport VertBoundaryConditionCalculator
 from delta cimport reset
+cimport pylag.random as random
 
 # Objects of type NumMethod
 # -------------------------
@@ -542,24 +545,298 @@ cdef class AdvRK43DItMethod(ItMethod):
 # ------------------------------------
 
 cdef class DiffNaive1DItMethod(ItMethod):
+    """ Stochastic Naive Euler 1D iterative method
+    """
+    cdef DTYPE_FLOAT_t _time_step
+
+    def __init__(self, config):
+        """ Initialise class data members
+        
+        Parameters:
+        -----------
+        config : ConfigParser
+        """
+        self._time_step = config.getfloat('NUMERICS', 'time_step')
+        
     cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X) except INT_ERR:
-        pass
+        """ Compute position delta in 1D using Naive Euler iterative method
+        
+        This method should only be used when the vertical eddy diffusivity field
+        is homogeneous. When it is not, particles will accumulate in regions of
+        low diffusivity.
+        
+        Parameters:
+        -----------
+        time: float
+            The current time.
+        particle: object of type Particle
+            A Particle object. The object's z position will be updated.
+        data_reader: object of type DataReader
+            A DataReader object. Used for reading the vertical eddy diffusivity.
+        delta_X: object of type Delta
+            A Delta object. Used for storing position deltas.
+            
+        Returns:
+        --------
+        flat : int
+        """
+        # The vertical eddy diffusiviy
+        cdef DTYPE_FLOAT_t D
+
+        D = data_reader.get_vertical_eddy_diffusivity(time, particle)
+        
+        # Change in position
+        delta_X.z += sqrt(2.0*D*self._time_step) * random.gauss(0.0, 1.0)
+        
+        return 0
 
 cdef class DiffEuler1DItMethod(ItMethod):
+    """ Stochastic Euler 1D iterative method
+    """
+    cdef DTYPE_FLOAT_t _time_step
+
+    def __init__(self, config):
+        """ Initialise class data members
+        
+        Parameters:
+        -----------
+        config : ConfigParser
+        """
+        self._time_step = config.getfloat('NUMERICS', 'time_step')
+
     cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X) except INT_ERR:
-        pass
+        """ Compute position delta in 1D using Euler iterative method
+        
+        The scheme includes a deterministic advective term that counteracts the
+        tendency for particles to accumulate in regions of low diffusivity
+        (c.f. the NaiveEuler scheme). See Grawe (2012) for more details.
+
+        Parameters:
+        -----------
+        time: float
+            The current time.
+        particle: object of type Particle
+            A Particle object. The object's z position will be updated.
+        data_reader: object of type DataReader
+            A DataReader object. Used for reading the vertical eddy diffusivity.
+        delta_X: object of type Delta
+            A Delta object. Used for storing position deltas.
+            
+        Returns:
+        --------
+        flat : int
+        """
+        # Temporary particle object
+        cdef Particle _particle
+        
+        # The vertical eddy diffusiviy
+        #     k - at the advected location
+        #     dk_dz - gradient in k
+        cdef DTYPE_FLOAT_t k, dk_dz
+
+        # Change in position (units: m)
+        cdef DTYPE_FLOAT_t dz_advection, dz_random
+
+        # Create a copy of particle
+        _particle = particle[0]
+
+        # Compute the vertical eddy diffusivity at the particle's current location.
+        k = data_reader.get_vertical_eddy_diffusivity(time, &_particle)
+
+        # Compute an approximate value for the gradient in the vertical eddy
+        # diffusivity at the particle's current location.
+        dk_dz = data_reader.get_vertical_eddy_diffusivity_derivative(time, &_particle)
+
+        # Compute the random displacement
+        dz_random = sqrt(2.0*k*self._time_step) * random.gauss(0.0, 1.0)
+
+        # Compute the advective displacement for inhomogeneous turbluence. This
+        # assumes advection due to the resolved flow is computed elsewhere or
+        # is zero.
+        dz_advection = dk_dz * self._time_step
+
+        # Change in position
+        delta_X.z = dz_advection + dz_random
+
+        return 0
 
 cdef class DiffVisser1DItMethod(ItMethod):
+    """ Stochastic Visser 1D iterative method
+    """
+    cdef DTYPE_FLOAT_t _time_step
+
+    cdef VertBoundaryConditionCalculator _vert_bc_calculator
+
+    def __init__(self, config):
+        """ Initialise class data members
+        
+        Parameters:
+        -----------
+        config : ConfigParser
+        """
+        self._time_step = config.getfloat('NUMERICS', 'time_step')
+        
+        self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
+
     cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X) except INT_ERR:
-        pass
+        """ Compute position delta in 1D using Visser iterative method
+        
+        The scheme includes a deterministic advective term that counteracts the
+        tendency for particles to accumulate in regions of low diffusivity
+        (c.f. the NaiveEuler scheme). See Visser (1997) and Ross and Sharples
+        (2004) for a more detailed discussion.
+
+        Parameters:
+        -----------
+        time: float
+            The current time.
+
+        particle: object of type Particle
+            A Particle object. The object's z position will be updated.
+
+        data_reader: object of type DataReader
+            A DataReader object. Used for reading the vertical eddy diffusivity.
+
+        delta_X: object of type Delta
+            A Delta object. Used for storing position deltas.
+            
+        Returns:
+        --------
+        flat : int
+        """
+        # Temporary particle object
+        cdef Particle _particle
+        
+        # Temporary containers for the particle's location
+        cdef DTYPE_FLOAT_t zmin, zmax
+        
+        # Temporary containers for z position offset from the current position -
+        # used in dk_dz calculations
+        cdef DTYPE_FLOAT_t zpos_offset
+        
+        # The vertical eddy diffusiviy
+        #     k - at the advected location
+        #     dk_dz - gradient in k
+        cdef DTYPE_FLOAT_t k, dk_dz
+
+        # The velocity at the particle's current location
+        cdef DTYPE_FLOAT_t vel[3]
+        vel[:] = [0.0, 0.0, 0.0]
+
+        # Change in position (units: m)
+        cdef DTYPE_FLOAT_t dz_advection, dz_random
+
+        # Create a copy of particle
+        _particle = particle[0]
+
+        # Compute an approximate value for the gradient in the vertical eddy
+        # diffusivity at the particle's current location.
+        dk_dz = data_reader.get_vertical_eddy_diffusivity_derivative(time, &_particle)
+        
+        # Compute the velocity at the particle's current location
+        data_reader.get_velocity(time, &_particle, vel)
+        
+        # Compute the vertical eddy diffusivity at a position that lies roughly
+        # between the current particle's position and the position it would be
+        # advected too. Apply reflecting boundary condition if the computed
+        # offset falls outside of the model domain
+        zpos_offset = _particle.zpos + 0.5 * (vel[2] + dk_dz) * self._time_step
+        zmin = data_reader.get_zmin(time, &_particle)
+        zmax = data_reader.get_zmax(time, &_particle)
+        if zpos_offset < zmin or zpos_offset > zmax:
+            zpos_offset = self._vert_bc_calculator.apply(zpos_offset, zmin, zmax)
+
+        _particle.zpos = zpos_offset
+        data_reader.set_vertical_grid_vars(time, &_particle)
+        k = data_reader.get_vertical_eddy_diffusivity(time, &_particle)
+
+        # Compute the random displacement
+        dz_random = sqrt(2.0*k*self._time_step) * random.gauss(0.0, 1.0)
+
+        # Compute the advective displacement for inhomogenous turbluence. This
+        # assumes advection due to the resolved flow is computed elsewhere or
+        # is zero.
+        dz_advection = dk_dz * self._time_step
+
+        # Change in position
+        delta_X.z = dz_advection + dz_random
+
+        return 0
 
 cdef class DiffMilstein1DItMethod(ItMethod):
+    """ Stochastic Milstein 1D iterative method
+    """
+    cdef DTYPE_FLOAT_t _time_step
+
+    def __init__(self, config):
+        """ Initialise class data members
+        
+        Parameters:
+        -----------
+        config : ConfigParser
+        """
+        self._time_step = config.getfloat('NUMERICS', 'time_step')
+
     cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X) except INT_ERR:
-        pass
+        """ Compute position delta in 1D using Milstein iterative method
+        
+        This scheme was highlighted by Grawe (2012) as being more
+        accurate that the Euler or Visser schemes, but still computationally
+        efficient.
+        
+        Parameters:
+        -----------
+        time: float
+            The current time.
+
+        particle: object of type Particle
+            A Particle object. The object's z position will be updated.
+
+        data_reader: object of type DataReader
+            A DataReader object. Used for reading the vertical eddy diffusivity.
+
+        delta_X: object of type Delta
+            A Delta object. Used for storing position deltas.
+            
+        Returns:
+        --------
+        flat : int
+        """
+        # Temporary particle object
+        cdef Particle _particle
+        
+        # Random deviate
+        cdef DTYPE_FLOAT_t deviate
+        
+        # The vertical eddy diffusiviy
+        #     k - at the advected location
+        #     dk_dz - gradient in k
+        cdef DTYPE_FLOAT_t k, dk_dz
+
+        # Create a copy of particle
+        _particle = particle[0]
+
+        # Compute the random deviate for the update. It is Gaussian, with zero
+        # mean and standard deviation equal to 1.0. It is transformed into a
+        # Wiener increment later. Not doing this hear minimises the number of
+        # square root operations we need to perform.
+        deviate = random.gauss(0.0, 1.0)
+
+        # Compute the vertical eddy diffusivity at the particle's current location.
+        k = data_reader.get_vertical_eddy_diffusivity(time, &_particle)
+
+        # Compute an approximate value for the gradient in the vertical eddy
+        # diffusivity at the particle's current location.
+        dk_dz = data_reader.get_vertical_eddy_diffusivity_derivative(time, &_particle)
+
+        # Compute the random displacement
+        delta_X.z  = 0.5 * dk_dz * self._time_step * (deviate*deviate + 1.0) + sqrt(2.0 * k * self._time_step) * deviate
+
+        return 0
 
 cdef class DiffMilstein2DItMethod(ItMethod):
     cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
