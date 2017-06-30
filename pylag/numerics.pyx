@@ -838,6 +838,107 @@ cdef class DiffMilstein1DItMethod(ItMethod):
 
         return 0
 
+cdef class DiffConst2DItMethod(ItMethod):
+    """ Stochastic Constant 2D iterative method
+    """
+    cdef DTYPE_FLOAT_t _time_step
+    
+    cdef DTYPE_FLOAT_t _kh
+
+    def __init__(self, config):
+        """ Initialise class data members
+        
+        Parameters:
+        -----------
+        config : ConfigParser
+        """
+        self._time_step = config.getfloat('NUMERICS', 'time_step')
+
+        self._kh = config.getfloat("OCEAN_CIRCULATION_MODEL", "horizontal_eddy_viscosity_constant")
+        
+    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
+            DataReader data_reader, Delta *delta_X) except INT_ERR:
+        """ Compute position delta in 2D using a constant eddy viscosity
+        
+        This method uses a constant value for the horizontal eddy viscosity that
+        is set in the run config.
+        
+        Parameters:
+        -----------
+        time: float
+            The current time.
+
+        particle: object of type Particle
+            A Particle object. The object's z position will be updated.
+
+        data_reader: object of type DataReader
+            A DataReader object. Used for reading the vertical eddy diffusivity.
+
+        delta_X: object of type Delta
+            A Delta object. Used for storing position deltas.
+            
+        Returns:
+        --------
+        flat : int
+        """
+        delta_X.x += sqrt(2.0*self._kh*self._time_step) * random.gauss(0.0, 1.0)
+        delta_X.y += sqrt(2.0*self._kh*self._time_step) * random.gauss(0.0, 1.0)
+        
+        return 0
+
+cdef class DiffNaive2DItMethod(ItMethod):
+    """ Stochastic Naive Euler 2D iterative method
+    """
+    cdef DTYPE_FLOAT_t _time_step
+
+    def __init__(self, config):
+        """ Initialise class data members
+        
+        Parameters:
+        -----------
+        config : ConfigParser
+        """
+        self._time_step = config.getfloat('NUMERICS', 'time_step')
+        
+    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
+            DataReader data_reader, Delta *delta_X) except INT_ERR:
+        """ Compute position delta in 2D using Naive Euler iterative method
+        
+        This method is very similar to that implemented in DiffConst2DItMethod
+        with the difference being the eddy viscosity is read from file. As in 
+        the 1D case, this method should not be used when the viscosity field is
+        inhomogeneous.
+        
+        Parameters:
+        -----------
+        time: float
+            The current time.
+
+        particle: object of type Particle
+            A Particle object. The object's z position will be updated.
+
+        data_reader: object of type DataReader
+            A DataReader object. Used for reading the vertical eddy diffusivity.
+
+        delta_X: object of type Delta
+            A Delta object. Used for storing position deltas.
+            
+        Returns:
+        --------
+        flat : int
+        """
+        # The horizontal eddy diffusiviy
+        cdef DTYPE_FLOAT_t kh
+
+        # The vertical eddy diffusivity at the particle's current location
+        kh = data_reader.get_horizontal_eddy_diffusivity(time, particle)
+        
+        # Change in position
+        delta_X.x += sqrt(2.0*kh*self._time_step) * random.gauss(0.0, 1.0)
+        delta_X.y += sqrt(2.0*kh*self._time_step) * random.gauss(0.0, 1.0)
+        
+        return 0
+
 cdef class DiffMilstein2DItMethod(ItMethod):
     cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X) except INT_ERR:
@@ -878,8 +979,12 @@ def get_iterative_method(config):
         return AdvRK42DItMethod(config)
     elif config.get("NUMERICS", "iterative_method") == "Adv_RK4_3D":
         return AdvRK43DItMethod(config)
+    elif config.get("NUMERICS", "iterative_method") == "Diff_Const_2D":
+        return DiffConst2DItMethod(config)
     elif config.get("NUMERICS", "iterative_method") == "Diff_Naive_1D":
         return DiffNaive1DItMethod(config)
+    elif config.get("NUMERICS", "iterative_method") == "Diff_Naive_2D":
+        return DiffNaive2DItMethod(config)
     elif config.get("NUMERICS", "iterative_method") == "Diff_Euler_1D":
         return DiffEuler1DItMethod(config)
     elif config.get("NUMERICS", "iterative_method") == "Diff_Visser_1D":
@@ -939,8 +1044,12 @@ def get_diff_iterative_method(config):
                 " the supplied configuration file.")
     
     # Return the specified numerical integrator.
-    if config.get("NUMERICS", "diff_iterative_method") == "Diff_Naive_1D":
+    if config.get("NUMERICS", "diff_iterative_method") == "Diff_Const_2D":
+        return DiffConst2DItMethod(config)
+    elif config.get("NUMERICS", "diff_iterative_method") == "Diff_Naive_1D":
         return DiffNaive1DItMethod(config)
+    elif config.get("NUMERICS", "diff_iterative_method") == "Diff_Naive_2D":
+        return DiffNaive2DItMethod(config)
     elif config.get("NUMERICS", "diff_iterative_method") == "Diff_Euler_1D":
         return DiffEuler1DItMethod(config)
     elif config.get("NUMERICS", "diff_iterative_method") == "Diff_Visser_1D":
