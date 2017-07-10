@@ -15,7 +15,7 @@ class NetCDFLogger(object):
     start_datetime : str
         String giving the simulation start date and time.
     
-    n_partilces : int
+    n_particles : int
         The number of particles.
     """
     def __init__(self, file_name, start_datetime, n_particles):
