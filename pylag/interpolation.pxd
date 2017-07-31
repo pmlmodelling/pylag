@@ -7,6 +7,9 @@ from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 cdef get_barycentric_coords(DTYPE_FLOAT_t x, DTYPE_FLOAT_t y,
         DTYPE_FLOAT_t x_tri[3], DTYPE_FLOAT_t y_tri[3], DTYPE_FLOAT_t phi[3])
 
+cdef get_barycentric_gradients(DTYPE_FLOAT_t x_tri[3], DTYPE_FLOAT_t y_tri[3],
+        DTYPE_FLOAT_t dphi_dx[3], DTYPE_FLOAT_t dphi_dy[3])
+
 cdef DTYPE_FLOAT_t shepard_interpolation(DTYPE_FLOAT_t x,
         DTYPE_FLOAT_t y, DTYPE_FLOAT_t xpts[4], DTYPE_FLOAT_t[4] ypts,
         DTYPE_FLOAT_t vals[4]) except FLOAT_ERR

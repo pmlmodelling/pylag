@@ -43,6 +43,47 @@ cdef get_barycentric_coords(DTYPE_FLOAT_t x, DTYPE_FLOAT_t y,
     phi[1] = (a2*(x - x_tri[2]) - a4*(y - y_tri[2]))/det
     phi[0] = 1.0 - phi[1] - phi[2]
 
+cdef get_barycentric_gradients(DTYPE_FLOAT_t x_tri[3], DTYPE_FLOAT_t y_tri[3],
+        DTYPE_FLOAT_t dphi_dx[3], DTYPE_FLOAT_t dphi_dy[3]):
+    """ Compute barycentric coordinate gradients with respect to x and y
+
+    Compute and return dphi_i/dx and dphi_i/dy - the gradient in the element's
+    barycentric coordinates. In all cases phi_i is linear in both x and y 
+    meaning the gradient is constant within the element.
+
+    Parameters:
+    -----------
+    x_tri : C array, float
+        Triangle x coordinates.
+
+    y_tri : C array, float
+        Triangle y coordinates.
+
+    dphi_dx : C array, float
+        The gradient in phi_i with respect to x.
+
+    dphi_dy : C array, float
+        The gradient in phi_i with respect to y.
+    """
+
+    cdef DTYPE_FLOAT_t a1, a2, a3, a4, den
+
+    a1 = x_tri[1] - x_tri[0]
+    a2 = y_tri[2] - y_tri[0]
+    a3 = y_tri[1] - y_tri[0]
+    a4 = x_tri[2] - x_tri[0]
+
+    # Denominator
+    den = a1 * a2 - a3 * a4
+
+    dphi_dx[0] = (y_tri[1] - y_tri[2])/den
+    dphi_dx[1] = (y_tri[2] - y_tri[0])/den
+    dphi_dx[2] = (y_tri[0] - y_tri[1])/den
+
+    dphi_dy[0] = (x_tri[2] - x_tri[1])/den
+    dphi_dy[1] = (x_tri[0] - x_tri[2])/den
+    dphi_dy[2] = (x_tri[1] - x_tri[0])/den
+
 cdef DTYPE_FLOAT_t shepard_interpolation(DTYPE_FLOAT_t x,
         DTYPE_FLOAT_t y, DTYPE_FLOAT_t xpts[4], DTYPE_FLOAT_t ypts[4],
         DTYPE_FLOAT_t vals[4]) except FLOAT_ERR:
