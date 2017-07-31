@@ -1429,6 +1429,38 @@ cdef class FVCOMDataReader(DataReader):
         # Calculate barycentric coordinates
         interp.get_barycentric_coords(xpos, ypos, x_tri, y_tri, phi)
 
+    cdef void _get_grad_phi(self, DTYPE_INT_t host,
+            DTYPE_FLOAT_t dphi_dx[N_VERTICES],
+            DTYPE_FLOAT_t dphi_dy[N_VERTICES]) except *:
+        """ Get gradient in phi with respect to x and y
+        
+        Parameters:
+        -----------
+        host : int
+            Host element
+
+        dphi_dx : C array, float
+            Gradient with respect to x
+
+        dphi_dy : C array, float
+            Gradient with respect to y
+        """
+        
+        cdef int i # Loop counters
+        cdef int vertex # Vertex identifier
+
+        # Intermediate arrays
+        cdef DTYPE_FLOAT_t x_tri[N_VERTICES]
+        cdef DTYPE_FLOAT_t y_tri[N_VERTICES]
+
+        for i in xrange(N_VERTICES):
+            vertex = self._nv[i,host]
+            x_tri[i] = self._x[vertex]
+            y_tri[i] = self._y[vertex]
+
+        # Calculate gradient in barycentric coordinates
+        interp.get_barycentric_gradients(x_tri, y_tri, dphi_dx, dphi_dy)
+
     cdef DTYPE_FLOAT_t _interp_on_sigma_layer(self, 
             DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_INT_t host,
             DTYPE_INT_t kidx)  except FLOAT_ERR:
