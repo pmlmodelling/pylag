@@ -13,15 +13,12 @@ from pylag.boundary_conditions cimport VertBoundaryConditionCalculator
 from delta cimport reset
 cimport pylag.random as random
 
-# Objects of type NumMethod
-# -------------------------
-
 cdef class NumMethod:
     """ An abstract base class for numerical integration schemes
     
-    The following methoda(s) should be implemented in the derived class:
+    The following method(s) should be implemented in the derived class:
     
-    * :meth:`step`
+    * :meth: `step`
     """
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
@@ -212,9 +209,6 @@ cdef class OS0NumMethod(NumMethod):
             Particle *particle) except INT_ERR:
         raise NotImplementedError
 
-
-# Advection-diffusion numerical method that uses a form or operator splitting 
-# known using Strang Splitting
 cdef class OS1NumMethod(NumMethod):
     """ Numerical method that employs strang splitting
     
@@ -268,7 +262,7 @@ cdef class OS1NumMethod(NumMethod):
         raise NotImplementedError
 
 def get_num_method(config):
-    """ Factory method for constructing object of type NumMethod
+    """ Factory method for constructing NumMethod objects
     
     Parameters:
     -----------
@@ -289,29 +283,39 @@ def get_num_method(config):
     else:
         raise ValueError('Unsupported numerical method specified.')
 
-# Base class for ItMethod objects
-# -------------------------------
-
 cdef class ItMethod:
+    """ An abstract base class for iterative methods
+    
+    The following method(s) should be implemented in the derived class:
+    
+    * :meth: `step`
+    """
     cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X) except INT_ERR:
-        pass
-
-# Iterative methods for pure advection
-# ------------------------------------
+        raise NotImplementedError
 
 cdef class AdvRK42DItMethod(ItMethod):
-    """ 2D deterministic Fourth Order Runga Kutta numerical integration scheme.
+    """ 2D deterministic Fourth Order Runga Kutta iterative method
     
-    Parameters:
+    Attributes:
     -----------
-    config : SafeConfigParser
-        Configuration object.
+    _time_step : float
+        Time step to be used by the iterative method
+
+    _horiz_bc_calculator : HorizBoundaryConditionCalculator
+        The method used for computing horizontal boundary conditions.
     """
     cdef DTYPE_FLOAT_t _time_step
     cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
 
     def __init__(self, config):
+        """ Initialise class data members
+        
+        Parameters:
+        -----------
+        config : ConfigParser
+            Configuration object
+        """
         self._time_step = config.getfloat('NUMERICS', 'time_step')
         
         # Create horizontal boundary conditions calculator
@@ -319,14 +323,13 @@ cdef class AdvRK42DItMethod(ItMethod):
 
     cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X) except INT_ERR:
-        """ Compute changes in a particle's position due to advection
+        """ Compute changes in a particle's position due to lateral advection
         
         Use a basic fourth order Runga Kutta scheme to compute changes in a
         particle's position in two dimensions (e_i,e_j). These are saved in an 
         object of type Delta. If the particle moves outside of the model domain
         delta_X is left unchanged and the flag identifying that a boundary
-        crossing has occurred is returned. This function returns a value
-        of 0 if a boundary crossing has not occured.
+        crossing has occurred is returned.
         
         Parameters:
         -----------
@@ -345,9 +348,8 @@ cdef class AdvRK42DItMethod(ItMethod):
         
         Returns:
         --------
-        host : int
-            Flag identifying if a boundary crossing has occurred. A return value
-            of 0 means a boundary crossing did not occur.
+        flag : int
+            Flag identifying if a boundary crossing has occurred.
         """
         # Arrays for RK4 stages
         cdef DTYPE_FLOAT_t k1[2]
@@ -460,19 +462,31 @@ cdef class AdvRK42DItMethod(ItMethod):
         return flag
 
 cdef class AdvRK43DItMethod(ItMethod):
-    """ 3D deterministic Fourth Order Runga Kutta numerical integration scheme.
+    """ 3D deterministic Fourth Order Runga Kutta iterative method
     
-    Parameters:
+    Attributes:
     -----------
-    config : SafeConfigParser
-        Configuration object.
-    """
+    _time_step : float
+        Time step to be used by the iterative method
 
+    _horiz_bc_calculator : HorizBoundaryConditionCalculator
+        The method used for computing horizontal boundary conditions.
+
+    _vert_bc_calculator : VertBoundaryConditionCalculator
+        The method used for computing vertical boundary conditions.
+    """
     cdef DTYPE_FLOAT_t _time_step
     cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
     cdef VertBoundaryConditionCalculator _vert_bc_calculator
 
     def __init__(self, config):
+        """ Initialise class data members
+        
+        Parameters:
+        -----------
+        config : ConfigParser
+            Configuration object
+        """
         self._time_step = config.getfloat('NUMERICS', 'time_step')
 
         # Create horizontal boundary conditions calculator
@@ -489,8 +503,7 @@ cdef class AdvRK43DItMethod(ItMethod):
         particle's position in three dimensions (e_i, e_j, e_k). These are saved
         in an object of type Delta. If the particle moves outside of the model
         domain delta_X is left unchanged and the flag identifying that a boundary
-        crossing has occurred is returned. This function returns a value
-        of 0 if a boundary crossing has not occured.
+        crossing has occurred is returned.
         
         Parameters:
         -----------
@@ -509,9 +522,8 @@ cdef class AdvRK43DItMethod(ItMethod):
         
         Returns:
         --------
-        host : int
-            Flag identifying if a boundary crossing has occurred. A return value
-            of 0 means a boundary crossing did not occur.
+        flag : int
+            Flag identifying if a boundary crossing has occurred.
         """
         # Arrays for RK4 stages
         cdef DTYPE_FLOAT_t k1[3]
@@ -651,11 +663,13 @@ cdef class AdvRK43DItMethod(ItMethod):
 
         return flag
 
-# Iterative methods for pure diffusion
-# ------------------------------------
-
 cdef class DiffNaive1DItMethod(ItMethod):
     """ Stochastic Naive Euler 1D iterative method
+
+    Attributes:
+    -----------
+    _time_step : float
+        Time step to be used by the iterative method
     """
     cdef DTYPE_FLOAT_t _time_step
 
@@ -680,16 +694,22 @@ cdef class DiffNaive1DItMethod(ItMethod):
         -----------
         time: float
             The current time.
+
         particle: object of type Particle
             A Particle object. The object's z position will be updated.
+
         data_reader: object of type DataReader
             A DataReader object. Used for reading the vertical eddy diffusivity.
+
         delta_X: object of type Delta
             A Delta object. Used for storing position deltas.
             
         Returns:
         --------
-        flat : int
+        flag : int
+            Flag identifying if a boundary crossing has occurred. This should
+            always be zero since the method does not check for boundary
+            crossings.
         """
         # The vertical eddy diffusiviy
         cdef DTYPE_FLOAT_t D
@@ -703,6 +723,11 @@ cdef class DiffNaive1DItMethod(ItMethod):
 
 cdef class DiffEuler1DItMethod(ItMethod):
     """ Stochastic Euler 1D iterative method
+
+    Attributes:
+    -----------
+    _time_step : float
+        Time step to be used by the iterative method
     """
     cdef DTYPE_FLOAT_t _time_step
 
@@ -727,16 +752,22 @@ cdef class DiffEuler1DItMethod(ItMethod):
         -----------
         time: float
             The current time.
+
         particle: object of type Particle
             A Particle object. The object's z position will be updated.
+
         data_reader: object of type DataReader
             A DataReader object. Used for reading the vertical eddy diffusivity.
+
         delta_X: object of type Delta
             A Delta object. Used for storing position deltas.
             
         Returns:
         --------
-        flat : int
+        flag : int
+            Flag identifying if a boundary crossing has occurred. This should
+            always be zero since the method does not check for boundary
+            crossings.
         """
         # Temporary particle object
         cdef Particle _particle
@@ -774,6 +805,14 @@ cdef class DiffEuler1DItMethod(ItMethod):
 
 cdef class DiffVisser1DItMethod(ItMethod):
     """ Stochastic Visser 1D iterative method
+
+    Attributes:
+    -----------
+    _time_step : float
+        Time step to be used by the iterative method
+
+    _vert_bc_calculator : VertBoundaryConditionCalculator
+        The method used for computing vertical boundary conditions.
     """
     cdef DTYPE_FLOAT_t _time_step
 
@@ -796,8 +835,7 @@ cdef class DiffVisser1DItMethod(ItMethod):
         
         The scheme includes a deterministic advective term that counteracts the
         tendency for particles to accumulate in regions of low diffusivity
-        (c.f. the NaiveEuler scheme). See Visser (1997) and Ross and Sharples
-        (2004) for a more detailed discussion.
+        (c.f. the NaiveEuler scheme). See Visser (1997).
 
         Parameters:
         -----------
@@ -815,7 +853,16 @@ cdef class DiffVisser1DItMethod(ItMethod):
             
         Returns:
         --------
-        flat : int
+        flag : int
+            Flag identifying if a boundary crossing has occurred. This should
+            always be zero since the method does not check for boundary
+            crossings.
+        
+        References:
+        -----------
+        Visser, A. (1997) Using random walk models to simulate the vertical 
+        distribution of particles in a turbulent water column.
+        Marine Ecology Progress Series, 158, 275-281
         """
         # Temporary particle object
         cdef Particle _particle
@@ -878,6 +925,11 @@ cdef class DiffVisser1DItMethod(ItMethod):
 
 cdef class DiffMilstein1DItMethod(ItMethod):
     """ Stochastic Milstein 1D iterative method
+
+    Attributes:
+    -----------
+    _time_step : float
+        Time step to be used by the iterative method
     """
     cdef DTYPE_FLOAT_t _time_step
 
@@ -895,7 +947,7 @@ cdef class DiffMilstein1DItMethod(ItMethod):
         """ Compute position delta in 1D using Milstein iterative method
         
         This scheme was highlighted by Grawe (2012) as being more
-        accurate that the Euler or Visser schemes, but still computationally
+        accurate than the Euler or Visser schemes, but still computationally
         efficient.
         
         Parameters:
@@ -911,10 +963,18 @@ cdef class DiffMilstein1DItMethod(ItMethod):
 
         delta_X: object of type Delta
             A Delta object. Used for storing position deltas.
-            
+        
         Returns:
         --------
-        flat : int
+        flag : int
+            Flag identifying if a boundary crossing has occurred. This should
+            always be zero since the method does not check for boundary
+            crossings.
+        
+        References:
+        -----------
+        Gräwe, U. (2011) Implementation of high-order particle-tracking schemes
+        in a water column model Ocean Modelling, 36, 80 - 89
         """
         # Temporary particle object
         cdef Particle _particle
@@ -950,6 +1010,14 @@ cdef class DiffMilstein1DItMethod(ItMethod):
 
 cdef class DiffConst2DItMethod(ItMethod):
     """ Stochastic Constant 2D iterative method
+
+    Attributes:
+    -----------
+    _time_step : float
+        Time step to be used by the iterative method
+
+    _kh : float
+        Horizontal eddy viscosity constant
     """
     cdef DTYPE_FLOAT_t _time_step
     
@@ -989,7 +1057,10 @@ cdef class DiffConst2DItMethod(ItMethod):
             
         Returns:
         --------
-        flat : int
+        flag : int
+            Flag identifying if a boundary crossing has occurred. This should
+            always be zero since the method does not check for boundary
+            crossings.
         """
         delta_X.x += sqrt(2.0*self._kh*self._time_step) * random.gauss(0.0, 1.0)
         delta_X.y += sqrt(2.0*self._kh*self._time_step) * random.gauss(0.0, 1.0)
@@ -998,6 +1069,11 @@ cdef class DiffConst2DItMethod(ItMethod):
 
 cdef class DiffNaive2DItMethod(ItMethod):
     """ Stochastic Naive Euler 2D iterative method
+
+    Attributes:
+    -----------
+    _time_step : float
+        Time step to be used by the iterative method
     """
     cdef DTYPE_FLOAT_t _time_step
 
@@ -1015,9 +1091,9 @@ cdef class DiffNaive2DItMethod(ItMethod):
         """ Compute position delta in 2D using Naive Euler iterative method
         
         This method is very similar to that implemented in DiffConst2DItMethod
-        with the difference being the eddy viscosity is read from file. As in 
-        the 1D case, this method should not be used when the viscosity field is
-        inhomogeneous.
+        with the difference being the eddy viscosity is provided by DataReader.
+        As in the 1D case, this method should not be used when the eddy 
+        viscosity field is inhomogeneous.
         
         Parameters:
         -----------
@@ -1035,7 +1111,10 @@ cdef class DiffNaive2DItMethod(ItMethod):
             
         Returns:
         --------
-        flat : int
+        flag : int
+            Flag identifying if a boundary crossing has occurred. This should
+            always be zero since the method does not check for boundary
+            crossings.
         """
         # The horizontal eddy diffusiviy
         cdef DTYPE_FLOAT_t kh
