@@ -97,12 +97,11 @@ cdef class MockVelocityDataReader(DataReader):
     def _get_w_component(self, DTYPE_FLOAT_t zpos):
         return 0.0
 
-cdef class MockDiffusivityDataReader(DataReader):
-    """Test data reader for random displacement models.
+cdef class MockVerticalDiffusivityDataReader(DataReader):
+    """Test data reader for vertical random displacement models.
     
-    Typically these use the vertical or horizontal eddy diffusivity to compute
-    particle displacements. This data reader returns vertical diffusivities
-    drawn from the analytic profile:
+    The data reader returns vertical eddy diffusivities drawn from the analytic
+    profile:
 
     k = 0.001 + 0.0136245*zpos - 0.00263245*zpos**2 + 2.11875e-4 * zpos**3 - \
         8.65898e-6 * zpos**4 + 1.7623e-7 * zpos**5 - 1.40918e-9 * zpos**6    
@@ -110,6 +109,14 @@ cdef class MockDiffusivityDataReader(DataReader):
     where k (m^2/s) is the vertical eddy diffusivity and zpos (m) is the height
     above the sea bed (positivite up). See Visser (1997) and Ross and 
     Sharples (2004).
+    
+    Attributes:
+    -----------
+    _zmin : float
+        The minimum depth in m.
+    
+    _zmax : float
+        The maximum depth in m.
     
     References:
     -----------
@@ -144,7 +151,8 @@ cdef class MockDiffusivityDataReader(DataReader):
         """ Returns a zeroed velocity vector.
         
         The advective velocity is used by random displacement models adapted to
-        work in non-homogenous diffusivity fields.
+        work in non-homogeneous diffusivity fields, thus the need to implement
+        this method here.
         """         
         vel[0] = 0.0
         vel[1] = 0.0
