@@ -285,3 +285,24 @@ class FVCOMDataReader_test(TestCase):
 
         diffusivity_gradient = cwrappers.get_vertical_eddy_diffusivity_derivative(self.data_reader, time, xpos, ypos, zpos, host)
         test.assert_almost_equal(diffusivity_gradient, -0.004166666666667)
+
+    def test_get_horizontal_eddy_diffusivity(self):
+        xpos = 365751.7
+        ypos = 5323568.0
+        host = 0
+
+        zpos = -0.1
+        time = 0.0
+        diffusivity = cwrappers.get_horizontal_eddy_diffusivity(self.data_reader, time, xpos, ypos, zpos, host)
+        test.assert_almost_equal(diffusivity,  0.01)
+
+    def test_get_horizontal_eddy_diffusivity_derivative(self):
+        xpos = 365751.7
+        ypos = 5323568.0
+        host = 0
+
+        zpos = -0.1
+        time = 0.0
+
+        diffusivity_gradient = cwrappers.get_horizontal_eddy_diffusivity_derivative(self.data_reader, time, xpos, ypos, zpos, host)
+        test.assert_almost_equal(diffusivity_gradient, 0.0)

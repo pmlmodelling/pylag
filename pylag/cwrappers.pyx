@@ -178,12 +178,45 @@ cpdef get_horizontal_velocity(DataReader data_reader, t, x, y, z, host, zlayer):
     data_reader.set_local_coordinates(&particle)
     data_reader.set_vertical_grid_vars(t, &particle)
     data_reader.get_horizontal_velocity(t, &particle, vel_c)
-    
+
     # Generate and pass back an array python can understand
     vel_out = np.empty(N_VERTICES, dtype=DTYPE_FLOAT)
     for i in xrange(2):
         vel_out[i] = vel_c[i]
     return vel_out
+
+cpdef get_horizontal_eddy_diffusivity(DataReader data_reader, time, xpos, ypos, zpos, host):
+    cdef Particle particle
+    particle.xpos = xpos
+    particle.ypos = ypos
+    particle.zpos = zpos
+    particle.host_horizontal_elem = host
+
+    data_reader.set_local_coordinates(&particle)
+    data_reader.set_vertical_grid_vars(time, &particle)
+
+    return data_reader.get_horizontal_eddy_diffusivity(time, &particle)
+
+cpdef get_horizontal_eddy_diffusivity_derivative(DataReader data_reader, time, xpos, ypos, zpos, host):
+    cdef DTYPE_FLOAT_t Ah_prime_c[2]
+    cdef Particle particle
+    cdef DTYPE_INT_t i
+
+    particle.xpos = xpos
+    particle.ypos = ypos
+    particle.zpos = zpos
+    particle.host_horizontal_elem = host
+
+    data_reader.set_local_coordinates(&particle)
+    data_reader.set_vertical_grid_vars(time, &particle)
+
+    data_reader.get_horizontal_eddy_diffusivity_derivative(time, &particle, Ah_prime_c)
+
+    # Generate and pass back an array python can understand
+    Ah_prime_out = np.empty(2, dtype=DTYPE_FLOAT)
+    for i in xrange(2):
+        Ah_prime_out[i] = Ah_prime_c[i]
+    return Ah_prime_out
 
 cpdef get_vertical_eddy_diffusivity(DataReader data_reader, time, xpos, ypos, zpos, host):
     cdef Particle particle

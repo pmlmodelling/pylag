@@ -38,7 +38,7 @@ cdef class DataReader:
             Particle *particle)
 
     cdef get_horizontal_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
-            Particle *particle)
+            Particle *particle, DTYPE_FLOAT_t Ah_prime[2])
 
     cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time,
             Particle* particle) except FLOAT_ERR

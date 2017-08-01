@@ -879,10 +879,20 @@ cdef class FVCOMDataReader(DataReader):
             return interp.linear_interp(particle.omega_layers, viscofh_layer_1, viscofh_layer_2)
 
     cdef get_horizontal_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
-            Particle* particle):
-        """ NOT YET IMPLEMENTED
+            Particle* particle, DTYPE_FLOAT_t Ah_prime[2]):
+        """ Returns the gradient in the horizontal eddy diffusivity
         
-                Parameters:
+        The gradient is first computed on sigma layers bounding the particle's
+        position, or simply on the nearest layer if the particle lies above or
+        below the top or bottom sigma layers respectively. Linear interpolation
+        in the vertical is used for z positions lying between the top and bottom
+        sigma layers.
+        
+        Within an element, the gradient itself is calculated from the gradient 
+        in the element's barycentric coordinates `phi' through linear
+        interpolation (e.g. Lynch et al 2015, p. 238) 
+        
+        Parameters:
         -----------
         time : float
             Time at which to interpolate.
@@ -890,13 +900,99 @@ cdef class FVCOMDataReader(DataReader):
         particle: *Particle
             Pointer to a Particle object.
 
-        Returns:
-        --------
-        viscofh_prime : float
-            The horizontal eddy diffusivity.
-        
+        Ah_prime : C array, float
+            dAh_dx and dH_dy components stored in a C array of length two.  
+
+        References:
+        -----------
+        Lynch, D. R. et al (2014). Particles in the coastal ocean: theory and
+        applications. Cambridge: Cambridge University Press.
+        doi.org/10.1017/CBO9781107449336
         """
-        pass
+        # No. of vertices and a temporary object used for determining variable
+        # values at the host element's nodes
+        cdef int i # Loop counters
+        cdef int vertex # Vertex identifier
+
+        # Variables used in interpolation in time      
+        cdef DTYPE_FLOAT_t time_fraction
+
+        # Gradients in phi
+        cdef DTYPE_FLOAT_t dphi_dx[N_VERTICES]
+        cdef DTYPE_FLOAT_t dphi_dy[N_VERTICES]
+
+        # Intermediate arrays - viscofh
+        cdef DTYPE_FLOAT_t viscofh_tri_t_last_layer_1[N_VERTICES]
+        cdef DTYPE_FLOAT_t viscofh_tri_t_next_layer_1[N_VERTICES]
+        cdef DTYPE_FLOAT_t viscofh_tri_t_last_layer_2[N_VERTICES]
+        cdef DTYPE_FLOAT_t viscofh_tri_t_next_layer_2[N_VERTICES]
+        cdef DTYPE_FLOAT_t viscofh_tri_layer_1[N_VERTICES]
+        cdef DTYPE_FLOAT_t viscofh_tri_layer_2[N_VERTICES]     
+        
+        # Gradients on lower and upper bounding sigma layers
+        cdef DTYPE_FLOAT_t dviscofh_dx_layer_1
+        cdef DTYPE_FLOAT_t dviscofh_dy_layer_1
+        cdef DTYPE_FLOAT_t dviscofh_dx_layer_2
+        cdef DTYPE_FLOAT_t dviscofh_dy_layer_2
+        
+        # Gradient 
+        cdef DTYPE_FLOAT_t dviscofh_dx
+        cdef DTYPE_FLOAT_t dviscofh_dy
+
+        # Time fraction
+        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
+
+        # Get gradient in phi
+        self._get_grad_phi(particle.host_horizontal_elem, dphi_dx, dphi_dy)
+
+        # No vertical interpolation for particles near to the surface or bottom, 
+        # i.e. above or below the top or bottom sigma layer depths respectively.
+        if particle.in_vertical_boundary_layer is True:
+            # Extract viscofh near to the boundary
+            for i in xrange(N_VERTICES):
+                vertex = self._nv[i,particle.host_horizontal_elem]
+                viscofh_tri_t_last_layer_1[i] = self._viscofh_last[particle.k_layer, vertex]
+                viscofh_tri_t_next_layer_1[i] = self._viscofh_next[particle.k_layer, vertex]
+
+            # Interpolate in time
+            for i in xrange(N_VERTICES):
+                viscofh_tri_layer_1[i] = interp.linear_interp(time_fraction, 
+                                            viscofh_tri_t_last_layer_1[i],
+                                            viscofh_tri_t_next_layer_1[i])
+
+            # Interpolate d{}/dx and d{}/dy within the host element
+            Ah_prime[0] = interp.interpolate_within_element(viscofh_tri_layer_1, dphi_dx)
+            Ah_prime[1] = interp.interpolate_within_element(viscofh_tri_layer_1, dphi_dy)
+            return
+        else:
+            # Extract viscofh on the lower and upper bounding sigma layers
+            for i in xrange(N_VERTICES):
+                vertex = self._nv[i,particle.host_horizontal_elem]
+                viscofh_tri_t_last_layer_1[i] = self._viscofh_last[particle.k_lower_layer, vertex]
+                viscofh_tri_t_next_layer_1[i] = self._viscofh_next[particle.k_lower_layer, vertex]
+                viscofh_tri_t_last_layer_2[i] = self._viscofh_last[particle.k_upper_layer, vertex]
+                viscofh_tri_t_next_layer_2[i] = self._viscofh_next[particle.k_upper_layer, vertex]
+
+            # Interpolate in time
+            for i in xrange(N_VERTICES):
+                viscofh_tri_layer_1[i] = interp.linear_interp(time_fraction, 
+                                            viscofh_tri_t_last_layer_1[i],
+                                            viscofh_tri_t_next_layer_1[i])
+                viscofh_tri_layer_2[i] = interp.linear_interp(time_fraction, 
+                                            viscofh_tri_t_last_layer_2[i],
+                                            viscofh_tri_t_next_layer_2[i])
+
+            # Interpolate d{}/dx and d{}/dy within the host element on the upper
+            # and lower bounding sigma layers
+            dviscofh_dx_layer_1 = interp.interpolate_within_element(viscofh_tri_layer_1, dphi_dx)
+            dviscofh_dy_layer_1 = interp.interpolate_within_element(viscofh_tri_layer_1, dphi_dy)
+            dviscofh_dx_layer_2 = interp.interpolate_within_element(viscofh_tri_layer_2, dphi_dx)
+            dviscofh_dy_layer_2 = interp.interpolate_within_element(viscofh_tri_layer_2, dphi_dy)
+
+            # Interpolate d{}/dx and d{}/dy between bounding sigma layers and
+            # save in the array Ah_prime
+            Ah_prime[0] = interp.linear_interp(particle.omega_layers, dviscofh_dx_layer_1, dviscofh_dx_layer_2)
+            Ah_prime[1] = interp.linear_interp(particle.omega_layers, dviscofh_dy_layer_1, dviscofh_dy_layer_2)
 
     cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time,
             Particle* particle) except FLOAT_ERR:
