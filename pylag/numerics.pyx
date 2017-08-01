@@ -15,19 +15,47 @@ cimport pylag.random as random
 
 # Objects of type NumMethod
 # -------------------------
-#
-# Different types of NumMethod object encode different approaches to combining
-# the effects of advection and diffusion.
 
-# Base class for NumMethod objects
 cdef class NumMethod:
+    """ An abstract base class for numerical integration schemes
+    
+    The following methoda(s) should be implemented in the derived class:
+    
+    * :meth:`step`
+    """
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
             Particle *particle) except INT_ERR:
-        pass
+        """ Perform one iteration of the numerical method
+        
+        Following the update, the particle's new position is saved.
+        """
+        raise NotImplementedError
 
-# Standard numerical method without operator splitting
 cdef class StdNumMethod(NumMethod):
+    """ Standard numerical method
+    
+    The method can be used for cases in which pure advection, pure diffusion
+    or advection and diffusion are modelled. In the case of the latter,
+    the deterministic and stochastic components of particle movement share the
+    same time step. If you would prefer to use some form of operator splitting
+    (e.g. to reduce simulation times) use the methods `OS1NumMethod' or 
+    `OS2NumMethod' instead.
+    
+    Attributes:
+    -----------
+    _time_step : float
+        Time step to be used by the iterative method
+    
+    _iterative_method : _ItMethod
+        The iterative method used (e.g. Euler etc)
+    
+    _horiz_bc_calculator : HorizBoundaryConditionCalculator
+        The method used for computing horizontal boundary conditions.
+
+    _vert_bc_calculator : VertBoundaryConditionCalculator
+        The method used for computing vertical boundary conditions.
+    """
     cdef DTYPE_FLOAT_t _time_step
 
     cdef ItMethod _iterative_method
@@ -35,6 +63,13 @@ cdef class StdNumMethod(NumMethod):
     cdef VertBoundaryConditionCalculator _vert_bc_calculator
 
     def __init__(self, config):
+        """ Initialise class data members
+        
+        Parameters:
+        -----------
+        config : ConfigParser
+            Configuration object
+        """
         self._time_step = config.getfloat('NUMERICS', 'time_step')
 
         self._iterative_method = get_iterative_method(config)
@@ -44,24 +79,30 @@ cdef class StdNumMethod(NumMethod):
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
             Particle *particle) except INT_ERR:
-        """ Compute changes in a particle's position due to advection
+        """ Perform one iteration of the numerical method
+        
+        If the particle's new position lies outside of the model domain, the
+        specified boundary conditions are applied. The `flag' variable is used
+        to tell the caller whether the particle's position was successfully
+        updated.
 
-         Parameters:
-         -----------
-         data_reader : DataReader
-             DataReader object used for calculating point velocities.
+        Parameters:
+        -----------
+        data_reader : DataReader
+            DataReader object used for calculating point velocities
+            and/or diffusivities.
 
-         time : float
-             The current time.
+        time : float
+            The current time.
 
-         particle : *Particle
-             Pointer to a particle object.
+        particle : *Particle
+            Pointer to a particle object.
 
-         Returns:
-         --------
-         flag : int
-             Flag identifying if a boundary crossing has occurred.
-         """
+        Returns:
+        --------
+        flag : int
+            Flag identifying if a boundary crossing has occurred.
+        """
         cdef DTYPE_FLOAT_t xpos, ypos, zpos
         cdef DTYPE_FLOAT_t zmin, zmax
         cdef Delta delta_X
@@ -117,9 +158,33 @@ cdef class StdNumMethod(NumMethod):
 
         return flag
 
-# Advection-diffusion numerical method that uses a form of operator splitting - 
-# first the advection step is computed, then the diffusion step.
 cdef class OS0NumMethod(NumMethod):
+    """ Numerical method that employs operator splitting
+    
+    The numerical method should be used when the effects of advection and
+    diffusion are combined using a form of operator splitting in which
+    first the advection step is computed, then the diffusion step. The two
+    processes can use different time steps - typically, the time step used
+    for diffusion will be smaller than that used for advection - which has
+    the potential to significantly reduce run times
+
+    Attributes:
+    -----------
+    _time_step : float
+        Time step to be used by the iterative method
+    
+    _adv_iterative_method : _ItMethod
+        The iterative method used for advection (e.g. Euler etc)
+
+    _diff_iterative_method : _ItMethod
+        The iterative method used for diffusion (e.g. Euler etc)
+
+    _horiz_bc_calculator : HorizBoundaryConditionCalculator
+        The method used for computing horizontal boundary conditions.
+
+    _vert_bc_calculator : VertBoundaryConditionCalculator
+        The method used for computing vertical boundary conditions.
+    """
     cdef DTYPE_FLOAT_t _time_step
 
     cdef ItMethod _adv_iterative_method
@@ -128,6 +193,13 @@ cdef class OS0NumMethod(NumMethod):
     cdef VertBoundaryConditionCalculator _vert_bc_calculator
 
     def __init__(self, config):
+        """ Initialise class data members
+        
+        Parameters:
+        -----------
+        config : ConfigParser
+            Configuration object
+        """
         self._time_step = config.getfloat('NUMERICS', 'time_step')
 
         self._adv_iterative_method = get_adv_iterative_method(config)
@@ -138,12 +210,36 @@ cdef class OS0NumMethod(NumMethod):
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
             Particle *particle) except INT_ERR:
-        pass
+        raise NotImplementedError
 
 
 # Advection-diffusion numerical method that uses a form or operator splitting 
 # known using Strang Splitting
 cdef class OS1NumMethod(NumMethod):
+    """ Numerical method that employs strang splitting
+    
+    The numerical method should be used when the effects of advection and
+    diffusion are combined using a form of operator splitting in which
+    first a half diffusion step is computed, then a full advection step, then
+    a half diffusion step.
+
+    Attributes:
+    -----------
+    _time_step : float
+        Time step to be used by the iterative method
+    
+    _adv_iterative_method : _ItMethod
+        The iterative method used for advection (e.g. Euler etc)
+
+    _diff_iterative_method : _ItMethod
+        The iterative method used for diffusion (e.g. Euler etc)
+
+    _horiz_bc_calculator : HorizBoundaryConditionCalculator
+        The method used for computing horizontal boundary conditions.
+
+    _vert_bc_calculator : VertBoundaryConditionCalculator
+        The method used for computing vertical boundary conditions.
+    """
     cdef DTYPE_FLOAT_t _time_step
 
     cdef ItMethod _adv_iterative_method
@@ -152,6 +248,13 @@ cdef class OS1NumMethod(NumMethod):
     cdef VertBoundaryConditionCalculator _vert_bc_calculator
 
     def __init__(self, config):
+        """ Initialise class data members
+        
+        Parameters:
+        -----------
+        config : ConfigParser
+            Configuration object
+        """
         self._time_step = config.getfloat('NUMERICS', 'time_step')
 
         self._adv_iterative_method = get_adv_iterative_method(config)
@@ -162,9 +265,16 @@ cdef class OS1NumMethod(NumMethod):
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
             Particle *particle) except INT_ERR:
-        pass
+        raise NotImplementedError
 
 def get_num_method(config):
+    """ Factory method for constructing object of type NumMethod
+    
+    Parameters:
+    -----------
+    config : ConfigParser
+        Object of type ConfigParser.
+    """
     if not config.has_option("NUMERICS", "num_method"):
         raise ValueError("Failed to find the option `num_method' in the "\
                 "supplied configuration file.")
