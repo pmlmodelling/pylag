@@ -1118,7 +1118,7 @@ cdef class DiffNaive2DItMethod(ItMethod):
         """
         # The horizontal eddy diffusiviy
         cdef DTYPE_FLOAT_t kh
-
+        
         # The vertical eddy diffusivity at the particle's current location
         kh = data_reader.get_horizontal_eddy_diffusivity(time, particle)
         
@@ -1129,9 +1129,80 @@ cdef class DiffNaive2DItMethod(ItMethod):
         return 0
 
 cdef class DiffMilstein2DItMethod(ItMethod):
+    """ Stochastic Milstein 2D iterative method
+
+    Attributes:
+    -----------
+    _time_step : float
+        Time step to be used by the iterative method
+    """
+    cdef DTYPE_FLOAT_t _time_step
+
+    def __init__(self, config):
+        """ Initialise class data members
+        
+        Parameters:
+        -----------
+        config : ConfigParser
+        """
+        self._time_step = config.getfloat('NUMERICS', 'time_step')
+
     cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X) except INT_ERR:
-        pass
+        """ Compute position delta in 2D using Milstein iterative method
+        
+        This method is a 2D implementation of the Milstein scheme.
+        
+        Parameters:
+        -----------
+        time: float
+            The current time.
+
+        particle: object of type Particle
+            A Particle object. The object's z position will be updated.
+
+        data_reader: object of type DataReader
+            A DataReader object. Used for reading the horizontal eddy viscosity.
+
+        delta_X: object of type Delta
+            A Delta object. Used for storing position deltas.
+            
+        Returns:
+        --------
+        flag : int
+            Flag identifying if a boundary crossing has occurred. This should
+            always be zero since the method does not check for boundary
+            crossings.
+        """
+        # Random deviates
+        cdef DTYPE_FLOAT_t deviate_X, deviate_y
+        
+        # The horizontal eddy viscosity
+        cdef DTYPE_FLOAT_t Ah
+        
+        # The gradient in the horizontal eddy viscosity wrt x and y
+        cdef DTYPE_FLOAT_t Ah_prime[2]
+
+        # The horizontal eddy viscosity at the particle's current location
+        Ah = data_reader.get_horizontal_eddy_diffusivity(time, particle)
+        
+        # The gradient in the horizontal eddy viscosity at the particle's current location
+        data_reader.get_horizontal_eddy_diffusivity_derivative(time, particle, Ah_prime)
+
+        # Compute random deviates. These are Gaussian, with zero mean and 
+        # standard deviation equal to 1.0. They are transformed into a
+        # Wiener increment later. Not doing this hear minimises the number of
+        # square root operations we need to perform.
+        deviate_x = random.gauss(0.0, 1.0)
+        deviate_y = random.gauss(0.0, 1.0)
+
+        # Compute the random displacements
+        delta_X.x  = 0.5 * Ah_prime[0] * self._time_step * (deviate_x*deviate_x + 1.0) \
+                + sqrt(2.0 * Ah * self._time_step) * deviate_x
+        delta_X.y  = 0.5 * Ah_prime[1] * self._time_step * (deviate_y*deviate_y + 1.0) \
+                + sqrt(2.0 * Ah * self._time_step) * deviate_y
+
+        return 0
 
 cdef class DiffMilstein3DItMethod(ItMethod):
     cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
