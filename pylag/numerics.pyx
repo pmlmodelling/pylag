@@ -1205,9 +1205,84 @@ cdef class DiffMilstein2DItMethod(ItMethod):
         return 0
 
 cdef class DiffMilstein3DItMethod(ItMethod):
+    """ Stochastic Milstein 3D iterative method
+
+    Attributes:
+    -----------
+    _time_step : float
+        Time step to be used by the iterative method
+    """
+    cdef DTYPE_FLOAT_t _time_step
+
+    def __init__(self, config):
+        """ Initialise class data members
+        
+        Parameters:
+        -----------
+        config : ConfigParser
+        """
+        self._time_step = config.getfloat('NUMERICS', 'time_step')
+
     cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X) except INT_ERR:
-        pass
+        """ Compute position delta in 3D using Milstein iterative method
+        
+        This method is a 3D implementation of the Milstein scheme.
+        
+        Parameters:
+        -----------
+        time: float
+            The current time.
+
+        *particle: C pointer
+            C Pointer to a Particle struct
+
+        data_reader: object of type DataReader
+            A DataReader object used for reading eddy diffusivities/viscosities.
+
+        *delta_X: C pointer
+            C Pointer to a Delta struct
+            
+        Returns:
+        --------
+        flag : int
+            Flag identifying if a boundary crossing has occurred. This should
+            always be zero since the method does not check for boundary
+            crossings.
+        """
+        # Random deviates
+        cdef DTYPE_FLOAT_t deviate_x, deviate_y, deviate_z
+        
+        # The horizontal eddy viscosity
+        cdef DTYPE_FLOAT_t Ah
+        
+        # The vertical eddy diffusivity
+        cdef DTYPE_FLOAT_t Kh
+        
+        # The gradient in the horizontal eddy viscosity wrt x and y
+        cdef DTYPE_FLOAT_t Ah_prime[2]
+        
+        # The gradient in the vertical eddy diffusivity wrt z
+        cdef DTYPE_FLOAT_t Kh_prime
+
+        Ah = data_reader.get_horizontal_eddy_diffusivity(time, particle)
+        data_reader.get_horizontal_eddy_diffusivity_derivative(time, particle, Ah_prime)
+
+        Kh = data_reader.get_vertical_eddy_diffusivity(time, particle)
+        Kh_prime = data_reader.get_vertical_eddy_diffusivity_derivative(time, particle)
+
+        deviate_x = random.gauss(0.0, 1.0)
+        deviate_y = random.gauss(0.0, 1.0)
+        deviate_z = random.gauss(0.0, 1.0)
+
+        delta_X.x  = 0.5 * Ah_prime[0] * self._time_step * (deviate_x*deviate_x + 1.0) \
+                + sqrt(2.0 * Ah * self._time_step) * deviate_x
+        delta_X.y  = 0.5 * Ah_prime[1] * self._time_step * (deviate_y*deviate_y + 1.0) \
+                + sqrt(2.0 * Ah * self._time_step) * deviate_y
+        delta_X.z  = 0.5 * Kh_prime * self._time_step * (deviate_z*deviate_z + 1.0) \
+                + sqrt(2.0 * Kh * self._time_step) * deviate_z
+
+        return 0
 
 # Iterative methods for advection and diffusion
 # -----------------------------------------
