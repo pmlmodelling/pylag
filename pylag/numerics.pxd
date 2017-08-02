@@ -15,5 +15,7 @@ cdef class NumMethod:
 
 # Base class for DetItMethod objects
 cdef class ItMethod:
+    cdef DTYPE_FLOAT_t _time_step
+
     cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X) except INT_ERR

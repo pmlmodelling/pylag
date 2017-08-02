@@ -415,6 +415,11 @@ cdef class ItMethod:
     The following method(s) should be implemented in the derived class:
     
     * :meth: `step`
+
+    Attributes:
+    -----------
+    _time_step : float
+        Time step to be used by the iterative method
     """
     cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X) except INT_ERR:
@@ -422,16 +427,12 @@ cdef class ItMethod:
 
 cdef class AdvRK42DItMethod(ItMethod):
     """ 2D deterministic Fourth Order Runga Kutta iterative method
-    
+
     Attributes:
     -----------
-    _time_step : float
-        Time step to be used by the iterative method
-
     _horiz_bc_calculator : HorizBoundaryConditionCalculator
         The method used for computing horizontal boundary conditions.
     """
-    cdef DTYPE_FLOAT_t _time_step
     cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
 
     def __init__(self, config):
@@ -592,16 +593,12 @@ cdef class AdvRK43DItMethod(ItMethod):
     
     Attributes:
     -----------
-    _time_step : float
-        Time step to be used by the iterative method
-
     _horiz_bc_calculator : HorizBoundaryConditionCalculator
         The method used for computing horizontal boundary conditions.
 
     _vert_bc_calculator : VertBoundaryConditionCalculator
         The method used for computing vertical boundary conditions.
     """
-    cdef DTYPE_FLOAT_t _time_step
     cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
     cdef VertBoundaryConditionCalculator _vert_bc_calculator
 
@@ -791,13 +788,7 @@ cdef class AdvRK43DItMethod(ItMethod):
 
 cdef class DiffNaive1DItMethod(ItMethod):
     """ Stochastic Naive Euler 1D iterative method
-
-    Attributes:
-    -----------
-    _time_step : float
-        Time step to be used by the iterative method
     """
-    cdef DTYPE_FLOAT_t _time_step
 
     def __init__(self, config):
         """ Initialise class data members
@@ -849,13 +840,7 @@ cdef class DiffNaive1DItMethod(ItMethod):
 
 cdef class DiffEuler1DItMethod(ItMethod):
     """ Stochastic Euler 1D iterative method
-
-    Attributes:
-    -----------
-    _time_step : float
-        Time step to be used by the iterative method
     """
-    cdef DTYPE_FLOAT_t _time_step
 
     def __init__(self, config):
         """ Initialise class data members
@@ -934,14 +919,9 @@ cdef class DiffVisser1DItMethod(ItMethod):
 
     Attributes:
     -----------
-    _time_step : float
-        Time step to be used by the iterative method
-
     _vert_bc_calculator : VertBoundaryConditionCalculator
         The method used for computing vertical boundary conditions.
     """
-    cdef DTYPE_FLOAT_t _time_step
-
     cdef VertBoundaryConditionCalculator _vert_bc_calculator
 
     def __init__(self, config):
@@ -1051,13 +1031,7 @@ cdef class DiffVisser1DItMethod(ItMethod):
 
 cdef class DiffMilstein1DItMethod(ItMethod):
     """ Stochastic Milstein 1D iterative method
-
-    Attributes:
-    -----------
-    _time_step : float
-        Time step to be used by the iterative method
     """
-    cdef DTYPE_FLOAT_t _time_step
 
     def __init__(self, config):
         """ Initialise class data members
@@ -1139,14 +1113,9 @@ cdef class DiffConst2DItMethod(ItMethod):
 
     Attributes:
     -----------
-    _time_step : float
-        Time step to be used by the iterative method
-
     _kh : float
         Horizontal eddy viscosity constant
     """
-    cdef DTYPE_FLOAT_t _time_step
-    
     cdef DTYPE_FLOAT_t _kh
 
     def __init__(self, config):
@@ -1195,13 +1164,7 @@ cdef class DiffConst2DItMethod(ItMethod):
 
 cdef class DiffNaive2DItMethod(ItMethod):
     """ Stochastic Naive Euler 2D iterative method
-
-    Attributes:
-    -----------
-    _time_step : float
-        Time step to be used by the iterative method
     """
-    cdef DTYPE_FLOAT_t _time_step
 
     def __init__(self, config):
         """ Initialise class data members
@@ -1256,13 +1219,7 @@ cdef class DiffNaive2DItMethod(ItMethod):
 
 cdef class DiffMilstein2DItMethod(ItMethod):
     """ Stochastic Milstein 2D iterative method
-
-    Attributes:
-    -----------
-    _time_step : float
-        Time step to be used by the iterative method
     """
-    cdef DTYPE_FLOAT_t _time_step
 
     def __init__(self, config):
         """ Initialise class data members
@@ -1332,13 +1289,7 @@ cdef class DiffMilstein2DItMethod(ItMethod):
 
 cdef class DiffMilstein3DItMethod(ItMethod):
     """ Stochastic Milstein 3D iterative method
-
-    Attributes:
-    -----------
-    _time_step : float
-        Time step to be used by the iterative method
     """
-    cdef DTYPE_FLOAT_t _time_step
 
     def __init__(self, config):
         """ Initialise class data members
@@ -1415,13 +1366,7 @@ cdef class AdvDiffMilstein3DItMethod(ItMethod):
 
     In this class the contributions of both advection and diffusion are
     accounted for.
-
-    Attributes:
-    -----------
-    _time_step : float
-        Time step to be used by the iterative method
     """
-    cdef DTYPE_FLOAT_t _time_step
 
     def __init__(self, config):
         """ Initialise class data members
