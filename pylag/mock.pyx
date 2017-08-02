@@ -14,7 +14,7 @@ from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 from pylag.numerics import get_adv_iterative_method, get_diff_iterative_method
 from pylag.boundary_conditions import get_vert_boundary_condition_calculator
 
-from particle cimport Particle
+from particle cimport Particle, ParticleSmartPtr
 from data_reader cimport DataReader
 from pylag.delta cimport Delta, reset
 from pylag.numerics cimport ItMethod
@@ -197,6 +197,96 @@ cdef class MockVerticalDiffusivityDataReader(DataReader):
         
         return (k2 - k1) / zpos_increment
 
+cdef class MockHorizontalEddyViscosityDataReader(DataReader):
+    """Test data reader for horizontal random displacement models.
+    
+    The data reader returns horizontal eddy viscosities using the analytic
+    formula:
+    
+    Ah = x^2 + y^2 + C (1)
+    
+    where `x' is the x cartesian coordinate, `y' is the y cartesian coordinate
+    and C is some constant, set equal to 1.0 m2/s. Ah has units
+    m^2/s; the time unit is implicit within equation (1). This class is designed
+    to help test 2D random displacement models; for example, using the well
+    mixed condition.
+    
+    Attributes:
+    -----------
+    _C : float
+        Constant used in equation (1)
+
+    _xmin, _xmax : float
+        Min and max x values between which Ah is defined.
+
+    _ymin, _ymax : float
+        Min and max y values between which Ah is defined.
+    """
+    cdef DTYPE_FLOAT_t _C
+    cdef DTYPE_FLOAT_t _xmin, _xmax, _ymin, _ymax
+    
+    def __init__(self):
+        """ Initialise class data members
+        """
+        self._C = 1.0
+        self._xmin = -10.0
+        self._xmax = 10.0
+        self._ymin = -10.0
+        self._ymax = 10.0
+    
+    def get_xmin(self):
+        return self._xmin
+    
+    def get_xmax(self):
+        return self._xmax
+    
+    def get_ymin(self):
+        return self._ymin
+
+    def get_ymax(self):
+        return self._ymax
+
+    cdef get_horizontal_eddy_diffusivity(self, DTYPE_FLOAT_t time,
+            Particle* particle):
+        """ Returns the horizontal eddy viscosity
+        
+        Parameters:
+        -----------
+        time : float
+            Time at which to interpolate.
+        
+        particle: *Particle
+            Pointer to a Particle object. 
+        
+        Returns:
+        --------
+        Ah : float
+            The horizontal eddy viscosity. 
+        """
+        return particle.xpos**2 + particle.ypos**2 + self._C
+
+    cdef get_horizontal_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
+            Particle* particle, DTYPE_FLOAT_t Ah_prime[2]):
+        """ Returns the gradient in the horizontal eddy viscosity
+
+        This is computed by taking the derivate of eqn (1) wrt x and y.
+
+        Parameters:
+        -----------
+        time : float
+            Time at which to interpolate.
+        
+        particle: *Particle
+            Pointer to a Particle object.
+
+        Ah_prime : C array, float
+            dAh_dx and dH_dy components stored in a C array of length two.
+        """
+        Ah_prime[0] = 2.0 * particle.xpos
+        Ah_prime[1] = 2.0 * particle.ypos
+
+        return
+
 cdef class MockAdvIterator:
     """ Test class for iterative methods that deal with pure advection
     
@@ -324,38 +414,50 @@ cdef class MockTwoDLSM:
 
         self._iterator = get_diff_iterative_method(config)
     
-    def step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
-            DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_FLOAT_t zpos,
-            DTYPE_INT_t host):
-        cdef Particle particle
+    def step(self, DataReader data_reader, time, xpos_arr, ypos_arr):
+        cdef ParticleSmartPtr particle
         cdef Delta delta_X
-        
         cdef DTYPE_FLOAT_t xpos_new, ypos_new
 
-        # Set default particle properties
-        particle.in_domain = True
-        particle.group_id = 0
+        if len(xpos_arr) != len(ypos_arr):
+            raise ValueError('xpos and ypos array lengths do not match')
+        n_particles = len(xpos_arr)
 
-        # Use supplied args to set the host, x and y positions
-        particle.host_horizontal_elem = host
-        particle.xpos = xpos
-        particle.ypos = ypos
-        particle.zpos = zpos
+        particle = ParticleSmartPtr(group_id=0, host=0, in_domain=True)
 
-        # Set local coordinates and variables defining the particle's position
-        # in the vertical grid
-        data_reader.set_local_coordinates(&particle)
-        data_reader.set_vertical_grid_vars(time, &particle)
+        xpos_new_arr = np.empty(n_particles, dtype=DTYPE_FLOAT)
+        ypos_new_arr = np.empty(n_particles, dtype=DTYPE_FLOAT)
+        
+        for i in xrange(n_particles):
+            particle.get_ptr().xpos = xpos_arr[i]
+            particle.get_ptr().ypos = ypos_arr[i]
 
-        # Reset Delta object
-        reset(&delta_X)
+            reset(&delta_X)
 
-        # Apply the vertical lagrangian stochastic model
-        self._iterator.step(time, &particle, data_reader, &delta_X)
+            self._iterator.step(time, particle.get_ptr(), data_reader, &delta_X)
 
-        # Use Delta values to update the particle's position
-        xpos_new = particle.xpos + delta_X.x
-        ypos_new = particle.ypos + delta_X.y
+            xpos_new = particle.get_ptr().xpos + delta_X.x
+            ypos_new = particle.get_ptr().ypos + delta_X.y
 
-        # Return the updated position
-        return xpos_new, ypos_new
+            # Apply boundary conditions in x
+            xmin = data_reader.get_xmin()
+            xmax = data_reader.get_xmax()
+            while xpos_new < xmin or xpos_new > xmax:
+                if xpos_new < xmin:
+                    xpos_new = xmin + xmin - xpos_new
+                elif xpos_new > xmax:
+                    xpos_new = xmax + xmax - xpos_new
+
+            # Apply boundary conditions in y
+            ymin = data_reader.get_ymin()
+            ymax = data_reader.get_ymax()
+            while ypos_new < ymin or ypos_new > ymax:
+                if ypos_new < ymin:
+                    ypos_new = ymin + ymin - ypos_new
+                elif ypos_new > ymax:
+                    ypos_new = ymax + ymax - ypos_new
+
+            xpos_new_arr[i] = xpos_new
+            ypos_new_arr[i] = ypos_new 
+
+        return xpos_new_arr, ypos_new_arr
