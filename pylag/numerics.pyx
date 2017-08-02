@@ -191,7 +191,7 @@ cdef class OS0NumMethod(NumMethod):
 
     def __init__(self, config):
         """ Initialise class data members
-        
+
         Parameters:
         -----------
         config : ConfigParser
@@ -207,7 +207,133 @@ cdef class OS0NumMethod(NumMethod):
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
             Particle *particle) except INT_ERR:
-        raise NotImplementedError
+        """ Perform one iteration of the numerical integration
+        
+        If the particle's new position lies outside of the model domain, the
+        specified boundary conditions are applied. The `flag' variable is used
+        to tell the caller whether the particle's position was successfully
+        updated.
+
+        Parameters:
+        -----------
+        data_reader: object of type DataReader
+            A DataReader object used for reading velocities and eddy
+            diffusivities/viscosities.
+
+        time: float
+            The current time.
+
+        *particle: C pointer
+            C Pointer to a Particle struct
+
+        *delta_X: C pointer
+            C Pointer to a Delta struct
+
+        Returns:
+        --------
+        flag : int
+            Flag identifying if a boundary crossing has occurred.
+        """
+        cdef DTYPE_FLOAT_t xpos, ypos, zpos
+        cdef DTYPE_FLOAT_t zmin, zmax
+        cdef DTYPE_INT_t flag, host
+        cdef Particle _particle
+        cdef Delta _delta_X
+
+        reset(&_delta_X)
+
+        # Compute Delta due to advection
+        flag = self._adv_iterative_method.step(time, particle, data_reader, &_delta_X)
+
+        # Return if the particle crossed an open boundary
+        if flag == -2: return flag
+
+        # Compute new position
+        xpos = particle.xpos + _delta_X.x
+        ypos = particle.ypos + _delta_X.y
+        zpos = particle.zpos + _delta_X.z
+        flag, host = data_reader.find_host(particle.xpos, particle.ypos, xpos,
+                ypos, particle.host_horizontal_elem)
+              
+        # First check for a land boundary crossing
+        while flag == -1:
+            xpos, ypos = self.horiz_bc_calculator.apply(data_reader,
+                    particle.xpos, particle.ypos, xpos, ypos, host)
+            flag, host = data_reader.find_host(particle.xpos,
+                particle.ypos, xpos, ypos, particle.host_horizontal_elem)
+
+        # Second check for an open boundary crossing
+        if flag == -2: return flag
+
+        # If the particle still resides in the domain continue with the update
+        if flag == 0:
+            # First clone the original particle
+            _particle = particle[0]
+            
+            # Update its position following the advection step
+            _particle.xpos = xpos
+            _particle.ypos = ypos
+            _particle.zpos = zpos
+            _particle.host_horizontal_elem = host
+
+            # Update particle local coordinates
+            data_reader.set_local_coordinates(&_particle)
+
+            # Apply surface/bottom boundary conditions and set zpos
+            zmin = data_reader.get_zmin(time, &_particle)
+            zmax = data_reader.get_zmax(time, &_particle)
+            if _particle.zpos < zmin or _particle.zpos > zmax:
+                _particle.zpos = self.vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
+
+            # Determine the host zlayer
+            data_reader.set_vertical_grid_vars(time, &_particle)
+            
+            # Reset delta and perform the diffusion step
+            reset(&_delta_X)
+            flag = self._diff_iterative_method.step(time, &_particle, data_reader, &_delta_X)
+
+            # Return if the particle crossed an open boundary
+            if flag == -2: return flag
+
+            # Compute new position
+            xpos = _particle.xpos + _delta_X.x
+            ypos = _particle.ypos + _delta_X.y
+            zpos = _particle.zpos + _delta_X.z
+            flag, host = data_reader.find_host(_particle.xpos, _particle.ypos, xpos,
+                    ypos, _particle.host_horizontal_elem)
+
+            # First check for a land boundary crossing
+            while flag == -1:
+                xpos, ypos = self.horiz_bc_calculator.apply(data_reader,
+                        _particle.xpos, _particle.ypos, xpos, ypos, host)
+                flag, host = data_reader.find_host(_particle.xpos,
+                    _particle.ypos, xpos, ypos, _particle.host_horizontal_elem)
+
+            # Second check for an open boundary crossing
+            if flag == -2: return flag
+
+            # If the particle still resides in the domain update the position
+            # or the original particle
+            if flag == 0:
+                particle.xpos = xpos
+                particle.ypos = ypos
+                particle.zpos = zpos
+                particle.host_horizontal_elem = host
+
+                data_reader.set_local_coordinates(particle)
+
+                zmin = data_reader.get_zmin(time+self._time_step, particle)
+                zmax = data_reader.get_zmax(time+self._time_step, particle)
+                if particle.zpos < zmin or particle.zpos > zmax:
+                    particle.zpos = self.vert_bc_calculator.apply(particle.zpos, zmin, zmax)
+
+                data_reader.set_vertical_grid_vars(time+self._time_step, particle)
+                
+                return flag
+            else:
+                raise ValueError('Unrecognised host element flag {}.'.format(flag))
+        else:
+            raise ValueError('Unrecognised host element flag {}.'.format(flag))
 
 cdef class OS1NumMethod(NumMethod):
     """ Numerical method that employs strang splitting
