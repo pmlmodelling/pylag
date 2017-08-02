@@ -67,12 +67,12 @@ cdef class StdNumMethod(NumMethod):
         config : ConfigParser
             Configuration object
         """
-        self._time_step = config.getfloat('NUMERICS', 'time_step')
-
         self._iterative_method = get_iterative_method(config)
         
         self._horiz_bc_calculator = get_horiz_boundary_condition_calculator(config)
         self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
+
+        self._time_step = self._iterative_method.get_time_step()
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
             Particle *particle) except INT_ERR:
@@ -167,8 +167,11 @@ cdef class OS0NumMethod(NumMethod):
 
     Attributes:
     -----------
-    _time_step : float
-        Time step to be used by the iterative method
+    _adv_time_step : float
+        Time step used for advection
+
+    _diff_time_step : float
+        Time step used for diffusion
     
     _adv_iterative_method : _ItMethod
         The iterative method used for advection (e.g. Euler etc)
@@ -182,7 +185,8 @@ cdef class OS0NumMethod(NumMethod):
     _vert_bc_calculator : VertBoundaryConditionCalculator
         The method used for computing vertical boundary conditions.
     """
-    cdef DTYPE_FLOAT_t _time_step
+    cdef DTYPE_FLOAT_t _adv_time_step
+    cdef DTYPE_FLOAT_t _diff_time_step
 
     cdef ItMethod _adv_iterative_method
     cdef ItMethod _diff_iterative_method
@@ -196,14 +200,19 @@ cdef class OS0NumMethod(NumMethod):
         -----------
         config : ConfigParser
             Configuration object
+        
+        TODO:
+        -----
+        (1) Check for correct time step specification
         """
-        self._time_step = config.getfloat('NUMERICS', 'time_step')
-
         self._adv_iterative_method = get_adv_iterative_method(config)
         self._diff_iterative_method = get_diff_iterative_method(config)
         
         self._horiz_bc_calculator = get_horiz_boundary_condition_calculator(config)
         self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
+
+        self._adv_time_step = self._adv_iterative_method.get_time_step()
+        self._diff_time_step = self._diff_iterative_method.get_time_step()
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
             Particle *particle) except INT_ERR:
@@ -233,12 +242,18 @@ cdef class OS0NumMethod(NumMethod):
         --------
         flag : int
             Flag identifying if a boundary crossing has occurred.
+            
+        TODO:
+        -----
+        (1) Implement sub time stepping for diffusion.
         """
         cdef DTYPE_FLOAT_t xpos, ypos, zpos
         cdef DTYPE_FLOAT_t zmin, zmax
         cdef DTYPE_INT_t flag, host
         cdef Particle _particle
         cdef Delta _delta_X
+
+        raise NotImplementedError
 
         reset(&_delta_X)
 
@@ -322,8 +337,8 @@ cdef class OS0NumMethod(NumMethod):
 
                 data_reader.set_local_coordinates(particle)
 
-                zmin = data_reader.get_zmin(time+self._time_step, particle)
-                zmax = data_reader.get_zmax(time+self._time_step, particle)
+                zmin = data_reader.get_zmin(time+self._adv_time_step, particle)
+                zmax = data_reader.get_zmax(time+self._adv_time_step, particle)
                 if particle.zpos < zmin or particle.zpos > zmax:
                     particle.zpos = self.vert_bc_calculator.apply(particle.zpos, zmin, zmax)
 
@@ -345,8 +360,11 @@ cdef class OS1NumMethod(NumMethod):
 
     Attributes:
     -----------
-    _time_step : float
-        Time step to be used by the iterative method
+    _adv_time_step : float
+        Time step used for advection
+
+    _diff_time_step : float
+        Time step used for diffusion
     
     _adv_iterative_method : _ItMethod
         The iterative method used for advection (e.g. Euler etc)
@@ -360,7 +378,8 @@ cdef class OS1NumMethod(NumMethod):
     _vert_bc_calculator : VertBoundaryConditionCalculator
         The method used for computing vertical boundary conditions.
     """
-    cdef DTYPE_FLOAT_t _time_step
+    cdef DTYPE_FLOAT_t _adv_time_step
+    cdef DTYPE_FLOAT_t _diff_time_step
 
     cdef ItMethod _adv_iterative_method
     cdef ItMethod _diff_iterative_method
@@ -375,13 +394,16 @@ cdef class OS1NumMethod(NumMethod):
         config : ConfigParser
             Configuration object
         """
-        self._time_step = config.getfloat('NUMERICS', 'time_step')
-
         self._adv_iterative_method = get_adv_iterative_method(config)
         self._diff_iterative_method = get_diff_iterative_method(config)
 
         self._horiz_bc_calculator = get_horiz_boundary_condition_calculator(config)
         self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
+
+        self._adv_time_step = self._adv_iterative_method.get_time_step()
+        self._diff_time_step = self._diff_iterative_method.get_time_step()
+        
+        # TODO Check for correct time step specification!
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
             Particle *particle) except INT_ERR:
@@ -421,6 +443,9 @@ cdef class ItMethod:
     _time_step : float
         Time step to be used by the iterative method
     """
+    cdef DTYPE_FLOAT_t get_time_step(self):
+        return self._time_step
+    
     cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X) except INT_ERR:
         raise NotImplementedError
@@ -443,7 +468,7 @@ cdef class AdvRK42DItMethod(ItMethod):
         config : ConfigParser
             Configuration object
         """
-        self._time_step = config.getfloat('NUMERICS', 'time_step')
+        self._time_step = config.getfloat('NUMERICS', 'time_step_adv')
         
         # Create horizontal boundary conditions calculator
         self._horiz_bc_calculator = get_horiz_boundary_condition_calculator(config)
@@ -610,7 +635,7 @@ cdef class AdvRK43DItMethod(ItMethod):
         config : ConfigParser
             Configuration object
         """
-        self._time_step = config.getfloat('NUMERICS', 'time_step')
+        self._time_step = config.getfloat('NUMERICS', 'time_step_adv')
 
         # Create horizontal boundary conditions calculator
         self._horiz_bc_calculator = get_horiz_boundary_condition_calculator(config)
@@ -797,7 +822,7 @@ cdef class DiffNaive1DItMethod(ItMethod):
         -----------
         config : ConfigParser
         """
-        self._time_step = config.getfloat('NUMERICS', 'time_step')
+        self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
         
     cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X) except INT_ERR:
@@ -849,7 +874,7 @@ cdef class DiffEuler1DItMethod(ItMethod):
         -----------
         config : ConfigParser
         """
-        self._time_step = config.getfloat('NUMERICS', 'time_step')
+        self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
     cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X) except INT_ERR:
@@ -931,7 +956,7 @@ cdef class DiffVisser1DItMethod(ItMethod):
         -----------
         config : ConfigParser
         """
-        self._time_step = config.getfloat('NUMERICS', 'time_step')
+        self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
         
         self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
 
@@ -1040,7 +1065,7 @@ cdef class DiffMilstein1DItMethod(ItMethod):
         -----------
         config : ConfigParser
         """
-        self._time_step = config.getfloat('NUMERICS', 'time_step')
+        self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
     cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X) except INT_ERR:
@@ -1125,7 +1150,7 @@ cdef class DiffConst2DItMethod(ItMethod):
         -----------
         config : ConfigParser
         """
-        self._time_step = config.getfloat('NUMERICS', 'time_step')
+        self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
         self._kh = config.getfloat("OCEAN_CIRCULATION_MODEL", "horizontal_eddy_viscosity_constant")
         
@@ -1173,7 +1198,7 @@ cdef class DiffNaive2DItMethod(ItMethod):
         -----------
         config : ConfigParser
         """
-        self._time_step = config.getfloat('NUMERICS', 'time_step')
+        self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
         
     cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X) except INT_ERR:
@@ -1228,7 +1253,7 @@ cdef class DiffMilstein2DItMethod(ItMethod):
         -----------
         config : ConfigParser
         """
-        self._time_step = config.getfloat('NUMERICS', 'time_step')
+        self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
     cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X) except INT_ERR:
@@ -1298,7 +1323,7 @@ cdef class DiffMilstein3DItMethod(ItMethod):
         -----------
         config : ConfigParser
         """
-        self._time_step = config.getfloat('NUMERICS', 'time_step')
+        self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
     cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X) except INT_ERR:
@@ -1375,7 +1400,7 @@ cdef class AdvDiffMilstein3DItMethod(ItMethod):
         -----------
         config : ConfigParser
         """
-        self._time_step = config.getfloat('NUMERICS', 'time_step')
+        self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
     cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X) except INT_ERR:
