@@ -7,6 +7,8 @@ import ConfigParser
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
+from pylag.numerics import get_global_time_step
+
 cdef class TimeManager(object):
     cdef object _config
     
@@ -43,16 +45,16 @@ cdef class TimeManager(object):
         # Time interval between particle releases
         self._particle_release_interval_in_hours = config.getfloat("SIMULATION", "particle_release_interval_in_hours")
         
-        # Simulation time step
-        self._time_step = config.getfloat('NUMERICS', 'time_step')
-        
         # Period at which data is written to file
         self._output_frequency = config.getfloat("SIMULATION", "output_frequency")
-        
+
+        # Simulation time step
+        self._time_step = get_global_time_step(config)
+
         # Check that the time step is an exact divisor of the output frequency
         if <int>self._output_frequency % <int>self._time_step != 0:
-            raise RuntimeError('The simulation time step should be an exact divisor of the '\
-                  'output frequency.')
+            raise RuntimeError("The simulation time step {} s should be an "
+                    "exact divisor of the output frequency {}".format(self._time_step, self._output_frequency))
 
         # Initialise counter for the current particle release
         self._current_release = 0
