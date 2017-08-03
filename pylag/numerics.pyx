@@ -122,7 +122,7 @@ cdef class StdNumMethod(NumMethod):
               
         # First check for a land boundary crossing
         while flag == -1:
-            xpos, ypos = self.horiz_bc_calculator.apply(data_reader,
+            xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
                     particle.xpos, particle.ypos, xpos, ypos, host)
             flag, host = data_reader.find_host(particle.xpos,
                 particle.ypos, xpos, ypos, particle.host_horizontal_elem)
@@ -146,7 +146,7 @@ cdef class StdNumMethod(NumMethod):
             zmin = data_reader.get_zmin(time+self._time_step, particle)
             zmax = data_reader.get_zmax(time+self._time_step, particle)
             if particle.zpos < zmin or particle.zpos > zmax:
-                particle.zpos = self.vert_bc_calculator.apply(particle.zpos, zmin, zmax)
+                particle.zpos = self._vert_bc_calculator.apply(particle.zpos, zmin, zmax)
 
             # Determine the new host zlayer
             data_reader.set_vertical_grid_vars(time+self._time_step, particle)
@@ -285,7 +285,7 @@ cdef class OS0NumMethod(NumMethod):
               
         # First check for a land boundary crossing
         while flag == -1:
-            xpos, ypos = self.horiz_bc_calculator.apply(data_reader,
+            xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
                     particle.xpos, particle.ypos, xpos, ypos, host)
             flag, host = data_reader.find_host(particle.xpos,
                 particle.ypos, xpos, ypos, particle.host_horizontal_elem)
@@ -311,7 +311,7 @@ cdef class OS0NumMethod(NumMethod):
         zmin = data_reader.get_zmin(time, &_particle)
         zmax = data_reader.get_zmax(time, &_particle)
         if _particle.zpos < zmin or _particle.zpos > zmax:
-            _particle.zpos = self.vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
+            _particle.zpos = self._vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
 
         data_reader.set_vertical_grid_vars(time, &_particle)
 
@@ -335,7 +335,7 @@ cdef class OS0NumMethod(NumMethod):
 
             # Check for a land boundary crossing
             while flag == -1:
-                xpos, ypos = self.horiz_bc_calculator.apply(data_reader,
+                xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
                         _particle.xpos, _particle.ypos, xpos, ypos, host)
                 flag, host = data_reader.find_host(_particle.xpos,
                     _particle.ypos, xpos, ypos, _particle.host_horizontal_elem)
@@ -353,7 +353,7 @@ cdef class OS0NumMethod(NumMethod):
             zmin = data_reader.get_zmin(t+self._diff_time_step, &_particle)
             zmax = data_reader.get_zmax(t+self._diff_time_step, &_particle)
             if _particle.zpos < zmin or _particle.zpos > zmax:
-                _particle.zpos = self.vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
+                _particle.zpos = self._vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
 
             data_reader.set_vertical_grid_vars(t+self._diff_time_step, &_particle)
 
