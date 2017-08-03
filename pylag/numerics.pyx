@@ -160,10 +160,12 @@ cdef class OS0NumMethod(NumMethod):
     
     The numerical method should be used when the effects of advection and
     diffusion are combined using a form of operator splitting in which
-    first the advection step is computed, then the diffusion step. The two
+    first the advection step is computed, then `n' diffusion steps. The two
     processes can use different time steps - typically, the time step used
     for diffusion will be smaller than that used for advection - which has
-    the potential to significantly reduce run times.
+    the potential to significantly reduce run times. Note the advection time 
+    step, which must be set in the supplied config, should be an exact multiple
+    of the diffusion time step; if it isn't, an exception will be raised.
 
     Attributes:
     -----------
@@ -424,7 +426,177 @@ cdef class OS1NumMethod(NumMethod):
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
             Particle *particle) except INT_ERR:
-        raise NotImplementedError
+        """ Perform one iteration of the numerical integration
+        
+        If the particle's new position lies outside of the model domain, the
+        specified boundary conditions are applied. The `flag' variable is used
+        to tell the caller whether the particle's position was successfully
+        updated.
+
+        Parameters:
+        -----------
+        data_reader: object of type DataReader
+            A DataReader object used for reading velocities and eddy
+            diffusivities/viscosities.
+
+        time: float
+            The current time.
+
+        *particle: C pointer
+            C Pointer to a Particle struct
+
+        *delta_X: C pointer
+            C Pointer to a Delta struct
+
+        Returns:
+        --------
+        flag : int
+            Flag identifying if a boundary crossing has occurred.
+        """
+        cdef DTYPE_FLOAT_t xpos, ypos, zpos
+        cdef DTYPE_FLOAT_t zmin, zmax
+        cdef DTYPE_INT_t flag, host
+        cdef Particle _particle
+        cdef Delta _delta_X
+        cdef DTYPE_FLOAT_t t
+
+        # 1st Diffusion step
+        # ------------------
+
+        # Compute Delta
+        reset(&_delta_X)
+        flag = self._diff_iterative_method.step(time, particle, data_reader, &_delta_X)
+
+        # Return if the particle crossed an open boundary
+        if flag == -2: return flag
+
+        # Compute new position
+        xpos = particle.xpos + _delta_X.x
+        ypos = particle.ypos + _delta_X.y
+        zpos = particle.zpos + _delta_X.z
+        flag, host = data_reader.find_host(particle.xpos, particle.ypos, xpos,
+                ypos, particle.host_horizontal_elem)
+              
+        # First check for a land boundary crossing
+        while flag == -1:
+            xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
+                    particle.xpos, particle.ypos, xpos, ypos, host)
+            flag, host = data_reader.find_host(particle.xpos,
+                particle.ypos, xpos, ypos, particle.host_horizontal_elem)
+
+        # Second check for an open boundary crossing
+        if flag == -2: return flag
+
+        # Advection step
+        # --------------
+
+        # Time at which to start the advection step
+        t = time + self._diff_time_step
+
+        # First clone the original particle then update its position
+        _particle = particle[0]
+
+        _particle.xpos = xpos
+        _particle.ypos = ypos
+        _particle.zpos = zpos
+        _particle.host_horizontal_elem = host
+
+        data_reader.set_local_coordinates(&_particle)
+
+        zmin = data_reader.get_zmin(t, &_particle)
+        zmax = data_reader.get_zmax(t, &_particle)
+        if _particle.zpos < zmin or _particle.zpos > zmax:
+            _particle.zpos = self._vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
+
+        data_reader.set_vertical_grid_vars(t, &_particle)
+
+        # Compute Delta
+        reset(&_delta_X)
+        flag = self._adv_iterative_method.step(t, &_particle, data_reader, &_delta_X)
+
+        # Return if the particle crossed an open boundary
+        if flag == -2: return flag
+
+        # Compute new position
+        xpos = _particle.xpos + _delta_X.x
+        ypos = _particle.ypos + _delta_X.y
+        zpos = _particle.zpos + _delta_X.z
+        flag, host = data_reader.find_host(_particle.xpos, _particle.ypos, xpos,
+                ypos, _particle.host_horizontal_elem)
+              
+        # First check for a land boundary crossing
+        while flag == -1:
+            xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
+                    _particle.xpos, _particle.ypos, xpos, ypos, host)
+            flag, host = data_reader.find_host(_particle.xpos,
+                _particle.ypos, xpos, ypos, _particle.host_horizontal_elem)
+
+        # Second check for an open boundary crossing
+        if flag == -2: return flag
+
+        # 2nd Diffusion step
+        # ------------------
+
+        # Time at which to start the second diffusion step
+        t = time + self._diff_time_step + self._adv_time_step
+
+        _particle.xpos = xpos
+        _particle.ypos = ypos
+        _particle.zpos = zpos
+        _particle.host_horizontal_elem = host
+
+        data_reader.set_local_coordinates(&_particle)
+
+        zmin = data_reader.get_zmin(t, &_particle)
+        zmax = data_reader.get_zmax(t, &_particle)
+        if _particle.zpos < zmin or _particle.zpos > zmax:
+            _particle.zpos = self._vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
+
+        data_reader.set_vertical_grid_vars(t, &_particle)
+
+        # Compute Delta
+        reset(&_delta_X)
+        flag = self._diff_iterative_method.step(t, &_particle, data_reader, &_delta_X)
+
+        # Return if the particle crossed an open boundary
+        if flag == -2: return flag
+
+        # Compute new position
+        xpos = _particle.xpos + _delta_X.x
+        ypos = _particle.ypos + _delta_X.y
+        zpos = _particle.zpos + _delta_X.z
+        flag, host = data_reader.find_host(_particle.xpos, _particle.ypos, xpos,
+                ypos, _particle.host_horizontal_elem)
+              
+        # First check for a land boundary crossing
+        while flag == -1:
+            xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
+                    _particle.xpos, _particle.ypos, xpos, ypos, host)
+            flag, host = data_reader.find_host(_particle.xpos,
+                _particle.ypos, xpos, ypos, _particle.host_horizontal_elem)
+
+        # Second check for an open boundary crossing
+        if flag == -2: return flag
+
+        # All steps complete - update the original particle's position
+        # ------------------------------------------------------------
+
+        particle.xpos = xpos
+        particle.ypos = ypos
+        particle.zpos = zpos
+        particle.host_horizontal_elem = host
+
+        data_reader.set_local_coordinates(particle)
+
+        t = time + 2.0*self._diff_time_step + self._adv_time_step 
+        zmin = data_reader.get_zmin(t, particle)
+        zmax = data_reader.get_zmax(t, particle)
+        if particle.zpos < zmin or particle.zpos > zmax:
+            particle.zpos = self._vert_bc_calculator.apply(particle.zpos, zmin, zmax)
+
+        data_reader.set_vertical_grid_vars(t, particle)
+        
+        return flag
 
 def get_num_method(config):
     """ Factory method for constructing NumMethod objects
