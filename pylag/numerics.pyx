@@ -1042,13 +1042,11 @@ cdef class DiffNaive1DItMethod(ItMethod):
             always be zero since the method does not check for boundary
             crossings.
         """
-        # The vertical eddy diffusiviy
-        cdef DTYPE_FLOAT_t D
+        cdef DTYPE_FLOAT_t Kh
 
-        D = data_reader.get_vertical_eddy_diffusivity(time, particle)
+        Kh = data_reader.get_vertical_eddy_diffusivity(time, particle)
         
-        # Change in position
-        delta_X.z += sqrt(2.0*D*self._time_step) * random.gauss(0.0, 1.0)
+        delta_X.z += sqrt(2.0*Kh*self._time_step) * random.gauss(0.0, 1.0)
         
         return 0
 
@@ -1094,42 +1092,26 @@ cdef class DiffEuler1DItMethod(ItMethod):
             always be zero since the method does not check for boundary
             crossings.
         """
-        # Temporary particle object
-        cdef Particle _particle
-        
-        # The vertical eddy diffusiviy
-        #     k - at the advected location
-        #     dk_dz - gradient in k
-        cdef DTYPE_FLOAT_t k, dk_dz
+        # The vertical eddy diffusiviy and its derivative wrt z
+        cdef DTYPE_FLOAT_t Kh, Kh_prime
 
-        # Change in position (units: m)
-        cdef DTYPE_FLOAT_t dz_advection, dz_random
+        Kh = data_reader.get_vertical_eddy_diffusivity(time, particle)
+        Kh_prime = data_reader.get_vertical_eddy_diffusivity_derivative(time, particle)
 
-        # Create a copy of particle
-        _particle = particle[0]
-
-        # Compute the vertical eddy diffusivity at the particle's current location.
-        k = data_reader.get_vertical_eddy_diffusivity(time, &_particle)
-
-        # Compute an approximate value for the gradient in the vertical eddy
-        # diffusivity at the particle's current location.
-        dk_dz = data_reader.get_vertical_eddy_diffusivity_derivative(time, &_particle)
-
-        # Compute the random displacement
-        dz_random = sqrt(2.0*k*self._time_step) * random.gauss(0.0, 1.0)
-
-        # Compute the advective displacement for inhomogeneous turbluence. This
-        # assumes advection due to the resolved flow is computed elsewhere or
-        # is zero.
-        dz_advection = dk_dz * self._time_step
-
-        # Change in position
-        delta_X.z = dz_advection + dz_random
+        delta_X.z = Kh_prime * self._time_step + sqrt(2.0*Kh*self._time_step) * random.gauss(0.0, 1.0)
 
         return 0
 
 cdef class DiffVisser1DItMethod(ItMethod):
     """ Stochastic Visser 1D iterative method
+
+    The scheme includes a deterministic advective term that counteracts the
+    tendency for particles to accumulate in regions of low diffusivity
+    (c.f. the NaiveEuler scheme). In this scheme, the vertical eddy
+    diffusivity is computed at a position that lies roughly half way between
+    the particle's current position and the position it would be advected
+    too. Vertical boundary conditions are invoked if the computed offset is 
+    outside of the model grid. See Visser (1997).
 
     Attributes:
     -----------
@@ -1152,10 +1134,6 @@ cdef class DiffVisser1DItMethod(ItMethod):
     cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X) except INT_ERR:
         """ Compute position delta in 1D using Visser iterative method
-        
-        The scheme includes a deterministic advective term that counteracts the
-        tendency for particles to accumulate in regions of low diffusivity
-        (c.f. the NaiveEuler scheme). See Visser (1997).
 
         Parameters:
         -----------
@@ -1184,67 +1162,41 @@ cdef class DiffVisser1DItMethod(ItMethod):
         distribution of particles in a turbulent water column.
         Marine Ecology Progress Series, 158, 275-281
         """
-        # Temporary particle object
         cdef Particle _particle
-        
-        # Temporary containers for the particle's location
-        cdef DTYPE_FLOAT_t zmin, zmax
-        
-        # Temporary containers for z position offset from the current position -
-        # used in dk_dz calculations
-        cdef DTYPE_FLOAT_t zpos_offset
-        
-        # The vertical eddy diffusiviy
-        #     k - at the advected location
-        #     dk_dz - gradient in k
-        cdef DTYPE_FLOAT_t k, dk_dz
-
-        # The velocity at the particle's current location
+        cdef DTYPE_FLOAT_t zmin, zmax, zpos_offset
+        cdef DTYPE_FLOAT_t Kh, Kh_prime
         cdef DTYPE_FLOAT_t vel[3]
+
         vel[:] = [0.0, 0.0, 0.0]
 
-        # Change in position (units: m)
-        cdef DTYPE_FLOAT_t dz_advection, dz_random
+        Kh_prime = data_reader.get_vertical_eddy_diffusivity_derivative(time, particle)
 
-        # Create a copy of particle
-        _particle = particle[0]
-
-        # Compute an approximate value for the gradient in the vertical eddy
-        # diffusivity at the particle's current location.
-        dk_dz = data_reader.get_vertical_eddy_diffusivity_derivative(time, &_particle)
+        data_reader.get_velocity(time, particle, vel)
         
-        # Compute the velocity at the particle's current location
-        data_reader.get_velocity(time, &_particle, vel)
-        
-        # Compute the vertical eddy diffusivity at a position that lies roughly
-        # between the current particle's position and the position it would be
-        # advected too. Apply reflecting boundary condition if the computed
-        # offset falls outside of the model domain
-        zpos_offset = _particle.zpos + 0.5 * (vel[2] + dk_dz) * self._time_step
-        zmin = data_reader.get_zmin(time, &_particle)
-        zmax = data_reader.get_zmax(time, &_particle)
+        zpos_offset = _particle.zpos + 0.5 * (vel[2] + Kh_prime) * self._time_step
+        zmin = data_reader.get_zmin(time, particle)
+        zmax = data_reader.get_zmax(time, particle)
         if zpos_offset < zmin or zpos_offset > zmax:
             zpos_offset = self._vert_bc_calculator.apply(zpos_offset, zmin, zmax)
 
+        # Create a copy of the particle and move it to the offset position
+        _particle = particle[0]
         _particle.zpos = zpos_offset
         data_reader.set_vertical_grid_vars(time, &_particle)
-        k = data_reader.get_vertical_eddy_diffusivity(time, &_particle)
 
-        # Compute the random displacement
-        dz_random = sqrt(2.0*k*self._time_step) * random.gauss(0.0, 1.0)
+        # Compute Kh at the offset position
+        Kh = data_reader.get_vertical_eddy_diffusivity(time, &_particle)
 
-        # Compute the advective displacement for inhomogenous turbluence. This
-        # assumes advection due to the resolved flow is computed elsewhere or
-        # is zero.
-        dz_advection = dk_dz * self._time_step
-
-        # Change in position
-        delta_X.z = dz_advection + dz_random
+        delta_X.z = Kh_prime * self._time_step + sqrt(2.0*Kh*self._time_step) * random.gauss(0.0, 1.0)
 
         return 0
 
 cdef class DiffMilstein1DItMethod(ItMethod):
     """ Stochastic Milstein 1D iterative method
+
+    This scheme was highlighted by Grawe (2012) as being more
+    accurate than the Euler or Visser schemes, but still computationally
+    efficient.
     """
 
     def __init__(self, config):
@@ -1259,10 +1211,6 @@ cdef class DiffMilstein1DItMethod(ItMethod):
     cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X) except INT_ERR:
         """ Compute position delta in 1D using Milstein iterative method
-        
-        This scheme was highlighted by Grawe (2012) as being more
-        accurate than the Euler or Visser schemes, but still computationally
-        efficient.
         
         Parameters:
         -----------
@@ -1290,35 +1238,15 @@ cdef class DiffMilstein1DItMethod(ItMethod):
         Gräwe, U. (2011) Implementation of high-order particle-tracking schemes
         in a water column model Ocean Modelling, 36, 80 - 89
         """
-        # Temporary particle object
-        cdef Particle _particle
-        
-        # Random deviate
         cdef DTYPE_FLOAT_t deviate
-        
-        # The vertical eddy diffusiviy
-        #     k - at the advected location
-        #     dk_dz - gradient in k
-        cdef DTYPE_FLOAT_t k, dk_dz
+        cdef DTYPE_FLOAT_t Kh, Kh_prime
 
-        # Create a copy of particle
-        _particle = particle[0]
-
-        # Compute the random deviate for the update. It is Gaussian, with zero
-        # mean and standard deviation equal to 1.0. It is transformed into a
-        # Wiener increment later. Not doing this hear minimises the number of
-        # square root operations we need to perform.
         deviate = random.gauss(0.0, 1.0)
 
-        # Compute the vertical eddy diffusivity at the particle's current location.
-        k = data_reader.get_vertical_eddy_diffusivity(time, &_particle)
+        Kh = data_reader.get_vertical_eddy_diffusivity(time, particle)
+        Kh_prime = data_reader.get_vertical_eddy_diffusivity_derivative(time, particle)
 
-        # Compute an approximate value for the gradient in the vertical eddy
-        # diffusivity at the particle's current location.
-        dk_dz = data_reader.get_vertical_eddy_diffusivity_derivative(time, &_particle)
-
-        # Compute the random displacement
-        delta_X.z  = 0.5 * dk_dz * self._time_step * (deviate*deviate + 1.0) + sqrt(2.0 * k * self._time_step) * deviate
+        delta_X.z  = 0.5 * Kh_prime * self._time_step * (deviate*deviate + 1.0) + sqrt(2.0 * Kh * self._time_step) * deviate
 
         return 0
 
@@ -1327,10 +1255,10 @@ cdef class DiffConst2DItMethod(ItMethod):
 
     Attributes:
     -----------
-    _kh : float
+    _Ah : float
         Horizontal eddy viscosity constant
     """
-    cdef DTYPE_FLOAT_t _kh
+    cdef DTYPE_FLOAT_t _Ah
 
     def __init__(self, config):
         """ Initialise class data members
@@ -1341,7 +1269,7 @@ cdef class DiffConst2DItMethod(ItMethod):
         """
         self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
-        self._kh = config.getfloat("OCEAN_CIRCULATION_MODEL", "horizontal_eddy_viscosity_constant")
+        self._Ah = config.getfloat("OCEAN_CIRCULATION_MODEL", "horizontal_eddy_viscosity_constant")
         
     cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X) except INT_ERR:
@@ -1371,13 +1299,18 @@ cdef class DiffConst2DItMethod(ItMethod):
             always be zero since the method does not check for boundary
             crossings.
         """
-        delta_X.x += sqrt(2.0*self._kh*self._time_step) * random.gauss(0.0, 1.0)
-        delta_X.y += sqrt(2.0*self._kh*self._time_step) * random.gauss(0.0, 1.0)
+        delta_X.x += sqrt(2.0*self._Ah*self._time_step) * random.gauss(0.0, 1.0)
+        delta_X.y += sqrt(2.0*self._Ah*self._time_step) * random.gauss(0.0, 1.0)
         
         return 0
 
 cdef class DiffNaive2DItMethod(ItMethod):
     """ Stochastic Naive Euler 2D iterative method
+    
+    This method is very similar to that implemented in DiffConst2DItMethod
+    with the difference being the eddy viscosity is provided by DataReader.
+    As in the 1D case, this method should not be used when the eddy 
+    viscosity field is inhomogeneous.
     """
 
     def __init__(self, config):
@@ -1392,11 +1325,6 @@ cdef class DiffNaive2DItMethod(ItMethod):
     cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X) except INT_ERR:
         """ Compute position delta in 2D using Naive Euler iterative method
-        
-        This method is very similar to that implemented in DiffConst2DItMethod
-        with the difference being the eddy viscosity is provided by DataReader.
-        As in the 1D case, this method should not be used when the eddy 
-        viscosity field is inhomogeneous.
         
         Parameters:
         -----------
@@ -1419,20 +1347,22 @@ cdef class DiffNaive2DItMethod(ItMethod):
             always be zero since the method does not check for boundary
             crossings.
         """
-        # The horizontal eddy diffusiviy
-        cdef DTYPE_FLOAT_t kh
+        # The horizontal eddy viscosity
+        cdef DTYPE_FLOAT_t Ah
         
-        # The vertical eddy diffusivity at the particle's current location
-        kh = data_reader.get_horizontal_eddy_diffusivity(time, particle)
+        # The horizontal eddy viscosity at the particle's current location
+        Ah = data_reader.get_horizontal_eddy_diffusivity(time, particle)
         
         # Change in position
-        delta_X.x += sqrt(2.0*kh*self._time_step) * random.gauss(0.0, 1.0)
-        delta_X.y += sqrt(2.0*kh*self._time_step) * random.gauss(0.0, 1.0)
+        delta_X.x += sqrt(2.0*Ah*self._time_step) * random.gauss(0.0, 1.0)
+        delta_X.y += sqrt(2.0*Ah*self._time_step) * random.gauss(0.0, 1.0)
         
         return 0
 
 cdef class DiffMilstein2DItMethod(ItMethod):
     """ Stochastic Milstein 2D iterative method
+
+    This method is a 2D implementation of the Milstein scheme.
     """
 
     def __init__(self, config):
@@ -1447,8 +1377,6 @@ cdef class DiffMilstein2DItMethod(ItMethod):
     cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X) except INT_ERR:
         """ Compute position delta in 2D using Milstein iterative method
-        
-        This method is a 2D implementation of the Milstein scheme.
         
         Parameters:
         -----------
@@ -1471,29 +1399,16 @@ cdef class DiffMilstein2DItMethod(ItMethod):
             always be zero since the method does not check for boundary
             crossings.
         """
-        # Random deviates
-        cdef DTYPE_FLOAT_t deviate_X, deviate_y
-        
-        # The horizontal eddy viscosity
+        cdef DTYPE_FLOAT_t deviate_x, deviate_y
         cdef DTYPE_FLOAT_t Ah
-        
-        # The gradient in the horizontal eddy viscosity wrt x and y
         cdef DTYPE_FLOAT_t Ah_prime[2]
 
-        # The horizontal eddy viscosity at the particle's current location
         Ah = data_reader.get_horizontal_eddy_diffusivity(time, particle)
-        
-        # The gradient in the horizontal eddy viscosity at the particle's current location
         data_reader.get_horizontal_eddy_diffusivity_derivative(time, particle, Ah_prime)
 
-        # Compute random deviates. These are Gaussian, with zero mean and 
-        # standard deviation equal to 1.0. They are transformed into a
-        # Wiener increment later. Not doing this hear minimises the number of
-        # square root operations we need to perform.
         deviate_x = random.gauss(0.0, 1.0)
         deviate_y = random.gauss(0.0, 1.0)
 
-        # Compute the random displacements
         delta_X.x  = 0.5 * Ah_prime[0] * self._time_step * (deviate_x*deviate_x + 1.0) \
                 + sqrt(2.0 * Ah * self._time_step) * deviate_x
         delta_X.y  = 0.5 * Ah_prime[1] * self._time_step * (deviate_y*deviate_y + 1.0) \
@@ -1503,6 +1418,8 @@ cdef class DiffMilstein2DItMethod(ItMethod):
 
 cdef class DiffMilstein3DItMethod(ItMethod):
     """ Stochastic Milstein 3D iterative method
+
+    This method is a 3D implementation of the Milstein scheme.
     """
 
     def __init__(self, config):
@@ -1517,8 +1434,6 @@ cdef class DiffMilstein3DItMethod(ItMethod):
     cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
             DataReader data_reader, Delta *delta_X) except INT_ERR:
         """ Compute position delta in 3D using Milstein iterative method
-        
-        This method is a 3D implementation of the Milstein scheme.
         
         Parameters:
         -----------
@@ -1541,19 +1456,10 @@ cdef class DiffMilstein3DItMethod(ItMethod):
             always be zero since the method does not check for boundary
             crossings.
         """
-        # Random deviates
         cdef DTYPE_FLOAT_t deviate_x, deviate_y, deviate_z
-        
-        # The horizontal eddy viscosity
         cdef DTYPE_FLOAT_t Ah
-        
-        # The vertical eddy diffusivity
         cdef DTYPE_FLOAT_t Kh
-        
-        # The gradient in the horizontal eddy viscosity wrt x and y
         cdef DTYPE_FLOAT_t Ah_prime[2]
-        
-        # The gradient in the vertical eddy diffusivity wrt z
         cdef DTYPE_FLOAT_t Kh_prime
 
         Ah = data_reader.get_horizontal_eddy_diffusivity(time, particle)
@@ -1620,22 +1526,11 @@ cdef class AdvDiffMilstein3DItMethod(ItMethod):
             always be zero since the method does not check for boundary
             crossings.
         """
-        # Calculated velocity
         cdef DTYPE_FLOAT_t vel[3]
-
-        # Random deviates
         cdef DTYPE_FLOAT_t deviate_x, deviate_y, deviate_z
-        
-        # The horizontal eddy viscosity
         cdef DTYPE_FLOAT_t Ah
-        
-        # The vertical eddy diffusivity
         cdef DTYPE_FLOAT_t Kh
-        
-        # The gradient in the horizontal eddy viscosity wrt x and y
         cdef DTYPE_FLOAT_t Ah_prime[2]
-        
-        # The gradient in the vertical eddy diffusivity wrt z
         cdef DTYPE_FLOAT_t Kh_prime
 
         data_reader.get_velocity(time, particle, vel) 
