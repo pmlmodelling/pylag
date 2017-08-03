@@ -1665,3 +1665,44 @@ def get_diff_iterative_method(config):
         return DiffMilstein3DItMethod(config)
     else:
         raise ValueError('Unsupported iterative method specified.')
+
+def get_global_time_step(config):
+    """ Return the global time step
+    
+    This is a utility function that returns the global time step adopted within
+    the model. It is included to ensure clients have a robust method of
+    calculating the global time step that takes into account the fact that
+    different NumMethod and ItMethod objects can use different time steps (or
+    combinations of time steps if separate iterative methods are used for 
+    advection and diffusion).
+    
+    The rules are:
+    1) Return the advection time step if operator splitting is being used
+    2) Return the advection time step if operator splitting isn't being used
+    and the iterative method is for advection only.
+    3) Return the diffusion tim step if operator splitting isn't being used,
+    and the iterative method is for diffusion only or advection+diffusion.
+
+    Parameters:
+    -----------
+    config : ConfigParser
+        Object of type ConfigParser.
+    
+    """
+    num_method = config.get("NUMERICS", "num_method")
+    if num_method == "operator_split_0" or num_method == "operator_split_1":
+        return config.getfloat("NUMERICS", "time_step_adv")
+    elif num_method == "standard":
+        iterative_method = config.get("NUMERICS", "iterative_method")
+        if iterative_method.find('Diff') == -1 and iterative_method.find('Adv') == -1:
+            raise ValueError("Expected the config option `iterative_method' "
+                "to contain one or both of the substrings `Diff' and `Adv'")
+
+        if iterative_method.find('Diff') != -1:
+            return config.getfloat("NUMERICS", "time_step_diff")
+        else:
+            return config.getfloat("NUMERICS", "time_step_adv")
+    else:
+        raise ValueError("Unrecognised config option num_method={}".format(num_method))    
+        
+        
