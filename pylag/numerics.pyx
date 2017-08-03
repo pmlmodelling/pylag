@@ -163,7 +163,7 @@ cdef class OS0NumMethod(NumMethod):
     first the advection step is computed, then the diffusion step. The two
     processes can use different time steps - typically, the time step used
     for diffusion will be smaller than that used for advection - which has
-    the potential to significantly reduce run times
+    the potential to significantly reduce run times.
 
     Attributes:
     -----------
@@ -172,7 +172,10 @@ cdef class OS0NumMethod(NumMethod):
 
     _diff_time_step : float
         Time step used for diffusion
-    
+
+    _n_sub_time_steps : int
+        The number of diffusion time steps for each advection step
+
     _adv_iterative_method : _ItMethod
         The iterative method used for advection (e.g. Euler etc)
 
@@ -254,22 +257,20 @@ cdef class OS0NumMethod(NumMethod):
         --------
         flag : int
             Flag identifying if a boundary crossing has occurred.
-            
-        TODO:
-        -----
-        (1) Implement sub time stepping for diffusion.
         """
         cdef DTYPE_FLOAT_t xpos, ypos, zpos
         cdef DTYPE_FLOAT_t zmin, zmax
         cdef DTYPE_INT_t flag, host
         cdef Particle _particle
         cdef Delta _delta_X
+        cdef DTYPE_FLOAT_t t
+        cdef DTYPE_INT_t i
 
-        raise NotImplementedError
+        # Advection
+        # ---------
 
+        # Compute Delta
         reset(&_delta_X)
-
-        # Compute Delta due to advection
         flag = self._adv_iterative_method.step(time, particle, data_reader, &_delta_X)
 
         # Return if the particle crossed an open boundary
@@ -292,34 +293,35 @@ cdef class OS0NumMethod(NumMethod):
         # Second check for an open boundary crossing
         if flag == -2: return flag
 
-        # If the particle still resides in the domain continue with the update
-        if flag == 0:
-            # First clone the original particle
-            _particle = particle[0]
-            
-            
-            
-            # Update its position following the advection step
-            _particle.xpos = xpos
-            _particle.ypos = ypos
-            _particle.zpos = zpos
-            _particle.host_horizontal_elem = host
+        # Diffusion
+        # ---------
 
-            # Update particle local coordinates
-            data_reader.set_local_coordinates(&_particle)
+        # First clone the original particle
+        _particle = particle[0]
 
-            # Apply surface/bottom boundary conditions and set zpos
-            zmin = data_reader.get_zmin(time, &_particle)
-            zmax = data_reader.get_zmax(time, &_particle)
-            if _particle.zpos < zmin or _particle.zpos > zmax:
-                _particle.zpos = self.vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
+        _particle.xpos = xpos
+        _particle.ypos = ypos
+        _particle.zpos = zpos
+        _particle.host_horizontal_elem = host
 
-            # Determine the host zlayer
-            data_reader.set_vertical_grid_vars(time, &_particle)
-            
+        data_reader.set_local_coordinates(&_particle)
+
+        # NB these are evaluated at time `time', since this is when the
+        # diffusion loop starts
+        zmin = data_reader.get_zmin(time, &_particle)
+        zmax = data_reader.get_zmax(time, &_particle)
+        if _particle.zpos < zmin or _particle.zpos > zmax:
+            _particle.zpos = self.vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
+
+        data_reader.set_vertical_grid_vars(time, &_particle)
+
+        # Diffusion inner loop
+        for i in xrange(self._n_sub_time_steps):
+            t = time + i * self._diff_time_step
+
             # Perform the diffusion step
             reset(&_delta_X)
-            flag = self._diff_iterative_method.step(time, &_particle, data_reader, &_delta_X)
+            flag = self._diff_iterative_method.step(t, &_particle, data_reader, &_delta_X)
 
             # Return if the particle crossed an open boundary
             if flag == -2: return flag
@@ -338,31 +340,27 @@ cdef class OS0NumMethod(NumMethod):
                 flag, host = data_reader.find_host(_particle.xpos,
                     _particle.ypos, xpos, ypos, _particle.host_horizontal_elem)
 
-            # Second check for an open boundary crossing
             if flag == -2: return flag
 
-            # If the particle still resides in the domain update the position
-            # or the original particle
-            if flag == 0:
-                particle.xpos = xpos
-                particle.ypos = ypos
-                particle.zpos = zpos
-                particle.host_horizontal_elem = host
+            # The particle still resides in the domain - update its position
+            _particle.xpos = xpos
+            _particle.ypos = ypos
+            _particle.zpos = zpos
+            _particle.host_horizontal_elem = host
 
-                data_reader.set_local_coordinates(particle)
+            data_reader.set_local_coordinates(&_particle)
 
-                zmin = data_reader.get_zmin(time+self._adv_time_step, particle)
-                zmax = data_reader.get_zmax(time+self._adv_time_step, particle)
-                if particle.zpos < zmin or particle.zpos > zmax:
-                    particle.zpos = self.vert_bc_calculator.apply(particle.zpos, zmin, zmax)
+            zmin = data_reader.get_zmin(t+self._diff_time_step, &_particle)
+            zmax = data_reader.get_zmax(t+self._diff_time_step, &_particle)
+            if _particle.zpos < zmin or _particle.zpos > zmax:
+                _particle.zpos = self.vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
 
-                data_reader.set_vertical_grid_vars(time+self._time_step, particle)
-                
-                return flag
-            else:
-                raise ValueError('Unrecognised host element flag {}.'.format(flag))
-        else:
-            raise ValueError('Unrecognised host element flag {}.'.format(flag))
+            data_reader.set_vertical_grid_vars(t+self._diff_time_step, &_particle)
+
+        # Diffusion loop complete - update the original particle's position
+        particle[0] = _particle
+
+        return flag
 
 cdef class OS1NumMethod(NumMethod):
     """ Numerical method that employs strang splitting
