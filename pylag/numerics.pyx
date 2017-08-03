@@ -187,6 +187,7 @@ cdef class OS0NumMethod(NumMethod):
     """
     cdef DTYPE_FLOAT_t _adv_time_step
     cdef DTYPE_FLOAT_t _diff_time_step
+    cdef DTYPE_INT_t _n_sub_time_steps
 
     cdef ItMethod _adv_iterative_method
     cdef ItMethod _diff_iterative_method
@@ -222,6 +223,8 @@ cdef class OS0NumMethod(NumMethod):
                     "(time_step_adv, {} s) must be an exact multiple of the "
                     "time step for diffusion (time_step_diff, {} s)"
                     "".format(self._adv_time_step, self._diff_time_step))
+        
+        self._n_sub_time_steps = int(self._adv_time_step / self._diff_time_step)
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
             Particle *particle) except INT_ERR:
@@ -293,6 +296,8 @@ cdef class OS0NumMethod(NumMethod):
         if flag == 0:
             # First clone the original particle
             _particle = particle[0]
+            
+            
             
             # Update its position following the advection step
             _particle.xpos = xpos
