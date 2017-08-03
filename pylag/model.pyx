@@ -5,9 +5,6 @@ from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 from pylag.numerics import get_num_method
-from pylag.integrator import get_num_integrator
-from pylag.lagrangian_stochastic_model import get_vertical_lsm, get_horizontal_lsm
-from pylag.boundary_conditions import get_horiz_boundary_condition_calculator, get_vert_boundary_condition_calculator
 from pylag.particle_positions_reader import read_particle_initial_positions
 from pylag.particle import ParticleSmartPtr
 
@@ -16,10 +13,6 @@ from libcpp.vector cimport vector
 from pylag.data_reader cimport DataReader
 from pylag.math cimport sigma_to_cartesian_coords, cartesian_to_sigma_coords
 from pylag.numerics cimport NumMethod
-from pylag.integrator cimport NumIntegrator
-from pylag.lagrangian_stochastic_model cimport OneDLSM, HorizontalLSM
-from pylag.boundary_conditions cimport HorizBoundaryConditionCalculator, VertBoundaryConditionCalculator
-from pylag.delta cimport Delta, reset
 from pylag.particle cimport Particle, ParticleSmartPtr, copy
 
 cdef class OPTModel:
@@ -58,11 +51,6 @@ cdef class FVCOMOPTModel(OPTModel):
     cdef object config
     cdef DataReader data_reader
     cdef NumMethod num_method
-    cdef NumIntegrator num_integrator
-    cdef OneDLSM vert_lsm
-    cdef HorizontalLSM horiz_lsm
-    cdef HorizBoundaryConditionCalculator horiz_bc_calculator
-    cdef VertBoundaryConditionCalculator vert_bc_calculator
     cdef object particle_seed_smart_ptrs
     cdef object particle_smart_ptrs
     cdef vector[Particle*] particle_ptrs
@@ -72,9 +60,6 @@ cdef class FVCOMOPTModel(OPTModel):
     cdef DTYPE_FLOAT_t[:] _x_positions
     cdef DTYPE_FLOAT_t[:] _y_positions
     cdef DTYPE_FLOAT_t[:] _z_positions
-    
-    # Time step
-    cdef DTYPE_FLOAT_t time_step 
 
     def __init__(self, config, data_reader, *args, **kwargs):
         # Initialise config
@@ -83,24 +68,8 @@ cdef class FVCOMOPTModel(OPTModel):
         # Initialise model data reader
         self.data_reader = data_reader
 
-        # Create boundary conditions calculators
-        self.horiz_bc_calculator = get_horiz_boundary_condition_calculator(self.config)
-        self.vert_bc_calculator = get_vert_boundary_condition_calculator(self.config)
-
         # Create num method object
         self.num_method = get_num_method(self.config)
-        
-        # Create numerical integrator
-        self.num_integrator = get_num_integrator(self.config)
-
-        # Create vertical lagrangian stochastic model
-        self.vert_lsm = get_vertical_lsm(self.config)
-
-        # Create horizontal lagrangian stochastic model
-        self.horiz_lsm = get_horizontal_lsm(self.config)
-        
-        # Time step
-        self.time_step = self.config.getfloat('NUMERICS', 'time_step')
 
     def set_particle_data(self, group_ids, x_positions, y_positions, z_positions):
         """Initialise memory views for data describing the particle seed.
@@ -260,106 +229,24 @@ cdef class FVCOMOPTModel(OPTModel):
 
     cpdef update(self, DTYPE_FLOAT_t time):
         """ Compute and update each particle's position.
-        
-        Compute the net effect of resolved and unresolved processes on particle
-        motion in the interval t -> t + dt. Resolved velocities are used to
-        advect particles. A random displacement model is used to model the
-        effect of unresolved (subgrid scale) vertical and horizontal transport
-        processes. Particle displacements are first stored and accumulated in an
-        object of type Delta before then being used to update a given particle's
-        position.
-        
-        If a particle crosses a land boundary its motion is temporarily
-        arrested. If the particle crosses an open boundary it is flagged as
-        having left the domain. These checks are performed twice - the first
-        after the advection call and the second after the net effect of each
-        process has been summed. The former is implemented in order to catch
-        errors thrown by the numerical integration scheme - these often employ
-        multi-step process which will error if the particle exits the domain 
-        mid-way through the computation.
-        
-        In the vertical, reflecting boundary conditions are applied at the 
-        bottom and surface boundaries.
+
+        Cycle over the particle set, updating the position of only those
+        particles that remain in the model domain
         
         Parameters:
         -----------
         time : float
             The current time.
         """
-        cdef DTYPE_FLOAT_t xpos, ypos, zpos
-        cdef DTYPE_FLOAT_t zmin, zmax
-        cdef Delta delta_X
         cdef Particle* particle_ptr
-        cdef DTYPE_INT_t flag, host, host_err
-        cdef DTYPE_INT_t i, n_particles
-        
-        # Cycle over the particle set, updating the position of only those
-        # particles that remain in the model domain
+        cdef DTYPE_INT_t flag
+
         for particle_ptr in self.particle_ptrs:
             if particle_ptr.in_domain:
-                reset(&delta_X)
-                
-                # Advection
-                if self.num_integrator is not None:
-                    host_err = self.num_integrator.advect(time,
-                            particle_ptr, self.data_reader, &delta_X)
-                            
-                    if host_err == -2:
-                        particle_ptr.in_domain = False
-                        continue
-                
-                # Vertical random walk
-                if self.vert_lsm is not None:
-                    self.vert_lsm.apply(time, particle_ptr, 
-                            self.data_reader, &delta_X)
+                flag = self.num_method.step(self.data_reader, time, particle_ptr)
 
-                # Horizontal random walk
-                if self.horiz_lsm is not None:
-                    self.horiz_lsm.apply(time, particle_ptr, 
-                            self.data_reader, &delta_X)  
-                
-                # Sum contributions
-                xpos = particle_ptr.xpos + delta_X.x
-                ypos = particle_ptr.ypos + delta_X.y
-                zpos = particle_ptr.zpos + delta_X.z
-                flag, host = self.data_reader.find_host(particle_ptr.xpos,
-                        particle_ptr.ypos, xpos, ypos, particle_ptr.host_horizontal_elem)
-              
-                # First check for land boundary crossing
-                while flag == -1:
-                    xpos, ypos = self.horiz_bc_calculator.apply(self.data_reader,
-                            particle_ptr.xpos, particle_ptr.ypos, xpos, ypos,
-                            host)
-                    flag, host = self.data_reader.find_host(particle_ptr.xpos,
-                        particle_ptr.ypos, xpos, ypos, particle_ptr.host_horizontal_elem)
-
-                # Second check for open boundary crossing
                 if flag == -2:
                     particle_ptr.in_domain = False
-                    continue
-
-                # If the particle still resides in the domain update its position.
-                if flag == 0:
-                    # Update the particle's position
-                    particle_ptr.xpos = xpos
-                    particle_ptr.ypos = ypos
-                    particle_ptr.zpos = zpos
-                    particle_ptr.host_horizontal_elem = host
-
-                    # Update particle local coordinates
-                    self.data_reader.set_local_coordinates(particle_ptr)
-
-                    # Apply surface/bottom boundary conditions and set zpos
-                    # NB zmin and zmax evaluated at the new time t+dt
-                    zmin = self.data_reader.get_zmin(time+self.time_step, particle_ptr)
-                    zmax = self.data_reader.get_zmax(time+self.time_step, particle_ptr)
-                    if particle_ptr.zpos < zmin or particle_ptr.zpos > zmax:
-                        particle_ptr.zpos = self.vert_bc_calculator.apply(particle_ptr.zpos, zmin, zmax)
-
-                    # Determine the new host zlayer
-                    self.data_reader.set_vertical_grid_vars(time+self.time_step, particle_ptr)
-                else:
-                    raise ValueError('Unrecognised host element flag {}.'.format(host))
 
     def get_diagnostics(self, time):
         """ Get particle diagnostics
@@ -407,8 +294,6 @@ cdef class GOTMOPTModel(OPTModel):
     cdef object config
     cdef DataReader data_reader
     cdef NumMethod num_method
-    cdef OneDLSM vert_lsm
-    cdef VertBoundaryConditionCalculator vert_bc_calculator
     cdef object particle_seed_smart_ptrs
     cdef object particle_smart_ptrs
     cdef vector[Particle*] particle_ptrs
@@ -418,9 +303,6 @@ cdef class GOTMOPTModel(OPTModel):
     cdef DTYPE_FLOAT_t[:] _x_positions
     cdef DTYPE_FLOAT_t[:] _y_positions
     cdef DTYPE_FLOAT_t[:] _z_positions
-    
-    # Time step
-    cdef DTYPE_FLOAT_t time_step 
 
     def __init__(self, config, data_reader, *args, **kwargs):
         # Initialise config
@@ -431,15 +313,6 @@ cdef class GOTMOPTModel(OPTModel):
 
         # Create num method object
         self.num_method = get_num_method(self.config)
-
-        # Create vertical lagrangian stochastic model
-        self.vert_lsm = get_vertical_lsm(self.config)
-
-        # Create vertical boundary conditions calculator
-        self.vert_bc_calculator = get_vert_boundary_condition_calculator(self.config)
-
-        # Time step
-        self.time_step = self.config.getfloat('NUMERICS', 'time_step')
 
     def set_particle_data(self, group_ids, x_positions, y_positions, z_positions):
         """Initialise memory views for data describing the particle seed.
@@ -567,51 +440,24 @@ cdef class GOTMOPTModel(OPTModel):
 
     cpdef update(self, DTYPE_FLOAT_t time):
         """ Compute and update each particle's position.
-        
-        Reflecting boundary conditions are applied at the bottom and surface
-        boundaries.
+
+        Cycle over the particle set, updating the position of only those
+        particles that remain in the model domain
         
         Parameters:
         -----------
         time : float
             The current time.
         """
-        cdef DTYPE_FLOAT_t zpos
-
-        cdef DTYPE_FLOAT_t zmin, zmax
-
-        cdef Delta delta_X
-
         cdef Particle* particle_ptr
+        cdef DTYPE_INT_t flag
 
-        cdef DTYPE_INT_t i, n_particles
-
-        # Cycle over the particle set, updating the position of only those
-        # particles that remain in the model domain
         for particle_ptr in self.particle_ptrs:
             if particle_ptr.in_domain:
-                reset(&delta_X)
+                flag = self.num_method.step(self.data_reader, time, particle_ptr)
 
-                # Find the host z layer for the current time
-                self.data_reader.set_vertical_grid_vars(time, particle_ptr)
-
-                # Vertical random walk
-                if self.vert_lsm is not None:
-                    self.vert_lsm.apply(time, particle_ptr, 
-                            self.data_reader, &delta_X)
-
-                # Sum contributions
-                zpos = particle_ptr.zpos + delta_X.z
-
-                # Apply surface/bottom boundary conditions
-                # NB zmin and zmax evaluated at the new time t+dt
-                zmin = self.data_reader.get_zmin(time+self.time_step, particle_ptr)
-                zmax = self.data_reader.get_zmax(time+self.time_step, particle_ptr)
-                if zpos < zmin or zpos > zmax:
-                    zpos = self.vert_bc_calculator.apply(zpos, zmin, zmax)
-
-                # Update the particle's position
-                particle_ptr.zpos = zpos
+                if flag == -2:
+                    particle_ptr.in_domain = False
 
     def get_diagnostics(self, time):
         """ Get particle diagnostics
