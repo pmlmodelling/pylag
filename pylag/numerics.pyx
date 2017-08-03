@@ -200,10 +200,6 @@ cdef class OS0NumMethod(NumMethod):
         -----------
         config : ConfigParser
             Configuration object
-        
-        TODO:
-        -----
-        (1) Check for correct time step specification
         """
         self._adv_iterative_method = get_adv_iterative_method(config)
         self._diff_iterative_method = get_diff_iterative_method(config)
@@ -213,6 +209,19 @@ cdef class OS0NumMethod(NumMethod):
 
         self._adv_time_step = self._adv_iterative_method.get_time_step()
         self._diff_time_step = self._diff_iterative_method.get_time_step()
+        
+        if self._diff_time_step > self._adv_time_step:
+            raise ValueError("The time step for advection "
+                    "(time_step_adv, {} s) must be greater than or equal to "
+                    "the time step for diffusion "
+                    "(time_step_diff, {} s)".format(self._adv_time_step,
+                    self._diff_time_step))
+
+        if self._adv_time_step % self._diff_time_step != 0.0:
+            raise ValueError("The time step for advection "
+                    "(time_step_adv, {} s) must be an exact multiple of the "
+                    "time step for diffusion (time_step_diff, {} s)"
+                    "".format(self._adv_time_step, self._diff_time_step))
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
             Particle *particle) except INT_ERR:
@@ -303,7 +312,7 @@ cdef class OS0NumMethod(NumMethod):
             # Determine the host zlayer
             data_reader.set_vertical_grid_vars(time, &_particle)
             
-            # Reset delta and perform the diffusion step
+            # Perform the diffusion step
             reset(&_delta_X)
             flag = self._diff_iterative_method.step(time, &_particle, data_reader, &_delta_X)
 
@@ -317,7 +326,7 @@ cdef class OS0NumMethod(NumMethod):
             flag, host = data_reader.find_host(_particle.xpos, _particle.ypos, xpos,
                     ypos, _particle.host_horizontal_elem)
 
-            # First check for a land boundary crossing
+            # Check for a land boundary crossing
             while flag == -1:
                 xpos, ypos = self.horiz_bc_calculator.apply(data_reader,
                         _particle.xpos, _particle.ypos, xpos, ypos, host)
@@ -402,8 +411,13 @@ cdef class OS1NumMethod(NumMethod):
 
         self._adv_time_step = self._adv_iterative_method.get_time_step()
         self._diff_time_step = self._diff_iterative_method.get_time_step()
-        
-        # TODO Check for correct time step specification!
+
+        if self._adv_time_step !=  2.0 * self._diff_time_step:
+            raise ValueError("The time step for advection ("\
+                    "time_step_adv, {} s) must be exactly twice that for "\
+                    "diffusion (time_step_diff, {} s) when using "\
+                    "the numerical integration scheme OS1NumMethod."\
+                    "".format(self._adv_time_step, self._diff_time_step))
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
             Particle *particle) except INT_ERR:
