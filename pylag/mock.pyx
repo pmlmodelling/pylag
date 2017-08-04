@@ -320,7 +320,7 @@ cdef class MockAdvIterator:
         reset(&delta_X)
         
         # Perform a single step
-        self._iterator.step(time, &particle, data_reader, &delta_X)
+        self._iterator.step(data_reader, time, &particle, &delta_X)
         
         # Used Delta values to update the particle's position
         xpos_new = particle.xpos + delta_X.x
@@ -383,7 +383,7 @@ cdef class MockOneDLSM:
             reset(&delta_X)
 
             # Apply the vertical lagrangian stochastic model
-            self._iterator.step(time, &particle, data_reader, &delta_X)
+            self._iterator.step(data_reader, time, &particle, &delta_X)
 
             # Use Delta values to update the particle's position
             zpos_new = particle.zpos + delta_X.z
@@ -434,7 +434,7 @@ cdef class MockTwoDLSM:
 
             reset(&delta_X)
 
-            self._iterator.step(time, particle.get_ptr(), data_reader, &delta_X)
+            self._iterator.step(data_reader, time, particle.get_ptr(), &delta_X)
 
             xpos_new = particle.get_ptr().xpos + delta_X.x
             ypos_new = particle.get_ptr().ypos + delta_X.y

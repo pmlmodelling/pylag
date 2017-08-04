@@ -19,5 +19,5 @@ cdef class ItMethod:
 
     cdef DTYPE_FLOAT_t get_time_step(self)
 
-    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
-            DataReader data_reader, Delta *delta_X) except INT_ERR
+    cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
+            Particle *particle, Delta *delta_X) except INT_ERR

@@ -92,8 +92,8 @@ cdef class StdNumMethod(NumMethod):
         time : float
             The current time.
 
-        particle : *Particle
-            Pointer to a particle object.
+        particle : C pointer
+            C pointer to a particle struct.
 
         Returns:
         --------
@@ -108,7 +108,7 @@ cdef class StdNumMethod(NumMethod):
         reset(&delta_X)
 
         # Compute Delta
-        flag = self._iterative_method.step(time, particle, data_reader, &delta_X)
+        flag = self._iterative_method.step(data_reader, time, particle, &delta_X)
 
         # Return if the particle crossed an open boundary
         if flag == -2: return flag
@@ -252,9 +252,6 @@ cdef class OS0NumMethod(NumMethod):
         *particle: C pointer
             C Pointer to a Particle struct
 
-        *delta_X: C pointer
-            C Pointer to a Delta struct
-
         Returns:
         --------
         flag : int
@@ -273,7 +270,7 @@ cdef class OS0NumMethod(NumMethod):
 
         # Compute Delta
         reset(&_delta_X)
-        flag = self._adv_iterative_method.step(time, particle, data_reader, &_delta_X)
+        flag = self._adv_iterative_method.step(data_reader, time, particle, &_delta_X)
 
         # Return if the particle crossed an open boundary
         if flag == -2: return flag
@@ -323,7 +320,7 @@ cdef class OS0NumMethod(NumMethod):
 
             # Perform the diffusion step
             reset(&_delta_X)
-            flag = self._diff_iterative_method.step(t, &_particle, data_reader, &_delta_X)
+            flag = self._diff_iterative_method.step(data_reader, t, &_particle, &_delta_X)
 
             # Return if the particle crossed an open boundary
             if flag == -2: return flag
@@ -445,9 +442,6 @@ cdef class OS1NumMethod(NumMethod):
         *particle: C pointer
             C Pointer to a Particle struct
 
-        *delta_X: C pointer
-            C Pointer to a Delta struct
-
         Returns:
         --------
         flag : int
@@ -465,7 +459,7 @@ cdef class OS1NumMethod(NumMethod):
 
         # Compute Delta
         reset(&_delta_X)
-        flag = self._diff_iterative_method.step(time, particle, data_reader, &_delta_X)
+        flag = self._diff_iterative_method.step(data_reader, time, particle, &_delta_X)
 
         # Return if the particle crossed an open boundary
         if flag == -2: return flag
@@ -512,7 +506,7 @@ cdef class OS1NumMethod(NumMethod):
 
         # Compute Delta
         reset(&_delta_X)
-        flag = self._adv_iterative_method.step(t, &_particle, data_reader, &_delta_X)
+        flag = self._adv_iterative_method.step(data_reader, t, &_particle, &_delta_X)
 
         # Return if the particle crossed an open boundary
         if flag == -2: return flag
@@ -556,7 +550,7 @@ cdef class OS1NumMethod(NumMethod):
 
         # Compute Delta
         reset(&_delta_X)
-        flag = self._diff_iterative_method.step(t, &_particle, data_reader, &_delta_X)
+        flag = self._diff_iterative_method.step(data_reader, t, &_particle, &_delta_X)
 
         # Return if the particle crossed an open boundary
         if flag == -2: return flag
@@ -635,8 +629,8 @@ cdef class ItMethod:
     cdef DTYPE_FLOAT_t get_time_step(self):
         return self._time_step
     
-    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
-            DataReader data_reader, Delta *delta_X) except INT_ERR:
+    cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
+            Particle *particle, Delta *delta_X) except INT_ERR:
         raise NotImplementedError
 
 cdef class AdvRK42DItMethod(ItMethod):
@@ -662,8 +656,8 @@ cdef class AdvRK42DItMethod(ItMethod):
         # Create horizontal boundary conditions calculator
         self._horiz_bc_calculator = get_horiz_boundary_condition_calculator(config)
 
-    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
-            DataReader data_reader, Delta *delta_X) except INT_ERR:
+    cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
+            Particle *particle, Delta *delta_X) except INT_ERR:
         """ Compute changes in a particle's position due to lateral advection
         
         Use a basic fourth order Runga Kutta scheme to compute changes in a
@@ -674,18 +668,17 @@ cdef class AdvRK42DItMethod(ItMethod):
         
         Parameters:
         -----------
+        data_reader : DataReader
+            DataReader object used for calculating point velocities.
+
         time : float
             The current time.
         
-        particle : Particle
-            Particle object that stores the current particle's position.
+        particle : C pointer
+            C pointer to a Particle struct
         
-        data_reader : DataReader
-            DataReader object used for calculating point velocities.
-        
-        delta_X : Delta
-            Delta object in which the change in the particle's position is
-            stored.
+        delta_X : C pointer
+            C pointer to a Delta struct
         
         Returns:
         --------
@@ -832,8 +825,8 @@ cdef class AdvRK43DItMethod(ItMethod):
         # Create vertical boundary conditions calculator
         self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)    
     
-    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
-            DataReader data_reader, Delta *delta_X) except INT_ERR:
+    cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
+            Particle *particle, Delta *delta_X) except INT_ERR:
         """ Compute changes in a particle's position due to advection
         
         Use a basic fourth order Runga Kutta scheme to compute changes in a
@@ -844,18 +837,17 @@ cdef class AdvRK43DItMethod(ItMethod):
         
         Parameters:
         -----------
+        data_reader : DataReader
+            DataReader object used for calculating point velocities.
+
         time : float
             The current time.
         
-        particle : Particle
-            Particle object that stores the current particle's position.
+        particle : C pointer
+            C pointer to a Particle struct
         
-        data_reader : DataReader
-            DataReader object used for calculating point velocities.
-        
-        delta_X : Delta
-            Delta object in which the change in the particle's position is
-            stored.
+        delta_X : C pointer
+            C pointer to a Delta struct
         
         Returns:
         --------
@@ -1013,8 +1005,8 @@ cdef class DiffNaive1DItMethod(ItMethod):
         """
         self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
         
-    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
-            DataReader data_reader, Delta *delta_X) except INT_ERR:
+    cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
+            Particle *particle, Delta *delta_X) except INT_ERR:
         """ Compute position delta in 1D using Naive Euler iterative method
         
         This method should only be used when the vertical eddy diffusivity field
@@ -1023,17 +1015,17 @@ cdef class DiffNaive1DItMethod(ItMethod):
         
         Parameters:
         -----------
-        time: float
+        data_reader : DataReader
+            DataReader object.
+
+        time : float
             The current time.
-
-        particle: object of type Particle
-            A Particle object. The object's z position will be updated.
-
-        data_reader: object of type DataReader
-            A DataReader object. Used for reading the vertical eddy diffusivity.
-
-        delta_X: object of type Delta
-            A Delta object. Used for storing position deltas.
+        
+        particle : C pointer
+            C pointer to a Particle struct
+        
+        delta_X : C pointer
+            C pointer to a Delta struct
             
         Returns:
         --------
@@ -1063,8 +1055,8 @@ cdef class DiffEuler1DItMethod(ItMethod):
         """
         self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
-    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
-            DataReader data_reader, Delta *delta_X) except INT_ERR:
+    cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
+            Particle *particle, Delta *delta_X) except INT_ERR:
         """ Compute position delta in 1D using Euler iterative method
         
         The scheme includes a deterministic advective term that counteracts the
@@ -1073,17 +1065,17 @@ cdef class DiffEuler1DItMethod(ItMethod):
 
         Parameters:
         -----------
-        time: float
+        data_reader : DataReader
+            DataReader object.
+
+        time : float
             The current time.
-
-        particle: object of type Particle
-            A Particle object. The object's z position will be updated.
-
-        data_reader: object of type DataReader
-            A DataReader object. Used for reading the vertical eddy diffusivity.
-
-        delta_X: object of type Delta
-            A Delta object. Used for storing position deltas.
+        
+        particle : C pointer
+            C pointer to a Particle struct
+        
+        delta_X : C pointer
+            C pointer to a Delta struct
             
         Returns:
         --------
@@ -1131,23 +1123,23 @@ cdef class DiffVisser1DItMethod(ItMethod):
         
         self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
 
-    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
-            DataReader data_reader, Delta *delta_X) except INT_ERR:
+    cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
+            Particle *particle, Delta *delta_X) except INT_ERR:
         """ Compute position delta in 1D using Visser iterative method
 
         Parameters:
         -----------
-        time: float
+        data_reader : DataReader
+            DataReader object.
+
+        time : float
             The current time.
-
-        particle: object of type Particle
-            A Particle object. The object's z position will be updated.
-
-        data_reader: object of type DataReader
-            A DataReader object. Used for reading the vertical eddy diffusivity.
-
-        delta_X: object of type Delta
-            A Delta object. Used for storing position deltas.
+        
+        particle : C pointer
+            C pointer to a Particle struct
+        
+        delta_X : C pointer
+            C pointer to a Delta struct
             
         Returns:
         --------
@@ -1208,23 +1200,23 @@ cdef class DiffMilstein1DItMethod(ItMethod):
         """
         self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
-    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
-            DataReader data_reader, Delta *delta_X) except INT_ERR:
+    cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
+            Particle *particle, Delta *delta_X) except INT_ERR:
         """ Compute position delta in 1D using Milstein iterative method
         
         Parameters:
         -----------
-        time: float
+        data_reader : DataReader
+            DataReader object.
+
+        time : float
             The current time.
-
-        particle: object of type Particle
-            A Particle object. The object's z position will be updated.
-
-        data_reader: object of type DataReader
-            A DataReader object. Used for reading the vertical eddy diffusivity.
-
-        delta_X: object of type Delta
-            A Delta object. Used for storing position deltas.
+        
+        particle : C pointer
+            C pointer to a Particle struct
+        
+        delta_X : C pointer
+            C pointer to a Delta struct
         
         Returns:
         --------
@@ -1271,8 +1263,8 @@ cdef class DiffConst2DItMethod(ItMethod):
 
         self._Ah = config.getfloat("OCEAN_CIRCULATION_MODEL", "horizontal_eddy_viscosity_constant")
         
-    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
-            DataReader data_reader, Delta *delta_X) except INT_ERR:
+    cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
+            Particle *particle, Delta *delta_X) except INT_ERR:
         """ Compute position delta in 2D using a constant eddy viscosity
         
         This method uses a constant value for the horizontal eddy viscosity that
@@ -1280,17 +1272,17 @@ cdef class DiffConst2DItMethod(ItMethod):
         
         Parameters:
         -----------
-        time: float
+        data_reader : DataReader
+            DataReader object.
+
+        time : float
             The current time.
-
-        particle: object of type Particle
-            A Particle object. The object's z position will be updated.
-
-        data_reader: object of type DataReader
-            A DataReader object. Used for reading the vertical eddy diffusivity.
-
-        delta_X: object of type Delta
-            A Delta object. Used for storing position deltas.
+        
+        particle : C pointer
+            C pointer to a Particle struct
+        
+        delta_X : C pointer
+            C pointer to a Delta struct
             
         Returns:
         --------
@@ -1322,23 +1314,23 @@ cdef class DiffNaive2DItMethod(ItMethod):
         """
         self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
         
-    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
-            DataReader data_reader, Delta *delta_X) except INT_ERR:
+    cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
+            Particle *particle, Delta *delta_X) except INT_ERR:
         """ Compute position delta in 2D using Naive Euler iterative method
         
         Parameters:
         -----------
-        time: float
+        data_reader : DataReader
+            DataReader object.
+
+        time : float
             The current time.
-
-        particle: object of type Particle
-            A Particle object. The object's z position will be updated.
-
-        data_reader: object of type DataReader
-            A DataReader object. Used for reading the vertical eddy diffusivity.
-
-        delta_X: object of type Delta
-            A Delta object. Used for storing position deltas.
+        
+        particle : C pointer
+            C pointer to a Particle struct
+        
+        delta_X : C pointer
+            C pointer to a Delta struct
             
         Returns:
         --------
@@ -1374,23 +1366,23 @@ cdef class DiffMilstein2DItMethod(ItMethod):
         """
         self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
-    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
-            DataReader data_reader, Delta *delta_X) except INT_ERR:
+    cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
+            Particle *particle, Delta *delta_X) except INT_ERR:
         """ Compute position delta in 2D using Milstein iterative method
         
         Parameters:
         -----------
-        time: float
+        data_reader : DataReader
+            DataReader object.
+
+        time : float
             The current time.
-
-        particle: object of type Particle
-            A Particle object. The object's z position will be updated.
-
-        data_reader: object of type DataReader
-            A DataReader object. Used for reading the horizontal eddy viscosity.
-
-        delta_X: object of type Delta
-            A Delta object. Used for storing position deltas.
+        
+        particle : C pointer
+            C pointer to a Particle struct
+        
+        delta_X : C pointer
+            C pointer to a Delta struct
             
         Returns:
         --------
@@ -1431,23 +1423,23 @@ cdef class DiffMilstein3DItMethod(ItMethod):
         """
         self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
-    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
-            DataReader data_reader, Delta *delta_X) except INT_ERR:
+    cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
+            Particle *particle, Delta *delta_X) except INT_ERR:
         """ Compute position delta in 3D using Milstein iterative method
         
         Parameters:
         -----------
-        time: float
+        data_reader : DataReader
+            DataReader object.
+
+        time : float
             The current time.
-
-        *particle: C pointer
-            C Pointer to a Particle struct
-
-        data_reader: object of type DataReader
-            A DataReader object used for reading eddy diffusivities/viscosities.
-
-        *delta_X: C pointer
-            C Pointer to a Delta struct
+        
+        particle : C pointer
+            C pointer to a Particle struct
+        
+        delta_X : C pointer
+            C pointer to a Delta struct
             
         Returns:
         --------
@@ -1497,8 +1489,8 @@ cdef class AdvDiffMilstein3DItMethod(ItMethod):
         """
         self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
-    cdef DTYPE_INT_t step(self, DTYPE_FLOAT_t time, Particle *particle,
-            DataReader data_reader, Delta *delta_X) except INT_ERR:
+    cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
+            Particle *particle, Delta *delta_X) except INT_ERR:
         """ Compute position delta in 3D using Milstein iterative method
         
         This method is a 3D implementation of the Milstein scheme that accounts
@@ -1506,18 +1498,17 @@ cdef class AdvDiffMilstein3DItMethod(ItMethod):
         
         Parameters:
         -----------
-        time: float
+        data_reader : DataReader
+            DataReader object.
+
+        time : float
             The current time.
-
-        *particle: C pointer
-            C Pointer to a Particle struct
-
-        data_reader: object of type DataReader
-            A DataReader object used for reading velocities and eddy 
-            diffusivities/viscosities.
-
-        *delta_X: C pointer
-            C Pointer to a Delta struct
+        
+        particle : C pointer
+            C pointer to a Particle struct
+        
+        delta_X : C pointer
+            C pointer to a Delta struct
             
         Returns:
         --------
