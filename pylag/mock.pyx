@@ -246,7 +246,7 @@ cdef class MockHorizontalEddyViscosityDataReader(DataReader):
     def get_ymax(self):
         return self._ymax
 
-    cdef get_horizontal_eddy_diffusivity(self, DTYPE_FLOAT_t time,
+    cdef get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
             Particle* particle):
         """ Returns the horizontal eddy viscosity
         
@@ -265,7 +265,7 @@ cdef class MockHorizontalEddyViscosityDataReader(DataReader):
         """
         return particle.xpos**2 + particle.ypos**2 + self._C
 
-    cdef get_horizontal_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
+    cdef get_horizontal_eddy_viscosity_derivative(self, DTYPE_FLOAT_t time,
             Particle* particle, DTYPE_FLOAT_t Ah_prime[2]):
         """ Returns the gradient in the horizontal eddy viscosity
 

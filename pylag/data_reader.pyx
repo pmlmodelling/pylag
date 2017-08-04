@@ -39,11 +39,11 @@ cdef class DataReader:
     cdef get_vertical_velocity(self, DTYPE_FLOAT_t time, Particle *particle):
         pass
 
-    cdef get_horizontal_eddy_diffusivity(self, DTYPE_FLOAT_t time,
+    cdef get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
             Particle *particle):
         pass
 
-    cdef get_horizontal_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
+    cdef get_horizontal_eddy_viscosity_derivative(self, DTYPE_FLOAT_t time,
             Particle *particle, DTYPE_FLOAT_t Ah_prime[2]):
         pass
 

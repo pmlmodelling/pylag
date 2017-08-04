@@ -330,7 +330,7 @@ cdef class NaiveHorizontalLSM(HorizontalLSM):
         cdef DTYPE_FLOAT_t kh
 
         # The vertical eddy diffusivity at the particle's current location
-        kh = data_reader.get_horizontal_eddy_diffusivity(time, particle)
+        kh = data_reader.get_horizontal_eddy_viscosity(time, particle)
         
         # Change in position
         delta_X.x += sqrt(2.0*kh*self._time_step) * random.gauss(0.0, 1.0)

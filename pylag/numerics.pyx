@@ -1351,7 +1351,7 @@ cdef class DiffNaive2DItMethod(ItMethod):
         cdef DTYPE_FLOAT_t Ah
         
         # The horizontal eddy viscosity at the particle's current location
-        Ah = data_reader.get_horizontal_eddy_diffusivity(time, particle)
+        Ah = data_reader.get_horizontal_eddy_viscosity(time, particle)
         
         # Change in position
         delta_X.x += sqrt(2.0*Ah*self._time_step) * random.gauss(0.0, 1.0)
@@ -1403,8 +1403,8 @@ cdef class DiffMilstein2DItMethod(ItMethod):
         cdef DTYPE_FLOAT_t Ah
         cdef DTYPE_FLOAT_t Ah_prime[2]
 
-        Ah = data_reader.get_horizontal_eddy_diffusivity(time, particle)
-        data_reader.get_horizontal_eddy_diffusivity_derivative(time, particle, Ah_prime)
+        Ah = data_reader.get_horizontal_eddy_viscosity(time, particle)
+        data_reader.get_horizontal_eddy_viscosity_derivative(time, particle, Ah_prime)
 
         deviate_x = random.gauss(0.0, 1.0)
         deviate_y = random.gauss(0.0, 1.0)
@@ -1462,8 +1462,8 @@ cdef class DiffMilstein3DItMethod(ItMethod):
         cdef DTYPE_FLOAT_t Ah_prime[2]
         cdef DTYPE_FLOAT_t Kh_prime
 
-        Ah = data_reader.get_horizontal_eddy_diffusivity(time, particle)
-        data_reader.get_horizontal_eddy_diffusivity_derivative(time, particle, Ah_prime)
+        Ah = data_reader.get_horizontal_eddy_viscosity(time, particle)
+        data_reader.get_horizontal_eddy_viscosity_derivative(time, particle, Ah_prime)
 
         Kh = data_reader.get_vertical_eddy_diffusivity(time, particle)
         Kh_prime = data_reader.get_vertical_eddy_diffusivity_derivative(time, particle)
@@ -1535,8 +1535,8 @@ cdef class AdvDiffMilstein3DItMethod(ItMethod):
 
         data_reader.get_velocity(time, particle, vel) 
 
-        Ah = data_reader.get_horizontal_eddy_diffusivity(time, particle)
-        data_reader.get_horizontal_eddy_diffusivity_derivative(time, particle, Ah_prime)
+        Ah = data_reader.get_horizontal_eddy_viscosity(time, particle)
+        data_reader.get_horizontal_eddy_viscosity_derivative(time, particle, Ah_prime)
 
         Kh = data_reader.get_vertical_eddy_diffusivity(time, particle)
         Kh_prime = data_reader.get_vertical_eddy_diffusivity_derivative(time, particle)
