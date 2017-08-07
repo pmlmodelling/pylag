@@ -130,28 +130,24 @@ cdef class StdNumMethod(NumMethod):
         # Second check for an open boundary crossing
         if flag == OPEN_BDY_CROSSED: return flag
 
-        # If the particle still resides in the domain update its position.
-        if flag == IN_DOMAIN:
-            # Update the particle's position
-            particle.xpos = xpos
-            particle.ypos = ypos
-            particle.zpos = zpos
-            particle.host_horizontal_elem = host
+        # Update the particle's position
+        particle.xpos = xpos
+        particle.ypos = ypos
+        particle.zpos = zpos
+        particle.host_horizontal_elem = host
 
-            # Update particle local coordinates
-            data_reader.set_local_coordinates(particle)
+        # Update particle local coordinates
+        data_reader.set_local_coordinates(particle)
 
-            # Apply surface/bottom boundary conditions and set zpos
-            # NB zmin and zmax evaluated at t+dt
-            zmin = data_reader.get_zmin(time+self._time_step, particle)
-            zmax = data_reader.get_zmax(time+self._time_step, particle)
-            if particle.zpos < zmin or particle.zpos > zmax:
-                particle.zpos = self._vert_bc_calculator.apply(particle.zpos, zmin, zmax)
+        # Apply surface/bottom boundary conditions and set zpos
+        # NB zmin and zmax evaluated at t+dt
+        zmin = data_reader.get_zmin(time+self._time_step, particle)
+        zmax = data_reader.get_zmax(time+self._time_step, particle)
+        if particle.zpos < zmin or particle.zpos > zmax:
+            particle.zpos = self._vert_bc_calculator.apply(particle.zpos, zmin, zmax)
 
-            # Determine the new host zlayer
-            data_reader.set_vertical_grid_vars(time+self._time_step, particle)
-        else:
-            raise ValueError('Unrecognised host element flag {}.'.format(flag))
+        # Determine the new host zlayer
+        data_reader.set_vertical_grid_vars(time+self._time_step, particle)
 
         return flag
 
