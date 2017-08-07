@@ -1,3 +1,5 @@
+include "constants.pxi"
+
 import logging
 
 # Data types used for constructing C data structures
@@ -245,7 +247,7 @@ cdef class FVCOMOPTModel(OPTModel):
             if particle_ptr.in_domain:
                 flag = self.num_method.step(self.data_reader, time, particle_ptr)
 
-                if flag == -2:
+                if flag == OPEN_BDY_CROSSED:
                     particle_ptr.in_domain = False
 
     def get_diagnostics(self, time):
@@ -456,7 +458,7 @@ cdef class GOTMOPTModel(OPTModel):
             if particle_ptr.in_domain:
                 flag = self.num_method.step(self.data_reader, time, particle_ptr)
 
-                if flag == -2:
+                if flag == OPEN_BDY_CROSSED:
                     particle_ptr.in_domain = False
 
     def get_diagnostics(self, time):

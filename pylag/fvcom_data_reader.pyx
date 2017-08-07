@@ -148,16 +148,16 @@ cdef class FVCOMDataReader(DataReader):
         
         Conventions
         -----------
-        flag = 0:
+        flag = IN_DOMAIN:
             This indicates that the particle was found successfully. Host is the
             index of the new host element.
         
-        flag = -1:
+        flag = LAND_BDY_CROSSED:
             This indicates that the particle exited the domain across a land
             boundary. Host is set to the last element the particle passed
             through before exiting the domain.
 
-        flag = -2:
+        flag = OPEN_BDY_CROSSED:
             This indicates that the particle exited the domain across an open
             boundary. Host is set to the last element the particle passed
             through before exiting the domain.
@@ -212,16 +212,16 @@ cdef class FVCOMDataReader(DataReader):
         
         Conventions
         -----------
-        flag = 0:
+        flag = IN_DOMAIN:
             This indicates that the particle was found successfully. Host is
             is the index of the new host element.
         
-        flag = -1:
+        flag = LAND_BDY_CROSSED:
             This indicates that the particle exited the domain across a land
             boundary. Host is set to the last element the particle passed
             through before exiting the domain.
 
-        flag = -2:
+        flag = OPEN_BDY_CROSSED:
             This indicates that the particle exited the domain across an open
             boundary. Host is set to the last element the particle passed
             through before exiting the domain.
@@ -288,7 +288,7 @@ cdef class FVCOMDataReader(DataReader):
 
                 if n_host_land_boundaries < 2:
                     # Normal element
-                    flag = 0
+                    flag = IN_DOMAIN
                     return flag, guess
                 else:
                     # Element has two land boundaries - mark as land and
@@ -298,7 +298,7 @@ cdef class FVCOMDataReader(DataReader):
                         logger.warning('Particle prevented from entering '\
                             'element {} which has two land '\
                             'boundaries.'.format(guess))
-                    flag = -1
+                    flag = LAND_BDY_CROSSED
                 return flag, last_guess 
 
             # If not, use phi to select the next element to be searched
@@ -313,11 +313,11 @@ cdef class FVCOMDataReader(DataReader):
             # Check for boundary crossings
             if guess == -1:
                 # Land boundary crossed
-                flag = -1
+                flag = LAND_BDY_CROSSED
                 return flag, last_guess
             elif guess == -2:
                 # Open ocean boundary crossed
-                flag = -2
+                flag = OPEN_BDY_CROSSED
                 return flag, last_guess
 
     cpdef find_host_using_particle_tracing(self, DTYPE_FLOAT_t xpos_old,
@@ -336,16 +336,16 @@ cdef class FVCOMDataReader(DataReader):
 
         Conventions
         -----------
-        flag = 0:
+        flag = IN_DOMAIN:
             This indicates that the particle was found successfully. Host is the
             index of the new host element.
         
-        flag = -1:
+        flag = LAND_BDY_CROSSED:
             This indicates that the particle exited the domain across a land
             boundary. Host is set to the last element the particle passed
             through before exiting the domain.
 
-        flag = -2:
+        flag = OPEN_BDY_CROSSED:
             This indicates that the particle exited the domain across an open
             boundary. Host is set to the last element the particle passed
             through before exiting the domain.
@@ -457,7 +457,7 @@ cdef class FVCOMDataReader(DataReader):
                         if self._nbe[i,elem] == -1:
                             n_host_boundaries += 1
                     if n_host_boundaries == 2:
-                        flag = -1
+                        flag = LAND_BDY_CROSSED
                         return flag, last_elem
                     else:
                         # Intersection found but the pathline has not exited the
@@ -467,17 +467,17 @@ cdef class FVCOMDataReader(DataReader):
                     # Particle has crossed a boundary
                     if elem == -1:
                         # Land boundary crossed
-                        flag = -1
+                        flag = LAND_BDY_CROSSED
                         return flag, last_elem
                     elif elem == -2:
                         # Open ocean boundary crossed
-                        flag = -2
+                        flag = OPEN_BDY_CROSSED
                         return flag, last_elem
 
             if current_elem == elem:
                 # Particle has not exited the current element meaning it must
                 # still reside in the domain
-                flag = 0
+                flag = IN_DOMAIN
                 return flag, current_elem
 
     cpdef find_host_using_global_search(self, DTYPE_FLOAT_t xpos,

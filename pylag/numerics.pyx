@@ -111,7 +111,7 @@ cdef class StdNumMethod(NumMethod):
         flag = self._iterative_method.step(data_reader, time, particle, &delta_X)
 
         # Return if the particle crossed an open boundary
-        if flag == -2: return flag
+        if flag == OPEN_BDY_CROSSED: return flag
                 
         # Compute new position
         xpos = particle.xpos + delta_X.x
@@ -121,17 +121,17 @@ cdef class StdNumMethod(NumMethod):
                 ypos, particle.host_horizontal_elem)
               
         # First check for a land boundary crossing
-        while flag == -1:
+        while flag == LAND_BDY_CROSSED:
             xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
                     particle.xpos, particle.ypos, xpos, ypos, host)
             flag, host = data_reader.find_host(particle.xpos,
                 particle.ypos, xpos, ypos, particle.host_horizontal_elem)
 
         # Second check for an open boundary crossing
-        if flag == -2: return flag
+        if flag == OPEN_BDY_CROSSED: return flag
 
         # If the particle still resides in the domain update its position.
-        if flag == 0:
+        if flag == IN_DOMAIN:
             # Update the particle's position
             particle.xpos = xpos
             particle.ypos = ypos
@@ -273,7 +273,7 @@ cdef class OS0NumMethod(NumMethod):
         flag = self._adv_iterative_method.step(data_reader, time, particle, &_delta_X)
 
         # Return if the particle crossed an open boundary
-        if flag == -2: return flag
+        if flag == OPEN_BDY_CROSSED: return flag
 
         # Compute new position
         xpos = particle.xpos + _delta_X.x
@@ -283,14 +283,14 @@ cdef class OS0NumMethod(NumMethod):
                 ypos, particle.host_horizontal_elem)
               
         # First check for a land boundary crossing
-        while flag == -1:
+        while flag == LAND_BDY_CROSSED:
             xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
                     particle.xpos, particle.ypos, xpos, ypos, host)
             flag, host = data_reader.find_host(particle.xpos,
                 particle.ypos, xpos, ypos, particle.host_horizontal_elem)
 
         # Second check for an open boundary crossing
-        if flag == -2: return flag
+        if flag == OPEN_BDY_CROSSED: return flag
 
         # Diffusion
         # ---------
@@ -323,7 +323,7 @@ cdef class OS0NumMethod(NumMethod):
             flag = self._diff_iterative_method.step(data_reader, t, &_particle, &_delta_X)
 
             # Return if the particle crossed an open boundary
-            if flag == -2: return flag
+            if flag == OPEN_BDY_CROSSED: return flag
 
             # Compute new position
             xpos = _particle.xpos + _delta_X.x
@@ -333,13 +333,13 @@ cdef class OS0NumMethod(NumMethod):
                     ypos, _particle.host_horizontal_elem)
 
             # Check for a land boundary crossing
-            while flag == -1:
+            while flag == LAND_BDY_CROSSED:
                 xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
                         _particle.xpos, _particle.ypos, xpos, ypos, host)
                 flag, host = data_reader.find_host(_particle.xpos,
                     _particle.ypos, xpos, ypos, _particle.host_horizontal_elem)
 
-            if flag == -2: return flag
+            if flag == OPEN_BDY_CROSSED: return flag
 
             # The particle still resides in the domain - update its position
             _particle.xpos = xpos
@@ -462,7 +462,7 @@ cdef class OS1NumMethod(NumMethod):
         flag = self._diff_iterative_method.step(data_reader, time, particle, &_delta_X)
 
         # Return if the particle crossed an open boundary
-        if flag == -2: return flag
+        if flag == OPEN_BDY_CROSSED: return flag
 
         # Compute new position
         xpos = particle.xpos + _delta_X.x
@@ -472,14 +472,14 @@ cdef class OS1NumMethod(NumMethod):
                 ypos, particle.host_horizontal_elem)
               
         # First check for a land boundary crossing
-        while flag == -1:
+        while flag == LAND_BDY_CROSSED:
             xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
                     particle.xpos, particle.ypos, xpos, ypos, host)
             flag, host = data_reader.find_host(particle.xpos,
                 particle.ypos, xpos, ypos, particle.host_horizontal_elem)
 
         # Second check for an open boundary crossing
-        if flag == -2: return flag
+        if flag == OPEN_BDY_CROSSED: return flag
 
         # Advection step
         # --------------
@@ -509,7 +509,7 @@ cdef class OS1NumMethod(NumMethod):
         flag = self._adv_iterative_method.step(data_reader, t, &_particle, &_delta_X)
 
         # Return if the particle crossed an open boundary
-        if flag == -2: return flag
+        if flag == OPEN_BDY_CROSSED: return flag
 
         # Compute new position
         xpos = _particle.xpos + _delta_X.x
@@ -519,14 +519,14 @@ cdef class OS1NumMethod(NumMethod):
                 ypos, _particle.host_horizontal_elem)
               
         # First check for a land boundary crossing
-        while flag == -1:
+        while flag == LAND_BDY_CROSSED:
             xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
                     _particle.xpos, _particle.ypos, xpos, ypos, host)
             flag, host = data_reader.find_host(_particle.xpos,
                 _particle.ypos, xpos, ypos, _particle.host_horizontal_elem)
 
         # Second check for an open boundary crossing
-        if flag == -2: return flag
+        if flag == OPEN_BDY_CROSSED: return flag
 
         # 2nd Diffusion step
         # ------------------
@@ -553,7 +553,7 @@ cdef class OS1NumMethod(NumMethod):
         flag = self._diff_iterative_method.step(data_reader, t, &_particle, &_delta_X)
 
         # Return if the particle crossed an open boundary
-        if flag == -2: return flag
+        if flag == OPEN_BDY_CROSSED: return flag
 
         # Compute new position
         xpos = _particle.xpos + _delta_X.x
@@ -563,14 +563,14 @@ cdef class OS1NumMethod(NumMethod):
                 ypos, _particle.host_horizontal_elem)
               
         # First check for a land boundary crossing
-        while flag == -1:
+        while flag == LAND_BDY_CROSSED:
             xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
                     _particle.xpos, _particle.ypos, xpos, ypos, host)
             flag, host = data_reader.find_host(_particle.xpos,
                 _particle.ypos, xpos, ypos, _particle.host_horizontal_elem)
 
         # Second check for an open boundary crossing
-        if flag == -2: return flag
+        if flag == OPEN_BDY_CROSSED: return flag
 
         # All steps complete - update the original particle's position
         # ------------------------------------------------------------
@@ -717,7 +717,7 @@ cdef class AdvRK42DItMethod(ItMethod):
                 _particle.ypos, particle.host_horizontal_elem)
 
         # Check for land boundary crossing
-        while flag == -1:
+        while flag == LAND_BDY_CROSSED:
             _particle.xpos, _particle.ypos = self._horiz_bc_calculator.apply(data_reader,
                     particle.xpos, particle.ypos, _particle.xpos, _particle.ypos,
                     _particle.host_horizontal_elem)
@@ -725,7 +725,7 @@ cdef class AdvRK42DItMethod(ItMethod):
                     _particle.xpos, _particle.ypos, particle.host_horizontal_elem)
 
         # Check for open boundary crossing
-        if flag == -2: return flag
+        if flag == OPEN_BDY_CROSSED: return flag
 
         # Update particle local coordinates
         data_reader.set_local_coordinates(&_particle)
@@ -744,7 +744,7 @@ cdef class AdvRK42DItMethod(ItMethod):
                 _particle.ypos, particle.host_horizontal_elem)
 
         # Check for land boundary crossing
-        while flag == -1:
+        while flag == LAND_BDY_CROSSED:
             _particle.xpos, _particle.ypos = self._horiz_bc_calculator.apply(data_reader,
                     particle.xpos, particle.ypos, _particle.xpos, _particle.ypos,
                     _particle.host_horizontal_elem)
@@ -752,7 +752,7 @@ cdef class AdvRK42DItMethod(ItMethod):
                     _particle.xpos, _particle.ypos, particle.host_horizontal_elem)
 
         # Check for open boundary crossing
-        if flag == -2: return flag
+        if flag == OPEN_BDY_CROSSED: return flag
 
         # Update particle local coordinates
         data_reader.set_local_coordinates(&_particle)
@@ -771,7 +771,7 @@ cdef class AdvRK42DItMethod(ItMethod):
                 _particle.ypos, particle.host_horizontal_elem)
 
         # Check for land boundary crossing
-        while flag == -1:
+        while flag == LAND_BDY_CROSSED:
             _particle.xpos, _particle.ypos = self._horiz_bc_calculator.apply(data_reader,
                     particle.xpos, particle.ypos, _particle.xpos, _particle.ypos,
                     _particle.host_horizontal_elem)
@@ -779,7 +779,7 @@ cdef class AdvRK42DItMethod(ItMethod):
                     _particle.xpos, _particle.ypos, particle.host_horizontal_elem)
 
         # Check for open boundary crossing
-        if flag == -2: return flag
+        if flag == OPEN_BDY_CROSSED: return flag
 
         # Update particle local coordinates
         data_reader.set_local_coordinates(&_particle)
@@ -890,7 +890,7 @@ cdef class AdvRK43DItMethod(ItMethod):
                 _particle.ypos, particle.host_horizontal_elem)
 
         # Check for land boundary crossing
-        while flag == -1:
+        while flag == LAND_BDY_CROSSED:
             _particle.xpos, _particle.ypos = self._horiz_bc_calculator.apply(data_reader,
                     particle.xpos, particle.ypos, _particle.xpos, _particle.ypos,
                     _particle.host_horizontal_elem)
@@ -898,7 +898,7 @@ cdef class AdvRK43DItMethod(ItMethod):
                     _particle.xpos, _particle.ypos, particle.host_horizontal_elem)
 
         # Check for open boundary crossing
-        if flag == -2: return flag
+        if flag == OPEN_BDY_CROSSED: return flag
 
         # Update particle local coordinates
         data_reader.set_local_coordinates(&_particle)
@@ -925,7 +925,7 @@ cdef class AdvRK43DItMethod(ItMethod):
                 _particle.ypos, particle.host_horizontal_elem)
 
         # Check for land boundary crossing
-        while flag == -1:
+        while flag == LAND_BDY_CROSSED:
             _particle.xpos, _particle.ypos = self._horiz_bc_calculator.apply(data_reader,
                     particle.xpos, particle.ypos, _particle.xpos, _particle.ypos,
                     _particle.host_horizontal_elem)
@@ -933,7 +933,7 @@ cdef class AdvRK43DItMethod(ItMethod):
                     _particle.xpos, _particle.ypos, particle.host_horizontal_elem)
 
         # Check for open boundary crossing
-        if flag == -2: return flag
+        if flag == OPEN_BDY_CROSSED: return flag
 
         # Update particle local coordinates
         data_reader.set_local_coordinates(&_particle)
@@ -960,7 +960,7 @@ cdef class AdvRK43DItMethod(ItMethod):
                 _particle.ypos, particle.host_horizontal_elem)
 
         # Check for land boundary crossing
-        while flag == -1:
+        while flag == LAND_BDY_CROSSED:
             _particle.xpos, _particle.ypos = self._horiz_bc_calculator.apply(data_reader,
                     particle.xpos, particle.ypos, _particle.xpos, _particle.ypos,
                     _particle.host_horizontal_elem)
@@ -968,7 +968,7 @@ cdef class AdvRK43DItMethod(ItMethod):
                     _particle.xpos, _particle.ypos, particle.host_horizontal_elem)
 
         # Check for open boundary crossing
-        if flag == -2: return flag
+        if flag == OPEN_BDY_CROSSED: return flag
 
         # Update particle local coordinates
         data_reader.set_local_coordinates(&_particle)
