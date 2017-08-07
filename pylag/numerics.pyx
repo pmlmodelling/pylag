@@ -1165,7 +1165,7 @@ cdef class DiffVisser1DItMethod(ItMethod):
 
         data_reader.get_velocity(time, particle, vel)
         
-        zpos_offset = _particle.zpos + 0.5 * (vel[2] + Kh_prime) * self._time_step
+        zpos_offset = particle.zpos + 0.5 * (vel[2] + Kh_prime) * self._time_step
         zmin = data_reader.get_zmin(time, particle)
         zmax = data_reader.get_zmax(time, particle)
         if zpos_offset < zmin or zpos_offset > zmax:
