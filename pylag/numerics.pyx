@@ -148,7 +148,11 @@ cdef class StdNumMethod(NumMethod):
         zmin = data_reader.get_zmin(time+self._time_step, particle)
         zmax = data_reader.get_zmax(time+self._time_step, particle)
         if particle.zpos < zmin or particle.zpos > zmax:
-            particle.zpos = self._vert_bc_calculator.apply(particle.zpos, zmin, zmax)
+            if self._vert_bc_calculator is not None:
+                particle.zpos = self._vert_bc_calculator.apply(particle.zpos, zmin, zmax)
+            else:
+                raise RuntimeError('A vertical boundary has been crossed but a vertical '
+                    'boundary condition calculator has not been specified.')
 
         # Determine the new host zlayer
         data_reader.set_vertical_grid_vars(time+self._time_step, particle)
@@ -314,7 +318,11 @@ cdef class OS0NumMethod(NumMethod):
         zmin = data_reader.get_zmin(time, &_particle)
         zmax = data_reader.get_zmax(time, &_particle)
         if _particle.zpos < zmin or _particle.zpos > zmax:
-            _particle.zpos = self._vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
+            if self._vert_bc_calculator is not None:
+                _particle.zpos = self._vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
+            else:
+                raise RuntimeError('A vertical boundary has been crossed but a vertical '
+                    'boundary condition calculator has not been specified.')
 
         data_reader.set_vertical_grid_vars(time, &_particle)
 
@@ -360,7 +368,11 @@ cdef class OS0NumMethod(NumMethod):
             zmin = data_reader.get_zmin(t+self._diff_time_step, &_particle)
             zmax = data_reader.get_zmax(t+self._diff_time_step, &_particle)
             if _particle.zpos < zmin or _particle.zpos > zmax:
-                _particle.zpos = self._vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
+                if self._vert_bc_calculator is not None:
+                    _particle.zpos = self._vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
+                else:
+                    raise RuntimeError('A vertical boundary has been crossed but a vertical '
+                        'boundary condition calculator has not been specified.')
 
             data_reader.set_vertical_grid_vars(t+self._diff_time_step, &_particle)
 
@@ -513,7 +525,11 @@ cdef class OS1NumMethod(NumMethod):
         zmin = data_reader.get_zmin(t, &_particle)
         zmax = data_reader.get_zmax(t, &_particle)
         if _particle.zpos < zmin or _particle.zpos > zmax:
-            _particle.zpos = self._vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
+            if self._vert_bc_calculator is not None:
+                _particle.zpos = self._vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
+            else:
+                raise RuntimeError('A vertical boundary has been crossed but a vertical '
+                    'boundary condition calculator has not been specified.')
 
         data_reader.set_vertical_grid_vars(t, &_particle)
 
@@ -561,7 +577,11 @@ cdef class OS1NumMethod(NumMethod):
         zmin = data_reader.get_zmin(t, &_particle)
         zmax = data_reader.get_zmax(t, &_particle)
         if _particle.zpos < zmin or _particle.zpos > zmax:
-            _particle.zpos = self._vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
+            if self._vert_bc_calculator is not None:
+                _particle.zpos = self._vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
+            else:
+                raise RuntimeError('A vertical boundary has been crossed but a vertical '
+                    'boundary condition calculator has not been specified.')
 
         data_reader.set_vertical_grid_vars(t, &_particle)
 
@@ -607,7 +627,11 @@ cdef class OS1NumMethod(NumMethod):
         zmin = data_reader.get_zmin(t, particle)
         zmax = data_reader.get_zmax(t, particle)
         if particle.zpos < zmin or particle.zpos > zmax:
-            particle.zpos = self._vert_bc_calculator.apply(particle.zpos, zmin, zmax)
+            if self._vert_bc_calculator is not None:
+                particle.zpos = self._vert_bc_calculator.apply(particle.zpos, zmin, zmax)
+            else:
+                raise RuntimeError('A vertical boundary has been crossed but a vertical '
+                    'boundary condition calculator has not been specified.')
 
         data_reader.set_vertical_grid_vars(t, particle)
         
@@ -944,7 +968,11 @@ cdef class AdvRK43DItMethod(ItMethod):
         zmin = data_reader.get_zmin(t, &_particle)
         zmax = data_reader.get_zmax(t, &_particle)
         if _particle.zpos < zmin or _particle.zpos > zmax:
-            _particle.zpos = self._vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
+            if self._vert_bc_calculator is not None:
+                _particle.zpos = self._vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
+            else:
+                raise RuntimeError('A vertical boundary has been crossed but a vertical '
+                    'boundary condition calculator has not been specified.')
 
         data_reader.set_vertical_grid_vars(t, &_particle)
 
@@ -983,7 +1011,11 @@ cdef class AdvRK43DItMethod(ItMethod):
         zmin = data_reader.get_zmin(t, &_particle)
         zmax = data_reader.get_zmax(t, &_particle)
         if _particle.zpos < zmin or _particle.zpos > zmax:
-            _particle.zpos = self._vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
+            if self._vert_bc_calculator is not None:
+                _particle.zpos = self._vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
+            else:
+                raise RuntimeError('A vertical boundary has been crossed but a vertical '
+                    'boundary condition calculator has not been specified.')
 
         data_reader.set_vertical_grid_vars(t, &_particle)
 
@@ -1022,7 +1054,11 @@ cdef class AdvRK43DItMethod(ItMethod):
         zmin = data_reader.get_zmin(t, &_particle)
         zmax = data_reader.get_zmax(t, &_particle)
         if _particle.zpos < zmin or _particle.zpos > zmax:
-            _particle.zpos = self._vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
+            if self._vert_bc_calculator is not None:
+                _particle.zpos = self._vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
+            else:
+                raise RuntimeError('A vertical boundary has been crossed but a vertical '
+                    'boundary condition calculator has not been specified.')
 
         data_reader.set_vertical_grid_vars(t, &_particle)
 
@@ -1214,7 +1250,11 @@ cdef class DiffVisser1DItMethod(ItMethod):
         zmin = data_reader.get_zmin(time, particle)
         zmax = data_reader.get_zmax(time, particle)
         if zpos_offset < zmin or zpos_offset > zmax:
-            zpos_offset = self._vert_bc_calculator.apply(zpos_offset, zmin, zmax)
+            if self._vert_bc_calculator is not None:
+                zpos_offset = self._vert_bc_calculator.apply(zpos_offset, zmin, zmax)
+            else:
+                raise RuntimeError('A vertical boundary has been crossed but a vertical '
+                    'boundary condition calculator has not been specified.')
 
         # Create a copy of the particle and move it to the offset position
         _particle = particle[0]
