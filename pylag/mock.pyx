@@ -299,49 +299,6 @@ cdef class MockHorizontalEddyViscosityDataReader(DataReader):
 
         return
 
-cdef class MockAdvIterator:
-    """ Test class for iterative methods that deal with pure advection
-    
-    Parameters:
-    -----------
-    config : ConfigParser
-        Configuration object.
-    """
-    cdef ItMethod _iterator
-    
-    def __init__(self, config):
-        
-        self._iterator = get_adv_iterative_method(config)
-    
-    def step(self, data_reader, time, xpos, ypos, zpos):
-        cdef Particle particle
-        cdef Delta delta_X
-
-        # Set these properties to default values
-        particle.group_id = 0
-        particle.host_horizontal_elem = 0
-        particle.k_layer = 0
-        particle.in_domain = True
-
-        # Initialise remaining particle properties using the supplied arguments
-        particle.xpos = xpos
-        particle.ypos = ypos
-        particle.zpos = zpos
-        
-        # Reset Delta object
-        reset(&delta_X)
-        
-        # Perform a single step
-        self._iterator.step(data_reader, time, &particle, &delta_X)
-        
-        # Used Delta values to update the particle's position
-        xpos_new = particle.xpos + delta_X.x
-        ypos_new = particle.ypos + delta_X.y
-        zpos_new = particle.zpos + delta_X.z
-
-        # Return the updated position
-        return xpos_new, ypos_new, zpos_new
-
 cdef class MockOneDNumMethod:
     """ Test class for 1D numerical methods
     
@@ -449,3 +406,54 @@ cdef class MockTwoDNumMethod:
             ypos_new_arr[i] = ypos_new
 
         return xpos_new_arr, ypos_new_arr
+
+cdef class MockThreeDNumMethod:
+    """ Test class for 3D numerical methods
+    
+    Parameters:
+    -----------
+    config : ConfigParser
+        Configuration object.
+    """
+    cdef NumMethod _num_method
+    
+    def __init__(self, config):
+
+        self._num_method = get_num_method(config)
+    
+    def step(self, DataReader data_reader, time, xpos_arr, ypos_arr, zpos_arr):
+        cdef ParticleSmartPtr particle
+        cdef DTYPE_FLOAT_t xpos_new, ypos_new, zpos_new
+
+        if len(xpos_arr) != len(ypos_arr) != len(zpos_arr):
+            raise ValueError('xpos, ypos and zpos array lengths do not match')
+        n_particles = len(xpos_arr)
+
+        particle = ParticleSmartPtr(group_id=0, host=0, in_domain=True)
+
+        xpos_new_arr = np.empty(n_particles, dtype=DTYPE_FLOAT)
+        ypos_new_arr = np.empty(n_particles, dtype=DTYPE_FLOAT)
+        zpos_new_arr = np.empty(n_particles, dtype=DTYPE_FLOAT)
+        
+        for i in xrange(n_particles):
+            particle.get_ptr().xpos = xpos_arr[i]
+            particle.get_ptr().ypos = ypos_arr[i]
+            particle.get_ptr().zpos = zpos_arr[i]
+
+            data_reader.set_local_coordinates(particle.get_ptr())
+            data_reader.set_vertical_grid_vars(time, particle.get_ptr())
+
+            self._num_method.step(data_reader, time, particle.get_ptr())
+
+            # New position
+            xpos_new = particle.get_ptr().xpos
+            ypos_new = particle.get_ptr().ypos
+            zpos_new = particle.get_ptr().zpos
+
+            # TODO Apply boundary conditions
+
+            xpos_new_arr[i] = xpos_new
+            ypos_new_arr[i] = ypos_new
+            zpos_new_arr[i] = zpos_new
+
+        return xpos_new_arr, ypos_new_arr, zpos_new_arr
