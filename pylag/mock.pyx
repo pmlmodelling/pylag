@@ -346,38 +346,29 @@ cdef class MockOneDNumMethod:
     
     def step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, zpos_arr, DTYPE_INT_t host):
-        cdef Particle particle
-        
+        cdef ParticleSmartPtr particle
         cdef DTYPE_FLOAT_t zpos_new, zmin, zmax
-        
         cdef DTYPE_INT_t i, n_zpos
 
-        # Set default particle properties
-        particle.in_domain = True
-        particle.group_id = 0
-
-        # Use supplied args to set the host, x and y positions
-        particle.host_horizontal_elem = host
-        particle.xpos = xpos
-        particle.ypos = ypos
+        # Create particle
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, host=host,
+                group_id=0, in_domain=True)
 
         # Number of z positions
         n_zpos = len(zpos_arr)
         
         # Array in which to store updated z positions
         zpos_new_arr = np.empty(n_zpos, dtype=DTYPE_FLOAT)
-        
-        # Loop over the particle set
+
         for i in xrange(n_zpos):
             # Set zpos, local coordinates and variables that define the location
             # of the particle within the vertical grid
-            particle.zpos = zpos_arr[i]
-            data_reader.set_local_coordinates(&particle)
-            data_reader.set_vertical_grid_vars(time, &particle)
+            particle.get_ptr().zpos = zpos_arr[i]
+            data_reader.set_local_coordinates(particle.get_ptr())
+            data_reader.set_vertical_grid_vars(time, particle.get_ptr())
 
-            if self._num_method.step(data_reader, time, &particle) != -2:
-                # Use Delta values to update the particle's position
-                zpos_new_arr[i] = particle.zpos
+            if self._num_method.step(data_reader, time, particle.get_ptr()) != -2:
+                zpos_new_arr[i] = particle.get_ptr().zpos
             else:
                 raise RuntimeError('Test particle left the domain.')
 
