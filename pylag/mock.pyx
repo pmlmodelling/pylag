@@ -11,13 +11,13 @@ from data_types_python import DTYPE_INT, DTYPE_FLOAT
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 # PyLag python imports
-from pylag.numerics import get_adv_iterative_method, get_diff_iterative_method
+from pylag.numerics import get_num_method, get_adv_iterative_method, get_diff_iterative_method
 from pylag.boundary_conditions import get_vert_boundary_condition_calculator
 
 from particle cimport Particle, ParticleSmartPtr
 from data_reader cimport DataReader
 from pylag.delta cimport Delta, reset
-from pylag.numerics cimport ItMethod
+from pylag.numerics cimport NumMethod, ItMethod
 from pylag.boundary_conditions cimport VertBoundaryConditionCalculator
 
 cdef class MockVelocityDataReader(DataReader):
@@ -330,7 +330,7 @@ cdef class MockAdvIterator:
         # Return the updated position
         return xpos_new, ypos_new, zpos_new
 
-cdef class MockOneDLSM:
+cdef class MockOneDNumMethod:
     """ Test class for 1D lagrangian stochastic models.
     
     Parameters:
@@ -338,19 +338,15 @@ cdef class MockOneDLSM:
     config : ConfigParser
         Configuration object.
     """
-    cdef ItMethod _iterator
-    cdef VertBoundaryConditionCalculator _vert_bc_calculator
+    cdef NumMethod _num_method
     
     def __init__(self, config):
 
-        self._iterator = get_diff_iterative_method(config)
-
-        self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
+        self._num_method = get_num_method(config)
     
     def step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
             DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, zpos_arr, DTYPE_INT_t host):
         cdef Particle particle
-        cdef Delta delta_X
         
         cdef DTYPE_FLOAT_t zpos_new, zmin, zmax
         
@@ -379,23 +375,11 @@ cdef class MockOneDLSM:
             data_reader.set_local_coordinates(&particle)
             data_reader.set_vertical_grid_vars(time, &particle)
 
-            # Reset Delta object
-            reset(&delta_X)
-
-            # Apply the vertical lagrangian stochastic model
-            self._iterator.step(data_reader, time, &particle, &delta_X)
-
-            # Use Delta values to update the particle's position
-            zpos_new = particle.zpos + delta_X.z
-            
-            # Apply boundary conditions
-            zmin = data_reader.get_zmin(time, &particle)
-            zmax = data_reader.get_zmax(time, &particle)
-            if zpos_new < zmin or zpos_new > zmax:
-                zpos_new = self._vert_bc_calculator.apply(zpos_new, zmin, zmax)
-            
-            # Set new z position
-            zpos_new_arr[i] = zpos_new 
+            if self._num_method.step(data_reader, time, &particle) != -2:
+                # Use Delta values to update the particle's position
+                zpos_new_arr[i] = particle.zpos
+            else:
+                raise RuntimeError('Test particle left the domain.')
 
         # Return the updated position
         return zpos_new_arr
