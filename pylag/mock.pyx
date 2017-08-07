@@ -336,7 +336,7 @@ cdef class MockOneDNumMethod:
             data_reader.set_local_coordinates(particle.get_ptr())
             data_reader.set_vertical_grid_vars(time, particle.get_ptr())
 
-            if self._num_method.step(data_reader, time, particle.get_ptr()) != -2:
+            if self._num_method.step(data_reader, time, particle.get_ptr()) == IN_DOMAIN:
                 zpos_new_arr[i] = particle.get_ptr().zpos
             else:
                 raise RuntimeError('Test particle left the domain.')
