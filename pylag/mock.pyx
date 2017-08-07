@@ -223,7 +223,7 @@ cdef class MockHorizontalEddyViscosityDataReader(DataReader):
         Min and max y values between which Ah is defined.
     """
     cdef DTYPE_FLOAT_t _C
-    cdef DTYPE_FLOAT_t _xmin, _xmax, _ymin, _ymax
+    cdef DTYPE_FLOAT_t _xmin, _xmax, _ymin, _ymax, _zmin, _zmax
     
     def __init__(self):
         """ Initialise class data members
@@ -233,6 +233,8 @@ cdef class MockHorizontalEddyViscosityDataReader(DataReader):
         self._xmax = 10.0
         self._ymin = -10.0
         self._ymax = 10.0
+        self._zmin = 0.0
+        self._zmax = 0.0
     
     def get_xmin(self):
         return self._xmin
@@ -245,6 +247,16 @@ cdef class MockHorizontalEddyViscosityDataReader(DataReader):
 
     def get_ymax(self):
         return self._ymax
+
+    cdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, Particle *particle):
+        return self._zmin
+
+    cdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, Particle *particle):
+        return self._zmax
+
+    cpdef find_host(self, DTYPE_FLOAT_t xpos_old, DTYPE_FLOAT_t ypos_old,
+            DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new, DTYPE_INT_t guess):
+        return 0, 0
 
     cdef get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
             Particle* particle):
@@ -331,7 +343,7 @@ cdef class MockAdvIterator:
         return xpos_new, ypos_new, zpos_new
 
 cdef class MockOneDNumMethod:
-    """ Test class for 1D lagrangian stochastic models.
+    """ Test class for 1D numerical methods
     
     Parameters:
     -----------
@@ -375,30 +387,29 @@ cdef class MockOneDNumMethod:
         # Return the updated position
         return zpos_new_arr
     
-cdef class MockTwoDLSM:
-    """ Test class for 2D lagrangian stochastic models.
+cdef class MockTwoDNumMethod:
+    """ Test class for 2D numerical methods
     
     Parameters:
     -----------
     config : ConfigParser
         Configuration object.
     """
-    cdef ItMethod _iterator
+    cdef NumMethod _num_method
     
     def __init__(self, config):
 
-        self._iterator = get_diff_iterative_method(config)
+        self._num_method = get_num_method(config)
     
     def step(self, DataReader data_reader, time, xpos_arr, ypos_arr):
         cdef ParticleSmartPtr particle
-        cdef Delta delta_X
         cdef DTYPE_FLOAT_t xpos_new, ypos_new
 
         if len(xpos_arr) != len(ypos_arr):
             raise ValueError('xpos and ypos array lengths do not match')
         n_particles = len(xpos_arr)
 
-        particle = ParticleSmartPtr(group_id=0, host=0, in_domain=True)
+        particle = ParticleSmartPtr(zpos=0.0, group_id=0, host=0, in_domain=True)
 
         xpos_new_arr = np.empty(n_particles, dtype=DTYPE_FLOAT)
         ypos_new_arr = np.empty(n_particles, dtype=DTYPE_FLOAT)
@@ -407,14 +418,16 @@ cdef class MockTwoDLSM:
             particle.get_ptr().xpos = xpos_arr[i]
             particle.get_ptr().ypos = ypos_arr[i]
 
-            reset(&delta_X)
+            data_reader.set_local_coordinates(particle.get_ptr())
+            data_reader.set_vertical_grid_vars(time, particle.get_ptr())
 
-            self._iterator.step(data_reader, time, particle.get_ptr(), &delta_X)
+            self._num_method.step(data_reader, time, particle.get_ptr())
 
-            xpos_new = particle.get_ptr().xpos + delta_X.x
-            ypos_new = particle.get_ptr().ypos + delta_X.y
+            # New position
+            xpos_new = particle.get_ptr().xpos
+            ypos_new = particle.get_ptr().ypos
 
-            # Apply boundary conditions in x
+            # TODO Apply boundary conditions in x in a specific calculator
             xmin = data_reader.get_xmin()
             xmax = data_reader.get_xmax()
             while xpos_new < xmin or xpos_new > xmax:
@@ -423,7 +436,7 @@ cdef class MockTwoDLSM:
                 elif xpos_new > xmax:
                     xpos_new = xmax + xmax - xpos_new
 
-            # Apply boundary conditions in y
+            # TODO Apply boundary conditions in y in a specific calculator
             ymin = data_reader.get_ymin()
             ymax = data_reader.get_ymax()
             while ypos_new < ymin or ypos_new > ymax:
@@ -433,6 +446,6 @@ cdef class MockTwoDLSM:
                     ypos_new = ymax + ymax - ypos_new
 
             xpos_new_arr[i] = xpos_new
-            ypos_new_arr[i] = ypos_new 
+            ypos_new_arr[i] = ypos_new
 
         return xpos_new_arr, ypos_new_arr
