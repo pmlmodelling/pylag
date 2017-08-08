@@ -1694,7 +1694,7 @@ def get_adv_iterative_method(config):
     """
 
     if not config.has_option("NUMERICS", "adv_iterative_method"):
-        raise ValueError("Failed to find the option `det_iterative_method' in "\
+        raise ValueError("Failed to find the option `adv_iterative_method' in "\
                 "the supplied configuration file.")
     
     # Return the specified numerical integrator.
