@@ -510,7 +510,7 @@ cdef class OS1NumMethod(NumMethod):
         # --------------
 
         # Time at which to start the advection step
-        t = time + self._diff_time_step
+        t = time
 
         # First clone the original particle then update its position
         _particle = particle[0]
@@ -565,7 +565,7 @@ cdef class OS1NumMethod(NumMethod):
         # ------------------
 
         # Time at which to start the second diffusion step
-        t = time + self._diff_time_step + self._adv_time_step
+        t = time + self._diff_time_step
 
         _particle.xpos = xpos
         _particle.ypos = ypos
