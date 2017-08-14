@@ -8,9 +8,9 @@ def test_set_valid_OSONumMethod_advection_and_diffusion_time_steps():
     # Create config
     config = SafeConfigParser()
 
-    config.add_section("SIMULATION")
-    config.set('SIMULATION', 'horiz_bound_cond', 'None')
-    config.set('SIMULATION', 'vert_bound_cond', 'None')
+    config.add_section("BOUNDARY_CONDITIONS")
+    config.set('BOUNDARY_CONDITIONS', 'horiz_bound_cond', 'None')
+    config.set('BOUNDARY_CONDITIONS', 'vert_bound_cond', 'None')
 
     config.add_section("NUMERICS")
     config.set('NUMERICS', 'num_method', 'operator_split_0')
@@ -28,9 +28,9 @@ def test_set_invalid_OSONumMethod_diffusion_time_step_that_is_greater_than_the_a
     # Create config
     config = SafeConfigParser()
 
-    config.add_section("SIMULATION")
-    config.set('SIMULATION', 'horiz_bound_cond', 'None')
-    config.set('SIMULATION', 'vert_bound_cond', 'None')
+    config.add_section("BOUNDARY_CONDITIONS")
+    config.set('BOUNDARY_CONDITIONS', 'horiz_bound_cond', 'None')
+    config.set('BOUNDARY_CONDITIONS', 'vert_bound_cond', 'None')
 
     config.add_section("NUMERICS")
     config.set('NUMERICS', 'num_method', 'operator_split_0')
@@ -48,9 +48,9 @@ def test_set_invalid_OS0NumMethod_diffusion_time_step_that_is_not_an_exact_multi
     # Create config
     config = SafeConfigParser()
 
-    config.add_section("SIMULATION")
-    config.set('SIMULATION', 'horiz_bound_cond', 'None')
-    config.set('SIMULATION', 'vert_bound_cond', 'None')
+    config.add_section("BOUNDARY_CONDITIONS")
+    config.set('BOUNDARY_CONDITIONS', 'horiz_bound_cond', 'None')
+    config.set('BOUNDARY_CONDITIONS', 'vert_bound_cond', 'None')
 
     config.add_section("NUMERICS")
     config.set('NUMERICS', 'num_method', 'operator_split_0')
@@ -67,9 +67,9 @@ def test_set_valid_OS1NumMethod_advection_and_diffusion_time_steps():
     # Create config
     config = SafeConfigParser()
 
-    config.add_section("SIMULATION")
-    config.set('SIMULATION', 'horiz_bound_cond', 'None')
-    config.set('SIMULATION', 'vert_bound_cond', 'None')
+    config.add_section("BOUNDARY_CONDITIONS")
+    config.set('BOUNDARY_CONDITIONS', 'horiz_bound_cond', 'None')
+    config.set('BOUNDARY_CONDITIONS', 'vert_bound_cond', 'None')
 
     config.add_section("NUMERICS")
     config.set('NUMERICS', 'num_method', 'operator_split_1')
@@ -87,9 +87,9 @@ def test_set_invalid_OS1NumMethod_diffusion_time_step_that_is_not_equal_to_half_
     # Create config
     config = SafeConfigParser()
 
-    config.add_section("SIMULATION")
-    config.set('SIMULATION', 'horiz_bound_cond', 'None')
-    config.set('SIMULATION', 'vert_bound_cond', 'None')
+    config.add_section("BOUNDARY_CONDITIONS")
+    config.set('BOUNDARY_CONDITIONS', 'horiz_bound_cond', 'None')
+    config.set('BOUNDARY_CONDITIONS', 'vert_bound_cond', 'None')
 
     config.add_section("NUMERICS")
     config.set('NUMERICS', 'num_method', 'operator_split_1')
