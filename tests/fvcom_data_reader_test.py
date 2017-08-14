@@ -48,6 +48,12 @@ class FVCOMDataReader_test(TestCase):
         host = self.data_reader.find_host_using_global_search(xpos, ypos)
         test.assert_equal(host, 0)
 
+    def test_find_host_using_global_search_when_a_particle_is_in_an_element_with_two_land_boundaries(self):
+        xpos = 369208.8125 # Centroid of element 1 that has two land boundaries (x coordinate)
+        ypos = 5323103.0 # Centroid of element 1 that has two land boundaries (y coordinate)
+        host = self.data_reader.find_host_using_global_search(xpos, ypos)
+        test.assert_equal(host, -1)
+
     def test_find_host_when_particle_is_in_the_domain(self):
         xpos_old = 368260.875 # Centroid of element 3 (x coordinate)
         ypos_old = 5326351.0 # Centroid of element 3 (y coordinate)

@@ -501,27 +501,51 @@ cdef class FVCOMDataReader(DataReader):
         host : int
             ID of the host horizontal element.
         """
-        # Loop counter
-        cdef DTYPE_INT_t i
-
         # Intermediate arrays/variables
         cdef DTYPE_FLOAT_t phi[N_VERTICES]
         cdef DTYPE_FLOAT_t phi_test
+
+        cdef bint host_found
+
+        cdef DTYPE_INT_t n_host_land_boundaries
+
+        cdef DTYPE_INT_t i, guess
+
+        host_found = False
         
-        for i in xrange(self._n_elems):
+        for guess in xrange(self._n_elems):
             # Barycentric coordinates
-            self._get_phi(xpos, ypos, i, phi)
+            self._get_phi(xpos, ypos, guess, phi)
 
             # Check to see if the particle is in the current element
             phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
             if phi_test >= 0.0:
-                return i
+                host_found = True
             elif phi_test >= -EPSILON:
                 if self.config.get('GENERAL', 'log_level') == 'DEBUG':
                     logger = logging.getLogger(__name__)
                     logger.warning('EPSILON applied during global host element search.')
-                return i
+                host_found = True
 
+            if host_found is True:
+                # If the element has two land boundaries, flag the particle as
+                # being outside of the domain
+                n_host_land_boundaries = 0
+                for i in xrange(3):
+                    if self._nbe[i,guess] == -1:
+                        n_host_land_boundaries += 1
+
+                if n_host_land_boundaries < 2:
+                    return guess
+                else:
+                    # Element has two land boundaries
+                    if self.config.get('GENERAL', 'log_level') == 'DEBUG':
+                        logger = logging.getLogger(__name__)
+                        logger.warning('FVCOM global host element search '
+                            'determined that the particle lies within an '
+                            'element with two land boundaries. Such elements '
+                            'are flagged as lying outside of the model domain.')
+                    return -1
         return -1
 
     cpdef get_boundary_intersection(self, DTYPE_FLOAT_t xpos_old,
