@@ -204,11 +204,15 @@ cdef class FVCOMDataReader(DataReader):
         
         Use a local search for the host horizontal element in which the next
         element to be search is determined by the barycentric coordinates of
-        the last.
+        the last element to be searched.
         
         Two variables are returned. The first is a flag that indicates whether
         or not the search was successful, the second gives either the host
         element or the last element searched before exiting the domain.
+        
+        We also keep track of the second to last element to be searched in order
+        to guard against instances when the model gets stuck alternately testing
+        two separate neighbouring elements.
         
         Conventions
         -----------
@@ -253,7 +257,7 @@ cdef class FVCOMDataReader(DataReader):
 
         cdef DTYPE_INT_t n_host_land_boundaries
         
-        cdef DTYPE_INT_t flag, last_guess, guess
+        cdef DTYPE_INT_t flag, guess, last_guess, second_to_last_guess
 
         # Check for non-sensical start points.
         guess = first_guess
@@ -262,6 +266,8 @@ cdef class FVCOMDataReader(DataReader):
                     'search. Start point = {}'.format(guess))
 
         host_found = False
+        last_guess = -1
+        second_to_last_guess = -1
         
         while True:
             # Barycentric coordinates
@@ -299,9 +305,10 @@ cdef class FVCOMDataReader(DataReader):
                             'element {} which has two land '\
                             'boundaries.'.format(guess))
                     flag = LAND_BDY_CROSSED
-                return flag, last_guess 
+                return flag, last_guess
 
             # If not, use phi to select the next element to be searched
+            second_to_last_guess = last_guess
             last_guess = guess
             if phi[0] == phi_test:
                 guess = self._nbe[0,last_guess]
@@ -319,6 +326,22 @@ cdef class FVCOMDataReader(DataReader):
                 # Open ocean boundary crossed
                 flag = OPEN_BDY_CROSSED
                 return flag, last_guess
+            
+            # Check that we are not alternately checking the same two elements
+            if guess == second_to_last_guess:
+                if self.config.get('GENERAL', 'log_level') == 'DEBUG':
+                    logger = logging.getLogger(__name__)
+                    logger.warning('FVCOM local host element search algorithm '
+                            'has failed to determine whether a particle lies '
+                            'within one of two elements. The two elements are '
+                            'element {} and element {}. The x and y coordinates '
+                            'of the particle are {} and {} respectively. One '
+                            'approach to solving this is to increase the value '
+                            'of epsilon which is used for floating point '
+                            'comparisons. See include/constants.pxi.'.format(guess,
+                            second_to_last_guess, xpos, ypos))
+                raise RuntimeError('Local host element search failed. See the '
+                        'log file for more details (with log_level == DEBUG).')
 
     cpdef find_host_using_particle_tracing(self, DTYPE_FLOAT_t xpos_old,
         DTYPE_FLOAT_t ypos_old, DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new,
