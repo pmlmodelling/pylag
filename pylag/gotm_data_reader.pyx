@@ -192,8 +192,16 @@ cdef class GOTMDataReader(DataReader):
 
     cpdef find_host(self, DTYPE_FLOAT_t xpos_old, DTYPE_FLOAT_t ypos_old,
             DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new, DTYPE_INT_t guess):
-        return 0, 0
-    
+        return IN_DOMAIN, DEFAULT_HOST
+
+    cpdef find_host_using_global_search(self, DTYPE_FLOAT_t xpos,
+            DTYPE_FLOAT_t ypos):
+        return DEFAULT_HOST
+
+    cpdef find_host_using_local_search(self, DTYPE_FLOAT_t xpos,
+            DTYPE_FLOAT_t ypos, DTYPE_INT_t first_guess):
+        return IN_DOMAIN, DEFAULT_HOST
+
     cdef set_vertical_grid_vars(self, DTYPE_FLOAT_t time, Particle* particle):
         """ Set variables describing the particle's position in z
         

@@ -14,6 +14,12 @@ cdef class DataReader:
     cpdef find_host(self, DTYPE_FLOAT_t xpos_old, DTYPE_FLOAT_t ypos_old,
         DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new, DTYPE_INT_t guess)
 
+    cpdef find_host_using_global_search(self, DTYPE_FLOAT_t xpos,
+            DTYPE_FLOAT_t ypos)
+
+    cpdef find_host_using_local_search(self, DTYPE_FLOAT_t xpos,
+            DTYPE_FLOAT_t ypos, DTYPE_INT_t first_guess)
+
     cpdef get_boundary_intersection(self, DTYPE_FLOAT_t xpos_old,
         DTYPE_FLOAT_t ypos_old, DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new,
         DTYPE_INT_t last_host)

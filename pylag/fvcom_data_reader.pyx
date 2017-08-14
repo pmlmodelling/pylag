@@ -190,7 +190,7 @@ cdef class FVCOMDataReader(DataReader):
         flag, host = self.find_host_using_local_search(xpos_new, ypos_new,
                 guess)
         
-        if flag < 0:
+        if flag != IN_DOMAIN:
             # Local search failed to find the particle. Perform check to see if
             # the particle has indeed left the model domain
             flag, host = self.find_host_using_particle_tracing(xpos_old,
