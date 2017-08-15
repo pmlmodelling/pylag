@@ -1291,12 +1291,12 @@ cdef class FVCOMDataReader(DataReader):
                     j = i+1 # +1 as host is 0
                     xc[j] = self._xc[neighbour] 
                     yc[j] = self._yc[neighbour]
-                    uc1[j] = interp.linear_interp(time_fraction, self._u_last[particle.k_lower_layer, particle.host_horizontal_elem], self._u_next[particle.k_lower_layer, particle.host_horizontal_elem])
-                    vc1[j] = interp.linear_interp(time_fraction, self._v_last[particle.k_lower_layer, particle.host_horizontal_elem], self._v_next[particle.k_lower_layer, particle.host_horizontal_elem])
-                    wc1[j] = interp.linear_interp(time_fraction, self._w_last[particle.k_lower_layer, particle.host_horizontal_elem], self._w_next[particle.k_lower_layer, particle.host_horizontal_elem])
-                    uc2[j] = interp.linear_interp(time_fraction, self._u_last[particle.k_upper_layer, particle.host_horizontal_elem], self._u_next[particle.k_upper_layer, particle.host_horizontal_elem])
-                    vc2[j] = interp.linear_interp(time_fraction, self._v_last[particle.k_upper_layer, particle.host_horizontal_elem], self._v_next[particle.k_upper_layer, particle.host_horizontal_elem])
-                    wc2[j] = interp.linear_interp(time_fraction, self._w_last[particle.k_upper_layer, particle.host_horizontal_elem], self._w_next[particle.k_upper_layer, particle.host_horizontal_elem])
+                    uc1[j] = interp.linear_interp(time_fraction, self._u_last[particle.k_lower_layer, neighbour], self._u_next[particle.k_lower_layer, neighbour])
+                    vc1[j] = interp.linear_interp(time_fraction, self._v_last[particle.k_lower_layer, neighbour], self._v_next[particle.k_lower_layer, neighbour])
+                    wc1[j] = interp.linear_interp(time_fraction, self._w_last[particle.k_lower_layer, neighbour], self._w_next[particle.k_lower_layer, neighbour])
+                    uc2[j] = interp.linear_interp(time_fraction, self._u_last[particle.k_upper_layer, neighbour], self._u_next[particle.k_upper_layer, neighbour])
+                    vc2[j] = interp.linear_interp(time_fraction, self._v_last[particle.k_upper_layer, neighbour], self._v_next[particle.k_upper_layer, neighbour])
+                    wc2[j] = interp.linear_interp(time_fraction, self._w_last[particle.k_upper_layer, neighbour], self._w_next[particle.k_upper_layer, neighbour])
             
             # ... lower bounding sigma layer
             up1 = interp.shepard_interpolation(particle.xpos, particle.ypos, xc, yc, uc1)
@@ -1426,12 +1426,12 @@ cdef class FVCOMDataReader(DataReader):
                 for i in xrange(3):
                     neighbour = self._nbe[i, particle.host_horizontal_elem]
                     j = i+1 # +1 as host is 0
-                    uc1[j] = interp.linear_interp(time_fraction, self._u_last[particle.k_lower_layer, particle.host_horizontal_elem], self._u_next[particle.k_lower_layer, particle.host_horizontal_elem])
-                    vc1[j] = interp.linear_interp(time_fraction, self._v_last[particle.k_lower_layer, particle.host_horizontal_elem], self._v_next[particle.k_lower_layer, particle.host_horizontal_elem])
-                    wc1[j] = interp.linear_interp(time_fraction, self._w_last[particle.k_lower_layer, particle.host_horizontal_elem], self._w_next[particle.k_lower_layer, particle.host_horizontal_elem])
-                    uc2[j] = interp.linear_interp(time_fraction, self._u_last[particle.k_upper_layer, particle.host_horizontal_elem], self._u_next[particle.k_upper_layer, particle.host_horizontal_elem])
-                    vc2[j] = interp.linear_interp(time_fraction, self._v_last[particle.k_upper_layer, particle.host_horizontal_elem], self._v_next[particle.k_upper_layer, particle.host_horizontal_elem])
-                    wc2[j] = interp.linear_interp(time_fraction, self._w_last[particle.k_upper_layer, particle.host_horizontal_elem], self._w_next[particle.k_upper_layer, particle.host_horizontal_elem])
+                    uc1[j] = interp.linear_interp(time_fraction, self._u_last[particle.k_lower_layer, neighbour], self._u_next[particle.k_lower_layer, neighbour])
+                    vc1[j] = interp.linear_interp(time_fraction, self._v_last[particle.k_lower_layer, neighbour], self._v_next[particle.k_lower_layer, neighbour])
+                    wc1[j] = interp.linear_interp(time_fraction, self._w_last[particle.k_lower_layer, neighbour], self._w_next[particle.k_lower_layer, neighbour])
+                    uc2[j] = interp.linear_interp(time_fraction, self._u_last[particle.k_upper_layer, neighbour], self._u_next[particle.k_upper_layer, neighbour])
+                    vc2[j] = interp.linear_interp(time_fraction, self._v_last[particle.k_upper_layer, neighbour], self._v_next[particle.k_upper_layer, neighbour])
+                    wc2[j] = interp.linear_interp(time_fraction, self._w_last[particle.k_upper_layer, neighbour], self._w_next[particle.k_upper_layer, neighbour])
             
             # ... lower bounding sigma layer
             up1 = self._interpolate_vel_between_elements(particle.xpos, particle.ypos, particle.host_horizontal_elem, uc1)
