@@ -41,6 +41,9 @@ cdef struct Particle:
     # Flag identifying whether or not the particle resides within the model domain.
     bint in_domain
 
+    # Flag identifying whether or not a particle is beached
+    DTYPE_INT_t is_beached
+
     # The host horizontal element
     DTYPE_INT_t host_horizontal_elem
 

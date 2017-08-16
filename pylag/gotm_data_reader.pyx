@@ -361,3 +361,21 @@ cdef class GOTMDataReader(DataReader):
         k_prime = (kh2 - kh1) / zpos_increment
 
         return k_prime
+
+    cdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, DTYPE_INT_t host) except INT_ERR:
+        """ Return an integer indicating whether `host' is wet or dry
+        
+        The function returns 1 if `host' is wet at time `time' and 
+        0 if `host' is dry.
+        
+        For GOTM, we assume there is always water present.
+        
+        Parameters:
+        -----------
+        time : float
+            Time at which to interpolate.
+
+        host : int
+            Integer that identifies the host element in question
+        """
+        return 1

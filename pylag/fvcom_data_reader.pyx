@@ -86,6 +86,10 @@ cdef class FVCOMDataReader(DataReader):
     # Horizontal eddy viscosities
     cdef DTYPE_FLOAT_t[:,:] _viscofh_last
     cdef DTYPE_FLOAT_t[:,:] _viscofh_next
+
+    # Wet/dry status of elements
+    cdef DTYPE_INT_t[:] _wet_cells_last
+    cdef DTYPE_INT_t[:] _wet_cells_next
     
     # Time array
     cdef DTYPE_FLOAT_t _time_last
@@ -1169,6 +1173,41 @@ cdef class FVCOMDataReader(DataReader):
 
         return k_prime
 
+    cdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, DTYPE_INT_t host) except INT_ERR:
+        """ Return an integer indicating whether `host' is wet or dry
+        
+        The function returns 1 if `host' is wet at time `time' and 
+        0 if `host' is dry.
+        
+        The wet-dry distinction reflects two discrete states - either the
+        element is wet, or it is dry. This raises the question of how to deal
+        with intermediate times, such that td < t < tw where
+        t is the current model time, and td and tw are conescutive input time
+        points between which the host element switches from being dry to being
+        wet. The approach taken is conservative, and involves flagging the
+        element as being dry if either one or both of the input time points
+        bounding the current model time indicate that the element is dry. In this
+        simple procedure, the `time' parameter is actually unused.
+        
+        NB - just because an element is flagged as being dry does not mean
+        that particles are necessarily frozen. Clients can still try to advect
+        particles within such elements, and the interpolated velocity field may
+        yield non-zero values, depending on the state of the host and
+        surrounding elements in the given time window.
+        
+        Parameters:
+        -----------
+        time : float
+            Time (unused)
+
+        host : int
+            Integer that identifies the host element in question
+        """
+        if self._wet_cells_last[host] == 0 or self._wet_cells_next[host] == 0:
+            return 0
+        return 1
+        
+
     cdef _get_velocity_using_shepard_interpolation(self, DTYPE_FLOAT_t time,
             Particle* particle, DTYPE_FLOAT_t vel[3]):
         """ Return (u,v,w) velocities at a point using Shepard interpolation
@@ -1535,6 +1574,10 @@ cdef class FVCOMDataReader(DataReader):
         if self.config.getboolean("OCEAN_CIRCULATION_MODEL", "has_Ah"):
             self._viscofh_last = self.mediator.get_time_dependent_variable_at_last_time_index('viscofh', (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
             self._viscofh_next = self.mediator.get_time_dependent_variable_at_next_time_index('viscofh', (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
+
+        # Update memory views for wet cells
+        self._wet_cells_last = self.mediator.get_time_dependent_variable_at_last_time_index('wet_cells', (self._n_elems), DTYPE_INT)
+        self._wet_cells_next = self.mediator.get_time_dependent_variable_at_next_time_index('wet_cells', (self._n_elems), DTYPE_INT)
 
     cdef void _get_phi(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos,
             DTYPE_INT_t host, DTYPE_FLOAT_t phi[N_VERTICES]) except *:

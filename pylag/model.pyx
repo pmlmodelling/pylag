@@ -199,6 +199,12 @@ cdef class OPTModel:
 
                 # Find the host z layer
                 self.data_reader.set_vertical_grid_vars(time, particle_ptr)
+                
+                # Determine if the host element is presently dry
+                if self.data_reader.is_wet(time, host_horizontal_elem) == 1:
+                    particle_ptr.is_beached = 0
+                else:
+                    particle_ptr.is_beached = 1
 
                 # Add particle to the particle set
                 self.particle_seed_smart_ptrs.append(particle_seed_smart_ptr)
@@ -221,7 +227,8 @@ cdef class OPTModel:
         """ Compute and update each particle's position.
 
         Cycle over the particle set, updating the position of only those
-        particles that remain in the model domain
+        particles that remain in the model domain. If a particle has beached
+        update its status.
         
         Parameters:
         -----------
@@ -237,7 +244,12 @@ cdef class OPTModel:
 
                 if flag == OPEN_BDY_CROSSED:
                     particle_ptr.in_domain = False
-
+                
+                if self.data_reader.is_wet(time, particle_ptr.host_horizontal_elem) == 1:
+                    particle_ptr.is_beached = 0
+                else:
+                    particle_ptr.is_beached = 1
+                
     def get_diagnostics(self, time):
         """ Get particle diagnostics
         
@@ -253,14 +265,15 @@ cdef class OPTModel:
         """
         cdef Particle* particle_ptr
         
-        diags = {'xpos': [], 'ypos': [], 'zpos': [], 'host_horizontal_elem': [], 'h': [], 'zeta': []}
+        diags = {'xpos': [], 'ypos': [], 'zpos': [], 'host_horizontal_elem': [], 'h': [], 'zeta': [], 'is_beached': []}
         for particle_ptr in self.particle_ptrs:
             diags['xpos'].append(particle_ptr.xpos)
             diags['ypos'].append(particle_ptr.ypos)
             diags['zpos'].append(particle_ptr.zpos)
-            diags['host_horizontal_elem'].append(particle_ptr.host_horizontal_elem)            
+            diags['host_horizontal_elem'].append(particle_ptr.host_horizontal_elem)
+            diags['is_beached'].append(particle_ptr.is_beached)   
             
-            # Derived vars including depth, which is first converted to cartesian coords
+            # Environmental environmental variables
             h = self.data_reader.get_zmin(time, particle_ptr)
             zeta = self.data_reader.get_zmax(time, particle_ptr)
             diags['h'].append(h)

@@ -82,10 +82,12 @@ class NetCDFLogger(object):
         self._zeta = self._ncfile.createVariable('zeta', DTYPE_FLOAT, ('time', 'particles',))
         self._zeta.units = 'meters (m)'
         self._zeta.long_name = 'Sea surface elevation'
+
+        self._is_beached = self._ncfile.createVariable('is_beached', DTYPE_INT, ('time', 'particles',))
+        self._is_beached.long_name = 'Is beached'
         
         # Add extra grid variables
         #self._indomain = self._ncfile.createVariable('indomain', 'i4', ('Time', 'Particles',))
-        #self._inwater = self._ncfile.createVariable('inwater', 'i4', ('Time', 'Particles',))
 
     def write_group_ids(self, group_ids):
         self._group_id[:] = group_ids
@@ -104,6 +106,7 @@ class NetCDFLogger(object):
         self._host[tidx, :] = particle_data['host_horizontal_elem']
         self._h[tidx, :] = particle_data['h']
         self._zeta[tidx, :] = particle_data['zeta']
+        self._is_beached[tidx, :] = particle_data['is_beached']
         
     def close(self):
         logger = logging.getLogger(__name__)
