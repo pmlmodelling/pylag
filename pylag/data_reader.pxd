@@ -15,10 +15,10 @@ cdef class DataReader:
         DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new, DTYPE_INT_t guess)
 
     cpdef find_host_using_global_search(self, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos)
+        DTYPE_FLOAT_t ypos)
 
     cpdef find_host_using_local_search(self, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos, DTYPE_INT_t first_guess)
+        DTYPE_FLOAT_t ypos, DTYPE_INT_t first_guess)
 
     cpdef get_boundary_intersection(self, DTYPE_FLOAT_t xpos_old,
         DTYPE_FLOAT_t ypos_old, DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new,
@@ -52,4 +52,4 @@ cdef class DataReader:
     cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity_derivative(self,
             DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR
 
-    cdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, DTYPE_INT_t host) except INT_ERR
+    cpdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, DTYPE_INT_t host) except INT_ERR

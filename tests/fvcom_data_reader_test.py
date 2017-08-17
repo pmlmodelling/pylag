@@ -312,3 +312,11 @@ class FVCOMDataReader_test(TestCase):
 
         diffusivity_gradient = cwrappers.get_horizontal_eddy_viscosity_derivative(self.data_reader, time, xpos, ypos, zpos, host)
         test.assert_almost_equal(diffusivity_gradient, 0.0)
+
+    def test_element_is_wet(self):
+        host = 0
+        time = 0.0
+
+        status = self.data_reader.is_wet(time, host)
+        test.assert_equal(status, 1)
+
