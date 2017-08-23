@@ -29,9 +29,12 @@ class NetCDFLogger(object):
 
         try:
             logger.info('Creating output file: {}.'.format(self.file_name))
-            self._ncfile = Dataset(self.file_name, mode='w')
+            self._ncfile = Dataset(self.file_name, mode='w', format='NETCDF4')
         except:
             raise RuntimeError('Failed to create output file {}.'.format(self.file_name))
+
+        # Compression options for the netCDF variables.
+        self._ncopts = {'zlib': True, 'complevel': 7}
 
         # Time units
         self._simulation_time_units = 'seconds since {}'.format(start_datetime)
@@ -58,32 +61,32 @@ class NetCDFLogger(object):
         self._group_id.long_name = 'Particle group ID'
         
         # Add position variables
-        self._xpos = self._ncfile.createVariable('xpos', DTYPE_FLOAT, ('time', 'particles',))
+        self._xpos = self._ncfile.createVariable('xpos', DTYPE_FLOAT, ('time', 'particles',), **self._ncopts)
         self._xpos.units = 'meters (m)'
         self._xpos.long_name = 'Particle x position'
         
-        self._ypos = self._ncfile.createVariable('ypos', DTYPE_FLOAT, ('time', 'particles',))
+        self._ypos = self._ncfile.createVariable('ypos', DTYPE_FLOAT, ('time', 'particles',), **self._ncopts)
         self._ypos.units = 'meters (m)'
         self._ypos.long_name = 'Particle y position'        
         
-        self._zpos = self._ncfile.createVariable('zpos', DTYPE_FLOAT, ('time', 'particles',))
+        self._zpos = self._ncfile.createVariable('zpos', DTYPE_FLOAT, ('time', 'particles',), **self._ncopts)
         self._zpos.units = 'meters (m)'
         self._zpos.long_name = 'Particle z position'
 
-        self._host = self._ncfile.createVariable('host', DTYPE_INT, ('time', 'particles',))
+        self._host = self._ncfile.createVariable('host', DTYPE_INT, ('time', 'particles',), **self._ncopts)
         self._host.units = 'None'
         self._host.long_name = 'Host horizontal element'
         
         # Add local environmental variables
-        self._h = self._ncfile.createVariable('h', DTYPE_FLOAT, ('time', 'particles',))
+        self._h = self._ncfile.createVariable('h', DTYPE_FLOAT, ('time', 'particles',), **self._ncopts)
         self._h.units = 'meters (m)'
         self._h.long_name = 'Water depth'
         
-        self._zeta = self._ncfile.createVariable('zeta', DTYPE_FLOAT, ('time', 'particles',))
+        self._zeta = self._ncfile.createVariable('zeta', DTYPE_FLOAT, ('time', 'particles',), **self._ncopts)
         self._zeta.units = 'meters (m)'
         self._zeta.long_name = 'Sea surface elevation'
 
-        self._is_beached = self._ncfile.createVariable('is_beached', DTYPE_INT, ('time', 'particles',))
+        self._is_beached = self._ncfile.createVariable('is_beached', DTYPE_INT, ('time', 'particles',), **self._ncopts)
         self._is_beached.long_name = 'Is beached'
         
         # Add extra grid variables
