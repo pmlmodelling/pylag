@@ -126,6 +126,10 @@ class TraceSimulator(Simulator):
             # The main update loop
             if rank == 0: logger.info('Starting ensemble member {} ...'.format(self.time_manager.current_release))
             while self.time_manager.time < self.time_manager.time_end:
+                if rank == 0:
+                    percent_complete = self.time_manager.time / self.time_manager.time_end * 100
+                    if percent_complete % 10 == 0:
+                        logger.info('{}% complete ...'.format(int(percent_complete)))
                 try:
                     self.model.update(self.time_manager.time)
                     self.time_manager.update_current_time()
