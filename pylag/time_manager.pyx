@@ -2,6 +2,7 @@ import numpy as np
 import copy
 import datetime
 import ConfigParser
+from netCDF4 import num2date
 
 # Data types used for constructing C data structures
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
@@ -21,6 +22,7 @@ cdef class TimeManager(object):
     cdef DTYPE_INT_t _current_release
 
     cdef object _datetime_start
+    cdef object _datetime_start_ref
     cdef object _datetime_end
 
     cdef DTYPE_FLOAT_t _time_start
@@ -62,11 +64,11 @@ cdef class TimeManager(object):
     def _set_time_vars(self):
         """ Set time variables for the current particle release
         
-        Initialise all time variables required to control a given particle 
+        Initialise all time variables required to control a given particle
         release.
         """
-        datetime_start_ref = datetime.datetime.strptime(self._datetime_start_str, "%Y-%m-%d %H:%M:%S")
-        self._datetime_start = datetime_start_ref + datetime.timedelta(hours=self._particle_release_interval_in_hours) * self._current_release
+        self._datetime_start_ref = datetime.datetime.strptime(self._datetime_start_str, "%Y-%m-%d %H:%M:%S")
+        self._datetime_start = self._datetime_start_ref + datetime.timedelta(hours=self._particle_release_interval_in_hours) * self._current_release
         
         # If the simulation involves just a single particle release use 
         # end_datetime to set the simulation end time.
@@ -132,6 +134,11 @@ cdef class TimeManager(object):
         def __get__(self):
             return self._datetime_end
         
+    # Current datetime
+    property datetime_current:
+        def __get__(self):
+            return num2date(self._time, units='days since {}'.format(self._datetime_start_ref))
+
     # Current time (seconds elapsed since start of the current simulation)
     property time:
         def __get__(self):
