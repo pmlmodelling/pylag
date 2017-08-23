@@ -12,9 +12,9 @@ from pylag.numerics import get_global_time_step
 
 cdef class TimeManager(object):
     cdef object _config
-    
+
     cdef object _datetime_start_str
-    
+
     cdef DTYPE_INT_t _number_of_particle_releases
 
     cdef DTYPE_FLOAT_t _particle_release_interval_in_hours
@@ -32,21 +32,21 @@ cdef class TimeManager(object):
     cdef DTYPE_FLOAT_t _time_step
 
     cdef DTYPE_FLOAT_t _output_frequency
-    
+
     def __init__(self, config):
         # Config object
         self._config = config
-        
+
         # Simulation start time - if running with multiple particle releases,
         # this is the time at which the first group of particles is released.
         self._datetime_start_str = config.get("SIMULATION", "start_datetime")
-        
+
         # The number of particle releases
         self._number_of_particle_releases = config.getint("SIMULATION", "number_of_particle_releases")
-        
+
         # Time interval between particle releases
         self._particle_release_interval_in_hours = config.getfloat("SIMULATION", "particle_release_interval_in_hours")
-        
+
         # Period at which data is written to file
         self._output_frequency = config.getfloat("SIMULATION", "output_frequency")
 
@@ -63,14 +63,14 @@ cdef class TimeManager(object):
 
     def _set_time_vars(self):
         """ Set time variables for the current particle release
-        
+
         Initialise all time variables required to control a given particle
         release.
         """
         self._datetime_start_ref = datetime.datetime.strptime(self._datetime_start_str, "%Y-%m-%d %H:%M:%S")
         self._datetime_start = self._datetime_start_ref + datetime.timedelta(hours=self._particle_release_interval_in_hours) * self._current_release
-        
-        # If the simulation involves just a single particle release use 
+
+        # If the simulation involves just a single particle release use
         # end_datetime to set the simulation end time.
         if self._number_of_particle_releases == 1:
             datetime_end_str = self._config.get("SIMULATION", "end_datetime")
@@ -88,25 +88,25 @@ cdef class TimeManager(object):
 
     def new_simulation(self):
         """Start a new simulation?
-        
-        If True, (re-)set all time variables and counters, then increment the 
+
+        If True, (re-)set all time variables and counters, then increment the
         indentifier for the current particle release.
         """
         if self._current_release >= self._number_of_particle_releases:
             return False
-        
+
         self._set_time_vars()
-        
+
         self._current_release += 1
-        
+
         return True
 
     def update_current_time(self):
         self._time = self._time + self._time_step
-        
+
     def write_output_to_file(self):
         cdef DTYPE_FLOAT_t time_diff
-        
+
         time_diff = self._time - self._time_start
         if <int>time_diff % <int>self._output_frequency == 0:
             return 1
@@ -128,12 +128,12 @@ cdef class TimeManager(object):
     property datetime_start:
         def __get__(self):
             return self._datetime_start
-    
+
     # Integration end datetime for the current release
     property datetime_end:
         def __get__(self):
             return self._datetime_end
-        
+
     # Current datetime
     property datetime_current:
         def __get__(self):
@@ -143,14 +143,14 @@ cdef class TimeManager(object):
     property time:
         def __get__(self):
             return self._time
-        
+
     # Integration time step (seconds)
     property time_step:
         def __get__(self):
             return self._time_step
- 
+
      # Integration end time (seconds)
     property time_end:
         def __get__(self):
             return self._time_end
-        
+

@@ -15,7 +15,7 @@ def get_simulator(config):
     if config.get("SIMULATION", "simulation_type") == "trace":
         return TraceSimulator(config)
     else:
-        raise ValueError('Unsupported simulation type.')  
+        raise ValueError('Unsupported simulation type.')
 
 class Simulator(object):
     def run(self):
@@ -28,10 +28,10 @@ class TraceSimulator(Simulator):
 
         # Time manager - for controlling time stepping etc
         self.time_manager = TimeManager(self._config)
-    
+
         # Model object
         self.model = get_model(self._config)
-    
+
     def run(self):
         # MPI objects and variables
         comm = MPI.COMM_WORLD
@@ -42,7 +42,7 @@ class TraceSimulator(Simulator):
         if rank == 0:
             # For logging
             logger = logging.getLogger(__name__)
-            
+
             file_name = self._config.get('SIMULATION', 'initial_positions_file')
 
             n_particles, group_ids, x_positions, y_positions, z_positions = \
@@ -58,7 +58,7 @@ class TraceSimulator(Simulator):
                     '{}. The actual number found while parsing the file was '\
                     '{}.'.format(self.n_particles, len(group_ids)))
                 comm.Abort()
-                    
+
             # Insist on the even distribution of particles
             if self.n_particles % size == 0:
                 my_n_particles = self.n_particles/size
@@ -78,7 +78,7 @@ class TraceSimulator(Simulator):
 
         # Broadcast local particle numbers
         my_n_particles = comm.bcast(my_n_particles, root=0)
-        
+
         # Local arrays for holding particle data
         my_group_ids = np.empty(my_n_particles, dtype=DTYPE_INT)
         my_x_positions = np.empty(my_n_particles, dtype=DTYPE_FLOAT)
@@ -106,7 +106,7 @@ class TraceSimulator(Simulator):
 
             # Read data into arrays
             self.model.read_input_data(self.time_manager.time)
-            
+
             # Seed the model
             self.model.seed(self.time_manager.time)
 
@@ -149,14 +149,14 @@ class TraceSimulator(Simulator):
         # MPI objects and variables
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
-        
+
         global_diags = {}
         for diag in diags.keys():
             if rank == 0:
                 global_diags[diag] = np.empty(self.n_particles, dtype=type(diags[diag][0]))
             else:
                 global_diags[diag] = None
-        
+
         # Pool diagnostics
         for diag in diags.keys():
             comm.Gather(np.array(diags[diag]), global_diags[diag], root=0)
