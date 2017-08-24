@@ -143,6 +143,7 @@ class TraceSimulator(Simulator):
 
             # Close the current data logger
             if rank == 0:
+                logger.info('100% complete ...')
                 self.data_logger.close()
 
     def _record(self, time, diags):
