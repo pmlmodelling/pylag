@@ -154,7 +154,7 @@ cdef class OPTModel:
 
         guess = None
         particles_in_domain = 0
-        for group, x, y, z_temp in zip(self._group_ids, self._x_positions, self._y_positions, self._z_positions):
+        for id, (group, x, y, z_temp) in enumerate(zip(self._group_ids, self._x_positions, self._y_positions, self._z_positions), 1):
             # Find particle host element
             if guess is not None:
                 # Try a local search first
@@ -172,7 +172,7 @@ cdef class OPTModel:
                 # Create particle
                 particle_seed_smart_ptr = ParticleSmartPtr(group_id=group,
                         xpos=x, ypos=y, host=host_horizontal_elem,
-                        in_domain=in_domain)
+                        in_domain=in_domain, id=id)
                 particle_ptr = particle_seed_smart_ptr.get_ptr()
 
                 # Set local coordinates
@@ -216,7 +216,7 @@ cdef class OPTModel:
                 guess = host_horizontal_elem
             else:
                 in_domain = False
-                particle_seed_smart_ptr = ParticleSmartPtr(group_id=group, in_domain=in_domain)
+                particle_seed_smart_ptr = ParticleSmartPtr(group_id=group, in_domain=in_domain, id=id)
                 self.particle_seed_smart_ptrs.append(particle_seed_smart_ptr)
 
         if self.config.get('GENERAL', 'log_level') == 'DEBUG':
