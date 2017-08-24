@@ -17,7 +17,8 @@ cdef class ParticleSmartPtr:
             DTYPE_FLOAT_t omega_layers=-999., DTYPE_INT_t in_domain=False,
             DTYPE_INT_t is_beached=0, DTYPE_INT_t host=-999, 
             DTYPE_INT_t k_layer=-999, DTYPE_INT_t in_vertical_boundary_layer=False,
-            DTYPE_INT_t k_lower_layer=-999, DTYPE_INT_t k_upper_layer=-999):
+            DTYPE_INT_t k_lower_layer=-999, DTYPE_INT_t k_upper_layer=-999,
+            DTYPE_INT_t id=-999):
 
         self._particle = <Particle *>PyMem_Malloc(sizeof(Particle))
 
@@ -40,6 +41,7 @@ cdef class ParticleSmartPtr:
         self._particle.in_vertical_boundary_layer = in_vertical_boundary_layer
         self._particle.k_lower_layer = k_lower_layer
         self._particle.k_upper_layer = k_upper_layer
+        self._particle.id = id
 
     def __dealloc__(self):
         PyMem_Free(self._particle)
@@ -83,4 +85,5 @@ cdef ParticleSmartPtr copy(ParticleSmartPtr particle_smart_ptr):
                             particle_ptr.k_layer,
                             particle_ptr.in_vertical_boundary_layer,
                             particle_ptr.k_lower_layer,
-                            particle_ptr.k_upper_layer)
+                            particle_ptr.k_upper_layer,
+                            particle_ptr.id)

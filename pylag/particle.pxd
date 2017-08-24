@@ -9,6 +9,9 @@ cdef struct Particle:
     # Particle group ID
     DTYPE_INT_t group_id
     
+    # Unique particle ID
+    DTYPE_INT_t id
+
     # Global coordinates
     # ------------------
 
