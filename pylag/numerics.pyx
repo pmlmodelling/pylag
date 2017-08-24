@@ -678,7 +678,7 @@ cdef class ItMethod:
         raise NotImplementedError
 
 cdef class AdvRK42DItMethod(ItMethod):
-    """ 2D deterministic Fourth Order Runga Kutta iterative method
+    """ 2D deterministic Fourth Order Runge-Kutta iterative method
 
     Attributes:
     -----------
@@ -704,8 +704,8 @@ cdef class AdvRK42DItMethod(ItMethod):
             Particle *particle, Delta *delta_X) except INT_ERR:
         """ Compute changes in a particle's position due to lateral advection
         
-        Use a basic fourth order Runga Kutta scheme to compute changes in a
-        particle's position in two dimensions (e_i,e_j). These are saved in an 
+        Use a basic fourth order Runge-Kutta scheme to compute changes in a
+        particle's position in two dimensions (e_i,e_j). These are saved in an
         object of type Delta. If the particle moves outside of the model domain
         delta_X is left unchanged and the flag identifying that a boundary
         crossing has occurred is returned.
@@ -852,7 +852,7 @@ cdef class AdvRK42DItMethod(ItMethod):
         return flag
 
 cdef class AdvRK43DItMethod(ItMethod):
-    """ 3D deterministic Fourth Order Runga Kutta iterative method
+    """ 3D deterministic Fourth Order Runge-Kutta iterative method
     
     Attributes:
     -----------
@@ -885,7 +885,7 @@ cdef class AdvRK43DItMethod(ItMethod):
             Particle *particle, Delta *delta_X) except INT_ERR:
         """ Compute changes in a particle's position due to advection
         
-        Use a basic fourth order Runga Kutta scheme to compute changes in a
+        Use a basic fourth order Runge-Kutta scheme to compute changes in a
         particle's position in three dimensions (e_i, e_j, e_k). These are saved
         in an object of type Delta. If the particle moves outside of the model
         domain delta_X is left unchanged and the flag identifying that a boundary
