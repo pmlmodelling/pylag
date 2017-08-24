@@ -154,7 +154,11 @@ cdef class OPTModel:
 
         guess = None
         particles_in_domain = 0
-        for id, (group, x, y, z_temp) in enumerate(zip(self._group_ids, self._x_positions, self._y_positions, self._z_positions), 1):
+        id = 0
+        for group, x, y, z_temp in zip(self._group_ids, self._x_positions, self._y_positions, self._z_positions):
+            # Unique particle ID.
+            id += 1
+
             # Find particle host element
             if guess is not None:
                 # Try a local search first
