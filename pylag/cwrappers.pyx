@@ -14,6 +14,8 @@ import numpy as np
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
+from libcpp.vector cimport vector
+
 # PyLag cimports
 cimport pylag.math as math
 cimport pylag.interpolation as interp
@@ -80,15 +82,15 @@ cpdef get_barycentric_gradients(x_tri, y_tri):
     return dphi_dx_out, dphi_dy_out
 
 cpdef shepard_interpolation(x, y, xpts, ypts, vals):
-    cdef DTYPE_FLOAT_t[N_NEIGH_ELEMS] xpts_c, ypts_c, vals_c
+    cdef vector[DTYPE_FLOAT_t] xpts_c, ypts_c, vals_c
     
     if xpts.shape[0] != N_NEIGH_ELEMS or ypts.shape[0] != N_NEIGH_ELEMS or vals.shape[0] != N_NEIGH_ELEMS:
         raise ValueError('1D arrays should be {} elements in length.'.format(N_NEIGH_ELEMS))
 
     for i in xrange(N_NEIGH_ELEMS):
-        xpts_c[i] = xpts[i]
-        ypts_c[i] = ypts[i]   
-        vals_c[i] = vals[i]
+        xpts_c.push_back(xpts[i])
+        ypts_c.push_back(ypts[i])  
+        vals_c.push_back(vals[i])
     
     return interp.shepard_interpolation(x, y, xpts_c, ypts_c, vals_c)
 

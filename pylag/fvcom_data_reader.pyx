@@ -8,6 +8,8 @@ from cpython cimport bool
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
+from libcpp.vector cimport vector
+
 # PyLag cython imports
 from particle cimport Particle
 from pylag.data_reader cimport DataReader
@@ -837,8 +839,7 @@ cdef class FVCOMDataReader(DataReader):
             u/v/w velocity components stored in a C array.           
         """
         # Compute u/v velocities and save
-        self._get_velocity_using_linear_least_squares_interpolation(time, 
-                particle, vel)
+        self._get_velocity_using_shepard_interpolation(time, particle, vel)
         return
 
     cdef get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
@@ -1240,28 +1241,28 @@ cdef class FVCOMDataReader(DataReader):
             Three element array giving the u, v and w velocity components.
         """
         # x/y coordinates of element centres
-        cdef DTYPE_FLOAT_t xc[N_NEIGH_ELEMS]
-        cdef DTYPE_FLOAT_t yc[N_NEIGH_ELEMS]
+        cdef vector[DTYPE_FLOAT_t] xc
+        cdef vector[DTYPE_FLOAT_t] yc
 
         # Temporary array for vel at element centres at last time point
-        cdef DTYPE_FLOAT_t uc_last[N_NEIGH_ELEMS]
-        cdef DTYPE_FLOAT_t vc_last[N_NEIGH_ELEMS]
-        cdef DTYPE_FLOAT_t wc_last[N_NEIGH_ELEMS]
+        cdef vector[DTYPE_FLOAT_t] uc_last
+        cdef vector[DTYPE_FLOAT_t] vc_last
+        cdef vector[DTYPE_FLOAT_t] wc_last
 
         # Temporary array for vel at element centres at next time point
-        cdef DTYPE_FLOAT_t uc_next[N_NEIGH_ELEMS]
-        cdef DTYPE_FLOAT_t vc_next[N_NEIGH_ELEMS]
-        cdef DTYPE_FLOAT_t wc_next[N_NEIGH_ELEMS]
+        cdef vector[DTYPE_FLOAT_t] uc_next
+        cdef vector[DTYPE_FLOAT_t] vc_next
+        cdef vector[DTYPE_FLOAT_t] wc_next
 
         # Vel at element centres in overlying sigma layer
-        cdef DTYPE_FLOAT_t uc1[N_NEIGH_ELEMS]
-        cdef DTYPE_FLOAT_t vc1[N_NEIGH_ELEMS]
-        cdef DTYPE_FLOAT_t wc1[N_NEIGH_ELEMS]
+        cdef vector[DTYPE_FLOAT_t] uc1
+        cdef vector[DTYPE_FLOAT_t] vc1
+        cdef vector[DTYPE_FLOAT_t] wc1
 
         # Vel at element centres in underlying sigma layer
-        cdef DTYPE_FLOAT_t uc2[N_NEIGH_ELEMS]
-        cdef DTYPE_FLOAT_t vc2[N_NEIGH_ELEMS]
-        cdef DTYPE_FLOAT_t wc2[N_NEIGH_ELEMS]
+        cdef vector[DTYPE_FLOAT_t] uc2
+        cdef vector[DTYPE_FLOAT_t] vc2
+        cdef vector[DTYPE_FLOAT_t] wc2
         
         # Vel at the given location in the overlying sigma layer
         cdef DTYPE_FLOAT_t up1, vp1, wp1
@@ -1280,72 +1281,55 @@ cdef class FVCOMDataReader(DataReader):
         # Time fraction
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
-        nbe_min = int_min(int_min(self._nbe[0, particle.host_horizontal_elem], self._nbe[1, particle.host_horizontal_elem]), self._nbe[2, particle.host_horizontal_elem])
-        if nbe_min < 0:
-            # Boundary element - no horizontal interpolation
-            if particle.in_vertical_boundary_layer is True:
-                vel[0] = interp.linear_interp(time_fraction, self._u_last[particle.k_layer, particle.host_horizontal_elem], self._u_next[particle.k_layer, particle.host_horizontal_elem])
-                vel[1] = interp.linear_interp(time_fraction, self._v_last[particle.k_layer, particle.host_horizontal_elem], self._v_next[particle.k_layer, particle.host_horizontal_elem])
-                vel[2] = interp.linear_interp(time_fraction, self._w_last[particle.k_layer, particle.host_horizontal_elem], self._w_next[particle.k_layer, particle.host_horizontal_elem])
-                return
-            else:
-                up1 = interp.linear_interp(time_fraction, self._u_last[particle.k_lower_layer, particle.host_horizontal_elem], self._u_next[particle.k_lower_layer, particle.host_horizontal_elem])
-                vp1 = interp.linear_interp(time_fraction, self._v_last[particle.k_lower_layer, particle.host_horizontal_elem], self._v_next[particle.k_lower_layer, particle.host_horizontal_elem])
-                wp1 = interp.linear_interp(time_fraction, self._w_last[particle.k_lower_layer, particle.host_horizontal_elem], self._w_next[particle.k_lower_layer, particle.host_horizontal_elem])
-                up2 = interp.linear_interp(time_fraction, self._u_last[particle.k_upper_layer, particle.host_horizontal_elem], self._u_next[particle.k_upper_layer, particle.host_horizontal_elem])
-                vp2 = interp.linear_interp(time_fraction, self._v_last[particle.k_upper_layer, particle.host_horizontal_elem], self._v_next[particle.k_upper_layer, particle.host_horizontal_elem])
-                wp2 = interp.linear_interp(time_fraction, self._w_last[particle.k_upper_layer, particle.host_horizontal_elem], self._w_next[particle.k_upper_layer, particle.host_horizontal_elem])
-        else:
-            # Non-boundary element - perform horizontal and temporal interpolation
-            if particle.in_vertical_boundary_layer is True:
-                xc[0] = self._xc[particle.host_horizontal_elem]
-                yc[0] = self._yc[particle.host_horizontal_elem]
-                uc1[0] = interp.linear_interp(time_fraction, self._u_last[particle.k_layer, particle.host_horizontal_elem], self._u_next[particle.k_layer, particle.host_horizontal_elem])
-                vc1[0] = interp.linear_interp(time_fraction, self._v_last[particle.k_layer, particle.host_horizontal_elem], self._v_next[particle.k_layer, particle.host_horizontal_elem])
-                wc1[0] = interp.linear_interp(time_fraction, self._w_last[particle.k_layer, particle.host_horizontal_elem], self._w_next[particle.k_layer, particle.host_horizontal_elem])
-                for i in xrange(3):
-                    neighbour = self._nbe[i, particle.host_horizontal_elem]
-                    j = i+1 # +1 as host is 0
-                    xc[j] = self._xc[neighbour] 
-                    yc[j] = self._yc[neighbour]
-                    uc1[j] = interp.linear_interp(time_fraction, self._u_last[particle.k_layer, neighbour], self._u_next[particle.k_layer, neighbour])
-                    vc1[j] = interp.linear_interp(time_fraction, self._v_last[particle.k_layer, neighbour], self._v_next[particle.k_layer, neighbour])
-                    wc1[j] = interp.linear_interp(time_fraction, self._w_last[particle.k_layer, neighbour], self._w_next[particle.k_layer, neighbour])
-                
-                vel[0] = interp.shepard_interpolation(particle.xpos, particle.ypos, xc, yc, uc1)
-                vel[1] = interp.shepard_interpolation(particle.xpos, particle.ypos, xc, yc, vc1)
-                vel[2] = interp.shepard_interpolation(particle.xpos, particle.ypos, xc, yc, wc1)
-                return  
-            else:
-                xc[0] = self._xc[particle.host_horizontal_elem]
-                yc[0] = self._yc[particle.host_horizontal_elem]
-                uc1[0] = interp.linear_interp(time_fraction, self._u_last[particle.k_lower_layer, particle.host_horizontal_elem], self._u_next[particle.k_lower_layer, particle.host_horizontal_elem])
-                vc1[0] = interp.linear_interp(time_fraction, self._v_last[particle.k_lower_layer, particle.host_horizontal_elem], self._v_next[particle.k_lower_layer, particle.host_horizontal_elem])
-                wc1[0] = interp.linear_interp(time_fraction, self._w_last[particle.k_lower_layer, particle.host_horizontal_elem], self._w_next[particle.k_lower_layer, particle.host_horizontal_elem])
-                uc2[0] = interp.linear_interp(time_fraction, self._u_last[particle.k_upper_layer, particle.host_horizontal_elem], self._u_next[particle.k_upper_layer, particle.host_horizontal_elem])
-                vc2[0] = interp.linear_interp(time_fraction, self._v_last[particle.k_upper_layer, particle.host_horizontal_elem], self._v_next[particle.k_upper_layer, particle.host_horizontal_elem])
-                wc2[0] = interp.linear_interp(time_fraction, self._w_last[particle.k_upper_layer, particle.host_horizontal_elem], self._w_next[particle.k_upper_layer, particle.host_horizontal_elem])
-                for i in xrange(3):
-                    neighbour = self._nbe[i, particle.host_horizontal_elem]
-                    j = i+1 # +1 as host is 0
-                    xc[j] = self._xc[neighbour] 
-                    yc[j] = self._yc[neighbour]
-                    uc1[j] = interp.linear_interp(time_fraction, self._u_last[particle.k_lower_layer, neighbour], self._u_next[particle.k_lower_layer, neighbour])
-                    vc1[j] = interp.linear_interp(time_fraction, self._v_last[particle.k_lower_layer, neighbour], self._v_next[particle.k_lower_layer, neighbour])
-                    wc1[j] = interp.linear_interp(time_fraction, self._w_last[particle.k_lower_layer, neighbour], self._w_next[particle.k_lower_layer, neighbour])
-                    uc2[j] = interp.linear_interp(time_fraction, self._u_last[particle.k_upper_layer, neighbour], self._u_next[particle.k_upper_layer, neighbour])
-                    vc2[j] = interp.linear_interp(time_fraction, self._v_last[particle.k_upper_layer, neighbour], self._v_next[particle.k_upper_layer, neighbour])
-                    wc2[j] = interp.linear_interp(time_fraction, self._w_last[particle.k_upper_layer, neighbour], self._w_next[particle.k_upper_layer, neighbour])
-            
-            # ... lower bounding sigma layer
-            up1 = interp.shepard_interpolation(particle.xpos, particle.ypos, xc, yc, uc1)
-            vp1 = interp.shepard_interpolation(particle.xpos, particle.ypos, xc, yc, vc1)
-            wp1 = interp.shepard_interpolation(particle.xpos, particle.ypos, xc, yc, wc1)
+        if particle.in_vertical_boundary_layer is True:
+            xc.push_back(self._xc[particle.host_horizontal_elem])
+            yc.push_back(self._yc[particle.host_horizontal_elem])
+            uc1.push_back(interp.linear_interp(time_fraction, self._u_last[particle.k_layer, particle.host_horizontal_elem], self._u_next[particle.k_layer, particle.host_horizontal_elem]))
+            vc1.push_back(interp.linear_interp(time_fraction, self._v_last[particle.k_layer, particle.host_horizontal_elem], self._v_next[particle.k_layer, particle.host_horizontal_elem]))
+            wc1.push_back(interp.linear_interp(time_fraction, self._w_last[particle.k_layer, particle.host_horizontal_elem], self._w_next[particle.k_layer, particle.host_horizontal_elem]))
+            for i in xrange(3):
+                neighbour = self._nbe[i, particle.host_horizontal_elem]
+                if neighbour >= 0:
+                    xc.push_back(self._xc[neighbour])
+                    yc.push_back(self._yc[neighbour])
+                    uc1.push_back(interp.linear_interp(time_fraction, self._u_last[particle.k_layer, neighbour], self._u_next[particle.k_layer, neighbour]))
+                    vc1.push_back(interp.linear_interp(time_fraction, self._v_last[particle.k_layer, neighbour], self._v_next[particle.k_layer, neighbour]))
+                    wc1.push_back(interp.linear_interp(time_fraction, self._w_last[particle.k_layer, neighbour], self._w_next[particle.k_layer, neighbour]))
 
-            # ... upper bounding sigma layer
-            up2 = interp.shepard_interpolation(particle.xpos, particle.ypos, xc, yc, uc2)
-            vp2 = interp.shepard_interpolation(particle.xpos, particle.ypos, xc, yc, vc2)
-            wp2 = interp.shepard_interpolation(particle.xpos, particle.ypos, xc, yc, wc2)
+            vel[0] = interp.shepard_interpolation(particle.xpos, particle.ypos, xc, yc, uc1)
+            vel[1] = interp.shepard_interpolation(particle.xpos, particle.ypos, xc, yc, vc1)
+            vel[2] = interp.shepard_interpolation(particle.xpos, particle.ypos, xc, yc, wc1)
+            return  
+        else:
+            xc.push_back(self._xc[particle.host_horizontal_elem])
+            yc.push_back(self._yc[particle.host_horizontal_elem])
+            uc1.push_back(interp.linear_interp(time_fraction, self._u_last[particle.k_lower_layer, particle.host_horizontal_elem], self._u_next[particle.k_lower_layer, particle.host_horizontal_elem]))
+            vc1.push_back(interp.linear_interp(time_fraction, self._v_last[particle.k_lower_layer, particle.host_horizontal_elem], self._v_next[particle.k_lower_layer, particle.host_horizontal_elem]))
+            wc1.push_back(interp.linear_interp(time_fraction, self._w_last[particle.k_lower_layer, particle.host_horizontal_elem], self._w_next[particle.k_lower_layer, particle.host_horizontal_elem]))
+            uc2.push_back(interp.linear_interp(time_fraction, self._u_last[particle.k_upper_layer, particle.host_horizontal_elem], self._u_next[particle.k_upper_layer, particle.host_horizontal_elem]))
+            vc2.push_back(interp.linear_interp(time_fraction, self._v_last[particle.k_upper_layer, particle.host_horizontal_elem], self._v_next[particle.k_upper_layer, particle.host_horizontal_elem]))
+            wc2.push_back(interp.linear_interp(time_fraction, self._w_last[particle.k_upper_layer, particle.host_horizontal_elem], self._w_next[particle.k_upper_layer, particle.host_horizontal_elem]))
+            for i in xrange(3):
+                neighbour = self._nbe[i, particle.host_horizontal_elem]
+                if neighbour >= 0:
+                    xc.push_back(self._xc[neighbour])
+                    yc.push_back(self._yc[neighbour])
+                    uc1.push_back(interp.linear_interp(time_fraction, self._u_last[particle.k_lower_layer, neighbour], self._u_next[particle.k_lower_layer, neighbour]))
+                    vc1.push_back(interp.linear_interp(time_fraction, self._v_last[particle.k_lower_layer, neighbour], self._v_next[particle.k_lower_layer, neighbour]))
+                    wc1.push_back(interp.linear_interp(time_fraction, self._w_last[particle.k_lower_layer, neighbour], self._w_next[particle.k_lower_layer, neighbour]))
+                    uc2.push_back(interp.linear_interp(time_fraction, self._u_last[particle.k_upper_layer, neighbour], self._u_next[particle.k_upper_layer, neighbour]))
+                    vc2.push_back(interp.linear_interp(time_fraction, self._v_last[particle.k_upper_layer, neighbour], self._v_next[particle.k_upper_layer, neighbour]))
+                    wc2.push_back(interp.linear_interp(time_fraction, self._w_last[particle.k_upper_layer, neighbour], self._w_next[particle.k_upper_layer, neighbour]))
+
+        # ... lower bounding sigma layer
+        up1 = interp.shepard_interpolation(particle.xpos, particle.ypos, xc, yc, uc1)
+        vp1 = interp.shepard_interpolation(particle.xpos, particle.ypos, xc, yc, vc1)
+        wp1 = interp.shepard_interpolation(particle.xpos, particle.ypos, xc, yc, wc1)
+
+        # ... upper bounding sigma layer
+        up2 = interp.shepard_interpolation(particle.xpos, particle.ypos, xc, yc, uc2)
+        vp2 = interp.shepard_interpolation(particle.xpos, particle.ypos, xc, yc, vc2)
+        wp2 = interp.shepard_interpolation(particle.xpos, particle.ypos, xc, yc, wc2)
 
         # Vertical interpolation
         vel[0] = interp.linear_interp(particle.omega_layers, up1, up2)

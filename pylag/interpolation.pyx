@@ -85,8 +85,8 @@ cdef get_barycentric_gradients(DTYPE_FLOAT_t x_tri[3], DTYPE_FLOAT_t y_tri[3],
     dphi_dy[2] = (x_tri[1] - x_tri[0])/den
 
 cdef DTYPE_FLOAT_t shepard_interpolation(DTYPE_FLOAT_t x,
-        DTYPE_FLOAT_t y, DTYPE_FLOAT_t xpts[4], DTYPE_FLOAT_t ypts[4],
-        DTYPE_FLOAT_t vals[4]) except FLOAT_ERR:
+        DTYPE_FLOAT_t y, vector[DTYPE_FLOAT_t] xpts, vector[DTYPE_FLOAT_t] ypts,
+        vector[DTYPE_FLOAT_t] vals) except FLOAT_ERR:
     """Shepard interpolation.
 
     """
@@ -100,13 +100,21 @@ cdef DTYPE_FLOAT_t shepard_interpolation(DTYPE_FLOAT_t x,
     cdef DTYPE_FLOAT_t sum
     cdef DTYPE_FLOAT_t sumw
 
-    # Loop index
-    cdef DTYPE_INT_t i
+    # For looping
+    cdef DTYPE_INT_t i, npts
+
+    # Don't like this much. Would be better to use a cython equivalent to 
+    # `zip'. The boost C++ libraries provide something like this, but using
+    # it would build in a new dependency.
+    if xpts.size() == ypts.size() == vals.size():
+        n_pts = xpts.size()
+    else:
+        raise ValueError('Array lengths do not match.')
 
     # Loop over all reference points
     sum = 0.0
     sumw = 0.0
-    for i in xrange(4):
+    for i in xrange(n_pts):
         r = get_euclidian_distance(x, y, xpts[i], ypts[i])
         if r == 0.0: return vals[i]
         w = 1.0/(r*r) # hardoced p value of -2
