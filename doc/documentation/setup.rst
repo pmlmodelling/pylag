@@ -40,7 +40,7 @@ the creation of particle initial positions files. Primarily, these support the
 creation of **circular release zones** in which any number of particles can be
 placed. Within a given release zone particles can be either regularly or
 randomly distributed. The former method is discontinuous, and only the latter
-guarentees that the specified number of particles will be created. The two 
+guarantees that the specified number of particles will be created. The two
 approaches are illustrated below:
 
 .. plot:: documentation/plots/release_zones.py

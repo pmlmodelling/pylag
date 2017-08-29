@@ -1475,7 +1475,7 @@ cdef class FVCOMDataReader(DataReader):
     def _read_grid(self):
         """ Set grid and coordinate variables.
         
-        All communications go via the mediator in order to guarentee support for
+        All communications go via the mediator in order to guarantee support for
         both serial and parallel simulations.
         
         Parameters:
@@ -1522,7 +1522,7 @@ cdef class FVCOMDataReader(DataReader):
         are stored. These correspond to the last and next time points at which
         FVCOM data was saved. Together these bound PyLag's current time point.
         
-        All communications go via the mediator in order to guarentee support for
+        All communications go via the mediator in order to guarantee support for
         both serial and parallel simulations.
         
         Parameters:

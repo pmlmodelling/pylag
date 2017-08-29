@@ -81,7 +81,7 @@ cdef class GOTMDataReader(DataReader):
         are stored. These correspond to the last and next time points at which
         GOTM data was saved. Together these bound PyLag's current time point.
         
-        All communications go via the mediator in order to guarentee support for
+        All communications go via the mediator in order to guarantee support for
         both serial and parallel simulations.
         
         Note that GOTM discards data for the bottom interface when saving data 
