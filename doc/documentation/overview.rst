@@ -82,7 +82,7 @@ NumIntegrator
 ^^^^^^^^^^^^^
 
 Objects of type NumIntegrator compute changes in a particle's position due to 
-resolved motions. At present, PyLag includes fourth-order Runga Kutta methods 
+resolved motions. At present, PyLag includes fourth-order Runge-Kutta methods 
 for advection in two and three dimensions.
 
 NetCDFLogger
