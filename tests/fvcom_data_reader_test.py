@@ -1,12 +1,103 @@
 from unittest import TestCase
 import numpy.testing as test
+import numpy as np
 import datetime
 from ConfigParser import SafeConfigParser
 
 from pylag.fvcom_data_reader import FVCOMDataReader
 from pylag import cwrappers
 
-from pylag.mediator import SerialMediator
+from pylag.mediator import Mediator
+
+class MockFVCOMMediator(Mediator):
+    """ Test mediator for FVCOM
+
+    """
+    def __init__(self):
+        # Dimension variables
+        n_elems = 4
+        n_nodes = 6
+        n_siglev = 4
+        n_siglay = 3
+        self._dim_vars = {'nele': n_elems, 'node': n_nodes,
+                          'siglev': n_siglev, 'siglay': n_siglay}
+                          
+        # Grid variables - copied from a real FVCOM output file
+        nv = np.array([[4,0,2,4],[3,1,4,5],[1,3,1,3]],dtype=int)
+        nbe = np.array([[1,0,0,-1],[2,-1,-1,0],[3,-1,-1,-1]],dtype=int)
+        x = np.array([370395.625, 367130.84375, 363094.219, 370100., 367030., 367652.656], dtype=float)
+        y = np.array([5321986.5, 5322253., 5322582.5, 5325070., 5325870., 5328112.5], dtype=float)
+        xc = np.array([368086.9, 369208.8, 365751.7, 368260.9], dtype=float)
+        yc = np.array([5324398.5, 5323103., 5323568.5, 5326351.], dtype=float)
+        siglay = np.array([[-.1,-.5,-.9],]*n_nodes, dtype=float).transpose()
+        siglev = np.array([[0., -.2,-.8,-1.],]*n_nodes, dtype=float).transpose()
+        h = np.array([10., 11., 10., 11., 11., 10.], dtype=float)
+        a1u = np.array([[0.0001532937, 0, 0, 0.0001793663],
+                        [0.0001951739, 0, 0, 0.0001998931],
+                        [-0.0003354263, 0, 0, -1.715655e-05],
+                        [-1.304125e-05, 0, 0, -0.0003621029]], dtype=float)
+        a2u = np.array([[7.157444e-06, 0, 0, 0.0001338511],
+                        [-0.0002355544, 0, 0, 0.0001577292],
+                        [-8.94851e-05, 0, 0, -0.0004162626],
+                        [0.0003178821, 0, 0, 0.0001246824]], dtype=float)
+        self._grid_vars = {'nv': nv, 'nbe': nbe, 'x': x, 'y': y, 'xc': xc,
+                           'yc': yc, 'siglay': siglay, 'siglev': siglev,
+                           'h': h, 'a1u': a1u, 'a2u': a2u}
+        
+        # Dictionaries holding the value of time dependent and time independent variables
+        zeta = np.array([[0.,1.,0.,1.,1.,0.],[0.,2.,0.,2.,2.,0.]],dtype=float)
+        
+        # u/v/w are imposed, equal across elements, decreasing with depth and increasing in time
+        uvw_t0 = np.array([[2.]*n_elems,[1.]*n_elems,[0.]*n_elems], dtype=float)
+        uvw_t1 = np.array([[4.]*n_elems,[2.]*n_elems,[0.]*n_elems], dtype=float)
+        u = np.array([uvw_t0, uvw_t1], dtype=float)
+        v = np.array([uvw_t0, uvw_t1], dtype=float)
+        ww = np.array([uvw_t0, uvw_t1], dtype=float)
+        
+        # kh is imposed, equal across nodes, variable with depth and increasing in time
+        kh_t0 = np.array([[0.]*n_nodes,[0.01]*n_nodes,[0.01]*n_nodes,[0.]*n_nodes], dtype=float)
+        kh_t1 = np.array([[0.]*n_nodes,[0.1]*n_nodes,[0.1]*n_nodes,[0.]*n_nodes], dtype=float)
+        kh = np.array([kh_t0, kh_t1], dtype=float)
+
+        # viscofh is imposed, equal across nodes, variable with depth and increasing in time
+        viscofh_t0 = np.array([[0.01]*n_nodes,[0.01]*n_nodes,[0.]*n_nodes], dtype=float)
+        viscofh_t1 = np.array([[0.1]*n_nodes,[0.1]*n_nodes,[0.]*n_nodes], dtype=float)
+        viscofh = np.array([viscofh_t0, viscofh_t1], dtype=float)
+
+        # Wet cells
+        wet_cells = np.array([[1,1,1,1],[1,1,1,1]],dtype=int)
+
+        # Store in dictionaries
+        self._time_dep_vars_last = {'zeta': zeta[0,:], 'u': u[0,:], 'v': v[0,:],
+                                    'ww': ww[0,:], 'kh': kh[0,:],
+                                    'viscofh': viscofh[0,:],
+                                    'wet_cells': wet_cells[0,:]}
+        self._time_dep_vars_next = {'zeta': zeta[1,:], 'u': u[1,:], 'v': v[1,:],
+                                    'ww': ww[1,:], 'kh': kh[1,:],
+                                    'viscofh': viscofh[1,:],
+                                    'wet_cells': wet_cells[1,:]}
+
+        # Time in seconds. ie two time pts, 1 hour apart
+        self._t_last = 0.0
+        self._t_next = 3600.0
+
+    def get_dimension_variable(self, var_name):
+        return self._dim_vars[var_name]
+
+    def get_time_at_last_time_index(self):
+        return self._t_last
+
+    def get_time_at_next_time_index(self):
+        return self._t_next
+
+    def get_grid_variable(self, var_name, var_dims, var_type):
+        return self._grid_vars[var_name][:].astype(var_type)
+
+    def get_time_dependent_variable_at_last_time_index(self, var_name, var_dims, var_type):
+        return self._time_dep_vars_last[var_name][:].astype(var_type)
+
+    def get_time_dependent_variable_at_next_time_index(self, var_name, var_dims, var_type):
+        return self._time_dep_vars_next[var_name][:].astype(var_type)
 
 class FVCOMDataReader_test(TestCase):
 
@@ -14,30 +105,21 @@ class FVCOMDataReader_test(TestCase):
         # Create config
         config = SafeConfigParser()
         config.add_section("GENERAL")
-        config.add_section("SIMULATION")
+        config.set('GENERAL', 'log_level', 'info')
         config.add_section("OCEAN_CIRCULATION_MODEL")
-        config.set('GENERAL', 'log_level', 'INFO')
-        config.set('SIMULATION', 'start_datetime', '2013-01-06 00:00:00')
-        config.set('SIMULATION', 'end_datetime', '2013-01-06 01:00:00')
-        config.set('OCEAN_CIRCULATION_MODEL', 'data_dir', '../resources/')
-        config.set('OCEAN_CIRCULATION_MODEL', 'grid_metrics_file', '../resources/fvcom_grid_metrics_test.nc')
-        config.set('OCEAN_CIRCULATION_MODEL', 'data_file_stem', 'fvcom_data_test')
-        config.set('OCEAN_CIRCULATION_MODEL', 'rounding_interval', '3600')
         config.set('OCEAN_CIRCULATION_MODEL', 'has_Kh', 'True')
         config.set('OCEAN_CIRCULATION_MODEL', 'has_Ah', 'True')
 
-        
         # Create mediator
-        mediator = SerialMediator(config)
+        mediator = MockFVCOMMediator()
         
         # Create data reader
         self.data_reader = FVCOMDataReader(config, mediator)
         
         # Read in data
-        datetime_start = datetime.datetime.strptime(config.get('SIMULATION', 'start_datetime'), "%Y-%m-%d %H:%M:%S")
-        datetime_end = datetime.datetime.strptime(config.get('SIMULATION', 'end_datetime'), "%Y-%m-%d %H:%M:%S")
+        datetime_start = datetime.datetime(2000,1,1) # Arbitrary start time, ignored by mock mediator
+        datetime_end = datetime.datetime(2000,1,1) # Arbitrary end time, ignored by mock mediator
         self.data_reader.setup_data_access(datetime_start, datetime_end)
-        self.data_reader.read_data(0.0)
 
     def tearDown(self):
         del(self.data_reader)
