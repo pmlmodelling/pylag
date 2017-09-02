@@ -55,6 +55,9 @@ cdef class StdNumMethod(NumMethod):
     """
     cdef DTYPE_FLOAT_t _time_step
 
+    cdef bint _depth_restoring
+    cdef DTYPE_FLOAT_t _fixed_depth_below_surface
+
     cdef ItMethod _iterative_method
     cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
     cdef VertBoundaryConditionCalculator _vert_bc_calculator
@@ -73,6 +76,9 @@ cdef class StdNumMethod(NumMethod):
         self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
 
         self._time_step = self._iterative_method.get_time_step()
+
+        self._depth_restoring = config.getboolean("SIMULATION", "depth_restoring")
+        self._fixed_depth_below_surface = config.getfloat("SIMULATION", "fixed_depth")
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
             Particle *particle) except INT_ERR:
@@ -142,7 +148,16 @@ cdef class StdNumMethod(NumMethod):
 
         # Update particle local coordinates
         data_reader.set_local_coordinates(particle)
-
+        
+        # Restore to a fixed depth?
+        if self._depth_restoring is True:
+            zmax = data_reader.get_zmax(time+self._time_step, particle)
+            particle.zpos = self._fixed_depth_below_surface + zmax
+            
+            # Determine the new host zlayer
+            data_reader.set_vertical_grid_vars(time+self._time_step, particle)
+            return flag
+        
         # Apply surface/bottom boundary conditions and set zpos
         # NB zmin and zmax evaluated at t+dt
         zmin = data_reader.get_zmin(time+self._time_step, particle)
@@ -198,6 +213,9 @@ cdef class OS0NumMethod(NumMethod):
     cdef DTYPE_FLOAT_t _diff_time_step
     cdef DTYPE_INT_t _n_sub_time_steps
 
+    cdef bint _depth_restoring
+    cdef DTYPE_FLOAT_t _fixed_depth_below_surface
+
     cdef ItMethod _adv_iterative_method
     cdef ItMethod _diff_iterative_method
     cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
@@ -234,6 +252,9 @@ cdef class OS0NumMethod(NumMethod):
                     "".format(self._adv_time_step, self._diff_time_step))
         
         self._n_sub_time_steps = int(self._adv_time_step / self._diff_time_step)
+
+        self._depth_restoring = config.getboolean("SIMULATION", "depth_restoring")
+        self._fixed_depth_below_surface = config.getfloat("SIMULATION", "fixed_depth")
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
             Particle *particle) except INT_ERR:
@@ -379,6 +400,15 @@ cdef class OS0NumMethod(NumMethod):
         # Diffusion loop complete - update the original particle's position
         particle[0] = _particle
 
+        # Restore to a fixed depth?
+        if self._depth_restoring is True:
+            zmax = data_reader.get_zmax(time+self._adv_time_step, particle)
+            particle.zpos = self._fixed_depth_below_surface + zmax
+            
+            # Determine the new host zlayer
+            data_reader.set_vertical_grid_vars(time+self._adv_time_step, particle)
+            return flag
+
         return flag
 
 cdef class OS1NumMethod(NumMethod):
@@ -412,6 +442,9 @@ cdef class OS1NumMethod(NumMethod):
     cdef DTYPE_FLOAT_t _adv_time_step
     cdef DTYPE_FLOAT_t _diff_time_step
 
+    cdef bint _depth_restoring
+    cdef DTYPE_FLOAT_t _fixed_depth_below_surface
+
     cdef ItMethod _adv_iterative_method
     cdef ItMethod _diff_iterative_method
     cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
@@ -440,6 +473,9 @@ cdef class OS1NumMethod(NumMethod):
                     "diffusion (time_step_diff, {} s) when using "\
                     "the numerical integration scheme OS1NumMethod."\
                     "".format(self._adv_time_step, self._diff_time_step))
+
+        self._depth_restoring = config.getboolean("SIMULATION", "depth_restoring")
+        self._fixed_depth_below_surface = config.getfloat("SIMULATION", "fixed_depth")
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
             Particle *particle) except INT_ERR:
@@ -622,7 +658,18 @@ cdef class OS1NumMethod(NumMethod):
 
         data_reader.set_local_coordinates(particle)
 
-        t = time + self._adv_time_step 
+        t = time + self._adv_time_step
+
+        # Restore to a fixed depth?
+        if self._depth_restoring is True:
+            zmax = data_reader.get_zmax(t, particle)
+            particle.zpos = self._fixed_depth_below_surface + zmax
+            
+            # Determine the new host zlayer
+            data_reader.set_vertical_grid_vars(t, particle)
+            return flag
+
+        # Apply vertical boundary condition
         zmin = data_reader.get_zmin(t, particle)
         zmax = data_reader.get_zmax(t, particle)
         if particle.zpos < zmin or particle.zpos > zmax:
