@@ -248,6 +248,7 @@ cdef class OPTModel:
 
                 if flag == OPEN_BDY_CROSSED:
                     particle_ptr.in_domain = False
+                    continue
                 
                 if self.data_reader.is_wet(time, particle_ptr.host_horizontal_elem) == 1:
                     particle_ptr.is_beached = 0
