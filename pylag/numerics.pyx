@@ -622,7 +622,7 @@ cdef class OS1NumMethod(NumMethod):
 
         data_reader.set_local_coordinates(particle)
 
-        t = time + 2.0*self._diff_time_step + self._adv_time_step 
+        t = time + self._adv_time_step 
         zmin = data_reader.get_zmin(t, particle)
         zmax = data_reader.get_zmax(t, particle)
         if particle.zpos < zmin or particle.zpos > zmax:
