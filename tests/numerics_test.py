@@ -8,6 +8,10 @@ def test_set_valid_OSONumMethod_advection_and_diffusion_time_steps():
     # Create config
     config = SafeConfigParser()
 
+    config.add_section("SIMULATION")
+    config.set("SIMULATION", "depth_restoring", 'False')
+    config.set("SIMULATION", "fixed_depth", '0.0')
+
     config.add_section("BOUNDARY_CONDITIONS")
     config.set('BOUNDARY_CONDITIONS', 'horiz_bound_cond', 'None')
     config.set('BOUNDARY_CONDITIONS', 'vert_bound_cond', 'None')
@@ -27,6 +31,10 @@ def test_set_valid_OSONumMethod_advection_and_diffusion_time_steps():
 def test_set_invalid_OSONumMethod_diffusion_time_step_that_is_greater_than_the_advection_time_step():
     # Create config
     config = SafeConfigParser()
+
+    config.add_section("SIMULATION")
+    config.set("SIMULATION", "depth_restoring", 'False')
+    config.set("SIMULATION", "fixed_depth", '0.0')
 
     config.add_section("BOUNDARY_CONDITIONS")
     config.set('BOUNDARY_CONDITIONS', 'horiz_bound_cond', 'None')
@@ -48,6 +56,10 @@ def test_set_invalid_OS0NumMethod_diffusion_time_step_that_is_not_an_exact_multi
     # Create config
     config = SafeConfigParser()
 
+    config.add_section("SIMULATION")
+    config.set("SIMULATION", "depth_restoring", 'False')
+    config.set("SIMULATION", "fixed_depth", '0.0')
+
     config.add_section("BOUNDARY_CONDITIONS")
     config.set('BOUNDARY_CONDITIONS', 'horiz_bound_cond', 'None')
     config.set('BOUNDARY_CONDITIONS', 'vert_bound_cond', 'None')
@@ -66,6 +78,10 @@ def test_set_invalid_OS0NumMethod_diffusion_time_step_that_is_not_an_exact_multi
 def test_set_valid_OS1NumMethod_advection_and_diffusion_time_steps():
     # Create config
     config = SafeConfigParser()
+
+    config.add_section("SIMULATION")
+    config.set("SIMULATION", "depth_restoring", 'False')
+    config.set("SIMULATION", "fixed_depth", '0.0')
 
     config.add_section("BOUNDARY_CONDITIONS")
     config.set('BOUNDARY_CONDITIONS', 'horiz_bound_cond', 'None')

@@ -81,6 +81,9 @@ class MockFVCOMMediator(Mediator):
         self._t_last = 0.0
         self._t_next = 3600.0
 
+    def setup_data_access(self, start_datetime, end_datetime):
+        pass
+
     def get_dimension_variable(self, var_name):
         return self._dim_vars[var_name]
 

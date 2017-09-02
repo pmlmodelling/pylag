@@ -11,28 +11,28 @@ class Mediator(object):
     
     """
     def setup_data_access(self, start_datetime, end_datetime):
-        pass
+        raise NotImplementedError
 
     def update_reading_frames(self, time):
-        pass
+        raise NotImplementedError
     
     def get_dimension_variable(self, var_name):
-        pass
+        raise NotImplementedError
     
     def get_grid_variable(self, var_name, var_dims, var_type):
-        pass
+        raise NotImplementedError
 
     def get_time_at_last_time_index(self):
-        pass
+        raise NotImplementedError
 
     def get_time_at_next_time_index(self):
-        pass
+        raise NotImplementedError
 
     def get_time_dependent_variable_at_last_time_index(self, var_name, var_dims, var_type):
-        pass
+        raise NotImplementedError
 
     def get_time_dependent_variable_at_next_time_index(self, var_name, var_dims, var_type):
-        pass
+        raise NotImplementedError
 
 class SerialMediator(Mediator):
     def __init__(self, config):

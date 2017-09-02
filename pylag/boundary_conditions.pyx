@@ -6,7 +6,7 @@ cdef class HorizBoundaryConditionCalculator:
      cpdef apply(self, DataReader data_reader, DTYPE_FLOAT_t x_old,
             DTYPE_FLOAT_t y_old, DTYPE_FLOAT_t x_new, DTYPE_FLOAT_t y_new,
             DTYPE_INT_t last_host):
-        pass
+        raise NotImplementedError
 
 cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator):
 

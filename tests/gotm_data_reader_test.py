@@ -30,6 +30,12 @@ class MockGOTMMediator(Mediator):
         nuh_next = np.array([[[2.0, 2.0, 0.0]]]).reshape(n_zlay, 1, 1)
         self._time_dep_vars_last = {'zeta': zeta, 'h': h, 'z': z, 'nuh': nuh_last}
         self._time_dep_vars_next = {'zeta': zeta, 'h': h, 'z': z, 'nuh': nuh_next}
+
+    def setup_data_access(self, start_datetime, end_datetime):
+        pass
+
+    def update_reading_frames(self, time):
+        pass
     
     def get_dimension_variable(self, var_name):
         return self._dim_vars[var_name]
