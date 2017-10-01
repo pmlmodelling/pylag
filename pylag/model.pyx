@@ -246,7 +246,8 @@ cdef class OPTModel:
             if particle_ptr.in_domain:
                 flag = self.num_method.step(self.data_reader, time, particle_ptr)
 
-                if flag == OPEN_BDY_CROSSED:
+                # TODO If BDY_ERROR, make error log
+                if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
                     particle_ptr.in_domain = False
                     continue
                 

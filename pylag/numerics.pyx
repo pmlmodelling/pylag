@@ -110,6 +110,7 @@ cdef class StdNumMethod(NumMethod):
         cdef DTYPE_FLOAT_t zmin, zmax
         cdef Delta delta_X
         cdef DTYPE_INT_t flag, host
+        cdef DTYPE_INT_t counter
 
         reset(&delta_X)
 
@@ -117,7 +118,8 @@ cdef class StdNumMethod(NumMethod):
         flag = self._iterative_method.step(data_reader, time, particle, &delta_X)
 
         # Return if the particle crossed an open boundary
-        if flag == OPEN_BDY_CROSSED: return flag
+        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+            return flag
                 
         # Compute new position
         xpos = particle.xpos + delta_X.x
@@ -126,19 +128,27 @@ cdef class StdNumMethod(NumMethod):
         flag, host = data_reader.find_host(particle.xpos, particle.ypos, xpos,
                 ypos, particle.host_horizontal_elem)
         
-        if flag == LAND_BDY_CROSSED and self._horiz_bc_calculator is None:
-            raise RuntimeError('A land boundary has been crossed but a horizontal '
-                    'boundary condition calculator has not been specified.')
-        
-        # First check for a land boundary crossing
-        while flag == LAND_BDY_CROSSED:
-            xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
-                    particle.xpos, particle.ypos, xpos, ypos, host)
-            flag, host = data_reader.find_host(particle.xpos,
-                particle.ypos, xpos, ypos, particle.host_horizontal_elem)
+        if flag == LAND_BDY_CROSSED:
+            if self._horiz_bc_calculator is None:
+                raise RuntimeError('A land boundary has been crossed but a horizontal '
+                        'boundary condition calculator has not been specified.')
+
+            counter = 0
+            while flag == LAND_BDY_CROSSED:
+                if counter == 2:
+                    flag = BDY_ERROR
+                    break
+
+                xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
+                        particle.xpos, particle.ypos, xpos, ypos, host)
+                flag, host = data_reader.find_host(particle.xpos,
+                    particle.ypos, xpos, ypos, particle.host_horizontal_elem)
+                
+                counter += 1
 
         # Second check for an open boundary crossing
-        if flag == OPEN_BDY_CROSSED: return flag
+        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+            return flag
 
         # Update the particle's position
         particle.xpos = xpos
@@ -289,6 +299,7 @@ cdef class OS0NumMethod(NumMethod):
         cdef Delta _delta_X
         cdef DTYPE_FLOAT_t t
         cdef DTYPE_INT_t i
+        cdef DTYPE_INT_t counter
 
         # Advection
         # ---------
@@ -298,7 +309,8 @@ cdef class OS0NumMethod(NumMethod):
         flag = self._adv_iterative_method.step(data_reader, time, particle, &_delta_X)
 
         # Return if the particle crossed an open boundary
-        if flag == OPEN_BDY_CROSSED: return flag
+        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+            return flag
 
         # Compute new position
         xpos = particle.xpos + _delta_X.x
@@ -307,19 +319,28 @@ cdef class OS0NumMethod(NumMethod):
         flag, host = data_reader.find_host(particle.xpos, particle.ypos, xpos,
                 ypos, particle.host_horizontal_elem)
 
-        if flag == LAND_BDY_CROSSED and self._horiz_bc_calculator is None:
-            raise RuntimeError('A land boundary has been crossed but a horizontal '
-                    'boundary condition calculator has not been specified.')
+        if flag == LAND_BDY_CROSSED:
+            if self._horiz_bc_calculator is None:
+                raise RuntimeError('A land boundary has been crossed but a horizontal '
+                        'boundary condition calculator has not been specified.')
               
-        # First check for a land boundary crossing
-        while flag == LAND_BDY_CROSSED:
-            xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
-                    particle.xpos, particle.ypos, xpos, ypos, host)
-            flag, host = data_reader.find_host(particle.xpos,
-                particle.ypos, xpos, ypos, particle.host_horizontal_elem)
+            # First check for a land boundary crossing
+            counter = 0
+            while flag == LAND_BDY_CROSSED:
+                if counter == 2:
+                    flag = BDY_ERROR
+                    break
+
+                xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
+                        particle.xpos, particle.ypos, xpos, ypos, host)
+                flag, host = data_reader.find_host(particle.xpos,
+                    particle.ypos, xpos, ypos, particle.host_horizontal_elem)
+                
+                counter += 1
 
         # Second check for an open boundary crossing
-        if flag == OPEN_BDY_CROSSED: return flag
+        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+            return flag
 
         # Diffusion
         # ---------
@@ -356,7 +377,8 @@ cdef class OS0NumMethod(NumMethod):
             flag = self._diff_iterative_method.step(data_reader, t, &_particle, &_delta_X)
 
             # Return if the particle crossed an open boundary
-            if flag == OPEN_BDY_CROSSED: return flag
+            if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+                return flag
 
             # Compute new position
             xpos = _particle.xpos + _delta_X.x
@@ -365,18 +387,27 @@ cdef class OS0NumMethod(NumMethod):
             flag, host = data_reader.find_host(_particle.xpos, _particle.ypos, xpos,
                     ypos, _particle.host_horizontal_elem)
 
-            if flag == LAND_BDY_CROSSED and self._horiz_bc_calculator is None:
-                raise RuntimeError('A land boundary has been crossed but a horizontal '
-                        'boundary condition calculator has not been specified.')
+            if flag == LAND_BDY_CROSSED:
+                if self._horiz_bc_calculator is None:
+                    raise RuntimeError('A land boundary has been crossed but a horizontal '
+                            'boundary condition calculator has not been specified.')
 
-            # Check for a land boundary crossing
-            while flag == LAND_BDY_CROSSED:
-                xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
-                        _particle.xpos, _particle.ypos, xpos, ypos, host)
-                flag, host = data_reader.find_host(_particle.xpos,
-                    _particle.ypos, xpos, ypos, _particle.host_horizontal_elem)
+                # Check for a land boundary crossing
+                counter = 0
+                while flag == LAND_BDY_CROSSED:
+                    if counter == 2:
+                        flag = BDY_ERROR
+                        break
 
-            if flag == OPEN_BDY_CROSSED: return flag
+                    xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
+                            _particle.xpos, _particle.ypos, xpos, ypos, host)
+                    flag, host = data_reader.find_host(_particle.xpos,
+                        _particle.ypos, xpos, ypos, _particle.host_horizontal_elem)
+                    
+                    counter += 1
+
+            if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+                return flag
 
             # The particle still resides in the domain - update its position
             _particle.xpos = xpos
@@ -509,6 +540,7 @@ cdef class OS1NumMethod(NumMethod):
         cdef Particle _particle
         cdef Delta _delta_X
         cdef DTYPE_FLOAT_t t
+        cdef DTYPE_INT_t counter
 
         # 1st Diffusion step
         # ------------------
@@ -518,7 +550,8 @@ cdef class OS1NumMethod(NumMethod):
         flag = self._diff_iterative_method.step(data_reader, time, particle, &_delta_X)
 
         # Return if the particle crossed an open boundary
-        if flag == OPEN_BDY_CROSSED: return flag
+        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+            return flag
 
         # Compute new position
         xpos = particle.xpos + _delta_X.x
@@ -527,19 +560,28 @@ cdef class OS1NumMethod(NumMethod):
         flag, host = data_reader.find_host(particle.xpos, particle.ypos, xpos,
                 ypos, particle.host_horizontal_elem)
 
-        if flag == LAND_BDY_CROSSED and self._horiz_bc_calculator is None:
-            raise RuntimeError('A land boundary has been crossed but a horizontal '
-                    'boundary condition calculator has not been specified.')
+        if flag == LAND_BDY_CROSSED:
+            if self._horiz_bc_calculator is None:
+                raise RuntimeError('A land boundary has been crossed but a horizontal '
+                        'boundary condition calculator has not been specified.')
               
-        # First check for a land boundary crossing
-        while flag == LAND_BDY_CROSSED:
-            xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
-                    particle.xpos, particle.ypos, xpos, ypos, host)
-            flag, host = data_reader.find_host(particle.xpos,
-                particle.ypos, xpos, ypos, particle.host_horizontal_elem)
+            # First check for a land boundary crossing
+            counter = 0
+            while flag == LAND_BDY_CROSSED:
+                if counter == 2:
+                    flag = BDY_ERROR
+                    break
+
+                xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
+                        particle.xpos, particle.ypos, xpos, ypos, host)
+                flag, host = data_reader.find_host(particle.xpos,
+                    particle.ypos, xpos, ypos, particle.host_horizontal_elem)
+                
+                counter += 1
 
         # Second check for an open boundary crossing
-        if flag == OPEN_BDY_CROSSED: return flag
+        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+            return flag
 
         # Advection step
         # --------------
@@ -573,7 +615,8 @@ cdef class OS1NumMethod(NumMethod):
         flag = self._adv_iterative_method.step(data_reader, t, &_particle, &_delta_X)
 
         # Return if the particle crossed an open boundary
-        if flag == OPEN_BDY_CROSSED: return flag
+        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+            return flag
 
         # Compute new position
         xpos = _particle.xpos + _delta_X.x
@@ -582,19 +625,28 @@ cdef class OS1NumMethod(NumMethod):
         flag, host = data_reader.find_host(_particle.xpos, _particle.ypos, xpos,
                 ypos, _particle.host_horizontal_elem)
 
-        if flag == LAND_BDY_CROSSED and self._horiz_bc_calculator is None:
-            raise RuntimeError('A land boundary has been crossed but a horizontal '
-                    'boundary condition calculator has not been specified.')
+        if flag == LAND_BDY_CROSSED:
+            if self._horiz_bc_calculator is None:
+                raise RuntimeError('A land boundary has been crossed but a horizontal '
+                        'boundary condition calculator has not been specified.')
               
-        # First check for a land boundary crossing
-        while flag == LAND_BDY_CROSSED:
-            xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
-                    _particle.xpos, _particle.ypos, xpos, ypos, host)
-            flag, host = data_reader.find_host(_particle.xpos,
-                _particle.ypos, xpos, ypos, _particle.host_horizontal_elem)
+            # First check for a land boundary crossing
+            counter = 0
+            while flag == LAND_BDY_CROSSED:
+                if counter == 2:
+                    flag = BDY_ERROR
+                    break
+
+                xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
+                        _particle.xpos, _particle.ypos, xpos, ypos, host)
+                flag, host = data_reader.find_host(_particle.xpos,
+                    _particle.ypos, xpos, ypos, _particle.host_horizontal_elem)
+                
+                counter += 1
 
         # Second check for an open boundary crossing
-        if flag == OPEN_BDY_CROSSED: return flag
+        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+            return flag
 
         # 2nd Diffusion step
         # ------------------
@@ -625,7 +677,8 @@ cdef class OS1NumMethod(NumMethod):
         flag = self._diff_iterative_method.step(data_reader, t, &_particle, &_delta_X)
 
         # Return if the particle crossed an open boundary
-        if flag == OPEN_BDY_CROSSED: return flag
+        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+            return flag
 
         # Compute new position
         xpos = _particle.xpos + _delta_X.x
@@ -634,19 +687,28 @@ cdef class OS1NumMethod(NumMethod):
         flag, host = data_reader.find_host(_particle.xpos, _particle.ypos, xpos,
                 ypos, _particle.host_horizontal_elem)
 
-        if flag == LAND_BDY_CROSSED and self._horiz_bc_calculator is None:
-            raise RuntimeError('A land boundary has been crossed but a horizontal '
-                    'boundary condition calculator has not been specified.')
+        if flag == LAND_BDY_CROSSED:
+            if self._horiz_bc_calculator is None:
+                raise RuntimeError('A land boundary has been crossed but a horizontal '
+                        'boundary condition calculator has not been specified.')
               
-        # First check for a land boundary crossing
-        while flag == LAND_BDY_CROSSED:
-            xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
-                    _particle.xpos, _particle.ypos, xpos, ypos, host)
-            flag, host = data_reader.find_host(_particle.xpos,
-                _particle.ypos, xpos, ypos, _particle.host_horizontal_elem)
+            # First check for a land boundary crossing
+            counter = 0
+            while flag == LAND_BDY_CROSSED:
+                if counter == 2:
+                    flag = BDY_ERROR
+                    break
+
+                xpos, ypos = self._horiz_bc_calculator.apply(data_reader,
+                        _particle.xpos, _particle.ypos, xpos, ypos, host)
+                flag, host = data_reader.find_host(_particle.xpos,
+                    _particle.ypos, xpos, ypos, _particle.host_horizontal_elem)
+                
+                counter += 1
 
         # Second check for an open boundary crossing
-        if flag == OPEN_BDY_CROSSED: return flag
+        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+            return flag
 
         # All steps complete - update the original particle's position
         # ------------------------------------------------------------
@@ -791,6 +853,7 @@ cdef class AdvRK42DItMethod(ItMethod):
         # Array indices/loop counters
         cdef DTYPE_INT_t ndim = 2
         cdef DTYPE_INT_t i
+        cdef DTYPE_INT_t counter
         
         # Stage 1
         t = time
@@ -807,20 +870,29 @@ cdef class AdvRK42DItMethod(ItMethod):
         flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos, _particle.xpos,
                 _particle.ypos, particle.host_horizontal_elem)
 
-        if flag == LAND_BDY_CROSSED and self._horiz_bc_calculator is None:
-            raise RuntimeError('A land boundary has been crossed but a horizontal '
-                    'boundary condition calculator has not been specified.')
+        if flag == LAND_BDY_CROSSED:
+            if self._horiz_bc_calculator is None:
+                raise RuntimeError('A land boundary has been crossed but a horizontal '
+                        'boundary condition calculator has not been specified.')
 
-        # Check for land boundary crossing
-        while flag == LAND_BDY_CROSSED:
-            _particle.xpos, _particle.ypos = self._horiz_bc_calculator.apply(data_reader,
-                    particle.xpos, particle.ypos, _particle.xpos, _particle.ypos,
-                    _particle.host_horizontal_elem)
-            flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos,
-                    _particle.xpos, _particle.ypos, particle.host_horizontal_elem)
+            # Check for land boundary crossing
+            counter = 0
+            while flag == LAND_BDY_CROSSED:
+                if counter == 2:
+                    flag = BDY_ERROR
+                    break
+
+                _particle.xpos, _particle.ypos = self._horiz_bc_calculator.apply(data_reader,
+                        particle.xpos, particle.ypos, _particle.xpos, _particle.ypos,
+                        _particle.host_horizontal_elem)
+                flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos,
+                        _particle.xpos, _particle.ypos, particle.host_horizontal_elem)
+                
+                counter += 1
 
         # Check for open boundary crossing
-        if flag == OPEN_BDY_CROSSED: return flag
+        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+            return flag
 
         # Update particle local coordinates
         data_reader.set_local_coordinates(&_particle)
@@ -838,20 +910,28 @@ cdef class AdvRK42DItMethod(ItMethod):
         flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos, _particle.xpos,
                 _particle.ypos, particle.host_horizontal_elem)
 
-        if flag == LAND_BDY_CROSSED and self._horiz_bc_calculator is None:
-            raise RuntimeError('A land boundary has been crossed but a horizontal '
-                    'boundary condition calculator has not been specified.')
+        if flag == LAND_BDY_CROSSED:
+            if self._horiz_bc_calculator is None:
+                raise RuntimeError('A land boundary has been crossed but a horizontal '
+                        'boundary condition calculator has not been specified.')
 
-        # Check for land boundary crossing
-        while flag == LAND_BDY_CROSSED:
-            _particle.xpos, _particle.ypos = self._horiz_bc_calculator.apply(data_reader,
-                    particle.xpos, particle.ypos, _particle.xpos, _particle.ypos,
-                    _particle.host_horizontal_elem)
-            flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos,
-                    _particle.xpos, _particle.ypos, particle.host_horizontal_elem)
+            # Check for land boundary crossing
+            counter = 0
+            while flag == LAND_BDY_CROSSED:
+                if counter == 2:
+                    flag = BDY_ERROR
+                    break
+
+                _particle.xpos, _particle.ypos = self._horiz_bc_calculator.apply(data_reader,
+                        particle.xpos, particle.ypos, _particle.xpos, _particle.ypos,
+                        _particle.host_horizontal_elem)
+                flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos,
+                        _particle.xpos, _particle.ypos, particle.host_horizontal_elem)
+                
+                counter += 1
 
         # Check for open boundary crossing
-        if flag == OPEN_BDY_CROSSED: return flag
+        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR: return flag
 
         # Update particle local coordinates
         data_reader.set_local_coordinates(&_particle)
@@ -869,20 +949,29 @@ cdef class AdvRK42DItMethod(ItMethod):
         flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos, _particle.xpos,
                 _particle.ypos, particle.host_horizontal_elem)
 
-        if flag == LAND_BDY_CROSSED and self._horiz_bc_calculator is None:
-            raise RuntimeError('A land boundary has been crossed but a horizontal '
-                    'boundary condition calculator has not been specified.')
+        if flag == LAND_BDY_CROSSED:
+            if self._horiz_bc_calculator is None:
+                raise RuntimeError('A land boundary has been crossed but a horizontal '
+                        'boundary condition calculator has not been specified.')
 
-        # Check for land boundary crossing
-        while flag == LAND_BDY_CROSSED:
-            _particle.xpos, _particle.ypos = self._horiz_bc_calculator.apply(data_reader,
-                    particle.xpos, particle.ypos, _particle.xpos, _particle.ypos,
-                    _particle.host_horizontal_elem)
-            flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos,
-                    _particle.xpos, _particle.ypos, particle.host_horizontal_elem)
+            # Check for land boundary crossing
+            counter = 0
+            while flag == LAND_BDY_CROSSED:
+                if counter == 2:
+                    flag = BDY_ERROR
+                    break
+
+                _particle.xpos, _particle.ypos = self._horiz_bc_calculator.apply(data_reader,
+                        particle.xpos, particle.ypos, _particle.xpos, _particle.ypos,
+                        _particle.host_horizontal_elem)
+                flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos,
+                        _particle.xpos, _particle.ypos, particle.host_horizontal_elem)
+                
+                counter += 1
 
         # Check for open boundary crossing
-        if flag == OPEN_BDY_CROSSED: return flag
+        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+            return flag
 
         # Update particle local coordinates
         data_reader.set_local_coordinates(&_particle)
@@ -975,6 +1064,7 @@ cdef class AdvRK43DItMethod(ItMethod):
         # Array indices/loop counters
         cdef DTYPE_INT_t ndim = 3
         cdef DTYPE_INT_t i
+        cdef DTYPE_INT_t counter
         
         # Stage 1
         t = time
@@ -992,20 +1082,29 @@ cdef class AdvRK43DItMethod(ItMethod):
         flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos, _particle.xpos,
                 _particle.ypos, particle.host_horizontal_elem)
 
-        if flag == LAND_BDY_CROSSED and self._horiz_bc_calculator is None:
-            raise RuntimeError('A land boundary has been crossed but a horizontal '
-                    'boundary condition calculator has not been specified.')
+        if flag == LAND_BDY_CROSSED:
+            if self._horiz_bc_calculator is None:
+                raise RuntimeError('A land boundary has been crossed but a horizontal '
+                        'boundary condition calculator has not been specified.')
 
-        # Check for land boundary crossing
-        while flag == LAND_BDY_CROSSED:
-            _particle.xpos, _particle.ypos = self._horiz_bc_calculator.apply(data_reader,
-                    particle.xpos, particle.ypos, _particle.xpos, _particle.ypos,
-                    _particle.host_horizontal_elem)
-            flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos,
-                    _particle.xpos, _particle.ypos, particle.host_horizontal_elem)
+            # Check for land boundary crossing
+            counter = 0
+            while flag == LAND_BDY_CROSSED:
+                if counter == 2:
+                    flag = BDY_ERROR
+                    break
+
+                _particle.xpos, _particle.ypos = self._horiz_bc_calculator.apply(data_reader,
+                        particle.xpos, particle.ypos, _particle.xpos, _particle.ypos,
+                        _particle.host_horizontal_elem)
+                flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos,
+                        _particle.xpos, _particle.ypos, particle.host_horizontal_elem)
+                
+                counter += 1
 
         # Check for open boundary crossing
-        if flag == OPEN_BDY_CROSSED: return flag
+        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+            return flag
 
         # Update particle local coordinates
         data_reader.set_local_coordinates(&_particle)
@@ -1035,20 +1134,29 @@ cdef class AdvRK43DItMethod(ItMethod):
         flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos, _particle.xpos,
                 _particle.ypos, particle.host_horizontal_elem)
 
-        if flag == LAND_BDY_CROSSED and self._horiz_bc_calculator is None:
-            raise RuntimeError('A land boundary has been crossed but a horizontal '
-                    'boundary condition calculator has not been specified.')
+        if flag == LAND_BDY_CROSSED:
+            if self._horiz_bc_calculator is None:
+                raise RuntimeError('A land boundary has been crossed but a horizontal '
+                        'boundary condition calculator has not been specified.')
 
-        # Check for land boundary crossing
-        while flag == LAND_BDY_CROSSED:
-            _particle.xpos, _particle.ypos = self._horiz_bc_calculator.apply(data_reader,
-                    particle.xpos, particle.ypos, _particle.xpos, _particle.ypos,
-                    _particle.host_horizontal_elem)
-            flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos,
-                    _particle.xpos, _particle.ypos, particle.host_horizontal_elem)
+            # Check for land boundary crossing
+            counter = 0
+            while flag == LAND_BDY_CROSSED:
+                if counter == 2:
+                    flag = BDY_ERROR
+                    break
+
+                _particle.xpos, _particle.ypos = self._horiz_bc_calculator.apply(data_reader,
+                        particle.xpos, particle.ypos, _particle.xpos, _particle.ypos,
+                        _particle.host_horizontal_elem)
+                flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos,
+                        _particle.xpos, _particle.ypos, particle.host_horizontal_elem)
+                
+                counter += 1
 
         # Check for open boundary crossing
-        if flag == OPEN_BDY_CROSSED: return flag
+        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+            return flag
 
         # Update particle local coordinates
         data_reader.set_local_coordinates(&_particle)
@@ -1078,20 +1186,29 @@ cdef class AdvRK43DItMethod(ItMethod):
         flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos, _particle.xpos,
                 _particle.ypos, particle.host_horizontal_elem)
 
-        if flag == LAND_BDY_CROSSED and self._horiz_bc_calculator is None:
-            raise RuntimeError('A land boundary has been crossed but a horizontal '
-                    'boundary condition calculator has not been specified.')
+        if flag == LAND_BDY_CROSSED:
+            if self._horiz_bc_calculator is None:
+                raise RuntimeError('A land boundary has been crossed but a horizontal '
+                        'boundary condition calculator has not been specified.')
 
-        # Check for land boundary crossing
-        while flag == LAND_BDY_CROSSED:
-            _particle.xpos, _particle.ypos = self._horiz_bc_calculator.apply(data_reader,
-                    particle.xpos, particle.ypos, _particle.xpos, _particle.ypos,
-                    _particle.host_horizontal_elem)
-            flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos,
-                    _particle.xpos, _particle.ypos, particle.host_horizontal_elem)
+            # Check for land boundary crossing
+            counter = 0
+            while flag == LAND_BDY_CROSSED:
+                if counter == 2:
+                    flag = BDY_ERROR
+                    break
+
+                _particle.xpos, _particle.ypos = self._horiz_bc_calculator.apply(data_reader,
+                        particle.xpos, particle.ypos, _particle.xpos, _particle.ypos,
+                        _particle.host_horizontal_elem)
+                flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos,
+                        _particle.xpos, _particle.ypos, particle.host_horizontal_elem)
+                
+                counter += 1
 
         # Check for open boundary crossing
-        if flag == OPEN_BDY_CROSSED: return flag
+        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+            return flag
 
         # Update particle local coordinates
         data_reader.set_local_coordinates(&_particle)
