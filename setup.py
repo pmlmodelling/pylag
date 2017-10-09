@@ -1,4 +1,5 @@
 # distutils: define_macros=CYTHON_TRACE_NOGIL=1
+
 import os
 import subprocess
 import glob
@@ -11,8 +12,13 @@ MINOR               = 1
 ISRELEASED          = False
 VERSION = '{}.{}'.format(MAJOR, MINOR)
 
-# Return the git revision as a string (adapted from NUMPY source)
+build_type = 'prod'
+#build_type = 'debug'
+
 def git_version():
+    """Return the git revision as a string (adapted from NUMPY source)
+
+    """
     def _minimal_ext_cmd(cmd):
         # construct minimal environment
         env = {}
@@ -35,8 +41,8 @@ def git_version():
 
     return GIT_REVISION
 
-# Return version info (adapted from NUMPY source)
 def get_version_info():
+    """ Return version info (adapted from NUMPY source) """
     FULLVERSION = VERSION
     if os.path.exists('.git'):
         GIT_REVISION = git_version()
@@ -79,10 +85,13 @@ if not release:
         finally:
             pass
 
-# Scan the directory for extension files, converting
-# them to extension names in dotted notation (adapted
-# from Cython wiki)
 def scandir(dir, file_type, files=[]):
+    """ Scan the directory for extension files
+
+        Convert these to extension names in dotted notation
+
+        Adapted from Cython wiki
+    """
     for file in os.listdir(dir):
         path = os.path.join(dir, file)
         if os.path.isfile(path) and path.endswith(file_type):
@@ -105,6 +114,9 @@ def makeExtension(extName, file_type):
         include_dirs=['.'],
         )
 
+# Rewrite the version file everytime
+write_version_py()
+
 # Get a list of source files
 file_type = '.pyx' if os.path.isdir('./.git') and glob.glob('./pylag/*.pyx') else '.cpp'
 
@@ -116,15 +128,19 @@ extensions = [makeExtension(name, file_type) for name in extNames]
 
 # Cythonize if working with pyx files
 if file_type == '.pyx':
-    ext_modules = cythonize(extensions, include_path=['include'])#,
-          #compiler_directives={'profile': True, 
-          #'linetrace': True, 'boundscheck': True,
-          #'cdivision_warnings': True, 'initializedcheck': True})
+    if build_type == 'prod':
+        ext_modules = cythonize(extensions, include_path=['include'])
+    elif build_type == 'debug':
+        ext_modules = cythonize(extensions, include_path=['include'],
+              compiler_directives={'profile': True, 
+              'linetrace': True, 'boundscheck': True,
+              'cdivision_warnings': True, 'initializedcheck': True,
+              'nonecheck': True, 'embedsignature': True
+              }, gdb_debug=True, verbose=True)
+    else:
+        raise ValueError('Unknown build_type {}'.format(build_type))
 elif file_type == '.cpp':
     ext_modules = extensions
-
-# Rewrite the version file everytime
-write_version_py()
 
 setup(name="PyLag",
       version=get_version_info()[0],
@@ -142,5 +158,5 @@ setup(name="PyLag",
           'Operating System :: UNIX',
       ],
       packages=["pylag", "pylag.parallel"],
-      ext_modules=extensions,
+      ext_modules=ext_modules,
 )
