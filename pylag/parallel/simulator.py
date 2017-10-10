@@ -136,6 +136,10 @@ class TraceSimulator(Simulator):
                     if self.time_manager.write_output_to_file() == 1:
                         particle_diagnostics = self.model.get_diagnostics(self.time_manager.time)
                         self._record(self.time_manager.time, particle_diagnostics)
+
+                    if rank == 0 and self.time_manager.sync_data_to_disk() == 1:
+                        self.data_logger.sync()
+
                     self.model.read_input_data(self.time_manager.time)
                 except Exception as e:
                     print traceback.format_exc()

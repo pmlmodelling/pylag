@@ -110,6 +110,10 @@ class NetCDFLogger(object):
         self._h[tidx, :] = particle_data['h']
         self._zeta[tidx, :] = particle_data['zeta']
         self._is_beached[tidx, :] = particle_data['is_beached']
+    
+    def sync(self):
+        # Sync data to disk
+        self._ncfile.sync()
         
     def close(self):
         logger = logging.getLogger(__name__)

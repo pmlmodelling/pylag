@@ -32,6 +32,7 @@ cdef class TimeManager(object):
     cdef DTYPE_FLOAT_t _time_step
 
     cdef DTYPE_FLOAT_t _output_frequency
+    cdef DTYPE_FLOAT_t _sync_frequency
 
     def __init__(self, config):
         # Config object
@@ -50,6 +51,9 @@ cdef class TimeManager(object):
         # Period at which data is written to file
         self._output_frequency = config.getfloat("SIMULATION", "output_frequency")
 
+        # Period at which data is synced to disk
+        self._sync_frequency = config.getfloat("SIMULATION", "sync_frequency")
+
         # Simulation time step
         self._time_step = get_global_time_step(config)
 
@@ -57,6 +61,11 @@ cdef class TimeManager(object):
         if <int>self._output_frequency % <int>self._time_step != 0:
             raise RuntimeError("The simulation time step {} s should be an "
                     "exact divisor of the output frequency {}".format(self._time_step, self._output_frequency))
+
+        # Check that the time step is an exact divisor of the sync frequency
+        if <int>self._sync_frequency % <int>self._time_step != 0:
+            raise RuntimeError("The simulation time step {} s should be an "
+                    "exact divisor of the sync frequency {}".format(self._time_step, self._sync_frequency))
 
         # Initialise counter for the current particle release
         self._current_release = 0
@@ -109,6 +118,14 @@ cdef class TimeManager(object):
 
         time_diff = self._time - self._time_start
         if <int>time_diff % <int>self._output_frequency == 0:
+            return 1
+        return 0
+
+    def sync_data_to_disk(self):
+        cdef DTYPE_FLOAT_t time_diff
+
+        time_diff = self._time - self._time_start
+        if <int>time_diff % <int>self._sync_frequency == 0:
             return 1
         return 0
 

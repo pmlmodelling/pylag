@@ -84,9 +84,13 @@ class TraceSimulator(Simulator):
             while self.time_manager.time < self.time_manager.time_end:
                 self.model.update(self.time_manager.time)
                 self.time_manager.update_current_time()
+
                 if self.time_manager.write_output_to_file() == 1:
                     particle_diagnostics = self.model.get_diagnostics(self.time_manager.time)
                     self.data_logger.write(self.time_manager.time, particle_diagnostics)
+                
+                if self.time_manager.sync_data_to_disk() == 1:
+                    self.data_logger.sync()
 
                 # Check on status of reading frames and update if necessary
                 # Communicate updated arrays to the data reader if these are out of
