@@ -89,8 +89,14 @@ class NetCDFLogger(object):
         self._is_beached = self._ncfile.createVariable('is_beached', DTYPE_INT, ('time', 'particles',), **self._ncopts)
         self._is_beached.long_name = 'Is beached'
         
-        # Add extra grid variables
-        #self._indomain = self._ncfile.createVariable('indomain', 'i4', ('Time', 'Particles',))
+        # Add status variables
+        self._in_domain = self._ncfile.createVariable('in_domain', 'i4', ('time', 'particles',), **self._ncopts)
+        self._in_domain.units = 'None'
+        self._in_domain.long_name = 'In domain flag (1 - yes; 0 - no)'
+
+        self._status = self._ncfile.createVariable('status', 'i4', ('time', 'particles',), **self._ncopts)
+        self._status.units = 'None'
+        self._status.long_name = 'Status flag (1 - error state; 0 - ok)'
 
     def write_group_ids(self, group_ids):
         self._group_id[:] = group_ids
@@ -110,6 +116,8 @@ class NetCDFLogger(object):
         self._h[tidx, :] = particle_data['h']
         self._zeta[tidx, :] = particle_data['zeta']
         self._is_beached[tidx, :] = particle_data['is_beached']
+        self._in_domain[tidx, :] = particle_data['in_domain']
+        self._status[tidx, :] = particle_data['status']
     
     def sync(self):
         # Sync data to disk

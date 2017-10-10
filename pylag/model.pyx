@@ -246,9 +246,12 @@ cdef class OPTModel:
             if particle_ptr.in_domain:
                 flag = self.num_method.step(self.data_reader, time, particle_ptr)
 
-                # TODO If BDY_ERROR, make error log
-                if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+                if flag == OPEN_BDY_CROSSED: 
                     particle_ptr.in_domain = False
+                    continue
+                elif flag == BDY_ERROR:
+                    particle_ptr.in_domain = False
+                    particle_ptr.status = 1
                     continue
                 
                 if self.data_reader.is_wet(time, particle_ptr.host_horizontal_elem) == 1:
@@ -271,13 +274,17 @@ cdef class OPTModel:
         """
         cdef Particle* particle_ptr
         
-        diags = {'xpos': [], 'ypos': [], 'zpos': [], 'host_horizontal_elem': [], 'h': [], 'zeta': [], 'is_beached': []}
+        diags = {'xpos': [], 'ypos': [], 'zpos': [], 'host_horizontal_elem': [],
+                 'h': [], 'zeta': [], 'is_beached': [], 'in_domain': [],
+                 'status': []}
         for particle_ptr in self.particle_ptrs:
             diags['xpos'].append(particle_ptr.xpos)
             diags['ypos'].append(particle_ptr.ypos)
             diags['zpos'].append(particle_ptr.zpos)
             diags['host_horizontal_elem'].append(particle_ptr.host_horizontal_elem)
-            diags['is_beached'].append(particle_ptr.is_beached)   
+            diags['is_beached'].append(particle_ptr.is_beached)
+            diags['in_domain'].append(particle_ptr.in_domain)
+            diags['status'].append(particle_ptr.status)
             
             # Environmental environmental variables
             h = self.data_reader.get_zmin(time, particle_ptr)

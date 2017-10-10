@@ -12,6 +12,9 @@ cdef struct Particle:
     # Unique particle ID
     DTYPE_INT_t id
 
+    # Status flag (0 - okay; 1 - error) 
+    DTYPE_INT_t status
+
     # Global coordinates
     # ------------------
 
