@@ -12,8 +12,8 @@ MINOR               = 1
 ISRELEASED          = False
 VERSION = '{}.{}'.format(MAJOR, MINOR)
 
-#build_type = 'prod'
-build_type = 'prof'
+build_type = 'prod'
+#build_type = 'prof'
 #build_type = 'debug'
 
 def git_version():
@@ -131,7 +131,7 @@ extensions = [makeExtension(name, file_type) for name in extNames]
 if file_type == '.pyx':
     if build_type == 'prod':
         ext_modules = cythonize(extensions, include_path=['include'])
-    if build_type == 'prof':
+    elif build_type == 'prof':
         ext_modules = cythonize(extensions, include_path=['include'],
               compiler_directives={'profile': True, 'linetrace': True})
     elif build_type == 'debug':
