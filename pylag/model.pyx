@@ -244,15 +244,16 @@ cdef class OPTModel:
 
         for particle_ptr in self.particle_ptrs:
             if particle_ptr.in_domain:
-                flag = self.num_method.step(self.data_reader, time, particle_ptr)
+                if particle_ptr.is_beached == 0:
+                    flag = self.num_method.step(self.data_reader, time, particle_ptr)
 
-                if flag == OPEN_BDY_CROSSED: 
-                    particle_ptr.in_domain = False
-                    continue
-                elif flag == BDY_ERROR:
-                    particle_ptr.in_domain = False
-                    particle_ptr.status = 1
-                    continue
+                    if flag == OPEN_BDY_CROSSED: 
+                        particle_ptr.in_domain = False
+                        continue
+                    elif flag == BDY_ERROR:
+                        particle_ptr.in_domain = False
+                        particle_ptr.status = 1
+                        continue
                 
                 if self.data_reader.is_wet(time, particle_ptr.host_horizontal_elem) == 1:
                     particle_ptr.is_beached = 0
