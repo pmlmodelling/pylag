@@ -75,3 +75,5 @@ cdef class ParticleSmartPtr:
     cdef Particle* get_ptr(self)
 
 cdef ParticleSmartPtr copy(ParticleSmartPtr)
+
+cdef to_string(Particle* particle)

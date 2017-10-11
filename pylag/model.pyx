@@ -15,7 +15,7 @@ from libcpp.vector cimport vector
 from pylag.data_reader cimport DataReader
 from pylag.math cimport sigma_to_cartesian_coords, cartesian_to_sigma_coords
 from pylag.numerics cimport NumMethod
-from pylag.particle cimport Particle, ParticleSmartPtr, copy
+from pylag.particle cimport Particle, ParticleSmartPtr, copy, to_string
 
 cdef class OPTModel:
     """ Offline Particle Tracking Model
@@ -251,6 +251,18 @@ cdef class OPTModel:
                         particle_ptr.in_domain = False
                         continue
                     elif flag == BDY_ERROR:
+                        s = to_string(particle_ptr)
+                        msg = "WARNING BDY_ERROR encountered at time {} \n\n"\
+                              "PyLag failed to successfully update the position of a particle \n"\
+                              "resulting in a BDY_ERROR flag being returned. This can occur \n"\
+                              "when a particle has crossed a land boundary and the model \n"\
+                              "fails to apply the specified land boundary condition. The \n"\
+                              "particle will be flagged as having entered an error state \n"\
+                              "and its position will no longer be updated. The following \n"\
+                              "information may be used to study the failure in more detail. \n\n"\
+                              "{}".format(time, s)
+                        print msg
+                    
                         particle_ptr.in_domain = False
                         particle_ptr.status = 1
                         continue

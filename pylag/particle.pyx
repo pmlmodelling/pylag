@@ -89,3 +89,52 @@ cdef ParticleSmartPtr copy(ParticleSmartPtr particle_smart_ptr):
                             particle_ptr.k_upper_layer,
                             particle_ptr.id,
                             particle_ptr.status)
+
+cdef to_string(Particle* particle):
+    """ Return a string object that describes a particle
+    
+    Parameters:
+    -----------
+    particle : Particle C ptr
+        Pointer to a particle object
+
+    Returns:
+    --------
+    s : str
+        String describing the particle
+    """
+    s = "Particle properties \n"\
+        "------------------- \n"\
+        "Particle id = {} \n"\
+        "Particle xpos = {} \n"\
+        "Particle ypos = {} \n"\
+        "Particle zpos = {} \n"\
+        "Particle phi[0] = {} \n"\
+        "Particle phi[1] = {} \n"\
+        "Particle phi[2] = {} \n"\
+        "Particle omega interfaces = {} \n"\
+        "Particle omega layers = {} \n"\
+        "Particle host element = {} \n"\
+        "Partilce in vertical boundary layer = {} \n"\
+        "Partilce k layer = {} \n"\
+        "Partilce k lower layer = {} \n"\
+        "Partilce k upper layer = {} \n"\
+        "Particle in domain = {} \n"\
+        "Particle is beached = {} \n".format(particle.id, 
+                                             particle.xpos,
+                                             particle.ypos,
+                                             particle.zpos,
+                                             particle.phi[0],
+                                             particle.phi[1],
+                                             particle.phi[2],
+                                             particle.omega_interfaces,
+                                             particle.omega_layers,
+                                             particle.host_horizontal_elem,
+                                             particle.in_vertical_boundary_layer,
+                                             particle.k_layer,
+                                             particle.k_lower_layer,
+                                             particle.k_upper_layer,
+                                             particle.in_domain,
+                                             particle.is_beached)
+                                             
+    return s
