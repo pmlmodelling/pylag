@@ -13,7 +13,7 @@ cdef class NumMethod:
             Particle *particle) except INT_ERR
 
 
-# Base class for DetItMethod objects
+# Base class for ItMethod objects
 cdef class ItMethod:
     cdef DTYPE_FLOAT_t _time_step
 
