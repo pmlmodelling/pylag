@@ -219,6 +219,12 @@ cdef class MockHorizontalEddyViscosityDataReader(DataReader):
 
     _ymin, _ymax : float
         Min and max y values between which Ah is defined.
+        
+    TODO:
+    -----
+    Will not work as is! It needs find_host() and get_boundary_intersection()
+    implementing properly in order to allow horizontal boundary conditions to
+    be applied.
     """
     cdef DTYPE_FLOAT_t _C
     cdef DTYPE_FLOAT_t _xmin, _xmax, _ymin, _ymax, _zmin, _zmax
