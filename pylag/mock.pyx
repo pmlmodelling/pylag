@@ -21,7 +21,7 @@ from pylag.numerics cimport NumMethod, ItMethod
 from pylag.boundary_conditions cimport VertBoundaryConditionCalculator
 
 cdef class MockVelocityDataReader(DataReader):
-    """ Test data reader for numerical integration schemes.
+    """ Test data reader for numerical integration schemes
     
     Object passes back u/v/w velocity components for the system of ODEs:
             dx/dt = x           (1)
@@ -32,8 +32,6 @@ cdef class MockVelocityDataReader(DataReader):
             x = x_0 * exp(t)    (4)
             y = y_0 * exp(1.5t) (5)
             z = 0.0             (6)
-    
-    which can be used to test different integration schemes.
     
     """
     cpdef find_host(self, DTYPE_FLOAT_t xpos_old, DTYPE_FLOAT_t ypos_old,
@@ -132,7 +130,7 @@ cdef class MockVelocityEddyViscosityDataReader(DataReader):
     cdef DTYPE_FLOAT_t _Ah
     cdef DTYPE_FLOAT_t _M
 
-    cdef DTYPE_FLOAT_t _xmin, _xmax, _ymin, _ymax, _zmin, _zmax
+    cdef DTYPE_FLOAT_t _zmin, _zmax
 
     def __cinit__(self):
         self._u = 1.0
@@ -141,28 +139,12 @@ cdef class MockVelocityEddyViscosityDataReader(DataReader):
         self._Ah = 10.0
         self._M = 1.0
 
-        self._xmin = -np.inf
-        self._xmax = np.inf
-        self._ymin = -np.inf
-        self._ymax = np.inf
         self._zmin = 0.0
         self._zmax = 0.0
 
     @property
     def M(self):
         return self._M
-    
-    def get_xmin(self):
-        return self._xmin
-    
-    def get_xmax(self):
-        return self._xmax
-    
-    def get_ymin(self):
-        return self._ymin
-
-    def get_ymax(self):
-        return self._ymax
 
     cdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, Particle *particle):
         return self._zmin
@@ -351,18 +333,6 @@ cdef class MockHorizontalEddyViscosityDataReader(DataReader):
         self._ymax = 10.0
         self._zmin = 0.0
         self._zmax = 0.0
-    
-    def get_xmin(self):
-        return self._xmin
-    
-    def get_xmax(self):
-        return self._xmax
-    
-    def get_ymin(self):
-        return self._ymin
-
-    def get_ymax(self):
-        return self._ymax
 
     cdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, Particle *particle):
         return self._zmin
@@ -372,7 +342,7 @@ cdef class MockHorizontalEddyViscosityDataReader(DataReader):
 
     cpdef find_host(self, DTYPE_FLOAT_t xpos_old, DTYPE_FLOAT_t ypos_old,
             DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new, DTYPE_INT_t guess):
-        return IN_DOMAIN, DEFAULT_HOST
+        raise NotImplementedError
 
     cdef get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
             Particle* particle):
@@ -496,30 +466,8 @@ cdef class MockTwoDNumMethod:
 
             self._num_method.step(data_reader, time, particle.get_ptr())
 
-            # New position
-            xpos_new = particle.get_ptr().xpos
-            ypos_new = particle.get_ptr().ypos
-
-            # TODO Apply boundary conditions in x in a specific calculator
-            xmin = data_reader.get_xmin()
-            xmax = data_reader.get_xmax()
-            while xpos_new < xmin or xpos_new > xmax:
-                if xpos_new < xmin:
-                    xpos_new = xmin + xmin - xpos_new
-                elif xpos_new > xmax:
-                    xpos_new = xmax + xmax - xpos_new
-
-            # TODO Apply boundary conditions in y in a specific calculator
-            ymin = data_reader.get_ymin()
-            ymax = data_reader.get_ymax()
-            while ypos_new < ymin or ypos_new > ymax:
-                if ypos_new < ymin:
-                    ypos_new = ymin + ymin - ypos_new
-                elif ypos_new > ymax:
-                    ypos_new = ymax + ymax - ypos_new
-
-            xpos_new_arr[i] = xpos_new
-            ypos_new_arr[i] = ypos_new
+            xpos_new_arr[i] = particle.get_ptr().xpos
+            ypos_new_arr[i] = particle.get_ptr().ypos
 
         return xpos_new_arr, ypos_new_arr
 
@@ -561,15 +509,9 @@ cdef class MockThreeDNumMethod:
 
             self._num_method.step(data_reader, time, particle.get_ptr())
 
-            # New position
-            xpos_new = particle.get_ptr().xpos
-            ypos_new = particle.get_ptr().ypos
-            zpos_new = particle.get_ptr().zpos
-
-            # TODO Apply boundary conditions
-
-            xpos_new_arr[i] = xpos_new
-            ypos_new_arr[i] = ypos_new
-            zpos_new_arr[i] = zpos_new
+            # Save new position
+            xpos_new_arr[i] = particle.get_ptr().xpos
+            ypos_new_arr[i] = particle.get_ptr().ypos
+            zpos_new_arr[i] = particle.get_ptr().zpos
 
         return xpos_new_arr, ypos_new_arr, zpos_new_arr
