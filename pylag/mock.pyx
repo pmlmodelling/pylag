@@ -95,106 +95,6 @@ cdef class MockVelocityDataReader(DataReader):
     def _get_w_component(self, DTYPE_FLOAT_t zpos):
         return 0.0
 
-cdef class MockVelocityEddyViscosityDataReader(DataReader):
-    """ Test data reader for advection-diffsion numerical integrations schemes
-    
-    The data reader represents a very simple 2D advection-diffusion test case
-    based upon the point release of a tracer into an environment with a
-    time independent, spatially homogeneous horizontal velocity field
-    described by the variables u and v; and a time independent, spatially homogeneous,
-    isotropic horizontal eddy viscosity field described by the variable Ah.
-    
-    Under these conditions, the evolution of the tracer C (units kg m-2) is 
-    described by the equation:
-    
-    C(t, x, y) = M/(4 * Pi * Ah * t) * exp (-((x - u * t)**2 + (y - v * t)**2)/(4 * Ah * t))
-    
-    where M (units kg) is the amount of tracer released at time t = 0 (s) and
-    position (x,y) = (0,0) (m).
-    
-    For testing purposes, u = 1.0 m s-1, v = 1.0 m s-1, Ah = 10 m2 s-1 and
-    M = 1 kg. Furthermore, w = 0.0 m s-1 and Kh = 0.0 m2 s-1.
-    
-    Attributes:
-    -----------
-    _u : float
-        x velocity component in Cartesian space.
-    _v : float
-        y velocity component in Cartesian space.
-    _Ah : float
-        Horizontal eddy viscosity.
-    M : float
-        Mass of tracer released at t = t0
-    """
-    cdef DTYPE_FLOAT_t _u, _v, _w
-    cdef DTYPE_FLOAT_t _Ah
-    cdef DTYPE_FLOAT_t _M
-
-    cdef DTYPE_FLOAT_t _zmin, _zmax
-
-    def __cinit__(self):
-        self._u = 1.0
-        self._v = 1.0
-        self._w = 0.0
-        self._Ah = 10.0
-        self._M = 1.0
-
-        self._zmin = 0.0
-        self._zmax = 0.0
-
-    @property
-    def M(self):
-        return self._M
-
-    cdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, Particle *particle):
-        return self._zmin
-
-    cdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, Particle *particle):
-        return self._zmax
-    
-    cpdef find_host(self, DTYPE_FLOAT_t xpos_old, DTYPE_FLOAT_t ypos_old,
-            DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new, DTYPE_INT_t guess):
-        return IN_DOMAIN, DEFAULT_HOST
-    
-    cdef get_velocity(self, DTYPE_FLOAT_t time, Particle* particle, 
-            DTYPE_FLOAT_t vel[3]):
-        """ Return velocity field array for the given space/time coordinates.
-        
-        """  
-        vel[0] = self._u
-        vel[1] = self._v
-        vel[2] = self._w
-
-    cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time, 
-            Particle* particle) except FLOAT_ERR:
-        return 0.0
-
-    cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity_derivative(self, 
-            DTYPE_FLOAT_t time, Particle* particle) except FLOAT_ERR:
-        return 0.0
-
-    cdef get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
-            Particle* particle):
-        """ Returns the horizontal eddy viscosity
-        """
-        return self._Ah
-
-    cdef get_horizontal_eddy_viscosity_derivative(self, DTYPE_FLOAT_t time,
-            Particle* particle, DTYPE_FLOAT_t Ah_prime[2]):
-        """ Returns the gradient in the horizontal eddy viscosity
-        """
-        Ah_prime[0] = 0.0
-        Ah_prime[1] = 0.0
-        return
-
-    def get_concentration_analytic(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos):
-        """ Return the mass concentration C(t, x, y) using the analytic formula
-        """
-        P = self._M / (4.*np.pi*self._Ah*time)
-        Q = np.exp(-((xpos - self._u*time)**2.0 + (ypos - self._v*time)**2.0)/(4.*self._Ah*time))
-        return P*Q
-
 cdef class MockVerticalDiffusivityDataReader(DataReader):
     """Test data reader for vertical random displacement models.
     
@@ -384,6 +284,106 @@ cdef class MockHorizontalEddyViscosityDataReader(DataReader):
         Ah_prime[1] = 2.0 * particle.ypos
 
         return
+
+cdef class MockVelocityEddyViscosityDataReader(DataReader):
+    """ Test data reader for advection-diffsion numerical integrations schemes
+    
+    The data reader represents a very simple 2D advection-diffusion test case
+    based upon the point release of a tracer into an environment with a
+    time independent, spatially homogeneous horizontal velocity field
+    described by the variables u and v; and a time independent, spatially homogeneous,
+    isotropic horizontal eddy viscosity field described by the variable Ah.
+    
+    Under these conditions, the evolution of the tracer C (units kg m-2) is 
+    described by the equation:
+    
+    C(t, x, y) = M/(4 * Pi * Ah * t) * exp (-((x - u * t)**2 + (y - v * t)**2)/(4 * Ah * t))
+    
+    where M (units kg) is the amount of tracer released at time t = 0 (s) and
+    position (x,y) = (0,0) (m).
+    
+    For testing purposes, u = 1.0 m s-1, v = 1.0 m s-1, Ah = 10 m2 s-1 and
+    M = 1 kg. Furthermore, w = 0.0 m s-1 and Kh = 0.0 m2 s-1.
+    
+    Attributes:
+    -----------
+    _u : float
+        x velocity component in Cartesian space.
+    _v : float
+        y velocity component in Cartesian space.
+    _Ah : float
+        Horizontal eddy viscosity.
+    M : float
+        Mass of tracer released at t = t0
+    """
+    cdef DTYPE_FLOAT_t _u, _v, _w
+    cdef DTYPE_FLOAT_t _Ah
+    cdef DTYPE_FLOAT_t _M
+
+    cdef DTYPE_FLOAT_t _zmin, _zmax
+
+    def __cinit__(self):
+        self._u = 1.0
+        self._v = 1.0
+        self._w = 0.0
+        self._Ah = 10.0
+        self._M = 1.0
+
+        self._zmin = 0.0
+        self._zmax = 0.0
+
+    @property
+    def M(self):
+        return self._M
+
+    cdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, Particle *particle):
+        return self._zmin
+
+    cdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, Particle *particle):
+        return self._zmax
+    
+    cpdef find_host(self, DTYPE_FLOAT_t xpos_old, DTYPE_FLOAT_t ypos_old,
+            DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new, DTYPE_INT_t guess):
+        return IN_DOMAIN, DEFAULT_HOST
+    
+    cdef get_velocity(self, DTYPE_FLOAT_t time, Particle* particle, 
+            DTYPE_FLOAT_t vel[3]):
+        """ Return velocity field array for the given space/time coordinates.
+        
+        """  
+        vel[0] = self._u
+        vel[1] = self._v
+        vel[2] = self._w
+
+    cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time, 
+            Particle* particle) except FLOAT_ERR:
+        return 0.0
+
+    cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity_derivative(self, 
+            DTYPE_FLOAT_t time, Particle* particle) except FLOAT_ERR:
+        return 0.0
+
+    cdef get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
+            Particle* particle):
+        """ Returns the horizontal eddy viscosity
+        """
+        return self._Ah
+
+    cdef get_horizontal_eddy_viscosity_derivative(self, DTYPE_FLOAT_t time,
+            Particle* particle, DTYPE_FLOAT_t Ah_prime[2]):
+        """ Returns the gradient in the horizontal eddy viscosity
+        """
+        Ah_prime[0] = 0.0
+        Ah_prime[1] = 0.0
+        return
+
+    def get_concentration_analytic(self, DTYPE_FLOAT_t time, DTYPE_FLOAT_t xpos,
+            DTYPE_FLOAT_t ypos):
+        """ Return the mass concentration C(t, x, y) using the analytic formula
+        """
+        P = self._M / (4.*np.pi*self._Ah*time)
+        Q = np.exp(-((xpos - self._u*time)**2.0 + (ypos - self._v*time)**2.0)/(4.*self._Ah*time))
+        return P*Q
 
 cdef class MockOneDNumMethod:
     """ Test class for 1D numerical methods
