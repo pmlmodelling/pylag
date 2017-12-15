@@ -202,6 +202,20 @@ cdef class GOTMDataReader(DataReader):
             DTYPE_FLOAT_t ypos, DTYPE_INT_t first_guess):
         return IN_DOMAIN, DEFAULT_HOST
 
+    cdef set_local_coordinates(self, Particle *particle):
+        """ Set local coordinates
+        
+        Each particle has associated with it a set of global coordinates
+        and a set of local coordinates. Here, the global coordinates and the 
+        host horizontal element are used to set the local coordinates.
+        
+        Parameters:
+        -----------
+        particle: *Particle
+            Pointer to a Particle struct
+        """
+        pass
+
     cdef set_vertical_grid_vars(self, DTYPE_FLOAT_t time, Particle* particle):
         """ Set variables describing the particle's position in z
         
