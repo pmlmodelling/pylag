@@ -37,7 +37,13 @@ cdef class MockVelocityDataReader(DataReader):
     cpdef find_host(self, DTYPE_FLOAT_t xpos_old, DTYPE_FLOAT_t ypos_old,
             DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new, DTYPE_INT_t guess):
         return IN_DOMAIN, DEFAULT_HOST
-    
+
+    cdef set_local_coordinates(self, Particle *particle):
+        raise NotImplementedError
+
+    cdef set_vertical_grid_vars(self, DTYPE_FLOAT_t time, Particle *particle):
+        pass
+
     cdef get_velocity(self, DTYPE_FLOAT_t time, Particle* particle, 
             DTYPE_FLOAT_t vel[3]):
         """ Return velocity field array for the given space/time coordinates.
@@ -46,7 +52,7 @@ cdef class MockVelocityDataReader(DataReader):
         vel[0] = self._get_u_component(particle.xpos)
         vel[1] = self._get_v_component(particle.ypos)
         vel[2] = self._get_w_component(particle.zpos)
-        
+
     cdef get_horizontal_velocity(self, DTYPE_FLOAT_t time, Particle* particle,
             DTYPE_FLOAT_t vel[2]):
         """ Return horizontal velocity for the given space/time coordinates.
@@ -143,7 +149,13 @@ cdef class MockVerticalDiffusivityDataReader(DataReader):
     cpdef find_host(self, DTYPE_FLOAT_t xpos_old, DTYPE_FLOAT_t ypos_old,
             DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new, DTYPE_INT_t guess):
         return IN_DOMAIN, DEFAULT_HOST
-    
+
+    cdef set_local_coordinates(self, Particle *particle):
+        pass
+
+    cdef set_vertical_grid_vars(self, DTYPE_FLOAT_t time, Particle *particle):
+        pass
+
     cdef get_velocity(self, DTYPE_FLOAT_t time, Particle* particle,
             DTYPE_FLOAT_t vel[3]):
         """ Returns a zeroed velocity vector.
@@ -250,6 +262,12 @@ cdef class MockHorizontalEddyViscosityDataReader(DataReader):
             DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new, DTYPE_INT_t guess):
         raise NotImplementedError
 
+    cdef set_local_coordinates(self, Particle *particle):
+        pass
+
+    cdef set_vertical_grid_vars(self, DTYPE_FLOAT_t time, Particle *particle):
+        pass
+
     cdef get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
             Particle* particle):
         """ Returns the horizontal eddy viscosity
@@ -333,7 +351,7 @@ cdef class MockVelocityEddyViscosityDataReader(DataReader):
         self._v = 1.0
         self._w = 0.0
         self._Ah = 10.0
-        self._M = 1.0
+        self._M = 10000.0
 
         self._zmin = 0.0
         self._zmax = 0.0
@@ -351,7 +369,13 @@ cdef class MockVelocityEddyViscosityDataReader(DataReader):
     cpdef find_host(self, DTYPE_FLOAT_t xpos_old, DTYPE_FLOAT_t ypos_old,
             DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new, DTYPE_INT_t guess):
         return IN_DOMAIN, DEFAULT_HOST
-    
+
+    cdef set_local_coordinates(self, Particle *particle):
+        pass
+
+    cdef set_vertical_grid_vars(self, DTYPE_FLOAT_t time, Particle *particle):
+        pass
+
     cdef get_velocity(self, DTYPE_FLOAT_t time, Particle* particle, 
             DTYPE_FLOAT_t vel[3]):
         """ Return velocity field array for the given space/time coordinates.
