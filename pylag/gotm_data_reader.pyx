@@ -55,8 +55,11 @@ cdef class GOTMDataReader(DataReader):
     # Z level depths
     cdef DTYPE_FLOAT_t[:] _zlev_last, _zlev_next, _zlev
 
-    # Eddy diffusivity on depth levels
+    # Eddy diffusivity at layer interfaces
     cdef DTYPE_FLOAT_t[:] _kh_last, _kh_next, _kh
+    
+    # Eddy diffusivity derivative at layer interfaces
+    cdef DTYPE_FLOAT_t[:] _kh_prime
 
     def __init__(self, config, mediator):
         self.config = config
@@ -73,7 +76,8 @@ cdef class GOTMDataReader(DataReader):
         self._kh_last = np.empty((self._n_zlev), dtype=DTYPE_FLOAT)
         self._kh_next = np.empty((self._n_zlev), dtype=DTYPE_FLOAT)
         self._kh = np.empty((self._n_zlev), dtype=DTYPE_FLOAT)
-        
+        self._kh_prime = np.empty((self._n_zlev), dtype=DTYPE_FLOAT)
+
     cdef _read_time_dependent_vars(self):
         """ Update time variables and memory views for GOTM data fields
         
@@ -134,6 +138,12 @@ cdef class GOTMDataReader(DataReader):
 
             self._kh[i] = interp.linear_interp(self._time_fraction, self._kh_last[i], self._kh_next[i])
         
+        # Compute kh_prime through central differencing
+        for i in xrange(1, self._n_zlev - 1):
+            self._kh_prime[i] = (self._kh[i+1] - self._kh[i-1]) / (self._zlev[i+1] - self._zlev[i-1])
+        self._kh_prime[0] = (self._kh[1] - self._kh[0]) / (self._zlev[1] - self._zlev[0])
+        self._kh_prime[-1] = (self._kh[-1] - self._kh[-2]) / (self._zlev[-1] - self._zlev[-2])        
+
     cpdef setup_data_access(self, start_datetime, end_datetime):
         """ Set up access to time-dependent variables.
         
@@ -318,41 +328,7 @@ cdef class GOTMDataReader(DataReader):
         k_prime : float
             Gradient in the vertical eddy diffusivity field.
         """
-        # Diffusivities
-        cdef DTYPE_FLOAT_t kh1, kh2
-        
-        # Diffusivity gradient
-        cdef DTYPE_FLOAT_t k_prime
-        
-        # Z coordinate vars for the gradient calculation
-        cdef DTYPE_FLOAT_t zpos_increment, zpos_incremented
-
-        # Z layer for incremented position
-        cdef DTYPE_INT_t zlayer_incremented
-
-        # Temporary particle object
-        cdef Particle _particle
-
-        # Create a copy of the particle
-        _particle = particle[0]
-
-        # Compute the diffusivity at the current particle's location
-        kh1 = self.get_vertical_eddy_diffusivity(time, &_particle)
-
-        # Find a point near to zpos
-        zpos_increment = 1.0e-3
-
-        # ... use the negative of zpos_increment at the top of the water column
-        if ((_particle.zpos + zpos_increment) > self._zeta):
-            zpos_increment = -zpos_increment
-
-        _particle.zpos = _particle.zpos + zpos_increment
-        self.set_vertical_grid_vars(time, &_particle)
-
-        kh2 = self.get_vertical_eddy_diffusivity(time, &_particle)
-        k_prime = (kh2 - kh1) / zpos_increment
-
-        return k_prime
+        return interp.linear_interp(particle.omega_interfaces, self._kh_prime[particle.k_layer], self._kh_prime[particle.k_layer+1])
 
     cpdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, DTYPE_INT_t host) except INT_ERR:
         """ Return an integer indicating whether `host' is wet or dry
