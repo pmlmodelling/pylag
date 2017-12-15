@@ -63,7 +63,7 @@ cdef class GOTMDataReader(DataReader):
         self.mediator = mediator
         
         self._n_zlay = self.mediator.get_dimension_variable('z')
-        self._n_zlev = self._n_zlay + 1
+        self._n_zlev = self.mediator.get_dimension_variable('zi')
 
         # Initialise as empty arrays - these are set to meaningful values
         # through calls to _read_time_dependent_vars.
@@ -97,10 +97,6 @@ cdef class GOTMDataReader(DataReader):
         --------
         N/A
         """
-        cdef DTYPE_FLOAT_t[:] h, z
-        cdef DTYPE_FLOAT_t[:] kh_last, kh_next
-        cdef DTYPE_INT_t i
-        
         # Update time references
         self._time_last = self.mediator.get_time_at_last_time_index()
         self._time_next = self.mediator.get_time_at_next_time_index()
@@ -109,31 +105,13 @@ cdef class GOTMDataReader(DataReader):
         self._zeta_last = self.mediator.get_time_dependent_variable_at_last_time_index('zeta', (1,1), DTYPE_FLOAT)[0,0]
         self._zeta_next = self.mediator.get_time_dependent_variable_at_next_time_index('zeta', (1,1), DTYPE_FLOAT)[0,0]
 
-        # Update memory views for interface depths at the last time point
-        h = self.mediator.get_time_dependent_variable_at_last_time_index('h', (self._n_zlay,1,1), DTYPE_FLOAT)[:,0,0]
-        z = self.mediator.get_time_dependent_variable_at_last_time_index('z', (self._n_zlay,1,1), DTYPE_FLOAT)[:,0,0]
-        for i in xrange(self._n_zlay):
-            self._zlev_last[i] = z[i] - h[i]/2.0
-        self._zlev_last[-1] = z[i] + h[i]/2.0
-
-        # Update memory views for interface depths at the next time point
-        h = self.mediator.get_time_dependent_variable_at_next_time_index('h', (self._n_zlay,1,1), DTYPE_FLOAT)[:,0,0]
-        z = self.mediator.get_time_dependent_variable_at_next_time_index('z', (self._n_zlay,1,1), DTYPE_FLOAT)[:,0,0]
-        for i in xrange(self._n_zlay):
-            self._zlev_next[i] = z[i] - h[i]/2.0
-        self._zlev_next[-1] = z[-1] + h[-1]/2.0
+        # Update z levels
+        self._zlev_last = self.mediator.get_time_dependent_variable_at_last_time_index('zi', (self._n_zlev,1,1), DTYPE_FLOAT)[:,0,0]
+        self._zlev_next = self.mediator.get_time_dependent_variable_at_next_time_index('zi', (self._n_zlev,1,1), DTYPE_FLOAT)[:,0,0]
         
-        # Update memory views for kh. As GOTM drops the value of the diffusivity
-        # at the last interface this must be set separately.
-        kh_last = self.mediator.get_time_dependent_variable_at_last_time_index('nuh', (self._n_zlay,1,1), DTYPE_FLOAT)[:,0,0]
-        kh_next = self.mediator.get_time_dependent_variable_at_next_time_index('nuh', (self._n_zlay,1,1), DTYPE_FLOAT)[:,0,0]
-        for i in xrange(self._n_zlay):
-            self._kh_last[i+1] = kh_last[i]
-            self._kh_next[i+1] = kh_next[i]
-
-        # At the missing interface set the diffusivity to zero
-        self._kh_last[0] = 0.0
-        self._kh_next[0] = 0.0
+        # Update memory views for kh
+        self._kh_last = self.mediator.get_time_dependent_variable_at_last_time_index('nuh', (self._n_zlev,1,1), DTYPE_FLOAT)[:,0,0]
+        self._kh_next = self.mediator.get_time_dependent_variable_at_next_time_index('nuh', (self._n_zlev,1,1), DTYPE_FLOAT)[:,0,0]
 
     cdef _interpolate_in_time(self, time):
         """ Linearly interpolate in time all time dependent variables
