@@ -284,6 +284,31 @@ cdef class GOTMDataReader(DataReader):
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
         
         return interp.linear_interp(self._time_fraction, self._zeta_last, self._zeta_next)
+
+    cdef get_velocity(self, DTYPE_FLOAT_t time, Particle* particle,
+            DTYPE_FLOAT_t vel[3]):
+        """ Returns the velocity u(t,x,y,z)
+        
+        For now, simply return a zeroed array.
+
+        Parameters:
+        -----------
+        time : float
+            Time at which to interpolate.
+        
+        particle: *Particle
+            Pointer to a Particle object.
+
+        Return:
+        -------
+        vel : C array, float
+            u/v/w velocity components stored in a C array.           
+        """
+        # Compute u/v velocities and save
+        vel[0] = 0.0
+        vel[1] = 0.0
+        vel[2] = 0.0
+        return
     
     cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time,
             Particle *particle) except FLOAT_ERR:
