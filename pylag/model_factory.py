@@ -1,3 +1,10 @@
+"""
+TODO
+----
+
+1) Should get_model() return a statically typed object?
+"""
+
 from pylag.model import OPTModel
 from pylag.fvcom_data_reader import FVCOMDataReader
 from pylag.gotm_data_reader import GOTMDataReader
