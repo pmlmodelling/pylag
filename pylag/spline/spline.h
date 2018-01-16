@@ -21,6 +21,21 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * ---------------------------------------------------------------------
  *
+ * TODO
+ * ----
+ * 
+ * James Clark (PML) 16/01/2018
+ * 
+ * 1) Objects of type `spline' offer no protection to clients who attempt to
+ * use the object's call operator without first calling set_points(). In a
+ * trial run, this caused the program to seg fault. One way to solve this is to 
+ * make the default constructor private, and to implement a new constructor
+ * with m_x and m_y as arguments. Note that if this is implemented, then
+ * set_boundary must also be called from the constructor. An alternative is
+ * to place a check that set_points() has been called already; however, this
+ * check would then be performed every time the object is called, which is 
+ * just wasteful.
+ * 
  */
 
 
