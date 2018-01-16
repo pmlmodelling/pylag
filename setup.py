@@ -102,13 +102,33 @@ def scandir(dir, file_type, files=[]):
     return files
 
 
-# generate an Extension object from its dotted name (adapted
-# from Cython wiki)
-def makeExtension(extName, file_type):
-    extPath = extName.replace(".", os.path.sep)+file_type
+def makeExtension(ext_name, file_type):
+    """ Generate an Extension object from its dotted name (adapted
+        from Cython wiki).
+
+        If the extension object is wrapping a C++ source file, then
+        we must append its name too. In order to find these files
+        automatically, we have adopted the following naming
+        convention:
+
+        <module_name>.h
+        <module_name>.cpp
+        <module_name>_cpp_wrapper.pyx
+    """
+    ext_path = ext_name.replace(".", os.path.sep)+file_type
+
+    cpp_path = None
+    substring = '_cpp_wrapper'
+    if substring in ext_path:
+        i = ext_path.find(substring)
+        stem = ext_path[:i]
+        cpp_path = stem + '.cpp'
+
+    ext_path_list = [ext_path] if cpp_path is None else [ext_path, cpp_path]
+
     return Extension(
-        extName,
-        [extPath],
+        ext_name,
+        ext_path_list,
         language="c++",
         extra_compile_args=["-std=c++11"],
         libraries=["stdc++"],
@@ -122,10 +142,10 @@ write_version_py()
 file_type = '.pyx' if os.path.isdir('./.git') and glob.glob('./pylag/*.pyx') else '.cpp'
 
 # Get the list of extensions
-extNames = scandir("pylag", file_type)
+ext_names = scandir("pylag", file_type)
 
 # And build up the set of Extension objects
-extensions = [makeExtension(name, file_type) for name in extNames]
+extensions = [makeExtension(name, file_type) for name in ext_names]
 
 # Cythonize if working with pyx files
 if file_type == '.pyx':
