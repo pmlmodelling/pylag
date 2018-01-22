@@ -1,7 +1,90 @@
 include "constants.pxi"
 
+import numpy as np
+
+# Cython imports
+cimport numpy as np
+np.import_array()
+
 # Data types used for constructing C data structures
+from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
+
+cdef class Interpolator:
+    def __cinit__(self, n_elems):
+        pass
+    
+    cdef set_points(self, DTYPE_FLOAT_t[:] xp, DTYPE_FLOAT_t[:] fp):
+        raise NotImplementedError
+
+    cdef DTYPE_FLOAT_t get_value(self, Particle* particle) except FLOAT_ERR:
+        raise NotImplementedError
+
+    cdef DTYPE_FLOAT_t get_first_derivative(self, Particle* particle) except FLOAT_ERR:
+        raise NotImplementedError
+
+cdef class Linear1DInterpolator:
+    def __cinit__(self, n_elems):
+        self._n_elems = n_elems
+        self._xp = np.empty((self._n_elems), dtype=DTYPE_FLOAT)
+        self._fp = np.empty((self._n_elems), dtype=DTYPE_FLOAT)
+        self._fp_prime = np.empty((self._n_elems), dtype=DTYPE_FLOAT)
+    
+    cdef set_points(self, DTYPE_FLOAT_t[:] xp, DTYPE_FLOAT_t[:] fp):
+        cdef DTYPE_INT_t i
+        
+        # Read in data
+        for i in xrange(self._n_elems):
+            self._xp[i] = xp[i]
+            self._fp[i] = fp[i]
+
+        # Compute the first derivative through central differencing
+        for i in xrange(1, self._n_elems - 1):
+            self._fp_prime[i] = (self._fp[i+1] - self._fp[i-1]) / (self._xp[i+1] - self._xp[i-1])
+        self._fp_prime[0] = (self._fp[1] - self._fp[0]) / (self._xp[1] - self._xp[0])
+        self._fp_prime[-1] = (self._fp[-1] - self._fp[-2]) / (self._xp[-1] - self._xp[-2])  
+
+    cdef DTYPE_FLOAT_t get_value(self, Particle* particle) except FLOAT_ERR:
+        return linear_interp(particle.omega_interfaces,
+                self._fp[particle.k_layer],
+                self._fp[particle.k_layer+1])
+
+    cdef DTYPE_FLOAT_t get_first_derivative(self, Particle* particle) except FLOAT_ERR:
+        return linear_interp(particle.omega_interfaces,
+                self._fp_prime[particle.k_layer],
+                self._fp_prime[particle.k_layer+1])
+
+cdef class CubicSpline1DInterpolator:
+    def __cinit__(self, n_elems):
+        pass
+
+    cdef set_points(self, DTYPE_FLOAT_t[:] xp, DTYPE_FLOAT_t[:] fp):
+        raise NotImplementedError
+
+    cdef DTYPE_FLOAT_t get_value(self, Particle* particle) except FLOAT_ERR:
+        raise NotImplementedError
+
+    cdef DTYPE_FLOAT_t get_first_derivative(self, Particle* particle) except FLOAT_ERR:
+        raise NotImplementedError
+
+def get_interpolator(config, n_elems):
+    """ Interpolator factory method
+
+        Parameters:
+        -----------
+        config : SafeConfigParser
+            Configuration object.
+        
+        n_elems : int
+            The number of points at which data is defined. Used when allocating
+            memory to the interpolating object.
+    """
+    if config.get("NUMERICS", "vertical_interpolation_scheme") == "linear":
+        return Linear1DInterpolator(n_elems)
+    elif config.get("NUMERICS", "vertical_interpolation_scheme") == "cubic_spline":
+        return CubicSpline1DInterpolator(n_elems)
+    else:
+        raise ValueError('Unsupported vertical interpolation scheme.')
 
 cdef get_barycentric_coords(DTYPE_FLOAT_t x, DTYPE_FLOAT_t y,
         DTYPE_FLOAT_t x_tri[3], DTYPE_FLOAT_t y_tri[3], DTYPE_FLOAT_t phi[3]):

@@ -6,6 +6,38 @@ from libcpp.vector cimport vector
 
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
+# PyLag cimports
+from particle cimport Particle
+from spline_cpp_wrapper cimport spline
+
+cdef class Interpolator:
+    cdef set_points(self, DTYPE_FLOAT_t[:] xp, DTYPE_FLOAT_t[:] fp)
+
+    cdef DTYPE_FLOAT_t get_value(self, Particle* particle) except FLOAT_ERR
+
+    cdef DTYPE_FLOAT_t get_first_derivative(self, Particle* particle) except FLOAT_ERR
+
+cdef class Linear1DInterpolator(Interpolator):
+    cdef DTYPE_INT_t _n_elems
+    cdef DTYPE_FLOAT_t[:] _xp
+    cdef DTYPE_FLOAT_t[:] _fp
+    cdef DTYPE_FLOAT_t[:] _fp_prime
+
+    cdef set_points(self, DTYPE_FLOAT_t[:] xp, DTYPE_FLOAT_t[:] fp)
+
+    cdef DTYPE_FLOAT_t get_value(self, Particle* particle) except FLOAT_ERR
+
+    cdef DTYPE_FLOAT_t get_first_derivative(self, Particle* particle) except FLOAT_ERR
+
+cdef class CubicSpline1DInterpolator(Interpolator):
+    cdef spline c_spline
+
+    cdef set_points(self, DTYPE_FLOAT_t[:] xp, DTYPE_FLOAT_t[:] fp)
+
+    cdef DTYPE_FLOAT_t get_value(self, Particle* particle) except FLOAT_ERR
+
+    cdef DTYPE_FLOAT_t get_first_derivative(self, Particle* particle) except FLOAT_ERR
+
 cdef get_barycentric_coords(DTYPE_FLOAT_t x, DTYPE_FLOAT_t y,
         DTYPE_FLOAT_t x_tri[3], DTYPE_FLOAT_t y_tri[3], DTYPE_FLOAT_t phi[3])
 

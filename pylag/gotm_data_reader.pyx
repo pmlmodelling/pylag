@@ -17,6 +17,7 @@ from pylag.data_reader cimport DataReader
 from pylag.math cimport sigma_to_cartesian_coords
 
 cimport pylag.interpolation as interp
+import pylag.interpolation as interp
 
 cdef class GOTMDataReader(DataReader):
     """ DataReader for GOTM.
@@ -61,6 +62,9 @@ cdef class GOTMDataReader(DataReader):
     # Eddy diffusivity derivative at layer interfaces
     cdef DTYPE_FLOAT_t[:] _kh_prime
 
+    # Interpolator
+    cdef interp.Interpolator _interpolator
+
     def __init__(self, config, mediator):
         self.config = config
         self.mediator = mediator
@@ -76,7 +80,9 @@ cdef class GOTMDataReader(DataReader):
         self._kh_last = np.empty((self._n_zlev), dtype=DTYPE_FLOAT)
         self._kh_next = np.empty((self._n_zlev), dtype=DTYPE_FLOAT)
         self._kh = np.empty((self._n_zlev), dtype=DTYPE_FLOAT)
-        self._kh_prime = np.empty((self._n_zlev), dtype=DTYPE_FLOAT)
+
+        # Interpolator
+        self._interpolator = interp.get_interpolator(self.config, self._n_zlev)
 
     cdef _read_time_dependent_vars(self):
         """ Update time variables and memory views for GOTM data fields
@@ -136,13 +142,9 @@ cdef class GOTMDataReader(DataReader):
         for i in xrange(self._n_zlev): 
             self._zlev[i] = interp.linear_interp(self._time_fraction, self._zlev_last[i], self._zlev_next[i])
 
-            self._kh[i] = interp.linear_interp(self._time_fraction, self._kh_last[i], self._kh_next[i])
-        
-        # Compute kh_prime through central differencing
-        for i in xrange(1, self._n_zlev - 1):
-            self._kh_prime[i] = (self._kh[i+1] - self._kh[i-1]) / (self._zlev[i+1] - self._zlev[i-1])
-        self._kh_prime[0] = (self._kh[1] - self._kh[0]) / (self._zlev[1] - self._zlev[0])
-        self._kh_prime[-1] = (self._kh[-1] - self._kh[-2]) / (self._zlev[-1] - self._zlev[-2])        
+            self._kh[i] = interp.linear_interp(self._time_fraction, self._kh_last[i], self._kh_next[i])     
+
+        self._interpolator.set_points(self._zlev, self._kh)
 
     cpdef setup_data_access(self, start_datetime, end_datetime):
         """ Set up access to time-dependent variables.
@@ -331,7 +333,7 @@ cdef class GOTMDataReader(DataReader):
             The vertical eddy diffusivity.        
         
         """
-        return interp.linear_interp(particle.omega_interfaces, self._kh[particle.k_layer], self._kh[particle.k_layer+1])
+        return self._interpolator.get_value(particle)
 
     cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity_derivative(self,
             DTYPE_FLOAT_t time, Particle* particle) except FLOAT_ERR:
@@ -353,7 +355,7 @@ cdef class GOTMDataReader(DataReader):
         k_prime : float
             Gradient in the vertical eddy diffusivity field.
         """
-        return interp.linear_interp(particle.omega_interfaces, self._kh_prime[particle.k_layer], self._kh_prime[particle.k_layer+1])
+        return self._interpolator.get_first_derivative(particle)
 
     cpdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, DTYPE_INT_t host) except INT_ERR:
         """ Return an integer indicating whether `host' is wet or dry
