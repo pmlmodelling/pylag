@@ -13,6 +13,15 @@ from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 cdef class Interpolator:
+    """ An abstract base class for interpolation schemes
+    
+    The following method(s) should be implemented in the derived class:
+    
+    * :meth: `set_points`
+    * :meth: `get_value`
+    * :meth: `get_first_derivative`
+    """
+
     def __cinit__(self, n_elems):
         pass
     
@@ -26,6 +35,18 @@ cdef class Interpolator:
         raise NotImplementedError
 
 cdef class Linear1DInterpolator:
+    """ Linear 1D Interpolator
+    
+    This class contains methods that perform linear 1D interpolation.
+    
+    Parameters:
+    -----------
+    n_elems : int
+        The number of points at which data are defined. This is used to
+        create data arrays of the correct size, which are later used for
+        the interpolation.
+    """
+
     def __cinit__(self, n_elems):
         self._n_elems = n_elems
         self._xp = np.empty((self._n_elems), dtype=DTYPE_FLOAT)
@@ -33,6 +54,21 @@ cdef class Linear1DInterpolator:
         self._fp_prime = np.empty((self._n_elems), dtype=DTYPE_FLOAT)
     
     cdef set_points(self, DTYPE_FLOAT_t[:] xp, DTYPE_FLOAT_t[:] fp):
+        """ Set coordinate and function value data
+
+        The two memory view objects should have the same length, equal to 
+        `n_elems'.
+
+        Parameters:
+        -----------
+        xp : 1D MemoryView
+            A MemoryView giving the location coordinates of points at which
+            the interpolating function is defined.
+        
+        fp : 1D MemoryView
+            A MemoryView giving the function value at each of the location
+            coordinates.
+        """
         cdef DTYPE_INT_t i
         
         # Read in data
@@ -47,16 +83,42 @@ cdef class Linear1DInterpolator:
         self._fp_prime[-1] = (self._fp[-1] - self._fp[-2]) / (self._xp[-1] - self._xp[-2])  
 
     cdef DTYPE_FLOAT_t get_value(self, Particle* particle) except FLOAT_ERR:
+        """ Evaluate the interpolating function at the particle's location
+
+        Parameters:
+        -----------
+        *particle: C pointer
+            C Pointer to a Particle struct
+        """
         return linear_interp(particle.omega_interfaces,
                 self._fp[particle.k_layer],
                 self._fp[particle.k_layer+1])
 
     cdef DTYPE_FLOAT_t get_first_derivative(self, Particle* particle) except FLOAT_ERR:
+        """ Evaluate the derivative of the interpolating function
+
+        Parameters:
+        -----------
+        *particle: C pointer
+            C Pointer to a Particle struct
+        """
         return linear_interp(particle.omega_interfaces,
                 self._fp_prime[particle.k_layer],
                 self._fp_prime[particle.k_layer+1])
 
 cdef class CubicSpline1DInterpolator:
+    """ Cubic spline 1D Interpolator
+    
+    This class contains methods that perform cubic spline 1D interpolation.
+    
+    Parameters:
+    -----------
+    n_elems : int
+        The number of points at which data are defined. This is used to
+        create data arrays of the correct size, which are later used for
+        the interpolation.
+    """
+
     def __cinit__(self, n_elems):
         self._n_elems = n_elems
         self._first_order = 1
@@ -69,12 +131,15 @@ cdef class CubicSpline1DInterpolator:
         This function is basically a wrapper for the same function that is
         implemented in C++. The supplied data arrays are first converted into
         C++ vectors before being passed in. This is the data type the C++
-        spline interpolator expects, and thus should help to minimise errors,
-        at the cost of losing some efficiency.
+        spline interpolator expects.
         
         TODO
         ----
-        1) C++ exception handling.
+        1) Check whether it is necessary to create a C++ vector before passing
+        the data on. Posts on stack overflow suggest numpy arrays can be
+        passed to C++ functions that expect C++ vectors, but I am not sure how
+        Cython handles this, or whether it would work here.
+        2) Exception handling.
         """
         cdef vector[DTYPE_FLOAT_t] xp_tmp
         cdef vector[DTYPE_FLOAT_t] fp_tmp
@@ -87,6 +152,15 @@ cdef class CubicSpline1DInterpolator:
         self._spline.set_points(xp_tmp, fp_tmp)
 
     cdef DTYPE_FLOAT_t get_value(self, Particle* particle) except FLOAT_ERR:
+        """ Evaluate the interpolating function at the particle's location
+
+        This function is basically a wrapper - all the hard work is done in C++.
+
+        Parameters:
+        -----------
+        *particle: C pointer
+            C Pointer to a Particle struct
+        """
         cdef DTYPE_FLOAT_t value
 
         value = self._spline.call(particle.zpos)
@@ -95,6 +169,16 @@ cdef class CubicSpline1DInterpolator:
         return value
 
     cdef DTYPE_FLOAT_t get_first_derivative(self, Particle* particle) except FLOAT_ERR:
+        """ Evaluate the derivative of the interpolating function
+
+        The derivative is computed at the particle's location. As before, this
+        function is basically a wrapper - all the hard work is done in C++.
+
+        Parameters:
+        -----------
+        *particle: C pointer
+            C Pointer to a Particle struct
+        """
         return self._spline.deriv(self._first_order, particle.zpos)
 
 def get_interpolator(config, n_elems):

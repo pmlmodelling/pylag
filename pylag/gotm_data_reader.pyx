@@ -26,6 +26,11 @@ cdef class GOTMDataReader(DataReader):
     data objects, including data describing the model grid as well as model
     output variables.
     
+    GOTMDataReader employs linear interpolation in time. For interpolation
+    in space, GOTM uses a dedicated Interpolator. The choice of interpolator
+    is made at run time. See PyLag's documentation for a list of supported
+    interpolation methods.
+    
     Parameters:
     -----------
     config : SafeConfigParser

@@ -1,6 +1,12 @@
 include "constants.pxi"
 
 cdef class SplineWrapper:
+    """ Cython wrapper for the class spline, which is implemented in spline.cpp
+    
+    The method for wrapping spline follows the method laid out in Cython's
+    documentation (see https://cython.readthedocs.io/en/latest/).
+    """
+
     def __cinit__(self):
         self.c_spline = spline()
 
