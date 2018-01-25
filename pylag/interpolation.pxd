@@ -7,8 +7,8 @@ from libcpp.vector cimport vector
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 # PyLag cimports
-from particle cimport Particle
-from spline_cpp_wrapper cimport spline
+from pylag.particle cimport Particle
+from pylag.spline_cpp_wrapper cimport SplineWrapper
 
 cdef class Interpolator:
     cdef set_points(self, DTYPE_FLOAT_t[:] xp, DTYPE_FLOAT_t[:] fp)
@@ -30,7 +30,11 @@ cdef class Linear1DInterpolator(Interpolator):
     cdef DTYPE_FLOAT_t get_first_derivative(self, Particle* particle) except FLOAT_ERR
 
 cdef class CubicSpline1DInterpolator(Interpolator):
-    cdef spline c_spline
+    cdef DTYPE_INT_t _n_elems
+    cdef DTYPE_INT_t _first_order
+    cdef DTYPE_INT_t _second_order
+
+    cdef SplineWrapper _spline
 
     cdef set_points(self, DTYPE_FLOAT_t[:] xp, DTYPE_FLOAT_t[:] fp)
 

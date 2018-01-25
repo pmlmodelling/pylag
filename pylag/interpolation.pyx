@@ -6,6 +6,8 @@ import numpy as np
 cimport numpy as np
 np.import_array()
 
+from libcpp.vector cimport vector
+
 # Data types used for constructing C data structures
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
@@ -56,16 +58,44 @@ cdef class Linear1DInterpolator:
 
 cdef class CubicSpline1DInterpolator:
     def __cinit__(self, n_elems):
-        pass
+        self._n_elems = n_elems
+        self._first_order = 1
+        self._second_order = 2
+        self._spline = SplineWrapper()
 
     cdef set_points(self, DTYPE_FLOAT_t[:] xp, DTYPE_FLOAT_t[:] fp):
-        raise NotImplementedError
+        """ Set points for the cubic spline interpolator
+        
+        This function is basically a wrapper for the same function that is
+        implemented in C++. The supplied data arrays are first converted into
+        C++ vectors before being passed in. This is the data type the C++
+        spline interpolator expects, and thus should help to minimise errors,
+        at the cost of losing some efficiency.
+        
+        TODO
+        ----
+        1) C++ exception handling.
+        """
+        cdef vector[DTYPE_FLOAT_t] xp_tmp
+        cdef vector[DTYPE_FLOAT_t] fp_tmp
+        
+        # Generate C++ vectors from the supplied data arrays
+        for i in xrange(self._n_elems):
+            xp_tmp.push_back(xp[i])
+            fp_tmp.push_back(fp[i])
+
+        self._spline.set_points(xp_tmp, fp_tmp)
 
     cdef DTYPE_FLOAT_t get_value(self, Particle* particle) except FLOAT_ERR:
-        raise NotImplementedError
+        cdef DTYPE_FLOAT_t value
+
+        value = self._spline.call(particle.zpos)
+        if value < 0.0:
+            return 0.0
+        return value
 
     cdef DTYPE_FLOAT_t get_first_derivative(self, Particle* particle) except FLOAT_ERR:
-        raise NotImplementedError
+        return self._spline.deriv(self._first_order, particle.zpos)
 
 def get_interpolator(config, n_elems):
     """ Interpolator factory method
