@@ -188,9 +188,9 @@ def get_interpolator(config, n_elems):
             The number of points at which data is defined. Used when allocating
             memory to the interpolating object.
     """
-    if config.get("NUMERICS", "vertical_interpolation_scheme") == "linear":
+    if config.get("OCEAN_CIRCULATION_MODEL", "vertical_interpolation_scheme") == "linear":
         return Linear1DInterpolator(n_elems)
-    elif config.get("NUMERICS", "vertical_interpolation_scheme") == "cubic_spline":
+    elif config.get("OCEAN_CIRCULATION_MODEL", "vertical_interpolation_scheme") == "cubic_spline":
         return CubicSpline1DInterpolator(n_elems)
     else:
         raise ValueError('Unsupported vertical interpolation scheme.')
