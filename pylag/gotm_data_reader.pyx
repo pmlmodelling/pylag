@@ -338,7 +338,12 @@ cdef class GOTMDataReader(DataReader):
             The vertical eddy diffusivity.        
         
         """
-        return self._interpolator.get_value(particle)
+        cdef DTYPE_FLOAT_t value
+
+        value = self._interpolator.get_value(particle)
+        if value < 0.0:
+            return 0.0
+        return value
 
     cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity_derivative(self,
             DTYPE_FLOAT_t time, Particle* particle) except FLOAT_ERR:

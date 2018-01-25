@@ -161,12 +161,7 @@ cdef class CubicSpline1DInterpolator:
         *particle: C pointer
             C Pointer to a Particle struct
         """
-        cdef DTYPE_FLOAT_t value
-
-        value = self._spline.call(particle.zpos)
-        if value < 0.0:
-            return 0.0
-        return value
+        return self._spline.call(particle.zpos)
 
     cdef DTYPE_FLOAT_t get_first_derivative(self, Particle* particle) except FLOAT_ERR:
         """ Evaluate the derivative of the interpolating function
