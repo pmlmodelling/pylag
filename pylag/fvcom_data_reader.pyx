@@ -15,7 +15,7 @@ from particle cimport Particle
 from pylag.data_reader cimport DataReader
 cimport pylag.interpolation as interp
 from pylag.math cimport int_min, float_min, get_intersection_point
-from pylag.math cimport cartesian_to_sigma_coords
+from pylag.math cimport cartesian_to_sigma_coords, sigma_to_cartesian_coords
 
 cdef class FVCOMDataReader(DataReader):
     """ DataReader for FVCOM.
@@ -1146,8 +1146,19 @@ cdef class FVCOMDataReader(DataReader):
         """ Returns the gradient in the vertical eddy diffusivity.
         
         Return a numerical approximation of the gradient in the vertical eddy 
-        diffusivity at (t,x,y,z).
-        
+        diffusivity at (t,x,y,z) using central differencing. First, the
+        diffusivity is computed on the sigma levels bounding the particle.
+        Central differencing is then used to compute the gradient in the
+        diffusivity on these levels. Finally, the gradient in the diffusivity
+        is interpolated to the particle's exact position. This algorithm
+        mirrors that used in GOTMDataReader, which is why it has been implemented
+        here. However, in contrast to GOTMDataReader, which calculates the
+        gradient in the diffusivity at all levels once each simulation time step,
+        resulting in significant time savings, this function is exectued once
+        for each particle. It is thus quite costly! To make things worse, the 
+        code, as implemented here, is highly repetitive, and no doubt efficiency
+        savings could be found. 
+
         Parameters:
         -----------
         time : float
@@ -1161,46 +1172,74 @@ cdef class FVCOMDataReader(DataReader):
         k_prime : float
             Gradient in the vertical eddy diffusivity field.
         """
-        # Diffusivities
-        cdef DTYPE_FLOAT_t kh1, kh2
-        
-        # Diffusivity gradient
-        cdef DTYPE_FLOAT_t k_prime
-        
-        # Z coordinate vars for the gradient calculation
-        cdef DTYPE_FLOAT_t zpos_increment, zpos_incremented
-        
-        # Z layer for incremented position
-        cdef DTYPE_INT_t zlayer_incremented
+        cdef DTYPE_FLOAT_t kh_0, kh_1, kh_2, kh_3
+        cdef DTYPE_FLOAT_t sigma_0, sigma_1, sigma_2, sigma_3
+        cdef DTYPE_FLOAT_t z_0, z_1, z_2, z_3
+        cdef DTYPE_FLOAT_t dkh_lower_level, dkh_upper_level
+        cdef DTYPE_FLOAT_t h, zeta
 
-        # Z max
-        cdef DTYPE_FLOAT_t zmax
+        h = self.get_zmin(time, particle)
+        zeta = self.get_zmax(time, particle)
 
-        # Temporary particle object
-        cdef Particle _particle
+        if particle.k_layer == 0:
+            kh_0 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer)
+            sigma_0 = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, particle.k_layer)
 
-        # Create a copy of the particle
-        _particle = particle[0]
+            kh_1 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer+1)
+            sigma_1 = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, particle.k_layer+1)
 
-        # Compute the diffusivity at the current particle's location
-        kh1 = self.get_vertical_eddy_diffusivity(time, &_particle)
+            kh_2 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer+2)
+            sigma_2 = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, particle.k_layer+2)
 
-        # Use a point that is close to zpos (in cartesian coordinates) for the 
-        # gradient calculation
-        zpos_increment = 1.0e-3
-        
-        # Use the negative of zpos_increment at the top of the water column
-        zmax = self.get_zmax(time, &_particle)
-        if ((_particle.zpos + zpos_increment) > zmax):
-            zpos_increment = -zpos_increment
+            # Convert to cartesian coordinates
+            z_0 = sigma_to_cartesian_coords(sigma_0, h, zeta)
+            z_1 = sigma_to_cartesian_coords(sigma_1, h, zeta)
+            z_2 = sigma_to_cartesian_coords(sigma_2, h, zeta)
+
+            dkh_lower_level = (kh_0 - kh_2) / (z_0 - z_2)
+            dkh_upper_level = (kh_0 - kh_1) / (z_0 - z_1)
             
-        _particle.zpos = _particle.zpos + zpos_increment
-        self.set_vertical_grid_vars(time, &_particle)
+        elif particle.k_layer == self._n_siglay - 1:
+            kh_0 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer-1)
+            sigma_0 = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, particle.k_layer-1)
 
-        kh2 = self.get_vertical_eddy_diffusivity(time, &_particle)
-        k_prime = (kh2 - kh1) / zpos_increment
+            kh_1 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer)
+            sigma_1 = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, particle.k_layer)
 
-        return k_prime
+            kh_2 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer+1)
+            sigma_2 = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, particle.k_layer+1)
+
+            # Convert to cartesian coordinates
+            z_0 = sigma_to_cartesian_coords(sigma_0, h, zeta)
+            z_1 = sigma_to_cartesian_coords(sigma_1, h, zeta)
+            z_2 = sigma_to_cartesian_coords(sigma_2, h, zeta)
+
+            dkh_lower_level = (kh_1 - kh_2) / (z_1 - z_2)
+            dkh_upper_level = (kh_0 - kh_2) / (z_0 - z_2)
+            
+        else:
+            kh_0 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer-1)
+            sigma_0 = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, particle.k_layer-1)
+
+            kh_1 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer)
+            sigma_1 = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, particle.k_layer)
+
+            kh_2 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer+1)
+            sigma_2 = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, particle.k_layer+1)
+
+            kh_3 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer+2)
+            sigma_3 = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, particle.k_layer+2)
+
+            # Convert to cartesian coordinates
+            z_0 = sigma_to_cartesian_coords(sigma_0, h, zeta)
+            z_1 = sigma_to_cartesian_coords(sigma_1, h, zeta)
+            z_2 = sigma_to_cartesian_coords(sigma_2, h, zeta)
+            z_3 = sigma_to_cartesian_coords(sigma_3, h, zeta)
+
+            dkh_lower_level = (kh_1 - kh_3) / (z_1 - z_3)
+            dkh_upper_level = (kh_0 - kh_2) / (z_0 - z_2)
+            
+        return interp.linear_interp(particle.omega_interfaces, dkh_lower_level, dkh_upper_level)
 
     cpdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, DTYPE_INT_t host) except INT_ERR:
         """ Return an integer indicating whether `host' is wet or dry
