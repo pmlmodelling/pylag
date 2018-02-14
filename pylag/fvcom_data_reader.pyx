@@ -1068,6 +1068,46 @@ cdef class FVCOMDataReader(DataReader):
             The vertical eddy diffusivity.        
         
         """
+        # Interpolated diffusivities on lower and upper bounding sigma levels
+        cdef DTYPE_FLOAT_t kh_lower_level
+        cdef DTYPE_FLOAT_t kh_upper_level
+        
+        # NB The index corresponding to the layer the particle presently resides
+        # in is used to calculate the index of the under and over lying k levels 
+        kh_lower_level = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer+1)
+        kh_upper_level = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer)
+
+        return interp.linear_interp(particle.omega_interfaces, kh_lower_level, kh_upper_level)
+
+    cdef DTYPE_FLOAT_t _get_vertical_eddy_diffusivity_on_level(self,
+            DTYPE_FLOAT_t time, Particle* particle,
+            DTYPE_INT_t k_level) except FLOAT_ERR:
+        """ Returns the vertical eddy diffusivity on a level
+        
+        The vertical eddy diffusivity is defined at element nodes on sigma
+        levels. Interpolation is performed first in time, then in x and y to
+        give the eddy diffusivity on the specified depth level.
+        
+        For internal use only.
+        
+        Parameters:
+        -----------
+        time : float
+            Time at which to interpolate.
+        
+        particle : *Particle
+            Pointer to a Particle object.
+        
+        k_level : int
+            The dpeth level on which to interpolate.
+        
+        Returns:
+        --------
+        kh : float
+            The vertical eddy diffusivity at the particle's position on the
+            specified level.
+        
+        """
         # Loop counter
         cdef int i
         
@@ -1078,40 +1118,28 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_FLOAT_t time_fraction
 
         # Intermediate arrays - kh
-        cdef DTYPE_FLOAT_t kh_tri_t_last_lower_level[N_VERTICES]
-        cdef DTYPE_FLOAT_t kh_tri_t_next_lower_level[N_VERTICES]
-        cdef DTYPE_FLOAT_t kh_tri_t_last_upper_level[N_VERTICES]
-        cdef DTYPE_FLOAT_t kh_tri_t_next_upper_level[N_VERTICES]
-        cdef DTYPE_FLOAT_t kh_tri_lower_level[N_VERTICES]
-        cdef DTYPE_FLOAT_t kh_tri_upper_level[N_VERTICES]      
+        cdef DTYPE_FLOAT_t kh_tri_t_last[N_VERTICES]
+        cdef DTYPE_FLOAT_t kh_tri_t_next[N_VERTICES]
+        cdef DTYPE_FLOAT_t kh_tri[N_VERTICES]  
         
-        # Interpolated diffusivities on lower and upper bounding sigma levels
-        cdef DTYPE_FLOAT_t kh_lower_level
-        cdef DTYPE_FLOAT_t kh_upper_level
+        # Interpolated diffusivities on the specified level
+        cdef DTYPE_FLOAT_t kh
 
         # Extract kh on the lower and upper bounding sigma levels, h and zeta
         for i in xrange(N_VERTICES):
             vertex = self._nv[i,particle.host_horizontal_elem]
-            kh_tri_t_last_lower_level[i] = self._kh_last[particle.k_layer + 1, vertex]
-            kh_tri_t_next_lower_level[i] = self._kh_next[particle.k_layer + 1, vertex]
-            kh_tri_t_last_upper_level[i] = self._kh_last[particle.k_layer, vertex]
-            kh_tri_t_next_upper_level[i] = self._kh_next[particle.k_layer, vertex]
+            kh_tri_t_last[i] = self._kh_last[k_level, vertex]
+            kh_tri_t_next[i] = self._kh_next[k_level, vertex]
 
         # Interpolate kh and zeta in time
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
         for i in xrange(N_VERTICES):
-            kh_tri_lower_level[i] = interp.linear_interp(time_fraction, 
-                                                kh_tri_t_last_lower_level[i],
-                                                kh_tri_t_next_lower_level[i])
-            kh_tri_upper_level[i] = interp.linear_interp(time_fraction, 
-                                                kh_tri_t_last_upper_level[i],
-                                                kh_tri_t_next_upper_level[i])
+            kh_tri[i] = interp.linear_interp(time_fraction, kh_tri_t_last[i], kh_tri_t_next[i])
 
         # Interpolate kh, zeta and h within the host
-        kh_lower_level = interp.interpolate_within_element(kh_tri_lower_level, particle.phi)
-        kh_upper_level = interp.interpolate_within_element(kh_tri_upper_level, particle.phi)
+        kh = interp.interpolate_within_element(kh_tri, particle.phi)
 
-        return interp.linear_interp(particle.omega_interfaces, kh_lower_level, kh_upper_level)
+        return kh
 
     cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity_derivative(self,
             DTYPE_FLOAT_t time, Particle* particle) except FLOAT_ERR:
