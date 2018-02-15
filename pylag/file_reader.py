@@ -117,11 +117,19 @@ class FileReader(object):
         for data_file_name in self._data_file_names:
             logger.info("Trying file `{}'".format(data_file_name))
             ds = Dataset(data_file_name, 'r')
-            time = ds.variables['time']
             
+            if self._config.get("OCEAN_CIRCULATION_MODEL", "name") == 'FVCOM':
+                # The time variable is FVCOM has the lowest precision. Instead,
+                # we construct the time array from the Itime and Itime2 vars
+                time = ds.variables['Itime'][:] + ds.variables['Itime2'][:] / 1000. / 60. / 60. / 24.
+                units = ds.variables['Itime'].units
+            else:
+                time = ds.variables['time']
+                units = ds.variables['time'].units        
+
             # Start and end time points for this file 
-            data_datetime_s = round_time([num2date(time[0], units=time.units)], rounding_interval)[0]
-            data_datetime_e = round_time([num2date(time[-1], units=time.units)], rounding_interval)[0]
+            data_datetime_s = round_time([num2date(time[0], units=units)], rounding_interval)[0]
+            data_datetime_e = round_time([num2date(time[-1], units=units)], rounding_interval)[0]
             ds.close()
             
             if (self._sim_datetime_s >= data_datetime_s) and (self._sim_datetime_s < data_datetime_e):
@@ -179,8 +187,15 @@ class FileReader(object):
 
         # Read in time from the current data file and convert to a list of 
         # datetime objects. Apply rounding as specified.
-        time_raw = self._current_data_file.variables['time']
-        datetime_raw = num2date(time_raw[:], units=time_raw.units)
+        if self._config.get("OCEAN_CIRCULATION_MODEL", "name") == 'FVCOM':
+            # The time variable is FVCOM has the lowest precision. Instead,
+            # we construct the time array from the Itime and Itime2 vars
+            time_raw = self._current_data_file.variables['Itime'][:] + self._current_data_file.variables['Itime2'][:] / 1000. / 60. / 60. / 24.
+            units = self._current_data_file.variables['Itime'].units
+        else:
+            time_raw = self._current_data_file.variables['time']
+            units = self._current_data_file.variables['time'].units   
+        datetime_raw = num2date(time_raw[:], units=units)
         datetime_rounded = round_time(datetime_raw, rounding_interval)
         
         # Convert to seconds using datetime_start as a reference point
