@@ -95,11 +95,19 @@ cdef class FVCOMDataReader(DataReader):
     
     # Time array
     cdef DTYPE_FLOAT_t _time_last
-    cdef DTYPE_FLOAT_t _time_next  
+    cdef DTYPE_FLOAT_t _time_next
+
+    # Flags that identify whether a given variable should be read in
+    cdef bint _has_Kh, _has_Ah, _has_is_wet
 
     def __init__(self, config, mediator):
         self.config = config
         self.mediator = mediator
+
+        # Set flags from config
+        self._has_Kh = self.config.getboolean("OCEAN_CIRCULATION_MODEL", "has_Kh")
+        self._has_Ah = self.config.getboolean("OCEAN_CIRCULATION_MODEL", "has_Ah")
+        self._has_is_wet = self.config.getboolean("OCEAN_CIRCULATION_MODEL", "has_is_wet")
 
         self._read_grid()
 
@@ -1271,8 +1279,9 @@ cdef class FVCOMDataReader(DataReader):
         host : int
             Integer that identifies the host element in question
         """
-        if self._wet_cells_last[host] == 0 or self._wet_cells_next[host] == 0:
-            return 0
+        if self._has_is_wet:
+            if self._wet_cells_last[host] == 0 or self._wet_cells_next[host] == 0:
+                return 0
         return 1
         
 
@@ -1617,18 +1626,19 @@ cdef class FVCOMDataReader(DataReader):
         self._w_next = self.mediator.get_time_dependent_variable_at_next_time_index('ww', (self._n_siglay, self._n_elems), DTYPE_FLOAT)
         
         # Update memory views for kh
-        if self.config.getboolean("OCEAN_CIRCULATION_MODEL", "has_Kh"):
+        if self._has_Kh:
             self._kh_last = self.mediator.get_time_dependent_variable_at_last_time_index('kh', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)
             self._kh_next = self.mediator.get_time_dependent_variable_at_next_time_index('kh', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)
 
         # Update memory views for viscofh
-        if self.config.getboolean("OCEAN_CIRCULATION_MODEL", "has_Ah"):
+        if self._has_Ah:
             self._viscofh_last = self.mediator.get_time_dependent_variable_at_last_time_index('viscofh', (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
             self._viscofh_next = self.mediator.get_time_dependent_variable_at_next_time_index('viscofh', (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
 
         # Update memory views for wet cells
-        self._wet_cells_last = self.mediator.get_time_dependent_variable_at_last_time_index('wet_cells', (self._n_elems), DTYPE_INT)
-        self._wet_cells_next = self.mediator.get_time_dependent_variable_at_next_time_index('wet_cells', (self._n_elems), DTYPE_INT)
+        if self._has_is_wet:
+            self._wet_cells_last = self.mediator.get_time_dependent_variable_at_last_time_index('wet_cells', (self._n_elems), DTYPE_INT)
+            self._wet_cells_next = self.mediator.get_time_dependent_variable_at_next_time_index('wet_cells', (self._n_elems), DTYPE_INT)
 
     cdef void _get_phi(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos,
             DTYPE_INT_t host, DTYPE_FLOAT_t phi[N_VERTICES]) except *:
