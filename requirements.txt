@@ -1,17 +1,16 @@
-# Template requirements file
-# --------------------------
-#
-# TODO Need to establish version restrictions.
+--index-url https://pypi.python.org/simple/
 
-# For running PyLag
+cython
 numpy
 netCDF4
-natsort
+mpi4py
+ConfigParser2
 progressbar
+natsort
 
-# For running unit tests
+# For testing
 nose
 
-# For building PyLag's documentation
-sphinx-rtd-theme
+# For building the documentation
+sphinx_rtd_theme
 
