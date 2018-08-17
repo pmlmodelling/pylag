@@ -11,11 +11,22 @@ Installation
 Requirements
 ------------
 
-*PyLag* has been developed and tested within a UNIX/Linux environment. The following instructions assume the user is working within a similar environment.
+*PyLag* has been developed and tested within a UNIX/Linux environment, and the following instructions assume the user is working within a similar environment. The code is distributed in two distinct packages. The first contains the *PyLag* source code; the second a set of tools to help with setting up and analysing *PyLag* simulations. The two packages have separate dependencies that are described below.
 
-The code is distributed in two distinct packages. The first contains the *PyLag* source code; the second a set of tools to help with setting up and analysing *PyLag* simulations. At the time of writing, *PyLag* itself will only work with the `Python 2.7 interpreter <https://www.python.org/download/releases/2.7>`_. In Linux, *Python 2.7* is typically available by default. *PyLag-tools* supports the `Python 3.6 interpreter <https://www.python.org/download/releases/3.6>`_, which is recommended for all analysis work that leaverages *PyLag-tools'* functionality.
+PyLag
+`````
 
-Parts of *PyLag's* code have been written in `Cython <http://www.cython.org>`_. If *Cython* is not installed already, you can install it using your package manager. For example, in *Fedora* you can install *Cython* using the following command:
+At the time of writing, *PyLag* itself will only work with the `Python 2.7 interpreter <https://www.python.org/download/releases/2.7>`_. The *PyLag* package has a small number of direct dependencies, including:
+
+* Cython
+* NumPy
+* netCDF4
+* mpi4py
+* ConfigParser
+* natsort
+* progressbar
+
+Both packages include dependencies that are sometime best installed prior to the installation of the package itself. *PyLag* has a dependency on `Cython <http://www.cython.org>`_, as several modules have been implemented *Cython*. If *Cython* is not installed already, you can install it using your package manager. For example, in *Fedora* you can install *Cython* using the following command:
 
 .. code-block:: bash
 
@@ -23,6 +34,15 @@ Parts of *PyLag's* code have been written in `Cython <http://www.cython.org>`_. 
 
 .. note::
     Different operating systems use different package managers. Recent releases of `Fedora <https://getfedora.org/>`_ use the `dnf package manager <https://fedoraproject.org/wiki/Dnf>`_ which is the successor to `yum <https://fedoraproject.org/wiki/Yum>`_. `ubuntu <http://www.ubuntu.com/>`_ uses the `apt <https://wiki.debian.org/Apt>`_ package manager .
+
+
+
+Alternatively, Cython
+
+PyLag-tools
+```````````
+
+*PyLag-tools* supports the `Python 3.6 interpreter <https://www.python.org/download/releases/3.6>`_, which is recommended for all analysis work that leaverages *PyLag-tools'* functionality.
 
 The easiest way to install *PyLag* and *PyLag-tools* is using the python package manager `pip <https://pip.pypa.io/en/stable/>`_, which should automatically handle all python dependencies. If *pip* is not installed already, you can install it using your package manager.
 
