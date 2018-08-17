@@ -6,45 +6,7 @@ Installation
 .. note::
     Before you can download or clone PyLag's source code, you must first register to use PyLag by following the instructions `here <http://www.pml.ac.uk/Modelling_at_PML/Access_Code>`_.
 
-.. _requirements:
-
-Requirements
-------------
-
-*PyLag* has been developed and tested within a UNIX/Linux environment, and the following instructions assume the user is working within a similar environment. The code is distributed in two distinct packages. The first contains the *PyLag* source code; the second a set of tools to help with setting up and analysing *PyLag* simulations. The two packages have separate dependencies that are described below.
-
-PyLag
-`````
-
-At the time of writing, *PyLag* itself will only work with the `Python 2.7 interpreter <https://www.python.org/download/releases/2.7>`_. The *PyLag* package has a small number of direct dependencies, including:
-
-* Cython
-* NumPy
-* netCDF4
-* mpi4py
-* ConfigParser
-* natsort
-* progressbar
-
-Both packages include dependencies that are sometime best installed prior to the installation of the package itself. *PyLag* has a dependency on `Cython <http://www.cython.org>`_, as several modules have been implemented *Cython*. If *Cython* is not installed already, you can install it using your package manager. For example, in *Fedora* you can install *Cython* using the following command:
-
-.. code-block:: bash
-
-    $ sudo dnf install -y python2-cython
-
-.. note::
-    Different operating systems use different package managers. Recent releases of `Fedora <https://getfedora.org/>`_ use the `dnf package manager <https://fedoraproject.org/wiki/Dnf>`_ which is the successor to `yum <https://fedoraproject.org/wiki/Yum>`_. `ubuntu <http://www.ubuntu.com/>`_ uses the `apt <https://wiki.debian.org/Apt>`_ package manager .
-
-
-
-Alternatively, Cython
-
-PyLag-tools
-```````````
-
-*PyLag-tools* supports the `Python 3.6 interpreter <https://www.python.org/download/releases/3.6>`_, which is recommended for all analysis work that leaverages *PyLag-tools'* functionality.
-
-The easiest way to install *PyLag* and *PyLag-tools* is using the python package manager `pip <https://pip.pypa.io/en/stable/>`_, which should automatically handle all python dependencies. If *pip* is not installed already, you can install it using your package manager.
+*PyLag* has been developed and tested within a UNIX/Linux environment, and the following instructions assume the user is working within a similar environment. The code is distributed in two distinct packages. The first contains the *PyLag* source code; the second a set of tools to help with setting up and analysing *PyLag* simulations.
 
 .. _download:
 
@@ -91,39 +53,94 @@ With SSH access setup, you can now clone the *PyLag* repository:
 
 If you don't want to use git to access the code, you can always grab a copy by downloading and unpacking tarballs of the two repositories.
 
+
 .. _pipinstall:
 
 Installation using pip
 ----------------------
 
-The cleanest way to install *PyLag* and *PyLag-tools* is by using  `virtualenv <https://virtualenv.pypa.io/en/stable/>`_ to create two new virtual environments. However, PyLag can also be installed locally by passing the *--user* flag to *pip*. The use of *sudo* -- which would allow *PyLag* and *PyLag-tools* to be installed at the system level -- is strongly discouraged.
+The cleanest way to install *PyLag* and *PyLag-tools* is by using  `virtualenv <https://virtualenv.pypa.io/en/stable/>`_ to create two new virtual environments, then using the python package manager `pip <https://pip.pypa.io/en/stable/>`_ to install the two packages within the new virtual environments. However, both packages can also be installed locally by passing the `--user` flag to *pip*. The use of *sudo* -- which would allow *PyLag* and *PyLag-tools* to be installed at the system level -- is strongly discouraged.
 
-To perform a local installation of *PyLag* given the above directory structure type:
+PyLag
+`````
+
+At the time of writing, *PyLag* itself will only work with the `Python 2.7 interpreter <https://www.python.org/download/releases/2.7>`_. As this is still the default interpreter on most common Linux distributions, it typically won't need installing separately. To begin installing *PyLag*, use `virtualenvwrapper <https://virtualenvwrapper.readthedocs.io/en/latest/>`_ to configure a new virtual environment:
+
+.. code-block:: bash
+
+    $ mkvirtualenv -p /usr/bin/python --no-site-packages pylag
+
+Python includes a dependency on the python package `MPI for Python <https://mpi4py.readthedocs.io/en/stable/>`_, which is used to facilitate running particle tracking simulations in parallel. To install *MPI for Python*, it is first necessary to ensure that you have a working MPI implementation on your system, and that all paths to MPI libraries and header files have been correctly set. You must use your Linux package manager to install a working MPI Implementation. On my laptop running Fedora 27, the following commands suffice:
+
+.. code-block:: bash
+
+    sudo dnf install -y mpich mpich-devel python2-mpich
+
+Alternatively, if it is available via your package manager, you can install `python2-mpi4py` at the system level, which should automatically install all necessary MPI dependencies.
+
+On my machine, *mpich* is enabled using the module command, which correctly sets environmental paths to the *mpich* MPI libraries and header files:
+
+.. code-block:: bash
+
+   module load mpi/mpich-x86_64
+
+.. note::
+    If this fails, try using `module avail` to list available MPI modules.
+
+With MPI support enabled, it is now possible to install *PyLag* within the new virtual environment:
 
 .. code-block:: bash
 
     $ cd $HOME/code/git/PyLag/PyLag
-    $ pip install --user -e .
+    $ pip install -r requirements.txt
+    $ pip install .
 
-*pip* will automatically search through *PyLag's* *Python* dependencies and try to install these if they are not found. To install PyLag-tools locally type:
-
-.. code-block:: bash
-
-    $ cd $HOME/code/git/PyLag/PyLag-tools
-    $ pip3 install --user -e .
-
-
-.. note::
-    If you experience trouble invoking pip3 directly, try typing `$ python3 -m pip install --user -e .` instead.
-
-
-You can check that PyLag and PyLag-tools have been successfully installed by running the
-commands:
+To test that *PyLag* has been correctly installed, type:
 
 .. code-block:: bash
 
     $ python -c "import pylag"
-    $ python3 -c "import pylagtools"
+
+which should exit without error. To install *PyLag* locally is arguably easier, since if *MPI for Python* is installed at the system level, you will not have to worry about updating your paths for MPI (this is required in the virtual environment, since *MPI for Python* is built from source after being pulled down from *PyPI*).If you do install *PyLag* locally, simply pass the `--user` flag to both invocations of `pip install`.
 
 
-which should exit without error.
+PyLag-tools
+```````````
+
+The installation of *PyLag-tools* within a new virtual environment is complicated by the fact that *Pylag* leverages `basemap <https://matplotlib.org/basemap/>`_ to map certain outputs, and that *basemap* is not available via PyPi and must be installed manually. While *basemap* can be installed within a new virtual environment, it is typically not a one step process. If *PyLag-tools* is installed within a new virtual environment and *basemap* is not available, then all functionality that leverages *basemap* will be disabled. If you would like to use basemap, by far the easiest way to install it is by using your package manager. For example, in Fedora type:
+
+.. code-block:: bash
+
+    $ sudo dnf install python3-basemap
+
+where we have specified that we want the *Python3* version.
+
+.. note::
+    Matploblib's *basemap* is being phased out in favour of `Cartopy <https://matplotlib.org/basemap/users/intro.html>`_. In the future, *PyLag-tools* will transition to using *Cartopy* too.
+
+Then, to use *basemap's* functionality within a new virtual environment, you can tell virtualenv to add system packages to your *Python* path:
+
+.. code-block:: bash
+
+    $ mkvirtualenv -p /usr/bin/python3 --system-site-packages pylagtools
+
+You can then install *PyLag-tools* using the following commands:
+
+.. code-block:: bash
+
+    $ cd $HOME/code/git/PyLag/PyLag-tools
+    $ pip install -r requirements.txt
+
+To test that *PyLag-tools* has been correctly installed, type:
+
+.. code-block:: bash
+
+    $ python -c "import pylagtools"
+
+within the virtual environment. The command should exit without error. As with *PyLag*, to install *PyLag-tools* locally you just need to pass the `--user` flag to `pip install`.
+
+.. note::
+    *PyLag-tools* leverages the functionality of a package called `PyQt-fit <https://pyqt-fit.readthedocs.io/en/latest/index.html>`_, which has some nice features with respect to kernel density estimators that I have not found elsewhere. However, the package appears to no longer be maintained and the version available from PyPI has fallen out of sync with more recent releases of packages it depends on resulting in it failing to build out of the box. For these reasons, the version of *PyQt-fit* used by *PyLag-tools* is a fork of the original project code, with a couple of small fixes that allow it to be installed.
+
+.. note::
+    If you attempt to install *PyLag-tools* using a *Python2* interpreter, you will typically hit upon an error that arises in the package `PyFVCOM <https://gitlab.ecosystem-modelling.pml.ac.uk/fvcom/pyfvcom>`_. PyLag-tools leverages some of *PyFVCOM's* functionality for working with *FVCOM* datasets, and *PyFVCOM* has stopped supporting the *Python2* interpreter.
