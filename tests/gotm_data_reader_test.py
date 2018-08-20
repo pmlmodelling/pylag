@@ -60,8 +60,8 @@ class GOTMDataReader_test(TestCase):
     def setUp(self):
         # Create config
         config = SafeConfigParser()
-        config.add_section("NUMERICS")
-        config.set('NUMERICS', 'vertical_interpolation_scheme', 'linear')
+        config.add_section("OCEAN_CIRCULATION_MODEL")
+        config.set('OCEAN_CIRCULATION_MODEL', 'vertical_interpolation_scheme', 'linear')
         
         # Create mediator
         mediator = MockGOTMMediator()
