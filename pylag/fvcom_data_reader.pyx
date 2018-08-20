@@ -440,7 +440,12 @@ cdef class FVCOMDataReader(DataReader):
         x1_indices = [0,1,2]
         x2_indices = [1,2,0]
         nbe_indices = [2,0,1]
-        
+
+        # Array indices
+        cdef int x1_idx
+        cdef int x2_idx
+        cdef int nbe_idx
+
         # Construct arrays to hold the coordinates of the particle's previous
         # position vector and its new position vector
         x3[0] = xpos_old; x3[1] = ypos_old
@@ -462,8 +467,11 @@ cdef class FVCOMDataReader(DataReader):
             # This keeps track of the element currently being checked
             current_elem = elem
 
-            # Loop over all sides of the element to check for crossings
-            for x1_idx, x2_idx, nbe_idx in zip(x1_indices, x2_indices, nbe_indices):
+            # Loop over all sides of the element to find the land boundary the element crossed
+            for i in xrange(3):
+                x1_idx = x1_indices[i]
+                x2_idx = x2_indices[i]
+                nbe_idx = nbe_indices[i]
 
                 # Test to avoid checking the side the pathline just crossed
                 if last_elem == self._nbe[nbe_idx, elem]:
