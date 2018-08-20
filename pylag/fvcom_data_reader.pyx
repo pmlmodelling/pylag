@@ -623,8 +623,8 @@ cdef class FVCOMDataReader(DataReader):
         cdef int vertex # Vertex identifier
 
         # Intermediate arrays/variables
-        cdef DTYPE_FLOAT_t x_tri[N_VERTICES]
-        cdef DTYPE_FLOAT_t y_tri[N_VERTICES]
+        cdef DTYPE_FLOAT_t x_tri[3]
+        cdef DTYPE_FLOAT_t y_tri[3]
 
         # 2D position vectors for the end points of the element's side
         cdef DTYPE_FLOAT_t x1[2]
@@ -641,7 +641,12 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_INT_t x1_indices[3]
         cdef DTYPE_INT_t x2_indices[3]
         cdef DTYPE_INT_t nbe_indices[3]
-        
+
+        # Array indices
+        cdef int x1_idx
+        cdef int x2_idx
+        cdef int nbe_idx
+
         x1_indices = [0,1,2]
         x2_indices = [1,2,0]
         nbe_indices = [2,0,1]
@@ -657,19 +662,25 @@ cdef class FVCOMDataReader(DataReader):
             x_tri[i] = self._x[vertex]
             y_tri[i] = self._y[vertex]
 
-        # Loop over all sides of the element to check for crossings
-        for x1_idx, x2_idx, nbe_idx in zip(x1_indices, x2_indices, nbe_indices):
-            # End coordinates for the side
-            x1[0] = x_tri[x1_idx]; x1[1] = y_tri[x1_idx]
-            x2[0] = x_tri[x2_idx]; x2[1] = y_tri[x2_idx]
-            
-            try:
-                get_intersection_point(x1, x2, x3, x4, xi)
-                return x1[0], x1[1], x2[0], x2[1], xi[0], xi[1]
-            except ValueError:
-                continue
-        
-        raise RuntimeError('Particle path does not intersect any side of the given element.')
+        # Loop over all sides of the element to find the land boundary the element crossed
+        for i in xrange(3):
+            x1_idx = x1_indices[i]
+            x2_idx = x2_indices[i]
+            nbe_idx = nbe_indices[i]
+
+            if self._nbe[nbe_idx, last_host] == -1:
+
+                # End coordinates for the side
+                x1[0] = x_tri[x1_idx]; x1[1] = y_tri[x1_idx]
+                x2[0] = x_tri[x2_idx]; x2[1] = y_tri[x2_idx]
+
+                try:
+                    get_intersection_point(x1, x2, x3, x4, xi)
+                    return x1[0], x1[1], x2[0], x2[1], xi[0], xi[1]
+                except ValueError:
+                    continue
+
+        raise RuntimeError('Failed to calculate boundary intersection.')
 
     cdef set_local_coordinates(self, Particle *particle):
         """ Set local coordinates
