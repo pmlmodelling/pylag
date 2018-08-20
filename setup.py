@@ -150,7 +150,8 @@ extensions = [makeExtension(name, file_type) for name in ext_names]
 # Cythonize if working with pyx files
 if file_type == '.pyx':
     if build_type == 'prod':
-        ext_modules = cythonize(extensions, include_path=['include'])
+        ext_modules = cythonize(extensions, include_path=['include'],
+              compiler_directives={'boundscheck': False})
     elif build_type == 'prof':
         ext_modules = cythonize(extensions, include_path=['include'],
               compiler_directives={'profile': True, 'linetrace': True})
