@@ -112,6 +112,7 @@ class FVCOMDataReader_test(TestCase):
         config.add_section("OCEAN_CIRCULATION_MODEL")
         config.set('OCEAN_CIRCULATION_MODEL', 'has_Kh', 'True')
         config.set('OCEAN_CIRCULATION_MODEL', 'has_Ah', 'True')
+        config.set('OCEAN_CIRCULATION_MODEL', 'has_is_wet', 'True')
 
         # Create mediator
         mediator = MockFVCOMMediator()
@@ -375,7 +376,7 @@ class FVCOMDataReader_test(TestCase):
         time = 0.0
 
         diffusivity_gradient = cwrappers.get_vertical_eddy_diffusivity_derivative(self.data_reader, time, xpos, ypos, zpos, host)
-        test.assert_almost_equal(diffusivity_gradient, -0.004166666666667)
+        test.assert_almost_equal(diffusivity_gradient, -0.0026042)
 
     def test_get_horizontal_eddy_viscosity(self):
         xpos = 365751.7
