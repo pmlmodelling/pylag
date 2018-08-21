@@ -11,7 +11,7 @@ from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 from libcpp.vector cimport vector
 
 # PyLag cython imports
-from particle cimport Particle
+from particle cimport Particle, to_string
 from pylag.data_reader cimport DataReader
 cimport pylag.interpolation as interp
 from pylag.math cimport int_min, float_min, get_intersection_point
@@ -768,7 +768,18 @@ cdef class FVCOMDataReader(DataReader):
 
                 return
         
-        raise ValueError("Particle zpos (={:0.20f}) not found! h = {:0.20f}, zeta = {:0.20f}, sigma = {:0.20f}.".format(particle.zpos, h, zeta, sigma))
+        # The particle has not been found! Retrieve some (hopefully useful) 
+        # diagnostic data exit
+        s = to_string(particle)
+        msg = "ERROR encountered at time {} \n\n"\
+              "Failed to locat particle within FVCOMs vertical grid. \n"\
+              "With h = {:0.20f}, zeta = {:0.20f} and sigma = {:0.20f}. \n"\
+              "The following information may be used to study the failure in \n"\
+              "more detail. \n\n"\
+              "{}".format(time, h, zeta, sigma, s)
+        print msg
+        
+        raise ValueError("Failed to locate particle within FVCOM's vertical grid")
 
     cdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, Particle *particle):
         """ Returns the bottom depth in cartesian coordinates
