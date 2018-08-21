@@ -135,7 +135,7 @@ cdef class StdNumMethod(NumMethod):
 
             counter = 0
             while flag == LAND_BDY_CROSSED:
-                if counter == 2:
+                if counter == 10:
                     flag = BDY_ERROR
                     break
 
@@ -327,7 +327,7 @@ cdef class OS0NumMethod(NumMethod):
             # First check for a land boundary crossing
             counter = 0
             while flag == LAND_BDY_CROSSED:
-                if counter == 2:
+                if counter == 10:
                     flag = BDY_ERROR
                     break
 
@@ -395,7 +395,7 @@ cdef class OS0NumMethod(NumMethod):
                 # Check for a land boundary crossing
                 counter = 0
                 while flag == LAND_BDY_CROSSED:
-                    if counter == 2:
+                    if counter == 10:
                         flag = BDY_ERROR
                         break
 
@@ -568,7 +568,7 @@ cdef class OS1NumMethod(NumMethod):
             # First check for a land boundary crossing
             counter = 0
             while flag == LAND_BDY_CROSSED:
-                if counter == 2:
+                if counter == 10:
                     flag = BDY_ERROR
                     break
 
@@ -633,7 +633,7 @@ cdef class OS1NumMethod(NumMethod):
             # First check for a land boundary crossing
             counter = 0
             while flag == LAND_BDY_CROSSED:
-                if counter == 2:
+                if counter == 10:
                     flag = BDY_ERROR
                     break
 
@@ -695,7 +695,7 @@ cdef class OS1NumMethod(NumMethod):
             # First check for a land boundary crossing
             counter = 0
             while flag == LAND_BDY_CROSSED:
-                if counter == 2:
+                if counter == 10:
                     flag = BDY_ERROR
                     break
 
@@ -878,7 +878,7 @@ cdef class AdvRK42DItMethod(ItMethod):
             # Check for land boundary crossing
             counter = 0
             while flag == LAND_BDY_CROSSED:
-                if counter == 2:
+                if counter == 10:
                     flag = BDY_ERROR
                     break
 
@@ -918,7 +918,7 @@ cdef class AdvRK42DItMethod(ItMethod):
             # Check for land boundary crossing
             counter = 0
             while flag == LAND_BDY_CROSSED:
-                if counter == 2:
+                if counter == 10:
                     flag = BDY_ERROR
                     break
 
@@ -957,7 +957,7 @@ cdef class AdvRK42DItMethod(ItMethod):
             # Check for land boundary crossing
             counter = 0
             while flag == LAND_BDY_CROSSED:
-                if counter == 2:
+                if counter == 10:
                     flag = BDY_ERROR
                     break
 
@@ -1090,7 +1090,7 @@ cdef class AdvRK43DItMethod(ItMethod):
             # Check for land boundary crossing
             counter = 0
             while flag == LAND_BDY_CROSSED:
-                if counter == 2:
+                if counter == 10:
                     flag = BDY_ERROR
                     break
 
@@ -1142,7 +1142,7 @@ cdef class AdvRK43DItMethod(ItMethod):
             # Check for land boundary crossing
             counter = 0
             while flag == LAND_BDY_CROSSED:
-                if counter == 2:
+                if counter == 10:
                     flag = BDY_ERROR
                     break
 
@@ -1194,7 +1194,7 @@ cdef class AdvRK43DItMethod(ItMethod):
             # Check for land boundary crossing
             counter = 0
             while flag == LAND_BDY_CROSSED:
-                if counter == 2:
+                if counter == 10:
                     flag = BDY_ERROR
                     break
 
