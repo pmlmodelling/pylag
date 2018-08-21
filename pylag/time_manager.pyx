@@ -86,7 +86,7 @@ cdef class TimeManager(object):
             self._datetime_end = datetime.datetime.strptime(datetime_end_str, "%Y-%m-%d %H:%M:%S")
         else:
             duration_in_days = self._config.getfloat("SIMULATION", "duration_in_days")
-            self._datetime_end = self._datetime_start + datetime.timedelta(duration_in_days)
+            self._datetime_end = self._datetime_start + datetime.timedelta(days=duration_in_days)
 
         if self._datetime_end <= self._datetime_start:
             raise ValueError("Invalid end time. The specified end time ({}) is before the simulation start "
