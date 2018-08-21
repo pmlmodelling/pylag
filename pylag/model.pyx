@@ -106,7 +106,7 @@ cdef class OPTModel:
         """
         self.data_reader.read_data(time)
 
-    def seed(self, time=None):
+    def seed(self, time):
         """Set particle positions equal to those of the particle seed.
         
         Create the particle seed if it has not been created already. Make
@@ -117,35 +117,70 @@ cdef class OPTModel:
         time : float
             The current time.
         """
+        # Grid boundary limits
+        cdef DTYPE_FLOAT_t zmin
+        cdef DTYPE_FLOAT_t zmax
+        
+        # Particle raw pointer
+        cdef Particle* particle_ptr
+
         if self.particle_seed_smart_ptrs is None:
-            self._create_seed(time)
+            self._create_seed()
 
         # Destroy the current active particle set and all pointers to it
         self.particle_smart_ptrs = []
         self.particle_ptrs.clear()
 
+        # Set all time dependent quantities while adding seed particles to the
+        # active particle set
         for particle_seed_smart_ptr in self.particle_seed_smart_ptrs:
             particle_smart_ptr = copy(particle_seed_smart_ptr)
-            self.particle_smart_ptrs.append(particle_smart_ptr)
-            self.particle_ptrs.push_back(particle_smart_ptr.get_ptr())
+            particle_ptr = particle_smart_ptr.get_ptr()
+            
+            # Set z depending on the specified coordinate system
+            zmin = self.data_reader.get_zmin(time, particle_ptr)
+            zmax = self.data_reader.get_zmax(time, particle_ptr)
+            if self.config.get("SIMULATION", "depth_coordinates") == "depth_below_surface":
+                # z_temp is given as the depth below the moving free surface
+                # Use this and zeta (zmax) to compute z
+                particle_ptr.zpos = particle_ptr.zpos + zmax
 
-    def _create_seed(self, time):
+            elif self.config.get("SIMULATION", "depth_coordinates") == "height_above_bottom":
+                # z_temp is given as the height above the sea floor. Use this
+                # and h (zmin) to compute z
+                particle_ptr.zpos = particle_ptr.zpos + zmin
+
+            # Check that the given depth is valid
+            if particle_ptr.zpos < zmin:
+                raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(particle_ptr.zpos, zmin))
+            elif particle_ptr.zpos > zmax:
+                raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(particle_ptr.zpos, zmax))
+
+            # Find the host z layer
+            self.data_reader.set_vertical_grid_vars(time, particle_ptr)
+
+            # Determine if the host element is presently dry
+            if self.data_reader.is_wet(time, particle_ptr.host_horizontal_elem) == 1:
+                particle_ptr.is_beached = 0
+            else:
+                particle_ptr.is_beached = 1
+            
+            self.particle_smart_ptrs.append(particle_smart_ptr)
+            self.particle_ptrs.push_back(particle_ptr)
+
+    def _create_seed(self):
         """Create the particle seed.
         
-        Create the particle seed using the supplied arguments. Initialise
-        the active particle set using seed particles. A separate copy of the 
-        particle seed is stored so that the model can be reseeded at a later 
-        time, as may be required during ensemble simulations.
-
-        Parameters:
-        -----------
-        time : float
-            The current time.        
-        """
-        # Grid boundary limits
-        cdef DTYPE_FLOAT_t zmin
-        cdef DTYPE_FLOAT_t zmax
+        Create the particle seed. The particle seed is distinct from the active
+        particle set, whose positions are updated throughout the model
+        simulation. The separation allows the model to reseeded at later times;
+        for example, during an ensemble simulation.
         
+        Note that while zpos is set here, this value is ultimately overwritten
+        in seed(), which accounts for the current position of the moving free
+        surface and the specified depth coordinates. Other time dependent
+        quantities (e.g. is_beached) are also set in seed().
+        """
         # Particle raw pointer
         cdef Particle* particle_ptr
         
@@ -155,7 +190,7 @@ cdef class OPTModel:
         guess = None
         particles_in_domain = 0
         id = 0
-        for group, x, y, z_temp in zip(self._group_ids, self._x_positions, self._y_positions, self._z_positions):
+        for group, x, y, z in zip(self._group_ids, self._x_positions, self._y_positions, self._z_positions):
             # Unique particle ID.
             id += 1
 
@@ -175,40 +210,12 @@ cdef class OPTModel:
 
                 # Create particle
                 particle_seed_smart_ptr = ParticleSmartPtr(group_id=group,
-                        xpos=x, ypos=y, host=host_horizontal_elem,
+                        xpos=x, ypos=y, zpos=z, host=host_horizontal_elem,
                         in_domain=in_domain, id=id)
                 particle_ptr = particle_seed_smart_ptr.get_ptr()
 
                 # Set local coordinates
                 self.data_reader.set_local_coordinates(particle_ptr)
-
-                # Set z depending on the specified coordinate system
-                zmin = self.data_reader.get_zmin(time, particle_ptr)
-                zmax = self.data_reader.get_zmax(time, particle_ptr)
-                if self.config.get("SIMULATION", "depth_coordinates") == "depth_below_surface":
-                    # z_temp is given as the depth below the moving free surface
-                    # Use this and zeta (zmax) to compute z
-                    particle_ptr.zpos = z_temp + zmax
-                    
-                elif self.config.get("SIMULATION", "depth_coordinates") == "height_above_bottom":
-                    # z_temp is given as the heigh above the sea floor. Use this
-                    # and h (zmin) to compute z
-                    particle_ptr.zpos = z_temp + zmin
-                
-                # Check that the given depth is valid
-                if particle_ptr.zpos < zmin:
-                    raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(particle_ptr.zpos,zmin))
-                elif particle_ptr.zpos > zmax:
-                    raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(particle_ptr.zpos,zmax))
-
-                # Find the host z layer
-                self.data_reader.set_vertical_grid_vars(time, particle_ptr)
-                
-                # Determine if the host element is presently dry
-                if self.data_reader.is_wet(time, host_horizontal_elem) == 1:
-                    particle_ptr.is_beached = 0
-                else:
-                    particle_ptr.is_beached = 1
 
                 # Add particle to the particle set
                 self.particle_seed_smart_ptrs.append(particle_seed_smart_ptr)
