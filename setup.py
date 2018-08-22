@@ -180,7 +180,7 @@ setup(name="PyLag",
           'Programming Language :: Python :: 2.7',
           'Operating System :: UNIX',
       ],
-      packages=["pylag", "pylag.parallel"],
+      packages=["pylag", "pylag.parallel", "pylag.tests"],
       ext_modules=ext_modules,
       install_requires=[
           "cython",
