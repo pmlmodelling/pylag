@@ -2,12 +2,12 @@ from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 # PyLag cimports
 from data_reader cimport DataReader
+from particle cimport Particle
 
 cdef class HorizBoundaryConditionCalculator:
 
-    cpdef apply(self, DataReader data_reader, DTYPE_FLOAT_t x_old,
-            DTYPE_FLOAT_t y_old, DTYPE_FLOAT_t x_new, DTYPE_FLOAT_t y_new,
-            DTYPE_INT_t last_host)
+    cdef apply(self, DataReader data_reader, Particle *particle_old,
+            Particle *particle_new)
 
 cdef class VertBoundaryConditionCalculator:
 
