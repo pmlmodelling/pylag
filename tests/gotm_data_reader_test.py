@@ -86,7 +86,6 @@ class GOTMDataReader_test(TestCase):
         time = 0.0
         self.data_reader.read_data(time)
         particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, host=host)
-        self.data_reader.set_local_coordinates_wrapper(particle)
         bathy = self.data_reader.get_zmin_wrapper(time, particle)
         test.assert_almost_equal(bathy, -4.0)
 
@@ -98,21 +97,18 @@ class GOTMDataReader_test(TestCase):
         time = 0.0
         self.data_reader.read_data(time)
         particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, host=host)
-        self.data_reader.set_local_coordinates_wrapper(particle)
         zeta = self.data_reader.get_zmax_wrapper(time, particle)
         test.assert_almost_equal(zeta, 0.0)
  
         time = 0.5
         self.data_reader.read_data(time)
         particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, host=host)
-        self.data_reader.set_local_coordinates_wrapper(particle)
         zeta = self.data_reader.get_zmax_wrapper(time, particle)
         test.assert_almost_equal(zeta, 0.0)
 
         time = 1.0
         self.data_reader.read_data(time)
         particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, host=host)
-        self.data_reader.set_local_coordinates_wrapper(particle)
         zeta = self.data_reader.get_zmax_wrapper(time, particle)
         test.assert_almost_equal(zeta, 0.0)
 
@@ -124,10 +120,11 @@ class GOTMDataReader_test(TestCase):
         host = 0
 
         self.data_reader.read_data(time)
-        grid_vars = cwrappers.set_vertical_grid_vars(self.data_reader, time, xpos, ypos, zpos, host)
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
+        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
         
-        test.assert_equal(grid_vars['k_layer'], 2)
-        test.assert_almost_equal(grid_vars['omega_interfaces'], 1.0)
+        test.assert_equal(particle.k_layer, 2)
+        test.assert_almost_equal(particle.omega_interfaces, 1.0)
 
     def test_set_vertical_grid_vars_for_a_particle_on_the_sea_floor(self):
         time = 0.0
@@ -137,10 +134,11 @@ class GOTMDataReader_test(TestCase):
         host = 0
 
         self.data_reader.read_data(time)
-        grid_vars = cwrappers.set_vertical_grid_vars(self.data_reader, time, xpos, ypos, zpos, host)
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
+        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
         
-        test.assert_equal(grid_vars['k_layer'], 0)
-        test.assert_almost_equal(grid_vars['omega_interfaces'], 0.0)
+        test.assert_equal(particle.k_layer, 0)
+        test.assert_almost_equal(particle.omega_interfaces, 0.0)
 
 
     def test_set_vertical_grid_vars_for_a_particle_in_the_surface_boundary_layer(self):
@@ -151,10 +149,11 @@ class GOTMDataReader_test(TestCase):
         host = 0
 
         self.data_reader.read_data(time)
-        grid_vars = cwrappers.set_vertical_grid_vars(self.data_reader, time, xpos, ypos, zpos, host)
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
+        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
         
-        test.assert_equal(grid_vars['k_layer'], 2)
-        test.assert_almost_equal(grid_vars['omega_interfaces'], 0.5)
+        test.assert_equal(particle.k_layer, 2)
+        test.assert_almost_equal(particle.omega_interfaces, 0.5)
 
     def test_set_vertical_grid_vars_for_a_particle_in_the_bottom_boundary_layer(self):
         time = 0.0
@@ -164,10 +163,11 @@ class GOTMDataReader_test(TestCase):
         host = 0
 
         self.data_reader.read_data(time)
-        grid_vars = cwrappers.set_vertical_grid_vars(self.data_reader, time, xpos, ypos, zpos, host)
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
+        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
         
-        test.assert_equal(grid_vars['k_layer'], 0)
-        test.assert_almost_equal(grid_vars['omega_interfaces'], 0.5)
+        test.assert_equal(particle.k_layer, 0)
+        test.assert_almost_equal(particle.omega_interfaces, 0.5)
 
     def test_set_vertical_grid_vars_for_a_particle_in_the_middle_of_the_water_column(self):
         time = 0.0
@@ -177,10 +177,11 @@ class GOTMDataReader_test(TestCase):
         host = 0
 
         self.data_reader.read_data(time)
-        grid_vars = cwrappers.set_vertical_grid_vars(self.data_reader, time, xpos, ypos, zpos, host)
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
+        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
         
-        test.assert_equal(grid_vars['k_layer'], 1)
-        test.assert_almost_equal(grid_vars['omega_interfaces'], 0.5)
+        test.assert_equal(particle.k_layer, 1)
+        test.assert_almost_equal(particle.omega_interfaces, 0.5)
 
 
     def test_get_vertical_eddy_diffusivity(self):

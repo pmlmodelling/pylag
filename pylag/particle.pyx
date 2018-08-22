@@ -66,6 +66,38 @@ cdef class ParticleSmartPtr:
     def host_horizontal_elem(self):
         return self._particle.host_horizontal_elem
 
+    @property
+    def omega_interfaces(self):
+        return self._particle.omega_interfaces
+
+    @property
+    def omega_layers(self):
+        return self._particle.omega_layers
+
+    @property
+    def in_domain(self):
+        return self._particle.in_domain
+
+    @property
+    def is_beached(self):
+        return self._particle.is_beached
+
+    @property
+    def k_layer(self):
+        return self._particle.k_layer
+
+    @property
+    def k_lower_layer(self):
+        return self._particle.k_lower_layer
+
+    @property
+    def k_upper_layer(self):
+        return self._particle.k_upper_layer
+
+    @property
+    def in_vertical_boundary_layer(self):
+        return self._particle.in_vertical_boundary_layer
+
 cdef ParticleSmartPtr copy(ParticleSmartPtr particle_smart_ptr):
     """ Create a copy of a ParticleSmartPtr object
     
