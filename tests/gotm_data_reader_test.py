@@ -191,19 +191,25 @@ class GOTMDataReader_test(TestCase):
         time = 0.0
         zpos = -2.0
         self.data_reader.read_data(time)
-        diffusivity = cwrappers.get_vertical_eddy_diffusivity(self.data_reader, time, xpos, ypos, zpos, host)
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
+        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        diffusivity = self.data_reader.get_vertical_eddy_diffusivity_wrapper(time, particle)
         test.assert_almost_equal(diffusivity,  1.0)
 
         time = 0.5
         zpos = -2.0
         self.data_reader.read_data(time)
-        diffusivity = cwrappers.get_vertical_eddy_diffusivity(self.data_reader, time, xpos, ypos, zpos, host)
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
+        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        diffusivity = self.data_reader.get_vertical_eddy_diffusivity_wrapper(time, particle)
         test.assert_almost_equal(diffusivity,  1.5)
 
         time = 1.0
         zpos = -2.0
         self.data_reader.read_data(time)
-        diffusivity = cwrappers.get_vertical_eddy_diffusivity(self.data_reader, time, xpos, ypos, zpos, host)
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
+        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        diffusivity = self.data_reader.get_vertical_eddy_diffusivity_wrapper(time, particle)
         test.assert_almost_equal(diffusivity,  2.0)
 
 
@@ -215,7 +221,9 @@ class GOTMDataReader_test(TestCase):
         time = 0.0
         zpos = -2.0
         self.data_reader.read_data(time)
-        diffusivity_gradient = cwrappers.get_vertical_eddy_diffusivity_derivative(self.data_reader, time, xpos, ypos, zpos, host)
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
+        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        diffusivity_gradient = self.data_reader.get_vertical_eddy_diffusivity_derivative_wrapper(time, particle)
         test.assert_almost_equal(diffusivity_gradient, 0.0)
 
         #time = 0.0
@@ -227,6 +235,8 @@ class GOTMDataReader_test(TestCase):
         time = 0.0
         zpos = 0.0
         self.data_reader.read_data(time)
-        diffusivity_gradient = cwrappers.get_vertical_eddy_diffusivity_derivative(self.data_reader, time, xpos, ypos, zpos, host)
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
+        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        diffusivity_gradient = self.data_reader.get_vertical_eddy_diffusivity_derivative_wrapper(time, particle)
         test.assert_almost_equal(diffusivity_gradient, -1.0)
         

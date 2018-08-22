@@ -372,7 +372,10 @@ class FVCOMDataReader_test(TestCase):
 
         zpos = -0.2
         time = 0.0
-        diffusivity = cwrappers.get_vertical_eddy_diffusivity(self.data_reader, time, xpos, ypos, zpos, host)
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        diffusivity = self.data_reader.get_vertical_eddy_diffusivity_wrapper(time, particle)
         test.assert_almost_equal(diffusivity,  0.005)
 
     def test_get_vertical_eddy_diffusivity_derivative(self):
@@ -382,8 +385,10 @@ class FVCOMDataReader_test(TestCase):
 
         zpos = -0.2
         time = 0.0
-
-        diffusivity_gradient = cwrappers.get_vertical_eddy_diffusivity_derivative(self.data_reader, time, xpos, ypos, zpos, host)
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        diffusivity_gradient = self.data_reader.get_vertical_eddy_diffusivity_derivative_wrapper(time, particle)
         test.assert_almost_equal(diffusivity_gradient, -0.0026042)
 
     def test_get_horizontal_eddy_viscosity(self):
@@ -393,8 +398,11 @@ class FVCOMDataReader_test(TestCase):
 
         zpos = -0.1
         time = 0.0
-        diffusivity = cwrappers.get_horizontal_eddy_viscosity(self.data_reader, time, xpos, ypos, zpos, host)
-        test.assert_almost_equal(diffusivity,  0.01)
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        viscosity = self.data_reader.get_horizontal_eddy_viscosity_wrapper(time, particle)
+        test.assert_almost_equal(viscosity,  0.01)
 
     def test_get_horizontal_eddy_viscosity_derivative(self):
         xpos = 365751.7
