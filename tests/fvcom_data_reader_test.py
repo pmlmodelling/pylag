@@ -5,6 +5,7 @@ import datetime
 from ConfigParser import SafeConfigParser
 
 from pylag.fvcom_data_reader import FVCOMDataReader
+from pylag.particle import ParticleSmartPtr
 from pylag import cwrappers
 
 from pylag.mediator import Mediator
@@ -214,7 +215,13 @@ class FVCOMDataReader_test(TestCase):
         host = 0
 
         time = 0.0
-        bathy = cwrappers.get_zmin(self.data_reader, time, xpos, ypos, host)
+        
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, host=host)
+
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        
+        bathy = self.data_reader.get_zmin_wrapper(time, particle)
+        
         test.assert_almost_equal(bathy, -11.0)
 
     def test_get_zmax(self):
@@ -223,11 +230,15 @@ class FVCOMDataReader_test(TestCase):
         host = 0
         
         time = 0.0
-        zeta = cwrappers.get_zmax(self.data_reader, time, xpos, ypos, host)
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        zeta = self.data_reader.get_zmax_wrapper(time, particle)
         test.assert_almost_equal(zeta, 1.0)
         
         time = 1800.0
-        zeta = cwrappers.get_zmax(self.data_reader, time, xpos, ypos, host)
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        zeta = self.data_reader.get_zmax_wrapper(time, particle)
         test.assert_almost_equal(zeta, 1.5)
 
     def test_set_vertical_grid_vars_for_a_particle_on_the_sea_surface(self):
