@@ -133,7 +133,7 @@ cdef class StdNumMethod(NumMethod):
         _particle_copy.host_horizontal_elem = host
         
         if flag == LAND_BDY_CROSSED:
-                flag = self._horiz_bc_calculator.apply(data_reader, particle, &_particle_copy)
+            flag = self._horiz_bc_calculator.apply(data_reader, particle, &_particle_copy)
 
         # Second check for an open boundary crossing
         if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
