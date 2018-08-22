@@ -8,8 +8,8 @@ from pylag.math cimport inner_product
 
 cdef class HorizBoundaryConditionCalculator:
 
-     cdef apply(self, DataReader data_reader, Particle *particle_old,
-                Particle *particle_new):
+     cdef DTYPE_INT_t apply(self, DataReader data_reader, Particle *particle_old,
+                            Particle *particle_new) except INT_ERR:
         raise NotImplementedError
 
 cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator):
@@ -21,12 +21,12 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
         
         """
         
-        self.apply(data_reader, particle_old.get_ptr(), particle_new.get_ptr())
+        flag = self.apply(data_reader, particle_old.get_ptr(), particle_new.get_ptr())
         
         return
 
-    cdef apply(self, DataReader data_reader, Particle *particle_old,
-                Particle *particle_new):
+    cdef DTYPE_INT_t apply(self, DataReader data_reader, Particle *particle_old,
+               Particle *particle_new) except INT_ERR:
         """Apply reflecting boundary conditions
         
         The algorithm computes reflection vectors for particles given
