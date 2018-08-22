@@ -62,6 +62,10 @@ cdef class DataReader:
     cdef get_vertical_velocity(self, DTYPE_FLOAT_t time, Particle *particle):
         raise NotImplementedError
 
+    def get_horizontal_eddy_viscosity_wrapper(self, DTYPE_FLOAT_t time,
+                                              ParticleSmartPtr particle):
+        return self.get_horizontal_eddy_viscosity(time, particle.get_ptr())
+
     cdef get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
             Particle *particle):
         raise NotImplementedError
@@ -70,10 +74,18 @@ cdef class DataReader:
             Particle *particle, DTYPE_FLOAT_t Ah_prime[2]):
         raise NotImplementedError
 
+    def get_vertical_eddy_diffusivity_wrapper(self, DTYPE_FLOAT_t time,
+                                              ParticleSmartPtr particle):
+        return self.get_vertical_eddy_diffusivity(time, particle.get_ptr())
+
     cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time,
             Particle *particle) except FLOAT_ERR:
         raise NotImplementedError
-    
+
+    def get_vertical_eddy_diffusivity_derivative_wrapper(self, DTYPE_FLOAT_t time,
+                                                         ParticleSmartPtr particle):
+        return self.get_vertical_eddy_diffusivity_derivative(time, particle.get_ptr())
+
     cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity_derivative(self, 
             DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR:
         raise NotImplementedError
