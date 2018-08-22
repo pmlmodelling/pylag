@@ -49,6 +49,22 @@ cdef class ParticleSmartPtr:
 
     cdef Particle* get_ptr(self):
         return self._particle
+    
+    @property
+    def xpos(self):
+        return self._particle.xpos
+
+    @property
+    def ypos(self):
+        return self._particle.ypos
+
+    @property
+    def zpos(self):
+        return self._particle.zpos
+
+    @property
+    def host_horizontal_elem(self):
+        return self._particle.host_horizontal_elem
 
 cdef ParticleSmartPtr copy(ParticleSmartPtr particle_smart_ptr):
     """ Create a copy of a ParticleSmartPtr object
