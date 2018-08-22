@@ -108,81 +108,6 @@ cpdef interpolate_within_element(var, phi):
     
     return interp.interpolate_within_element(var_c, phi_c)
 
-cpdef set_vertical_grid_vars(DataReader data_reader, time, xpos, ypos, zpos, 
-        host):
-    cdef ParticleSmartPtr particle
-    
-    particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
-
-    data_reader.set_local_coordinates(particle.get_ptr())
-    data_reader.set_vertical_grid_vars(time, particle.get_ptr())
-    
-    grid_vars = {}
-    grid_vars['k_layer'] = particle.get_ptr().k_layer
-    grid_vars['k_lower_layer'] = particle.get_ptr().k_lower_layer
-    grid_vars['k_upper_layer'] = particle.get_ptr().k_upper_layer
-    grid_vars['in_vertical_boundary_layer'] = particle.get_ptr().in_vertical_boundary_layer
-    grid_vars['omega_interfaces'] = particle.get_ptr().omega_interfaces
-    grid_vars['omega_layers'] = particle.get_ptr().omega_layers
-    
-    return grid_vars
-
-cpdef get_velocity(DataReader data_reader, time, xpos, ypos, zpos, host, k_layer):
-    cdef ParticleSmartPtr particle
-    cdef DTYPE_FLOAT_t vel_c[N_VERTICES]
-
-    particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host,
-            k_layer=k_layer)
-
-    data_reader.set_local_coordinates(particle.get_ptr())
-    data_reader.set_vertical_grid_vars(time, particle.get_ptr())
-
-    data_reader.get_velocity(time, particle.get_ptr(), vel_c)
-    
-    # Generate and pass back an array type python can understand
-    vel_out = np.empty(N_VERTICES, dtype=DTYPE_FLOAT)
-    for i in xrange(N_VERTICES):
-        vel_out[i] = vel_c[i]
-    return vel_out
-
-cpdef get_horizontal_velocity(DataReader data_reader, time, xpos, ypos, zpos,
-        host, k_layer):
-    cdef ParticleSmartPtr particle
-    cdef DTYPE_FLOAT_t vel_c[2]
-    cdef DTYPE_INT_t i
-
-    particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host,
-            k_layer=k_layer)
-
-    data_reader.set_local_coordinates(particle.get_ptr())
-    data_reader.set_vertical_grid_vars(time, particle.get_ptr())
-
-    data_reader.get_horizontal_velocity(time, particle.get_ptr(), vel_c)
-
-    # Generate and pass back an array python can understand
-    vel_out = np.empty(N_VERTICES, dtype=DTYPE_FLOAT)
-    for i in xrange(2):
-        vel_out[i] = vel_c[i]
-    return vel_out
-
-cpdef get_horizontal_eddy_viscosity_derivative(DataReader data_reader, time, xpos, ypos, zpos, host):
-    cdef ParticleSmartPtr particle
-    cdef DTYPE_FLOAT_t Ah_prime_c[2]
-    cdef DTYPE_INT_t i
-
-    particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
-
-    data_reader.set_local_coordinates(particle.get_ptr())
-    data_reader.set_vertical_grid_vars(time, particle.get_ptr())
-
-    data_reader.get_horizontal_eddy_viscosity_derivative(time, particle.get_ptr(), Ah_prime_c)
-
-    # Generate and pass back an array python can understand
-    Ah_prime_out = np.empty(2, dtype=DTYPE_FLOAT)
-    for i in xrange(2):
-        Ah_prime_out[i] = Ah_prime_c[i]
-    return Ah_prime_out
-
 def get_intersection_point_wrapper(x1, x2, x3, x4, xi):
     cdef DTYPE_FLOAT_t x1_c[2]
     cdef DTYPE_FLOAT_t x2_c[2]
@@ -202,3 +127,4 @@ def get_intersection_point_wrapper(x1, x2, x3, x4, xi):
     for i in xrange(2):
         xi[i] = xi_c[i]
     return
+

@@ -51,9 +51,41 @@ cdef class DataReader:
     cdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, Particle *particle):
         raise NotImplementedError
 
+    def get_velocity_wrapper(self, DTYPE_FLOAT_t time, ParticleSmartPtr particle,
+                             vel):
+        cdef DTYPE_FLOAT_t vel_c[3]
+
+        if len(vel.shape) != 1 or vel.shape[0] != 3:
+            raise ValueError('Invalid vel array')
+
+        vel_c[:] = vel[:]
+
+        self.get_velocity(time, particle.get_ptr(), vel_c)
+
+        for i in xrange(3):
+            vel[i] = vel_c[i]
+
+        return
+
     cdef get_velocity(self, DTYPE_FLOAT_t time, Particle *particle,
             DTYPE_FLOAT_t vel[3]):
         raise NotImplementedError
+
+    def get_horizontal_velocity_wrapper(self, DTYPE_FLOAT_t time, ParticleSmartPtr particle,
+                                        vel):
+        cdef DTYPE_FLOAT_t vel_c[2]
+
+        if len(vel.shape) != 1 or vel.shape[0] != 2:
+            raise ValueError('Invalid vel array')
+
+        vel_c[:] = vel[:]
+
+        self.get_velocity(time, particle.get_ptr(), vel_c)
+
+        for i in xrange(2):
+            vel[i] = vel_c[i]
+
+        return
 
     cdef get_horizontal_velocity(self, DTYPE_FLOAT_t time, Particle *particle,
             DTYPE_FLOAT_t vel[2]):
@@ -69,6 +101,23 @@ cdef class DataReader:
     cdef get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
             Particle *particle):
         raise NotImplementedError
+
+    def get_horizontal_eddy_viscosity_derivative_wrapper(self, DTYPE_FLOAT_t time,
+                                                          ParticleSmartPtr particle,
+                                                          Ah_prime):
+        cdef DTYPE_FLOAT_t Ah_prime_c[2]
+
+        if len(Ah_prime.shape) != 1 or Ah_prime.shape[0] != 2:
+            raise ValueError('Invalid Ah_prime array')
+
+        Ah_prime_c[:] = Ah_prime[:]
+
+        self.get_horizontal_eddy_viscosity_derivative(time, particle.get_ptr(), Ah_prime_c)
+
+        for i in xrange(2):
+            Ah_prime[i] = Ah_prime_c[i]
+
+        return
 
     cdef get_horizontal_eddy_viscosity_derivative(self, DTYPE_FLOAT_t time,
             Particle *particle, DTYPE_FLOAT_t Ah_prime[2]):

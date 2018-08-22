@@ -4,6 +4,9 @@ import numpy as np
 import datetime
 from ConfigParser import SafeConfigParser
 
+# PyLag data types
+from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
+
 from pylag.fvcom_data_reader import FVCOMDataReader
 from pylag.particle import ParticleSmartPtr
 from pylag import cwrappers
@@ -321,58 +324,105 @@ class FVCOMDataReader_test(TestCase):
         xpos = 365751.7
         ypos = 5323568.0
         host = 0
-        zlayer = 0
 
+        # Test #1
         zpos = 1.0
         time = 0.0
-        vel = cwrappers.get_velocity(self.data_reader, time, xpos, ypos, zpos, host, zlayer)
+
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+
+        vel = np.empty(3, dtype=DTYPE_FLOAT)
+        self.data_reader.get_velocity_wrapper(time, particle, vel)
+
         test.assert_array_almost_equal(vel, [2.0, 2.0, 2.0])
 
+        # Test #2
         zpos = 1.5
         time = 1800.0
-        vel = cwrappers.get_velocity(self.data_reader, time, xpos, ypos, zpos, host, zlayer)
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+
+        vel = np.empty(3, dtype=DTYPE_FLOAT)
+        self.data_reader.get_velocity_wrapper(time, particle, vel)
         test.assert_array_almost_equal(vel, [3.0, 3.0, 3.0])
-        
+
+        # Test #3
         zpos = -0.2
         time = 0.0
-        vel = cwrappers.get_velocity(self.data_reader, time, xpos, ypos, zpos, host, zlayer)
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+
+        vel = np.empty(3, dtype=DTYPE_FLOAT)
+        self.data_reader.get_velocity_wrapper(time, particle, vel)
         test.assert_array_almost_equal(vel, [2.0, 2.0, 2.0])
 
     def test_get_velocity_in_middle_layer(self):
         xpos = 365751.7
         ypos = 5323568.0
         host = 0
-        zlayer = 1
 
+        # Test #1
         zpos = -2.6
         time = 0.0
-        vel = cwrappers.get_velocity(self.data_reader, time, xpos, ypos, zpos, host, zlayer)
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+
+        vel = np.empty(3, dtype=DTYPE_FLOAT)
+        self.data_reader.get_velocity_wrapper(time, particle, vel)
         test.assert_array_almost_equal(vel, [1.5, 1.5, 1.5])
 
+        # Test #2
         zpos = -2.25
         time = 1800.0
-        vel = cwrappers.get_velocity(self.data_reader, time, xpos, ypos, zpos, host, zlayer)
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+
+        vel = np.empty(3, dtype=DTYPE_FLOAT)
+        self.data_reader.get_velocity_wrapper(time, particle, vel)
         test.assert_array_almost_equal(vel, [2.25, 2.25, 2.25])
 
     def test_get_velocity_in_bottom_layer(self):
         xpos = 365751.7
         ypos = 5323568.0
         host = 0
-        zlayer = 2
 
+        # Test #1
         zpos = -10.999
         time = 0.0
-        vel = cwrappers.get_velocity(self.data_reader, time, xpos, ypos, zpos, host, zlayer)
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+
+        vel = np.empty(3, dtype=DTYPE_FLOAT)
+        self.data_reader.get_velocity_wrapper(time, particle, vel)
         test.assert_array_almost_equal(vel, [0.0, 0.0, 0.0])
 
+        # Test #2
         zpos = -10.999
         time = 1800.0
-        vel = cwrappers.get_velocity(self.data_reader, time, xpos, ypos, zpos, host, zlayer)
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+
+        vel = np.empty(3, dtype=DTYPE_FLOAT)
+        self.data_reader.get_velocity_wrapper(time, particle, vel)
         test.assert_array_almost_equal(vel, [0.0, 0.0, 0.0])
-        
+
+        # Test #3
         zpos = -9.8
         time = 0.0
-        vel = cwrappers.get_velocity(self.data_reader, time, xpos, ypos, zpos, host, zlayer)
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+
+        vel = np.empty(3, dtype=DTYPE_FLOAT)
+        self.data_reader.get_velocity_wrapper(time, particle, vel)
         test.assert_array_almost_equal(vel, [0.0, 0.0, 0.0])
 
     def test_get_vertical_eddy_diffusivity(self):
@@ -421,9 +471,13 @@ class FVCOMDataReader_test(TestCase):
 
         zpos = -0.1
         time = 0.0
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
 
-        diffusivity_gradient = cwrappers.get_horizontal_eddy_viscosity_derivative(self.data_reader, time, xpos, ypos, zpos, host)
-        test.assert_almost_equal(diffusivity_gradient, 0.0)
+        Ah_prime = np.empty(2, dtype=DTYPE_FLOAT)
+        self.data_reader.get_horizontal_eddy_viscosity_derivative_wrapper(time, particle, Ah_prime)
+        test.assert_array_almost_equal(Ah_prime, [0.0, 0.0])
 
     def test_element_is_wet(self):
         host = 0
