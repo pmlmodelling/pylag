@@ -3,6 +3,7 @@ include "constants.pxi"
 import logging
 
 # PyLag cimports
+from pylag.particle cimport ParticleSmartPtr
 from pylag.math cimport inner_product
 
 cdef class HorizBoundaryConditionCalculator:
@@ -12,6 +13,17 @@ cdef class HorizBoundaryConditionCalculator:
         raise NotImplementedError
 
 cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator):
+
+    def apply_wrapper(self, DataReader data_reader,
+                      ParticleSmartPtr particle_old,
+                      ParticleSmartPtr particle_new):
+        """ Python friendly wrapper for apply()
+        
+        """
+        
+        self.apply(data_reader, particle_old.get_ptr(), particle_new.get_ptr())
+        
+        return
 
     cdef apply(self, DataReader data_reader, Particle *particle_old,
                 Particle *particle_new):
