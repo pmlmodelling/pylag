@@ -108,20 +108,6 @@ cpdef interpolate_within_element(var, phi):
     
     return interp.interpolate_within_element(var_c, phi_c)
 
-cpdef get_zmin(DataReader data_reader, time, xpos, ypos, host):
-    cdef ParticleSmartPtr particle
-    particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, host=host)
-
-    data_reader.set_local_coordinates(particle.get_ptr())
-    return data_reader.get_zmin(time, particle.get_ptr())
-
-cpdef get_zmax(DataReader data_reader, time, xpos, ypos, host):
-    cdef ParticleSmartPtr particle
-    particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, host=host)
-
-    data_reader.set_local_coordinates(particle.get_ptr())
-    return data_reader.get_zmax(time, particle.get_ptr())
-
 cpdef set_vertical_grid_vars(DataReader data_reader, time, xpos, ypos, zpos, 
         host):
     cdef ParticleSmartPtr particle
@@ -179,15 +165,6 @@ cpdef get_horizontal_velocity(DataReader data_reader, time, xpos, ypos, zpos,
         vel_out[i] = vel_c[i]
     return vel_out
 
-cpdef get_horizontal_eddy_viscosity(DataReader data_reader, time, xpos, ypos, zpos, host):
-    cdef ParticleSmartPtr particle
-    particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
-
-    data_reader.set_local_coordinates(particle.get_ptr())
-    data_reader.set_vertical_grid_vars(time, particle.get_ptr())
-
-    return data_reader.get_horizontal_eddy_viscosity(time, particle.get_ptr())
-
 cpdef get_horizontal_eddy_viscosity_derivative(DataReader data_reader, time, xpos, ypos, zpos, host):
     cdef ParticleSmartPtr particle
     cdef DTYPE_FLOAT_t Ah_prime_c[2]
@@ -205,24 +182,6 @@ cpdef get_horizontal_eddy_viscosity_derivative(DataReader data_reader, time, xpo
     for i in xrange(2):
         Ah_prime_out[i] = Ah_prime_c[i]
     return Ah_prime_out
-
-cpdef get_vertical_eddy_diffusivity(DataReader data_reader, time, xpos, ypos, zpos, host):
-    cdef ParticleSmartPtr particle
-    particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
-
-    data_reader.set_local_coordinates(particle.get_ptr())
-    data_reader.set_vertical_grid_vars(time, particle.get_ptr())
-
-    return data_reader.get_vertical_eddy_diffusivity(time, particle.get_ptr())
-
-cpdef get_vertical_eddy_diffusivity_derivative(DataReader data_reader, time, xpos, ypos, zpos, host):
-    cdef ParticleSmartPtr particle
-    particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
-
-    data_reader.set_local_coordinates(particle.get_ptr())
-    data_reader.set_vertical_grid_vars(time, particle.get_ptr())
-
-    return data_reader.get_vertical_eddy_diffusivity_derivative(time, particle.get_ptr())
 
 def get_intersection_point_wrapper(x1, x2, x3, x4, xi):
     cdef DTYPE_FLOAT_t x1_c[2]
