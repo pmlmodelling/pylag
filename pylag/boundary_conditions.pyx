@@ -70,10 +70,6 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
 
         counter = 0
         while counter < 10:
-            if counter > 0 and self.config.get('GENERAL', 'log_level') == 'DEBUG':
-                logger = logging.getLogger(__name__)
-                logger.warning('Particle moved to intersection.')
-            
             # Construct arrays to hold the coordinates of the particle's previous
             # position vector and its new position vector that lies outside of the
             # model domain
@@ -121,7 +117,7 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
             particle_copy_a.xpos = xi[0]
             particle_copy_a.ypos = xi[1]
             particle_copy_a.host_horizontal_elem = host
-            
+
             # Move the new particle to the reflected point
             # --------------------------------------------
             flag, host = data_reader.find_host(particle_copy_a.xpos, 
