@@ -289,12 +289,7 @@ cdef class FVCOMDataReader(DataReader):
 
             # Check to see if the particle is in the current element
             phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
-            if phi_test >= 0.0:
-                host_found = True
-            elif phi_test >= -EPSILON:
-                if self.config.get('GENERAL', 'log_level') == 'DEBUG':
-                    logger = logging.getLogger(__name__)
-                    logger.warning('EPSILON applied during local host element search.')
+            if phi_test >= -EPSILON:
                 host_found = True
 
             # If the particle has walked into an element with two land
