@@ -5,6 +5,7 @@ import datetime
 from ConfigParser import SafeConfigParser
 
 from pylag.gotm_data_reader import GOTMDataReader
+from pylag.particle import ParticleSmartPtr
 from pylag import cwrappers
 
 from pylag.mediator import Mediator
@@ -84,8 +85,10 @@ class GOTMDataReader_test(TestCase):
 
         time = 0.0
         self.data_reader.read_data(time)
-        zmin = cwrappers.get_zmin(self.data_reader, time, xpos, ypos, host)
-        test.assert_almost_equal(zmin, -4.0)
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        bathy = self.data_reader.get_zmin_wrapper(time, particle)
+        test.assert_almost_equal(bathy, -4.0)
 
     def test_get_zmax(self):
         xpos = 0.0
@@ -94,17 +97,23 @@ class GOTMDataReader_test(TestCase):
 
         time = 0.0
         self.data_reader.read_data(time)
-        zeta = cwrappers.get_zmax(self.data_reader, time, xpos, ypos, host)
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        zeta = self.data_reader.get_zmax_wrapper(time, particle)
         test.assert_almost_equal(zeta, 0.0)
  
         time = 0.5
         self.data_reader.read_data(time)
-        zeta = cwrappers.get_zmax(self.data_reader, time, xpos, ypos, host)
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        zeta = self.data_reader.get_zmax_wrapper(time, particle)
         test.assert_almost_equal(zeta, 0.0)
 
         time = 1.0
         self.data_reader.read_data(time)
-        zeta = cwrappers.get_zmax(self.data_reader, time, xpos, ypos, host)
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        zeta = self.data_reader.get_zmax_wrapper(time, particle)
         test.assert_almost_equal(zeta, 0.0)
 
     def test_set_vertical_grid_vars_for_a_particle_on_the_sea_surface(self):
