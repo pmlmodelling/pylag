@@ -697,8 +697,31 @@ cdef class FVCOMDataReader(DataReader):
         particle: *Particle
             Pointer to a Particle struct
         """
+        cdef DTYPE_FLOAT_t phi[3]
+        
+        cdef DTYPE_INT_t i
+        
         self._get_phi(particle.xpos, particle.ypos, 
-                particle.host_horizontal_elem, particle.phi)
+                particle.host_horizontal_elem, phi)
+                
+        # Check for negative values and flush near misses to zero.
+        for i in xrange(3):
+            if phi[i] >= -EPSILON and phi[i] < 0.0:
+                phi[i] = 0.0
+            elif phi[i] < -EPSILON:
+                print phi[i]
+                s = to_string(particle)
+                msg = "One or more local coordinates are invalid \n\n"\
+                      "The following information may be used to study the \n"\
+                      "failure in more detail. \n\n"\
+                      "{}".format(s)
+                print msg
+                
+                raise ValueError('One or more local coordinates are negative')
+        
+        # Update the particle's coordiantes
+        for i in xrange(3):
+            particle.phi[i] = phi[i]
 
     cdef set_vertical_grid_vars(self, DTYPE_FLOAT_t time, Particle* particle):
         """ Find the host depth layer
