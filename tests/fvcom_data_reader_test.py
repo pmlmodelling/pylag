@@ -213,8 +213,8 @@ class FVCOMDataReader_test(TestCase):
         test.assert_almost_equal(y2, 5322253.0)
 
     def test_get_zmin(self):
-        xpos = 365751.7
-        ypos = 5323568.0
+        xpos = 368086.9
+        ypos = 5324398.5
         host = 0
 
         time = 0.0
@@ -225,8 +225,8 @@ class FVCOMDataReader_test(TestCase):
         test.assert_almost_equal(bathy, -11.0)
 
     def test_get_zmax(self):
-        xpos = 365751.7
-        ypos = 5323568.0
+        xpos = 368086.9
+        ypos = 5324398.5
         host = 0
         
         time = 0.0
@@ -243,8 +243,8 @@ class FVCOMDataReader_test(TestCase):
 
     def test_set_vertical_grid_vars_for_a_particle_on_the_sea_surface(self):
         time = 0.0
-        xpos = 365751.7
-        ypos = 5323568.0
+        xpos = 368086.9
+        ypos = 5324398.5
         zpos = 1.0
         host = 0
 
@@ -258,8 +258,8 @@ class FVCOMDataReader_test(TestCase):
 
     def test_set_vertical_grid_vars_for_a_particle_on_the_sea_floor(self):
         time = 0.0
-        xpos = 365751.7
-        ypos = 5323568.0
+        xpos = 368086.9
+        ypos = 5324398.5
         zpos = -11.0
         host = 0
 
@@ -274,8 +274,8 @@ class FVCOMDataReader_test(TestCase):
 
     def test_set_vertical_grid_vars_for_a_particle_in_the_surface_boundary_layer(self):
         time = 0.0
-        xpos = 365751.7
-        ypos = 5323568.0
+        xpos = 368086.9
+        ypos = 5324398.5
         zpos = 0.4 # this is 25% of the way between the top and bottom sigma levels
         host = 0
 
@@ -289,8 +289,8 @@ class FVCOMDataReader_test(TestCase):
 
     def test_set_vertical_grid_vars_for_a_particle_in_the_bottom_boundary_layer(self):
         time = 0.0
-        xpos = 365751.7
-        ypos = 5323568.0
+        xpos = 368086.9
+        ypos = 5324398.5
         zpos = -10.4
         host = 0
 
@@ -304,8 +304,8 @@ class FVCOMDataReader_test(TestCase):
 
     def test_set_vertical_grid_vars_for_a_particle_in_the_middle_of_the_water_column(self):
         time = 0.0
-        xpos = 365751.7
-        ypos = 5323568.0
+        xpos = 368086.9
+        ypos = 5324398.5
         zpos = -2.6
         host = 0
 
@@ -321,8 +321,8 @@ class FVCOMDataReader_test(TestCase):
         test.assert_almost_equal(particle.omega_layers, 0.5)
 
     def test_get_velocity_in_surface_layer(self):
-        xpos = 365751.7
-        ypos = 5323568.0
+        xpos = 368086.9
+        ypos = 5324398.5
         host = 0
 
         # Test #1
@@ -361,8 +361,8 @@ class FVCOMDataReader_test(TestCase):
         test.assert_array_almost_equal(vel, [2.0, 2.0, 2.0])
 
     def test_get_velocity_in_middle_layer(self):
-        xpos = 365751.7
-        ypos = 5323568.0
+        xpos = 368086.9
+        ypos = 5324398.5
         host = 0
 
         # Test #1
@@ -388,8 +388,8 @@ class FVCOMDataReader_test(TestCase):
         test.assert_array_almost_equal(vel, [2.25, 2.25, 2.25])
 
     def test_get_velocity_in_bottom_layer(self):
-        xpos = 365751.7
-        ypos = 5323568.0
+        xpos = 368086.9
+        ypos = 5324398.5
         host = 0
 
         # Test #1
@@ -426,8 +426,8 @@ class FVCOMDataReader_test(TestCase):
         test.assert_array_almost_equal(vel, [0.0, 0.0, 0.0])
 
     def test_get_vertical_eddy_diffusivity(self):
-        xpos = 365751.7
-        ypos = 5323568.0
+        xpos = 368086.9
+        ypos = 5324398.5
         host = 0
 
         zpos = -0.2
@@ -439,8 +439,8 @@ class FVCOMDataReader_test(TestCase):
         test.assert_almost_equal(diffusivity,  0.005)
 
     def test_get_vertical_eddy_diffusivity_derivative(self):
-        xpos = 365751.7
-        ypos = 5323568.0
+        xpos = 368086.9
+        ypos = 5324398.5
         host = 0
 
         zpos = -0.2
@@ -452,8 +452,8 @@ class FVCOMDataReader_test(TestCase):
         test.assert_almost_equal(diffusivity_gradient, -0.0026042)
 
     def test_get_horizontal_eddy_viscosity(self):
-        xpos = 365751.7
-        ypos = 5323568.0
+        xpos = 368086.9
+        ypos = 5324398.5
         host = 0
 
         zpos = -0.1
@@ -465,8 +465,8 @@ class FVCOMDataReader_test(TestCase):
         test.assert_almost_equal(viscosity,  0.01)
 
     def test_get_horizontal_eddy_viscosity_derivative(self):
-        xpos = 365751.7
-        ypos = 5323568.0
+        xpos = 368086.9
+        ypos = 5324398.5
         host = 0
 
         zpos = -0.1
