@@ -57,6 +57,10 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
         # 2D position vector for the reflected position
         cdef DTYPE_FLOAT_t x4_prime[2]
         
+        # 2D position and directon vectors used for locating lost particles
+        cdef DTYPE_FLOAT_t x_test[2]
+        cdef DTYPE_FLOAT_t r_test[2]
+        
         # 2D directoion vector normal to the element side, pointing into the
         # element
         cdef DTYPE_FLOAT_t n[2]     
@@ -74,6 +78,12 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
         # Temporary particle objects
         cdef Particle particle_copy_a
         cdef Particle particle_copy_b
+
+        # In domain flag
+        cdef DTYPE_INT_t flag
+        
+        # Is found flag
+        cdef bint found
 
         # Create copies of the two particles - these will be used to save
         # intermediate states
@@ -111,23 +121,45 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
                 r[i] = d[i] - mult*n[i]
                 x4_prime[i] = xi[i] + r[i]
 
-            # Move the old particle to the intersection point
-            # -----------------------------------------------
-            flag, host = data_reader.find_host(particle_copy_a.xpos, 
-                                               particle_copy_a.ypos,
-                                               xi[0],
-                                               xi[1],
-                                               particle_copy_a.host_horizontal_elem)
-            
-            if flag != IN_DOMAIN:
-                # This shouldn't happen. But perhaps it can if there is a 
-                # floating point precision issue that means a point on the
-                # boundary is flagged as being outside of the domain.
-                raise RuntimeError('Boundary intersection flagged as being outside of the domain')
+            # Attempt to find the particle using a local search
+            # -------------------------------------------------
+            flag, host = data_reader.find_host_using_local_search(x4_prime[0],
+                                                                  x4_prime[1],
+                                                                  particle_copy_b.host_horizontal_elem)
 
+            if flag == IN_DOMAIN:
+                particle_new.xpos = x4_prime[0]
+                particle_new.ypos = x4_prime[1]
+                particle_new.host_horizontal_elem = host
+                return flag
+
+            # Local search failed
+            # -------------------
             
-            particle_copy_a.xpos = xi[0]
-            particle_copy_a.ypos = xi[1]
+            # To locate the new particle's position, first find a location that
+            # sits safely in the model grid some way between the intersection
+            # point and the new position. This will allow us to use line
+            # crossings to definitely locate the particle. We don't use the
+            # intersection point itself for this, for fear that it will be
+            # flagged as a line crossing. To guarantee the search, we resort
+            # to global searching.
+            for i in xrange(2):
+                r_test[i] = r[i]
+            
+            found = False
+            while found == False:
+                for i in xrange(2):
+                    r_test[i] = r_test[i]/10.
+                    x_test[i] = xi[i] + r_test[i]
+                host = data_reader.find_host_using_global_search(x_test[0],
+                                                                 x_test[1])
+                if host != -1:
+                    found = True
+            
+            # Move the old particle to this point, which will act as a
+            # reference point when searching for the new particle. 
+            particle_copy_a.xpos = x_test[0]
+            particle_copy_a.ypos = x_test[1]
             particle_copy_a.host_horizontal_elem = host
 
             # Move the new particle to the reflected point
