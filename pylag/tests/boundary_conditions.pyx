@@ -8,6 +8,15 @@ cdef class TestHorizBCDataReader(DataReader):
                     DTYPE_INT_t guess):
         return 0, 0
 
+    cpdef find_host_using_local_search(self, DTYPE_FLOAT_t xpos,
+                                       DTYPE_FLOAT_t ypos,
+                                       DTYPE_INT_t guess):
+        return 0, 0
+
+    cpdef find_host_using_global_search(self, DTYPE_FLOAT_t xpos,
+                                        DTYPE_FLOAT_t ypos):
+        return 0
+
     cpdef get_boundary_intersection(self, DTYPE_FLOAT_t xpos_old,
                                     DTYPE_FLOAT_t ypos_old,
                                     DTYPE_FLOAT_t xpos_new,
