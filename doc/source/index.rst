@@ -19,8 +19,10 @@ Contents
 ========
 
 .. toctree::
-   :maxdepth: 2
+    :maxdepth: 2
 
-   installation
-
+    install/installation
+    examples/index
+    documentation/index
+    acknowledgements/acknowledgements
 
