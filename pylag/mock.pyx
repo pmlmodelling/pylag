@@ -34,9 +34,9 @@ cdef class MockVelocityDataReader(DataReader):
             z = 0.0             (6)
     
     """
-    cpdef find_host(self, DTYPE_FLOAT_t xpos_old, DTYPE_FLOAT_t ypos_old,
-            DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new, DTYPE_INT_t guess):
-        return IN_DOMAIN, DEFAULT_HOST
+    cdef DTYPE_INT_t find_host(self, Particle *particle_old,
+                               Particle *particle_new) except INT_ERR:
+        return IN_DOMAIN
 
     cdef set_local_coordinates(self, Particle *particle):
         raise NotImplementedError
@@ -146,9 +146,9 @@ cdef class MockVerticalDiffusivityDataReader(DataReader):
     cdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, Particle *particle):
         return self._zmax
 
-    cpdef find_host(self, DTYPE_FLOAT_t xpos_old, DTYPE_FLOAT_t ypos_old,
-            DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new, DTYPE_INT_t guess):
-        return IN_DOMAIN, DEFAULT_HOST
+    cdef DTYPE_INT_t find_host(self, Particle *particle_old,
+                               Particle *particle_new) except INT_ERR:
+        return IN_DOMAIN
 
     cdef set_local_coordinates(self, Particle *particle):
         pass
@@ -258,9 +258,9 @@ cdef class MockHorizontalEddyViscosityDataReader(DataReader):
     cdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, Particle *particle):
         return self._zmax
 
-    cpdef find_host(self, DTYPE_FLOAT_t xpos_old, DTYPE_FLOAT_t ypos_old,
-            DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new, DTYPE_INT_t guess):
-        raise NotImplementedError
+    cdef DTYPE_INT_t find_host(self, Particle *particle_old,
+                               Particle *particle_new) except INT_ERR:
+        return IN_DOMAIN
 
     cdef set_local_coordinates(self, Particle *particle):
         pass
@@ -366,9 +366,9 @@ cdef class MockVelocityEddyViscosityDataReader(DataReader):
     cdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, Particle *particle):
         return self._zmax
     
-    cpdef find_host(self, DTYPE_FLOAT_t xpos_old, DTYPE_FLOAT_t ypos_old,
-            DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new, DTYPE_INT_t guess):
-        return IN_DOMAIN, DEFAULT_HOST
+    cdef DTYPE_INT_t find_host(self, Particle *particle_old,
+                               Particle *particle_new) except INT_ERR:
+        return IN_DOMAIN
 
     cdef set_local_coordinates(self, Particle *particle):
         pass

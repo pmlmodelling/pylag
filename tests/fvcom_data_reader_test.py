@@ -145,48 +145,32 @@ class FVCOMDataReader_test(TestCase):
         test.assert_equal(host, -1)
 
     def test_find_host_when_particle_is_in_the_domain(self):
-        xpos_old = 368260.875 # Centroid of element 3 (x coordinate)
-        ypos_old = 5326351.0 # Centroid of element 3 (y coordinate)
-        xpos_new = 368086.9375 # Centroid of element 0 (x coordinate)
-        ypos_new = 5324397.5 # Centroid of element 0 (y coordinate)
-        last_host = 3
-        flag, host = self.data_reader.find_host(xpos_old, ypos_old, xpos_new,
-                ypos_new, last_host)
+        particle_old = ParticleSmartPtr(xpos=368260.875, ypos=5326351.0, host=3)
+        particle_new = ParticleSmartPtr(xpos=368086.9375, ypos=5324397.5)
+        flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
         test.assert_equal(flag, 0)
-        test.assert_equal(host, 0)
+        test.assert_equal(particle_new.host_horizontal_elem, 0)
 
     def test_find_host_when_particle_has_crossed_into_an_element_with_two_land_boundaries(self):
-        xpos_old = 368086.9375 # Centroid of element 0 (x coordinate)
-        ypos_old = 5324397.5 # Centroid of element 0 (y coordinate)
-        xpos_new = 369208.8125 # Centroid of element 1 that has two land boundaries (x coordinate)
-        ypos_new = 5323103.0 # Centroid of element 1 that has two land boundaries (y coordinate)
-        last_host = 0 # Center element
-        flag, host = self.data_reader.find_host(xpos_old, ypos_old, xpos_new,
-                ypos_new, last_host)
+        particle_old = ParticleSmartPtr(xpos=368086.9375, ypos=5324397.5, host=0)
+        particle_new = ParticleSmartPtr(xpos=369208.8125, ypos=5323103.0)
+        flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
         test.assert_equal(flag, -1)
-        test.assert_equal(host, 0)
+        test.assert_equal(particle_new.host_horizontal_elem, 0)
 
     def test_find_host_when_particle_has_crossed_a_land_boundary(self):
-        xpos_old = 369208.8125 # Centroid of element 1 (x coordinate)
-        ypos_old = 5323103.0 # Centroid of element 1 (y coordinate)
-        xpos_new = 370267.0 # Point outside of the domain (x coordinate)
-        ypos_new = 5324350.0 # Point outside of the domain (y coordinate)
-        last_host = 1 # Center element
-        flag, host = self.data_reader.find_host(xpos_old, ypos_old, xpos_new,
-                ypos_new, last_host)
+        particle_old = ParticleSmartPtr(xpos=369208.8125, ypos=5323103.0, host=1)
+        particle_new = ParticleSmartPtr(xpos=370267.0, ypos=5324350.0)
+        flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
         test.assert_equal(flag, -1)
-        test.assert_equal(host, 1)
+        test.assert_equal(particle_new.host_horizontal_elem, 1)
 
     def test_find_host_when_particle_has_crossed_multiple_elements_to_an_element_with_two_land_boundaries(self):
-        xpos_old = 369208.8125 # Centroid of element 1 (x coordinate)
-        ypos_old = 5323103.0 # Centroid of element 1 (y coordinate)
-        xpos_new = 365751.6875 # Centroid of element 2 (x coordinate)
-        ypos_new = 5323568.5 # Centroid of element 2 (y coordinate)
-        last_host = 1 # Center element
-        flag, host = self.data_reader.find_host(xpos_old, ypos_old, xpos_new,
-                ypos_new, last_host)
+        particle_old = ParticleSmartPtr(xpos=369208.8125, ypos=5323103.0, host=1)
+        particle_new = ParticleSmartPtr(xpos=365751.6875, ypos=5323568.5)
+        flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
         test.assert_equal(flag, -1)
-        test.assert_equal(host, 0)
+        test.assert_equal(particle_new.host_horizontal_elem, 0)
 
     def test_get_boundary_intersection_x2x0(self):
         xpos_old = 369208.8125 # Centroid of element 1 (x coordinate)

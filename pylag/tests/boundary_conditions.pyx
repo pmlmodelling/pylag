@@ -1,12 +1,14 @@
+include "constants.pxi"
+
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 from pylag.data_reader cimport DataReader
+from pylag.particle cimport Particle
 
 cdef class TestHorizBCDataReader(DataReader):
     
-    cpdef find_host(self, DTYPE_FLOAT_t xpos_old, DTYPE_FLOAT_t ypos_old,
-                    DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new,
-                    DTYPE_INT_t guess):
-        return 0, 0
+    cdef DTYPE_INT_t find_host(self, Particle *particle_old,
+                               Particle *particle_new) except INT_ERR:
+        return IN_DOMAIN
 
     cpdef find_host_using_local_search(self, DTYPE_FLOAT_t xpos,
                                        DTYPE_FLOAT_t ypos,

@@ -109,7 +109,7 @@ cdef class StdNumMethod(NumMethod):
         cdef Particle _particle_copy
         cdef DTYPE_FLOAT_t zmin, zmax
         cdef Delta _delta_X
-        cdef DTYPE_INT_t flag, host
+        cdef DTYPE_INT_t flag
         cdef DTYPE_INT_t counter
 
         # Create a clone of the current particle to work on
@@ -128,9 +128,7 @@ cdef class StdNumMethod(NumMethod):
         _particle_copy.xpos += _delta_X.x
         _particle_copy.ypos += _delta_X.y
         _particle_copy.zpos += _delta_X.z
-        flag, host = data_reader.find_host(particle.xpos, particle.ypos, _particle_copy.xpos, _particle_copy.ypos,
-                                           particle.host_horizontal_elem)
-        _particle_copy.host_horizontal_elem = host
+        flag = data_reader.find_host(particle, &_particle_copy)
         
         if flag == LAND_BDY_CROSSED:
             flag = self._horiz_bc_calculator.apply(data_reader, particle, &_particle_copy)
@@ -279,7 +277,7 @@ cdef class OS0NumMethod(NumMethod):
             Flag identifying if a boundary crossing has occurred.
         """
         cdef DTYPE_FLOAT_t zmin, zmax
-        cdef DTYPE_INT_t flag, host
+        cdef DTYPE_INT_t flag
         cdef Particle _particle_copy_a
         cdef Particle _particle_copy_b
         cdef Delta _delta_X
@@ -307,9 +305,7 @@ cdef class OS0NumMethod(NumMethod):
         _particle_copy_a.xpos += _delta_X.x
         _particle_copy_a.ypos += _delta_X.y
         _particle_copy_a.zpos += _delta_X.z
-        flag, host = data_reader.find_host(particle.xpos, particle.ypos, _particle_copy_a.xpos,
-                _particle_copy_a.ypos, particle.host_horizontal_elem)
-        _particle_copy_a.host_horizontal_elem = host
+        flag = data_reader.find_host(particle, &_particle_copy_a)
 
         if flag == LAND_BDY_CROSSED:
                 flag = self._horiz_bc_calculator.apply(data_reader, particle, &_particle_copy_a)
@@ -351,9 +347,7 @@ cdef class OS0NumMethod(NumMethod):
             _particle_copy_b.xpos += _delta_X.x
             _particle_copy_b.ypos += _delta_X.y
             _particle_copy_b.zpos += _delta_X.z
-            flag, host = data_reader.find_host(_particle_copy_a.xpos, _particle_copy_a.ypos, _particle_copy_b.xpos,
-                    _particle_copy_b.ypos, _particle_copy_a.host_horizontal_elem)
-            _particle_copy_b.host_horizontal_elem = host
+            flag = data_reader.find_host(&_particle_copy_a, &_particle_copy_b)
 
             if flag == LAND_BDY_CROSSED:
                 flag = self._horiz_bc_calculator.apply(data_reader, &_particle_copy_a, &_particle_copy_b)
@@ -478,7 +472,7 @@ cdef class OS1NumMethod(NumMethod):
             Flag identifying if a boundary crossing has occurred.
         """
         cdef DTYPE_FLOAT_t zmin, zmax
-        cdef DTYPE_INT_t flag, host
+        cdef DTYPE_INT_t flag
         cdef Particle _particle_copy_a
         cdef Particle _particle_copy_b
         cdef Delta _delta_X
@@ -503,9 +497,7 @@ cdef class OS1NumMethod(NumMethod):
         _particle_copy_a.xpos += _delta_X.x
         _particle_copy_a.ypos += _delta_X.y
         _particle_copy_a.zpos += _delta_X.z
-        flag, host = data_reader.find_host(particle.xpos, particle.ypos, _particle_copy_a.xpos,
-                _particle_copy_a.ypos, particle.host_horizontal_elem)
-        _particle_copy_a.host_horizontal_elem = host
+        flag = data_reader.find_host(particle, &_particle_copy_a)
 
         if flag == LAND_BDY_CROSSED:
                 flag = self._horiz_bc_calculator.apply(data_reader, particle, &_particle_copy_a)
@@ -546,9 +538,7 @@ cdef class OS1NumMethod(NumMethod):
         _particle_copy_b.xpos += _delta_X.x
         _particle_copy_b.ypos += _delta_X.y
         _particle_copy_b.zpos += _delta_X.z
-        flag, host = data_reader.find_host(_particle_copy_a.xpos, _particle_copy_a.ypos, _particle_copy_b.xpos,
-                _particle_copy_b.ypos, _particle_copy_a.host_horizontal_elem)
-        _particle_copy_b.host_horizontal_elem = host
+        flag = data_reader.find_host(&_particle_copy_a, &_particle_copy_b)
 
         if flag == LAND_BDY_CROSSED:
                 flag = self._horiz_bc_calculator.apply(data_reader, &_particle_copy_a, &_particle_copy_b)
@@ -587,9 +577,7 @@ cdef class OS1NumMethod(NumMethod):
         _particle_copy_b.xpos += _delta_X.x
         _particle_copy_b.ypos += _delta_X.y
         _particle_copy_b.zpos += _delta_X.z
-        flag, host = data_reader.find_host(_particle_copy_a.xpos, _particle_copy_a.ypos, _particle_copy_b.xpos,
-                _particle_copy_b.ypos, _particle_copy_a.host_horizontal_elem)
-        _particle_copy_b.host_horizontal_elem = host
+        flag = data_reader.find_host(&_particle_copy_a, &_particle_copy_b)
 
         if flag == LAND_BDY_CROSSED:
                 flag = self._horiz_bc_calculator.apply(data_reader, &_particle_copy_a, &_particle_copy_b)
@@ -740,6 +728,9 @@ cdef class AdvRK42DItMethod(ItMethod):
         cdef DTYPE_INT_t ndim = 2
         cdef DTYPE_INT_t i
         cdef DTYPE_INT_t counter
+
+        # Host search flag
+        cdef DTYPE_INT_t flag
         
         # Stage 1
         t = time
@@ -753,8 +744,7 @@ cdef class AdvRK42DItMethod(ItMethod):
         _particle.xpos = particle.xpos + 0.5 * k1[0]
         _particle.ypos = particle.ypos + 0.5 * k1[1]
         
-        flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos, _particle.xpos,
-                _particle.ypos, particle.host_horizontal_elem)
+        flag = data_reader.find_host(particle, &_particle)
 
         if flag == LAND_BDY_CROSSED:
             flag = self._horiz_bc_calculator.apply(data_reader, particle, &_particle)
@@ -776,8 +766,7 @@ cdef class AdvRK42DItMethod(ItMethod):
         _particle.xpos = particle.xpos + 0.5 * k2[0]
         _particle.ypos = particle.ypos + 0.5 * k2[1]
         
-        flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos, _particle.xpos,
-                _particle.ypos, particle.host_horizontal_elem)
+        flag = data_reader.find_host(particle, &_particle)
 
         if flag == LAND_BDY_CROSSED:
             flag = self._horiz_bc_calculator.apply(data_reader, particle, &_particle)
@@ -798,8 +787,7 @@ cdef class AdvRK42DItMethod(ItMethod):
         _particle.xpos = particle.xpos + k3[0]
         _particle.ypos = particle.ypos + k3[1]
 
-        flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos, _particle.xpos,
-                _particle.ypos, particle.host_horizontal_elem)
+        flag = data_reader.find_host(particle, &_particle)
 
         if flag == LAND_BDY_CROSSED:
             flag = self._horiz_bc_calculator.apply(data_reader, particle, &_particle)
@@ -900,6 +888,9 @@ cdef class AdvRK43DItMethod(ItMethod):
         cdef DTYPE_INT_t ndim = 3
         cdef DTYPE_INT_t i
         cdef DTYPE_INT_t counter
+
+        # Host search flag
+        cdef DTYPE_INT_t flag
         
         # Stage 1
         t = time
@@ -914,8 +905,7 @@ cdef class AdvRK43DItMethod(ItMethod):
         _particle.ypos = particle.ypos + 0.5 * k1[1]
         _particle.zpos = particle.zpos + 0.5 * k1[2]
         
-        flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos, _particle.xpos,
-                _particle.ypos, particle.host_horizontal_elem)
+        flag = data_reader.find_host(particle, &_particle)
 
         if flag == LAND_BDY_CROSSED:
             flag = self._horiz_bc_calculator.apply(data_reader, particle, &_particle)
@@ -945,8 +935,7 @@ cdef class AdvRK43DItMethod(ItMethod):
         _particle.ypos = particle.ypos + 0.5 * k2[1]
         _particle.zpos = particle.zpos + 0.5 * k2[2]
         
-        flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos, _particle.xpos,
-                _particle.ypos, particle.host_horizontal_elem)
+        flag = data_reader.find_host(particle, &_particle)
 
         if flag == LAND_BDY_CROSSED:
             flag = self._horiz_bc_calculator.apply(data_reader, particle, &_particle)
@@ -976,8 +965,7 @@ cdef class AdvRK43DItMethod(ItMethod):
         _particle.ypos = particle.ypos + k3[1]
         _particle.zpos = particle.zpos + k3[2]
 
-        flag, _particle.host_horizontal_elem = data_reader.find_host(particle.xpos, particle.ypos, _particle.xpos,
-                _particle.ypos, particle.host_horizontal_elem)
+        flag = data_reader.find_host(particle, &_particle)
 
         if flag == LAND_BDY_CROSSED:
             flag = self._horiz_bc_calculator.apply(data_reader, particle, &_particle)

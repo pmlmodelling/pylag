@@ -9,8 +9,12 @@ cdef class DataReader:
     cpdef read_data(self, DTYPE_FLOAT_t time):
         raise NotImplementedError
 
-    cpdef find_host(self, DTYPE_FLOAT_t xpos_old, DTYPE_FLOAT_t ypos_old,
-            DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new, DTYPE_INT_t guess):
+    def find_host_wrapper(self, ParticleSmartPtr particle_old,
+                          ParticleSmartPtr particle_new):
+        return self.find_host(particle_old.get_ptr(), particle_new.get_ptr())
+
+    cdef DTYPE_INT_t find_host(self, Particle *particle_old,
+                               Particle *particle_new) except INT_ERR:
         raise NotImplementedError
 
     cpdef find_host_using_global_search(self, DTYPE_FLOAT_t xpos,

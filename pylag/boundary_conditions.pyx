@@ -85,6 +85,12 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
         # Is found flag
         cdef bint found
 
+        # Host flag
+        cdef DTYPE_INT_t host
+
+        # Loop counter
+        cdef DTYPE_INT_t counter
+
         # Create copies of the two particles - these will be used to save
         # intermediate states
         particle_copy_a = particle_old[0]
@@ -164,16 +170,9 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
 
             # Move the new particle to the reflected point
             # --------------------------------------------
-            flag, host = data_reader.find_host(particle_copy_a.xpos, 
-                                               particle_copy_a.ypos,
-                                               x4_prime[0],
-                                               x4_prime[1],
-                                               particle_copy_a.host_horizontal_elem)            
-
-            # Update the new particle's position
             particle_copy_b.xpos = x4_prime[0]
             particle_copy_b.ypos = x4_prime[1]
-            particle_copy_b.host_horizontal_elem = host
+            flag = data_reader.find_host(&particle_copy_a, &particle_copy_b)
             
             if flag == IN_DOMAIN:
                 particle_new[0] = particle_copy_b

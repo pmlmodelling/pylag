@@ -142,8 +142,8 @@ cdef class FVCOMDataReader(DataReader):
             self.mediator.update_reading_frames(time)
             self._read_time_dependent_vars()
 
-    cpdef find_host(self, DTYPE_FLOAT_t xpos_old, DTYPE_FLOAT_t ypos_old,
-            DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new, DTYPE_INT_t guess):
+    cdef DTYPE_INT_t find_host(self, Particle *particle_old,
+                               Particle *particle_new) except INT_ERR:
         """ Returns the host horizontal element.
         
         This function first tries to find the new host horizontal element using
@@ -155,10 +155,11 @@ cdef class FVCOMDataReader(DataReader):
         pathline - if this crosses a known boundary, the particle is deemed
         to have left the domain.
 
-        Two variables are returned. The first is a flag that indicates whether
-        or not the particle remains in the domain; the second gives either the
-        host element or the last element the particle passed through before
-        exiting the domain.
+        The function returns a flag that indicates whether or not the particle
+        has been found within the domain. If it has, it's host element will 
+        have been set appropriately. If not, the the new particle's host
+        element will have been set to the last host element the particle passed
+        through before exiting the domain.
         
         Conventions
         -----------
@@ -177,40 +178,36 @@ cdef class FVCOMDataReader(DataReader):
             through before exiting the domain.
         
         Parameters:
-        -----------
-        xpos_old : float
-            Old x-position.
+        -----------       
+        particle_old: *Particle
+            The particle at its old position.
 
-        ypos_old : float
-            Old y-position
-
-        xpos_new : float
-            New x-position.
-
-        ypos_new : float
-            New y-position
-        
-        guess : int
-            First element to try during the search.
+        particle_new: *Particle
+            The particle at its new position. The host element will be updated.
         
         Returns:
         --------
-        host : int
-            ID of the new host horizontal element or the last element the
-            particle passed through before exiting the domain.
+        flag : int
+            Integer flag that indicates whether or not the seach was successful.
         """
         cdef DTYPE_INT_t flag, host
         
-        flag, host = self.find_host_using_local_search(xpos_new, ypos_new,
-                guess)
+        flag, host = self.find_host_using_local_search(particle_new.xpos,
+                                                       particle_new.ypos,
+                                                       particle_old.host_horizontal_elem)
         
         if flag != IN_DOMAIN:
             # Local search failed to find the particle. Perform check to see if
             # the particle has indeed left the model domain
-            flag, host = self.find_host_using_particle_tracing(xpos_old,
-                    ypos_old, xpos_new, ypos_new, guess)
-        
-        return flag, host
+            flag, host = self.find_host_using_particle_tracing(particle_old.xpos,
+                                                               particle_old.ypos,
+                                                               particle_new.xpos,
+                                                               particle_new.ypos,
+                                                               particle_old.host_horizontal_elem)
+
+        particle_new.host_horizontal_elem = host
+
+        return flag
 
     cpdef find_host_using_local_search(self, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos, DTYPE_INT_t first_guess):

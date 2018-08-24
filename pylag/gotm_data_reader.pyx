@@ -185,9 +185,9 @@ cdef class GOTMDataReader(DataReader):
         
         self._interpolate_in_time(time)
 
-    cpdef find_host(self, DTYPE_FLOAT_t xpos_old, DTYPE_FLOAT_t ypos_old,
-            DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new, DTYPE_INT_t guess):
-        return IN_DOMAIN, DEFAULT_HOST
+    cdef DTYPE_INT_t find_host(self, Particle *particle_old,
+                               Particle *particle_new) except INT_ERR:
+        return IN_DOMAIN
 
     cpdef find_host_using_global_search(self, DTYPE_FLOAT_t xpos,
             DTYPE_FLOAT_t ypos):
