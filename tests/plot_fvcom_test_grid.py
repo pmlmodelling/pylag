@@ -30,23 +30,8 @@ for idx, (xc, yc) in enumerate(zip(x_centroids, y_centroids)):
     ax.scatter(xc, yc)
     ax.annotate('xc_{}'.format(idx), xy=(xc, yc), xytext=(xc, yc))
 
-# Add test particle
-x_test = [370267.0, 368802.0, 365301.0]
-y_test = [5324350.0, 5321920.0, 5325340.0]
-ax.scatter(x_test, y_test, c='r')
-for idx in [0,1, 2]:
-    ax.annotate('x_test_{}'.format(idx), xy=(x_test[idx], y_test[idx]), xytext=(x_test[idx], y_test[idx]))
-
-# Add nodes for element containing the test particle
-test_x_nodes = []
-test_y_nodes = []
-test_nodes = nv[:,0]
-for test_node in test_nodes:
-    test_x_nodes.append(x_nodes[test_node])
-    test_y_nodes.append(y_nodes[test_node])
-
 # Plot
-for idx, (x, y) in enumerate(zip(test_x_nodes, test_y_nodes)):
+for idx, (x, y) in enumerate(zip(x_nodes, y_nodes)):
     ax.scatter(x, y)
     ax.annotate('xn_{}'.format(idx), xy=(x, y), xytext=(x, y))
 
@@ -61,4 +46,4 @@ print '%.10f' %test_x_nodes[0], '%.10f' %test_y_nodes[0]
 print '%.10f' %test_x_nodes[1], '%.10f' %test_y_nodes[1]
 print '%.10f' %test_x_nodes[2], '%.10f' %test_y_nodes[2]
 
-
+plt.show()
