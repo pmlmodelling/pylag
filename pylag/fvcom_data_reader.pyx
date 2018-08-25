@@ -58,9 +58,9 @@ cdef class FVCOMDataReader(DataReader):
     cdef DTYPE_FLOAT_t[:] _xc
     cdef DTYPE_FLOAT_t[:] _yc
     
-    # Interpolation coefficients
-    cdef DTYPE_FLOAT_t[:,:] _a1u
-    cdef DTYPE_FLOAT_t[:,:] _a2u
+#    # Interpolation coefficients
+#    cdef DTYPE_FLOAT_t[:,:] _a1u
+#    cdef DTYPE_FLOAT_t[:,:] _a2u
     
     # Sigma layers and levels
     cdef DTYPE_FLOAT_t[:,:] _siglev
@@ -1632,9 +1632,9 @@ cdef class FVCOMDataReader(DataReader):
         # Bathymetry
         self._h = self.mediator.get_grid_variable('h', (self._n_nodes), DTYPE_FLOAT)
 
-        # Interpolation parameters (a1u, a2u, aw0, awx, awy)
-        self._a1u = self.mediator.get_grid_variable('a1u', (4, self._n_elems), DTYPE_FLOAT)
-        self._a2u = self.mediator.get_grid_variable('a2u', (4, self._n_elems), DTYPE_FLOAT)
+#        # Interpolation parameters (a1u, a2u, aw0, awx, awy)
+#        self._a1u = self.mediator.get_grid_variable('a1u', (4, self._n_elems), DTYPE_FLOAT)
+#        self._a2u = self.mediator.get_grid_variable('a2u', (4, self._n_elems), DTYPE_FLOAT)
 
     cdef _read_time_dependent_vars(self):
         """ Update time variables and memory views for FVCOM data fields.
@@ -1825,40 +1825,40 @@ cdef class FVCOMDataReader(DataReader):
         sigma = interp.interpolate_within_element(sigma_nodes, phi)
         return sigma
 
-    cdef DTYPE_FLOAT_t _interpolate_vel_between_elements(self, 
-            DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t host, 
-            DTYPE_FLOAT_t vel_elem[N_NEIGH_ELEMS]) except FLOAT_ERR:
-        """Interpolate between elements using linear least squares interpolation.
-        
-        Use the a1u and a2u interpolants to compute the velocity at xpos and
-        ypos.
-        
-        Parameters:
-        -----------
-        xpos : float
-            x position in cartesian coordinates.
-
-        ypos : float
-            y position in cartesian coordinates.
-        
-        host : int
-            The host element.
-
-        vel_elem : c array, float
-            Velocity at the centroid of the host element and its three 
-            surrounding neighbour elements.
-        """
-
-        cdef DTYPE_FLOAT_t rx, ry
-        cdef DTYPE_FLOAT_t dudx, dudy
-        
-        # Interpolate horizontally
-        rx = xpos - self._xc[host]
-        ry = ypos - self._yc[host]
-
-        dudx = 0.0
-        dudy = 0.0
-        for i in xrange(N_NEIGH_ELEMS):
-            dudx += vel_elem[i] * self._a1u[i, host]
-            dudy += vel_elem[i] * self._a2u[i, host]
-        return vel_elem[0] + dudx*rx + dudy*ry
+#    cdef DTYPE_FLOAT_t _interpolate_vel_between_elements(self, 
+#            DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t host, 
+#            DTYPE_FLOAT_t vel_elem[N_NEIGH_ELEMS]) except FLOAT_ERR:
+#        """Interpolate between elements using linear least squares interpolation.
+#        
+#        Use the a1u and a2u interpolants to compute the velocity at xpos and
+#        ypos.
+#        
+#        Parameters:
+#        -----------
+#        xpos : float
+#            x position in cartesian coordinates.
+#
+#        ypos : float
+#            y position in cartesian coordinates.
+#        
+#        host : int
+#            The host element.
+#
+#        vel_elem : c array, float
+#            Velocity at the centroid of the host element and its three 
+#            surrounding neighbour elements.
+#        """
+#
+#        cdef DTYPE_FLOAT_t rx, ry
+#        cdef DTYPE_FLOAT_t dudx, dudy
+#        
+#        # Interpolate horizontally
+#        rx = xpos - self._xc[host]
+#        ry = ypos - self._yc[host]
+#
+#        dudx = 0.0
+#        dudy = 0.0
+#        for i in xrange(N_NEIGH_ELEMS):
+#            dudx += vel_elem[i] * self._a1u[i, host]
+#            dudy += vel_elem[i] * self._a2u[i, host]
+#        return vel_elem[0] + dudx*rx + dudy*ry
