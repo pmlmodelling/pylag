@@ -41,9 +41,4 @@ print '%.10f' %x_centroids[1], '%.10f' %y_centroids[1]
 print '%.10f' %x_centroids[2], '%.10f' %y_centroids[2]
 print '%.10f' %x_centroids[3], '%.10f' %y_centroids[3]
 
-print 'Nodes'
-print '%.10f' %test_x_nodes[0], '%.10f' %test_y_nodes[0]
-print '%.10f' %test_x_nodes[1], '%.10f' %test_y_nodes[1]
-print '%.10f' %test_x_nodes[2], '%.10f' %test_y_nodes[2]
-
 plt.show()
