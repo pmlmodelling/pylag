@@ -192,34 +192,35 @@ cdef class FVCOMDataReader(DataReader):
         """
         cdef DTYPE_INT_t flag, host
         
-        flag, host = self.find_host_using_local_search(particle_new.xpos,
-                                                       particle_new.ypos,
-                                                       particle_old.host_horizontal_elem)
+        flag = self.find_host_using_local_search(particle_new,
+                                                 particle_old.host_horizontal_elem)
         
         if flag != IN_DOMAIN:
             # Local search failed to find the particle. Perform check to see if
             # the particle has indeed left the model domain
             flag, host = self.find_host_using_particle_tracing(particle_old.xpos,
-                                                               particle_old.ypos,
-                                                               particle_new.xpos,
-                                                               particle_new.ypos,
-                                                               particle_old.host_horizontal_elem)
+                                                         particle_old.ypos,
+                                                         particle_new.xpos,
+                                                         particle_new.ypos,
+                                                         particle_old.host_horizontal_elem)
 
-        particle_new.host_horizontal_elem = host
+            particle_new.host_horizontal_elem = host
 
         return flag
 
-    cpdef find_host_using_local_search(self, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos, DTYPE_INT_t first_guess):
+    cdef DTYPE_INT_t find_host_using_local_search(self, Particle *particle,
+                                                  DTYPE_INT_t first_guess) except INT_ERR:
         """ Returns the host horizontal element through local searching.
         
         Use a local search for the host horizontal element in which the next
         element to be search is determined by the barycentric coordinates of
         the last element to be searched.
         
-        Two variables are returned. The first is a flag that indicates whether
-        or not the search was successful, the second gives either the host
-        element or the last element searched before exiting the domain.
+        The function returns a flag that indicates whether or not the particle
+        has been found within the domain. If it has, its host element will 
+        have been set appropriately. If not, a search error is returned. The
+        algorithm cannot reliably detect boundary crossings, so no attempt
+        is made to try and flag if a boundary crossing occurred.
         
         We also keep track of the second to last element to be searched in order
         to guard against instances when the model gets stuck alternately testing
@@ -231,34 +232,21 @@ cdef class FVCOMDataReader(DataReader):
             This indicates that the particle was found successfully. Host is
             is the index of the new host element.
         
-        flag = LAND_BDY_CROSSED:
-            This indicates that the particle exited the domain across a land
-            boundary. Host is set to the last element the particle passed
-            through before exiting the domain.
-
-        flag = OPEN_BDY_CROSSED:
-            This indicates that the particle exited the domain across an open
-            boundary. Host is set to the last element the particle passed
-            through before exiting the domain.
+        flag = BDY_ERROR:
+            The host element was not found.
         
         Parameters:
         -----------
-        xpos : float
-            x-position.
+        particle: *Particle
+            The particle.
 
-        ypos : float
-            y-position
-        
-        first_guess : int
-            First element to try during the search.
+        DTYPE_INT_t: first_guess
+            The first element to start searching.
         
         Returns:
         --------
         flag : int
             Integer flag that indicates whether or not the seach was successful.
-
-        guess : int
-            ID of the host horizontal element or the last element searched.
         """
         # Intermediate arrays/variables
         cdef DTYPE_FLOAT_t phi[N_VERTICES]
@@ -282,7 +270,7 @@ cdef class FVCOMDataReader(DataReader):
         
         while True:
             # Barycentric coordinates
-            self._get_phi(xpos, ypos, guess, phi)
+            self._get_phi(particle.xpos, particle.ypos, guess, phi)
 
             # Check to see if the particle is in the current element
             phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
@@ -290,8 +278,7 @@ cdef class FVCOMDataReader(DataReader):
                 host_found = True
 
             # If the particle has walked into an element with two land
-            # boundaries flag it as having moved outside of the domain - ideally
-            # unstructured grids should not include such elements.
+            # boundaries flag this as an error.
             if host_found is True:
                 n_host_land_boundaries = 0
                 for i in xrange(3):
@@ -300,18 +287,11 @@ cdef class FVCOMDataReader(DataReader):
 
                 if n_host_land_boundaries < 2:
                     # Normal element
-                    flag = IN_DOMAIN
-                    return flag, guess
+                    particle.host_horizontal_elem = guess
+                    return IN_DOMAIN
                 else:
-                    # Element has two land boundaries - mark as land and
-                    # return the last element searched
-                    if self.config.get('GENERAL', 'log_level') == 'DEBUG':
-                        logger = logging.getLogger(__name__)
-                        logger.warning('Particle prevented from entering '\
-                            'element {} which has two land '\
-                            'boundaries.'.format(guess))
-                    flag = LAND_BDY_CROSSED
-                return flag, last_guess
+                    # Element has two land boundaries
+                    return BDY_ERROR
 
             # If not, use phi to select the next element to be searched
             second_to_last_guess = last_guess
@@ -324,14 +304,8 @@ cdef class FVCOMDataReader(DataReader):
                 guess = self._nbe[2,last_guess]
 
             # Check for boundary crossings
-            if guess == -1:
-                # Land boundary crossed
-                flag = LAND_BDY_CROSSED
-                return flag, last_guess
-            elif guess == -2:
-                # Open ocean boundary crossed
-                flag = OPEN_BDY_CROSSED
-                return flag, last_guess
+            if guess == -1 or guess == -2:
+                return BDY_ERROR
             
             # Check that we are not alternately checking the same two elements
             if guess == second_to_last_guess:
@@ -345,7 +319,7 @@ cdef class FVCOMDataReader(DataReader):
                             'approach to solving this is to increase the value '
                             'of epsilon which is used for floating point '
                             'comparisons. See include/constants.pxi.'.format(guess,
-                            second_to_last_guess, xpos, ypos))
+                            second_to_last_guess, particle.xpos, particle.ypos))
                 raise RuntimeError('Local host element search failed. See the '
                         'log file for more details (with log_level == DEBUG).')
 
@@ -517,26 +491,21 @@ cdef class FVCOMDataReader(DataReader):
                 flag = IN_DOMAIN
                 return flag, current_elem
 
-    cpdef find_host_using_global_search(self, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos):
+    cdef DTYPE_INT_t find_host_using_global_search(self, Particle *particle) except INT_ERR:
         """ Returns the host horizontal element through global searching.
         
-        Sequentially search all elements for the given location. Return the
-        ID of the host horizontal element if it exists and -1 if the particle
-        lies outside of the domain.
+        Sequentially search all elements for the given location. Set the particle
+        host element if found.
         
         Parameters:
         -----------
-        xpos : float
-            x-position.
-
-        ypos : float
-            y-position
+        particle_old: *Particle
+            The particle.
         
         Returns:
         --------
-        host : int
-            ID of the host horizontal element.
+        flag : int
+            Integer flag that indicates whether or not the seach was successful.
         """
         # Intermediate arrays/variables
         cdef DTYPE_FLOAT_t phi[N_VERTICES]
@@ -552,7 +521,7 @@ cdef class FVCOMDataReader(DataReader):
         
         for guess in xrange(self._n_elems):
             # Barycentric coordinates
-            self._get_phi(xpos, ypos, guess, phi)
+            self._get_phi(particle.xpos, particle.ypos, guess, phi)
 
             # Check to see if the particle is in the current element
             phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
@@ -573,7 +542,8 @@ cdef class FVCOMDataReader(DataReader):
                         n_host_land_boundaries += 1
 
                 if n_host_land_boundaries < 2:
-                    return guess
+                    particle.host_horizontal_elem = guess
+                    return IN_DOMAIN
                 else:
                     # Element has two land boundaries
                     if self.config.get('GENERAL', 'log_level') == 'DEBUG':
@@ -582,8 +552,8 @@ cdef class FVCOMDataReader(DataReader):
                             'determined that the particle lies within an '
                             'element with two land boundaries. Such elements '
                             'are flagged as lying outside of the model domain.')
-                    return -1
-        return -1
+                    return BDY_ERROR
+        return BDY_ERROR
 
     cpdef get_boundary_intersection(self, DTYPE_FLOAT_t xpos_old,
         DTYPE_FLOAT_t ypos_old, DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new,

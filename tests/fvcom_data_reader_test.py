@@ -125,16 +125,15 @@ class FVCOMDataReader_test(TestCase):
         del(self.data_reader)
 
     def test_find_host_using_global_search(self):
-        xpos = 1.3333333333 # Centroid of element 0 (x coordinate)
-        ypos = 1.6666666667 # Centroid of element 0 (y coordinate)
-        host = self.data_reader.find_host_using_global_search(xpos, ypos)
-        test.assert_equal(host, 0)
+        particle = ParticleSmartPtr(xpos=1.3333333333, ypos=1.6666666667)
+        flag = self.data_reader.find_host_using_global_search_wrapper(particle)
+        test.assert_equal(particle.host_horizontal_elem, 0)
+        test.assert_equal(flag, 0)
 
     def test_find_host_using_global_search_when_a_particle_is_in_an_element_with_two_land_boundaries(self):
-        xpos = 0.6666666667 # Centroid of element 1 that has two land boundaries (x coordinate)
-        ypos = 1.3333333333 # Centroid of element 1 that has two land boundaries (y coordinate)
-        host = self.data_reader.find_host_using_global_search(xpos, ypos)
-        test.assert_equal(host, -1)
+        particle = ParticleSmartPtr(xpos=0.6666666667, ypos=1.3333333333, host=-1)
+        flag = self.data_reader.find_host_using_global_search_wrapper(particle)
+        test.assert_equal(particle.host_horizontal_elem, -1)
 
     def test_find_host_when_particle_is_in_the_domain(self):
         particle_old = ParticleSmartPtr(xpos=1.5, ypos=2.3333333333, host=3)

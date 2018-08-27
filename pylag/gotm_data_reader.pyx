@@ -189,13 +189,14 @@ cdef class GOTMDataReader(DataReader):
                                Particle *particle_new) except INT_ERR:
         return IN_DOMAIN
 
-    cpdef find_host_using_global_search(self, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos):
-        return DEFAULT_HOST
+    cdef DTYPE_INT_t find_host_using_global_search(self,
+                                                   Particle *particle) except INT_ERR:
+        return IN_DOMAIN
 
-    cpdef find_host_using_local_search(self, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos, DTYPE_INT_t first_guess):
-        return IN_DOMAIN, DEFAULT_HOST
+    cdef DTYPE_INT_t find_host_using_local_search(self,
+                                                  Particle *particle_old,
+                                                  DTYPE_INT_t first_guess) except INT_ERR:
+        return IN_DOMAIN
 
     cdef set_local_coordinates(self, Particle *particle):
         """ Set local coordinates

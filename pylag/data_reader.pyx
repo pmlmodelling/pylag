@@ -17,12 +17,23 @@ cdef class DataReader:
                                Particle *particle_new) except INT_ERR:
         raise NotImplementedError
 
-    cpdef find_host_using_global_search(self, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos):
+    def find_host_using_global_search_wrapper(self,
+                                              ParticleSmartPtr particle):
+        return self.find_host_using_global_search(particle.get_ptr())
+
+    cdef DTYPE_INT_t find_host_using_global_search(self,
+                                                   Particle *particle) except INT_ERR:
         raise NotImplementedError
 
-    cpdef find_host_using_local_search(self, DTYPE_FLOAT_t xpos,
-            DTYPE_FLOAT_t ypos, DTYPE_INT_t first_guess):
+    def find_host_using_local_search_wrapper(self,
+                                             ParticleSmartPtr particle,
+                                             DTYPE_INT_t first_guess):
+        return self.find_host_using_local_search(particle.get_ptr(),
+                                                 first_guess)
+
+    cdef DTYPE_INT_t find_host_using_local_search(self,
+                                                  Particle *particle,
+                                                  DTYPE_INT_t first_guess) except INT_ERR:
         raise NotImplementedError
 
     cpdef get_boundary_intersection(self, DTYPE_FLOAT_t xpos_old,

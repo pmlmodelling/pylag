@@ -182,7 +182,7 @@ cdef class OPTModel:
         quantities (e.g. is_beached) are also set in seed().
         """
         # Particle raw pointer
-        cdef Particle* particle_ptr
+        cdef ParticleSmartPtr particle_smart_ptr
         
         # Create particle seed - particles stored in a list object
         self.particle_seed_smart_ptrs = []
@@ -194,41 +194,37 @@ cdef class OPTModel:
             # Unique particle ID.
             id += 1
 
+            # Create particle
+            particle_smart_ptr = ParticleSmartPtr(group_id=group, xpos=x, ypos=y, zpos=z, id=id)
+
             # Find particle host element
             if guess is not None:
                 # Try a local search first
-                flag, host_horizontal_elem = self.data_reader.find_host_using_local_search(x, y, guess)
+                flag = self.data_reader.find_host_using_local_search(particle_smart_ptr.get_ptr(), guess)
                 if flag != IN_DOMAIN:
                     # Local search failed - try a global search
-                    host_horizontal_elem = self.data_reader.find_host_using_global_search(x, y)
+                    flag = self.data_reader.find_host_using_global_search(particle_smart_ptr.get_ptr())
             else:
                 # Global search ...
-                host_horizontal_elem = self.data_reader.find_host_using_global_search(x, y)
+                flag = self.data_reader.find_host_using_global_search(particle_smart_ptr.get_ptr())
 
-            if host_horizontal_elem >= 0:
-                in_domain = True
-
-                # Create particle
-                particle_seed_smart_ptr = ParticleSmartPtr(group_id=group,
-                        xpos=x, ypos=y, zpos=z, host=host_horizontal_elem,
-                        in_domain=in_domain, id=id)
-                particle_ptr = particle_seed_smart_ptr.get_ptr()
+            if flag == IN_DOMAIN:
+                particle_smart_ptr.get_ptr().in_domain = True
 
                 # Set local coordinates
-                self.data_reader.set_local_coordinates(particle_ptr)
+                self.data_reader.set_local_coordinates(particle_smart_ptr.get_ptr())
 
                 # Add particle to the particle set
-                self.particle_seed_smart_ptrs.append(particle_seed_smart_ptr)
+                self.particle_seed_smart_ptrs.append(particle_smart_ptr)
 
                 particles_in_domain += 1
 
                 # Use the location of the last particle to guide the search for the
                 # next. This should be fast if particle initial positions are colocated.
-                guess = host_horizontal_elem
+                guess = particle_smart_ptr.host_horizontal_elem
             else:
-                in_domain = False
-                particle_seed_smart_ptr = ParticleSmartPtr(group_id=group, in_domain=in_domain, id=id)
-                self.particle_seed_smart_ptrs.append(particle_seed_smart_ptr)
+                particle_smart_ptr.get_ptr().in_domain = False
+                self.particle_seed_smart_ptrs.append(particle_smart_ptr)
 
         if self.config.get('GENERAL', 'log_level') == 'DEBUG':
             logger = logging.getLogger(__name__)

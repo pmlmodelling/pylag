@@ -10,14 +10,12 @@ cdef class TestHorizBCDataReader(DataReader):
                                Particle *particle_new) except INT_ERR:
         return IN_DOMAIN
 
-    cpdef find_host_using_local_search(self, DTYPE_FLOAT_t xpos,
-                                       DTYPE_FLOAT_t ypos,
-                                       DTYPE_INT_t guess):
-        return 0, 0
+    cdef DTYPE_INT_t find_host_using_local_search(self,  Particle *particle,
+                                       DTYPE_INT_t first_guess) except INT_ERR:
+        return IN_DOMAIN
 
-    cpdef find_host_using_global_search(self, DTYPE_FLOAT_t xpos,
-                                        DTYPE_FLOAT_t ypos):
-        return 0
+    cdef DTYPE_INT_t find_host_using_global_search(self,  Particle *particle) except INT_ERR:
+        return IN_DOMAIN
 
     cpdef get_boundary_intersection(self, DTYPE_FLOAT_t xpos_old,
                                     DTYPE_FLOAT_t ypos_old,

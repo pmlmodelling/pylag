@@ -14,11 +14,12 @@ cdef class DataReader:
     cdef DTYPE_INT_t find_host(self, Particle *particle_old,
                                Particle *particle_new) except INT_ERR
 
-    cpdef find_host_using_global_search(self, DTYPE_FLOAT_t xpos,
-        DTYPE_FLOAT_t ypos)
+    cdef DTYPE_INT_t find_host_using_global_search(self,
+                                                   Particle *particle) except INT_ERR
 
-    cpdef find_host_using_local_search(self, DTYPE_FLOAT_t xpos,
-        DTYPE_FLOAT_t ypos, DTYPE_INT_t first_guess)
+    cdef DTYPE_INT_t find_host_using_local_search(self,
+                                                  Particle *particle,
+                                                  DTYPE_INT_t first_guess) except INT_ERR
 
     cpdef get_boundary_intersection(self, DTYPE_FLOAT_t xpos_old,
         DTYPE_FLOAT_t ypos_old, DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new,

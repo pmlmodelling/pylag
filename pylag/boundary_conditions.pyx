@@ -85,9 +85,6 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
         # Is found flag
         cdef bint found
 
-        # Host flag
-        cdef DTYPE_INT_t host
-
         # Loop counter
         cdef DTYPE_INT_t counter
 
@@ -129,14 +126,13 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
 
             # Attempt to find the particle using a local search
             # -------------------------------------------------
-            flag, host = data_reader.find_host_using_local_search(x4_prime[0],
-                                                                  x4_prime[1],
-                                                                  particle_copy_b.host_horizontal_elem)
+            particle_copy_b.xpos = x4_prime[0]
+            particle_copy_b.ypos = x4_prime[1]
+            flag = data_reader.find_host_using_local_search(&particle_copy_b,
+                                                            particle_copy_b.host_horizontal_elem)
 
             if flag == IN_DOMAIN:
-                particle_new.xpos = x4_prime[0]
-                particle_new.ypos = x4_prime[1]
-                particle_new.host_horizontal_elem = host
+                particle_new[0] = particle_copy_b
                 return flag
 
             # Local search failed
@@ -157,21 +153,17 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
                 for i in xrange(2):
                     r_test[i] = r_test[i]/10.
                     x_test[i] = xi[i] + r_test[i]
-                host = data_reader.find_host_using_global_search(x_test[0],
-                                                                 x_test[1])
-                if host != -1:
-                    found = True
-            
-            # Move the old particle to this point, which will act as a
-            # reference point when searching for the new particle. 
-            particle_copy_a.xpos = x_test[0]
-            particle_copy_a.ypos = x_test[1]
-            particle_copy_a.host_horizontal_elem = host
 
-            # Move the new particle to the reflected point
-            # --------------------------------------------
-            particle_copy_b.xpos = x4_prime[0]
-            particle_copy_b.ypos = x4_prime[1]
+                particle_copy_a.xpos = x_test[0]
+                particle_copy_a.ypos = x_test[1]
+
+                flag = data_reader.find_host_using_global_search(&particle_copy_a)
+
+                if flag == IN_DOMAIN:
+                    found = True
+
+            # Attempt to locate the new point using robust searching
+            # ------------------------------------------------------
             flag = data_reader.find_host(&particle_copy_a, &particle_copy_b)
             
             if flag == IN_DOMAIN:
