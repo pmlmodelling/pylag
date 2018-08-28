@@ -2,6 +2,8 @@ include "constants.pxi"
 
 import logging
 
+import numpy as np
+
 from cpython cimport bool
 
 # Data types used for constructing C data structures
@@ -57,6 +59,10 @@ cdef class FVCOMDataReader(DataReader):
     # Element centre coordinates
     cdef DTYPE_FLOAT_t[:] _xc
     cdef DTYPE_FLOAT_t[:] _yc
+
+    # Minimum nodal x/y values
+    cdef DTYPE_FLOAT_t _xmin
+    cdef DTYPE_FLOAT_t _ymin
     
 #    # Interpolation coefficients
 #    cdef DTYPE_FLOAT_t[:,:] _a1u
@@ -765,6 +771,12 @@ cdef class FVCOMDataReader(DataReader):
         print msg
         
         raise ValueError("Failed to locate particle within FVCOM's vertical grid")
+
+    cpdef DTYPE_FLOAT_t get_xmin(self) except FLOAT_ERR:
+        return self._xmin
+
+    cpdef DTYPE_FLOAT_t get_ymin(self) except FLOAT_ERR:
+        return self._ymin
 
     cdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, Particle *particle):
         """ Returns the bottom depth in cartesian coordinates
@@ -1587,11 +1599,21 @@ cdef class FVCOMDataReader(DataReader):
         self._nv = self.mediator.get_grid_variable('nv', (3, self._n_elems), DTYPE_INT)
         self._nbe = self.mediator.get_grid_variable('nbe', (3, self._n_elems), DTYPE_INT)
 
-        # Cartesian coordinates
-        self._x = self.mediator.get_grid_variable('x', (self._n_nodes), DTYPE_FLOAT)
-        self._y = self.mediator.get_grid_variable('y', (self._n_nodes), DTYPE_FLOAT)
-        self._xc = self.mediator.get_grid_variable('xc', (self._n_elems), DTYPE_FLOAT)
-        self._yc = self.mediator.get_grid_variable('yc', (self._n_elems), DTYPE_FLOAT)
+        # Raw grid x/y coordinates
+        x = self.mediator.get_grid_variable('x', (self._n_nodes), DTYPE_FLOAT)
+        y = self.mediator.get_grid_variable('y', (self._n_nodes), DTYPE_FLOAT)
+        xc = self.mediator.get_grid_variable('xc', (self._n_elems), DTYPE_FLOAT)
+        yc = self.mediator.get_grid_variable('yc', (self._n_elems), DTYPE_FLOAT)
+
+        # calculate offsets
+        self._xmin = np.min(x)
+        self._ymin = np.min(y)
+
+        # Apply offsets
+        self._x = x - self._xmin
+        self._y = y - self._ymin
+        self._xc = xc - self._xmin
+        self._yc = yc - self._ymin
 
         # Sigma levels at nodal coordinates
         self._siglev = self.mediator.get_grid_variable('siglev', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)

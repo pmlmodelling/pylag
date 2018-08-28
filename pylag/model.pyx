@@ -187,6 +187,10 @@ cdef class OPTModel:
         # Create particle seed - particles stored in a list object
         self.particle_seed_smart_ptrs = []
 
+        # Grid offsets
+        xmin = self.data_reader.get_xmin()
+        ymin = self.data_reader.get_ymin()
+
         guess = None
         particles_in_domain = 0
         id = 0
@@ -195,7 +199,7 @@ cdef class OPTModel:
             id += 1
 
             # Create particle
-            particle_smart_ptr = ParticleSmartPtr(group_id=group, xpos=x, ypos=y, zpos=z, id=id)
+            particle_smart_ptr = ParticleSmartPtr(group_id=group, xpos=x-xmin, ypos=y-ymin, zpos=z, id=id)
 
             # Find particle host element
             if guess is not None:
@@ -289,13 +293,17 @@ cdef class OPTModel:
             Dictionary holding particle diagnostic data.
         """
         cdef Particle* particle_ptr
-        
+
+        # Grid offsets
+        xmin = self.data_reader.get_xmin()
+        ymin = self.data_reader.get_ymin()
+
         diags = {'xpos': [], 'ypos': [], 'zpos': [], 'host_horizontal_elem': [],
                  'h': [], 'zeta': [], 'is_beached': [], 'in_domain': [],
                  'status': []}
         for particle_ptr in self.particle_ptrs:
-            diags['xpos'].append(particle_ptr.xpos)
-            diags['ypos'].append(particle_ptr.ypos)
+            diags['xpos'].append(particle_ptr.xpos + xmin)
+            diags['ypos'].append(particle_ptr.ypos + ymin)
             diags['zpos'].append(particle_ptr.zpos)
             diags['host_horizontal_elem'].append(particle_ptr.host_horizontal_elem)
             diags['is_beached'].append(particle_ptr.is_beached)

@@ -54,6 +54,12 @@ cdef class DataReader:
     cdef set_vertical_grid_vars(self, DTYPE_FLOAT_t time, Particle *particle):
         raise NotImplementedError
 
+    cpdef DTYPE_FLOAT_t get_xmin(self) except FLOAT_ERR:
+        raise NotImplementedError
+
+    cpdef DTYPE_FLOAT_t get_ymin(self) except FLOAT_ERR:
+        raise NotImplementedError
+
     def get_zmin_wrapper(self, DTYPE_FLOAT_t time, ParticleSmartPtr particle):
         return self.get_zmin(time, particle.get_ptr())
 

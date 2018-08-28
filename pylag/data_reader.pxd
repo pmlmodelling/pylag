@@ -29,6 +29,10 @@ cdef class DataReader:
 
     cdef set_vertical_grid_vars(self, DTYPE_FLOAT_t time, Particle *particle)
 
+    cpdef DTYPE_FLOAT_t get_xmin(self) except FLOAT_ERR
+
+    cpdef DTYPE_FLOAT_t get_ymin(self) except FLOAT_ERR
+
     cdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, Particle *particle)
 
     cdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, Particle *particle)
