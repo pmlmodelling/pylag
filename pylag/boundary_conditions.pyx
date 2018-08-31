@@ -5,6 +5,7 @@ import logging
 # PyLag cimports
 from pylag.particle cimport ParticleSmartPtr
 from pylag.math cimport inner_product
+from pylag.math cimport Intersection
 
 cdef class HorizBoundaryConditionCalculator:
 
@@ -88,6 +89,9 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
         # Loop counter
         cdef DTYPE_INT_t counter
 
+        # The intersection point
+        cdef Intersection intersection
+
         # Create copies of the two particles - these will be used to save
         # intermediate states
         particle_copy_a = particle_old[0]
@@ -105,18 +109,18 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
 
             # Compute coordinates for the side of the element the particle crossed
             # before exiting the domain
-            x1[0], x1[1], x2[0], x2[1], xi[0], xi[1] = data_reader.get_boundary_intersection(particle_copy_a.xpos,
-                    particle_copy_a.ypos, particle_copy_b.xpos, particle_copy_b.ypos,
-                    particle_copy_b.host_horizontal_elem)
+            intersection = data_reader.get_boundary_intersection(&particle_copy_a,
+                                                                 &particle_copy_b)
 
             # Compute the direction vector pointing from the intersection point
             # to the position vector that lies outside of the model domain
-            for i in xrange(2):
-                d[i] = x4[i] - xi[i]
+            d[0] = x4[0] - intersection.xi
+            d[1] = x4[1] - intersection.yi
 
             # Compute the normal to the element side that points back into the
             # element given the clockwise ordering of element vertices
-            n[0] = x2[1] - x1[1]; n[1] = x1[0] - x2[0]
+            n[0] = intersection.y2 - intersection.y1
+            n[1] = intersection.x1 - intersection.x2
 
             # Compute the reflection vector
             mult = 2.0 * inner_product(n, d) / inner_product(n, n)

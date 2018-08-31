@@ -5,6 +5,7 @@ from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 # PyLag cimports
 from particle cimport Particle
+from math cimport Intersection
 
 cdef class DataReader:
     cpdef setup_data_access(self, start_datetime, end_datetime)
@@ -21,9 +22,8 @@ cdef class DataReader:
                                                   Particle *particle,
                                                   DTYPE_INT_t first_guess) except INT_ERR
 
-    cpdef get_boundary_intersection(self, DTYPE_FLOAT_t xpos_old,
-        DTYPE_FLOAT_t ypos_old, DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new,
-        DTYPE_INT_t last_host)
+    cdef Intersection get_boundary_intersection(self, Particle *particle_old,
+                                                Particle *particle_new)
 
     cdef set_local_coordinates(self, Particle *particle)
 

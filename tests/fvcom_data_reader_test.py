@@ -202,33 +202,23 @@ class FVCOMDataReader_test(TestCase):
         test.assert_equal(flag, -1)
         test.assert_equal(particle_new.host_horizontal_elem, 1)
 
-    def test_get_boundary_intersection_x2x0(self):
-        xpos_old = 1.6666666667-self.xmin # Centroid of element 1 (x coordinate)
-        ypos_old = 1.3333333333-self.ymin # Centroid of element 1 (y coordinate)
-        xpos_new = 1.6666666667-self.xmin # Point outside element (x coordinate)
-        ypos_new = 0.9-self.ymin # Point outside element (y coordinate)
-        last_host = 1
-        x1, y1, x2, y2, xi, yi = self.data_reader.get_boundary_intersection(xpos_old, ypos_old, xpos_new, ypos_new, last_host)
-        test.assert_almost_equal(x1+self.xmin, 2.0)
-        test.assert_almost_equal(y1+self.ymin, 1.0)
-        test.assert_almost_equal(x2+self.xmin, 1.0)
-        test.assert_almost_equal(y2+self.ymin, 1.0)
-        test.assert_almost_equal(xi+self.xmin, 1.6666666667)
-        test.assert_almost_equal(yi+self.ymin, 1.0)
+    def test_find_host_when_particle_is_on_an_external_elements_side(self):
+        particle_old = ParticleSmartPtr(xpos=1.6666666667-self.xmin, ypos=1.3333333333-self.ymin, host=1)
+        particle_new = ParticleSmartPtr(xpos=1.6666666667-self.xmin, ypos=1.0-self.ymin)
+        flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
+        test.assert_equal(flag, 0)
+        test.assert_equal(particle_new.host_horizontal_elem, 1)
 
-    def test_get_boundary_intersection_x0x1(self):
-        xpos_old = 1.3333333333-self.xmin # Centroid of element 0 (y coordinate)
-        ypos_old = 1.6666666667-self.ymin # Centroid of element 0 (x coordinate)
-        xpos_new = 1.3333333333-self.xmin # Point outside element (x coordinate)
-        ypos_new = 0.9-self.ymin # Point outside element (y coordinate)
-        last_host = 1
-        x1, y1, x2, y2, xi, yi = self.data_reader.get_boundary_intersection(xpos_old, ypos_old, xpos_new, ypos_new, last_host)
-        test.assert_almost_equal(x1+self.xmin, 2.0)
-        test.assert_almost_equal(y1+self.ymin, 1.0)
-        test.assert_almost_equal(x2+self.xmin, 1.0)
-        test.assert_almost_equal(y2+self.ymin, 1.0)
-        test.assert_almost_equal(xi+self.xmin, 1.3333333333)
-        test.assert_almost_equal(yi+self.ymin, 1.0)
+    def test_get_boundary_intersection(self):
+        particle_old = ParticleSmartPtr(xpos=1.6666666667-self.xmin, ypos=1.3333333333-self.ymin, host=1)
+        particle_new = ParticleSmartPtr(xpos=1.6666666667-self.xmin, ypos=0.9-self.ymin, host=1)
+        intersection = self.data_reader.get_boundary_intersection_wrapper(particle_old, particle_new)
+        test.assert_almost_equal(intersection.x1+self.xmin, 2.0)
+        test.assert_almost_equal(intersection.y1+self.ymin, 1.0)
+        test.assert_almost_equal(intersection.x2+self.xmin, 1.0)
+        test.assert_almost_equal(intersection.y2+self.ymin, 1.0)
+        test.assert_almost_equal(intersection.xi+self.xmin, 1.6666666667)
+        test.assert_almost_equal(intersection.yi+self.ymin, 1.0)
 
     def test_get_zmin(self):
         xpos = 1.3333333333-self.xmin

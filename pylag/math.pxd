@@ -1,5 +1,8 @@
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
+cdef class Intersection:
+    cdef DTYPE_FLOAT_t _x1, _y1, _x2, _y2, _xi, _yi
+
 cdef inline DTYPE_FLOAT_t float_min(DTYPE_FLOAT_t a, DTYPE_FLOAT_t b): return a if a <= b else b
 cdef inline DTYPE_FLOAT_t float_max(DTYPE_FLOAT_t a, DTYPE_FLOAT_t b): return a if a >= b else b
 

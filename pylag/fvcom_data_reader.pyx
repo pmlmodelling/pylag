@@ -18,6 +18,7 @@ from pylag.data_reader cimport DataReader
 cimport pylag.interpolation as interp
 from pylag.math cimport int_min, float_min, get_intersection_point
 from pylag.math cimport cartesian_to_sigma_coords, sigma_to_cartesian_coords
+from pylag.math cimport Intersection
 
 cdef class FVCOMDataReader(DataReader):
     """ DataReader for FVCOM.
@@ -561,9 +562,7 @@ cdef class FVCOMDataReader(DataReader):
                     return BDY_ERROR
         return BDY_ERROR
 
-    cpdef get_boundary_intersection(self, DTYPE_FLOAT_t xpos_old,
-        DTYPE_FLOAT_t ypos_old, DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new,
-        DTYPE_INT_t last_host):
+    cdef Intersection get_boundary_intersection(self, Particle *particle_old, Particle *particle_new):
         """ Find the boundary intersection point
 
         This function is primarily intended to assist in the application of 
@@ -573,27 +572,16 @@ cdef class FVCOMDataReader(DataReader):
         
         Parameters:
         -----------
-        xpos_old : float
-            x-position at the last time point.
+        particle_old: *Particle
+            The particle at its old position.
 
-        ypos_old : float
-            y-position at the last time point.
+        particle_new: *Particle
+            The particle at its new position.
 
-        xpos_new : float
-            x-position at the next time point that lies outside of the domain.
-
-        ypos_new : float
-            y-position at the next time point that lies outside of the domain.      
-        
-        last_host : int
-            The last element the particle passed through before exiting the
-            domain.
-        
         Returns:
         --------
-        x1, y1, x2, y2, xi, yi :  float
-            The end coordinates of the line segment (side) and the intersection
-            point.
+        intersection: Intersection
+            Object describing the boundary intersection.
         """
         cdef int i # Loop counter
         cdef int vertex # Vertex identifier
@@ -623,18 +611,23 @@ cdef class FVCOMDataReader(DataReader):
         cdef int x2_idx
         cdef int nbe_idx
 
+        # The intersection
+        cdef Intersection intersection
+
+        intersection = Intersection()
+
         x1_indices = [0,1,2]
         x2_indices = [1,2,0]
         nbe_indices = [2,0,1]
         
         # Construct arrays to hold the coordinates of the particle's previous
         # position vector and its new position vector
-        x3[0] = xpos_old; x3[1] = ypos_old
-        x4[0] = xpos_new; x4[1] = ypos_new
+        x3[0] = particle_old.xpos; x3[1] = particle_old.ypos
+        x4[0] = particle_new.xpos; x4[1] = particle_new.ypos
 
         # Extract nodal coordinates
         for i in xrange(3):
-            vertex = self._nv[i,last_host]
+            vertex = self._nv[i, particle_new.host_horizontal_elem]
             x_tri[i] = self._x[vertex]
             y_tri[i] = self._y[vertex]
 
@@ -644,7 +637,7 @@ cdef class FVCOMDataReader(DataReader):
             x2_idx = x2_indices[i]
             nbe_idx = nbe_indices[i]
 
-            if self._nbe[nbe_idx, last_host] == -1:
+            if self._nbe[nbe_idx, particle_new.host_horizontal_elem] == -1:
 
                 # End coordinates for the side
                 x1[0] = x_tri[x1_idx]; x1[1] = y_tri[x1_idx]
@@ -652,7 +645,13 @@ cdef class FVCOMDataReader(DataReader):
 
                 try:
                     get_intersection_point(x1, x2, x3, x4, xi)
-                    return x1[0], x1[1], x2[0], x2[1], xi[0], xi[1]
+                    intersection.x1 = x1[0]
+                    intersection.y1 = x1[1]
+                    intersection.x2 = x2[0]
+                    intersection.y2 = x2[1]
+                    intersection.xi = xi[0]
+                    intersection.yi = xi[1]
+                    return intersection
                 except ValueError:
                     continue
 

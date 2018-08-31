@@ -36,9 +36,12 @@ cdef class DataReader:
                                                   DTYPE_INT_t first_guess) except INT_ERR:
         raise NotImplementedError
 
-    cpdef get_boundary_intersection(self, DTYPE_FLOAT_t xpos_old,
-            DTYPE_FLOAT_t ypos_old, DTYPE_FLOAT_t xpos_new,
-            DTYPE_FLOAT_t ypos_new, DTYPE_INT_t last_host):
+    def get_boundary_intersection_wrapper(self, ParticleSmartPtr particle_old,
+                                  ParticleSmartPtr particle_new):
+        return self.get_boundary_intersection(particle_old.get_ptr(), particle_new.get_ptr())
+
+    cdef Intersection get_boundary_intersection(self, Particle *particle_old,
+                                                Particle *particle_new):
         raise NotImplementedError
 
     def set_local_coordinates_wrapper(self, ParticleSmartPtr particle):
