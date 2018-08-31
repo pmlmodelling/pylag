@@ -146,13 +146,6 @@ class FVCOMDataReader_test(TestCase):
         test.assert_equal(flag, 0)
         test.assert_equal(particle_new.host_horizontal_elem, 0)
 
-    def test_find_host_when_particle_has_crossed_into_an_element_with_two_land_boundaries(self):
-        particle_old = ParticleSmartPtr(xpos=1.3333333333-self.xmin, ypos=1.6666666667-self.ymin, host=0)
-        particle_new = ParticleSmartPtr(xpos=0.6666666667-self.xmin, ypos=1.3333333333-self.ymin)
-        flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
-        test.assert_equal(flag, -1)
-        test.assert_equal(particle_new.host_horizontal_elem, 0)
-
     def test_find_host_when_particle_has_crossed_a_land_boundary(self):
         particle_old = ParticleSmartPtr(xpos=1.6666666667-self.xmin, ypos=1.3333333333-self.ymin, host=1)
         particle_new = ParticleSmartPtr(xpos=1.5-self.xmin, ypos=0.0-self.ymin)
@@ -160,12 +153,54 @@ class FVCOMDataReader_test(TestCase):
         test.assert_equal(flag, -1)
         test.assert_equal(particle_new.host_horizontal_elem, 1)
 
+    def test_find_host_when_particle_has_crossed_into_an_element_with_two_land_boundaries(self):
+        particle_old = ParticleSmartPtr(xpos=1.3333333333-self.xmin, ypos=1.6666666667-self.ymin, host=0)
+        particle_new = ParticleSmartPtr(xpos=0.6666666667-self.xmin, ypos=1.3333333333-self.ymin)
+        flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
+        test.assert_equal(flag, -1)
+        test.assert_equal(particle_new.host_horizontal_elem, 0)
+
     def test_find_host_when_particle_has_crossed_multiple_elements_to_an_element_with_two_land_boundaries(self):
         particle_old = ParticleSmartPtr(xpos=1.6666666667-self.xmin, ypos=1.3333333333-self.ymin, host=1)
         particle_new = ParticleSmartPtr(xpos=0.6666666667-self.xmin, ypos=1.3333333333-self.ymin)
         flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
         test.assert_equal(flag, -1)
         test.assert_equal(particle_new.host_horizontal_elem, 0)
+
+    def test_find_host_when_particle_is_just_inside_an_internal_element(self):
+        particle_old = ParticleSmartPtr(xpos=1.4-self.xmin, ypos=1.5-self.ymin, host=0)
+        particle_new = ParticleSmartPtr(xpos=1.5 - 1.e-15 - self.xmin, ypos=1.5 - self.ymin)
+        flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
+        test.assert_equal(flag, 0)
+        test.assert_equal(particle_new.host_horizontal_elem, 0)
+
+    def test_find_host_when_particle_is_just_outside_an_internal_element(self):
+        particle_old = ParticleSmartPtr(xpos=1.4-self.xmin, ypos=1.5-self.ymin, host=0)
+        particle_new = ParticleSmartPtr(xpos=1.5 + 1.e-15 - self.xmin, ypos=1.5 - self.ymin)
+        flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
+        test.assert_equal(flag, 0)
+        test.assert_equal(particle_new.host_horizontal_elem, 1)
+
+    def test_find_host_when_particle_is_on_an_internal_elements_side(self):
+        particle_old = ParticleSmartPtr(xpos=1.4 - self.xmin, ypos=1.5 - self.ymin, host=0)
+        particle_new = ParticleSmartPtr(xpos=1.5 - self.xmin, ypos=1.5 - self.ymin)
+        flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
+        test.assert_equal(flag, 0)
+        test.assert_equal(particle_new.host_horizontal_elem, 0)
+
+    def test_find_host_when_particle_is_just_inside_an_external_element(self):
+        particle_old = ParticleSmartPtr(xpos=1.6666666667-self.xmin, ypos=1.3333333333-self.ymin, host=1)
+        particle_new = ParticleSmartPtr(xpos=1.6666666667-self.xmin, ypos=1.0 + 1.e-15 - self.ymin)
+        flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
+        test.assert_equal(flag, 0)
+        test.assert_equal(particle_new.host_horizontal_elem, 1)
+
+    def test_find_host_when_particle_is_just_outside_an_external_element(self):
+        particle_old = ParticleSmartPtr(xpos=1.6666666667-self.xmin, ypos=1.3333333333-self.ymin, host=1)
+        particle_new = ParticleSmartPtr(xpos=1.6666666667-self.xmin, ypos=1.0 - 1.e-15 - self.ymin)
+        flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
+        test.assert_equal(flag, -1)
+        test.assert_equal(particle_new.host_horizontal_elem, 1)
 
     def test_get_boundary_intersection_x2x0(self):
         xpos_old = 1.6666666667-self.xmin # Centroid of element 1 (x coordinate)
