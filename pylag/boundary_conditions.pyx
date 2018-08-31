@@ -9,22 +9,20 @@ from pylag.math cimport Intersection
 
 cdef class HorizBoundaryConditionCalculator:
 
-     cdef DTYPE_INT_t apply(self, DataReader data_reader, Particle *particle_old,
-                            Particle *particle_new) except INT_ERR:
-        raise NotImplementedError
-
-cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator):
-
     def apply_wrapper(self, DataReader data_reader,
                       ParticleSmartPtr particle_old,
                       ParticleSmartPtr particle_new):
         """ Python friendly wrapper for apply()
         
         """
-        
-        flag = self.apply(data_reader, particle_old.get_ptr(), particle_new.get_ptr())
-        
-        return
+
+        return self.apply(data_reader, particle_old.get_ptr(), particle_new.get_ptr())
+
+    cdef DTYPE_INT_t apply(self, DataReader data_reader, Particle *particle_old,
+                           Particle *particle_new) except INT_ERR:
+        raise NotImplementedError
+
+cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator):
 
     cdef DTYPE_INT_t apply(self, DataReader data_reader, Particle *particle_old,
                Particle *particle_new) except INT_ERR:
