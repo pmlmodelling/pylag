@@ -42,16 +42,9 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
         iterations is imposed. If this limit is exceeded, a boundary error is 
         returned and the particle's position is not updated.
         """
-        # 2D position vectors for the end points of the element's side
-        cdef DTYPE_FLOAT_t x1[2]
-        cdef DTYPE_FLOAT_t x2[2]
-        
         # 2D position vectors for the particle's previous and new position
         cdef DTYPE_FLOAT_t x3[2]
         cdef DTYPE_FLOAT_t x4[2]
-        
-        # 2D position vector for the intersection point
-        cdef DTYPE_FLOAT_t xi[2]
         
         # 2D position vector for the reflected position
         cdef DTYPE_FLOAT_t x4_prime[2]
@@ -122,9 +115,11 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
 
             # Compute the reflection vector
             mult = 2.0 * inner_product(n, d) / inner_product(n, n)
-            for i in xrange(2):
-                r[i] = d[i] - mult*n[i]
-                x4_prime[i] = xi[i] + r[i]
+            r[0] = d[0] - mult*n[0]
+            x4_prime[0] = intersection.xi + r[0]
+
+            r[1] = d[1] - mult*n[1]
+            x4_prime[1] = intersection.yi + r[1]
 
             # Attempt to find the particle using a local search
             # -------------------------------------------------
@@ -144,17 +139,19 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
             # sits safely in the model grid some way between the intersection
             # point and the new position. This will allow us to use line
             # crossings to definitely locate the particle. We don't use the
-            # intersection point itself for this, for fear that it will be
-            # flagged as a line crossing. To guarantee the search, we resort
-            # to global searching.
+            # intersection point itself for this, as it will be flagged as a
+            # line crossing, possibly affecting the result. To guarantee the
+            # search, we resort to global searching.
             for i in xrange(2):
                 r_test[i] = r[i]
             
             found = False
             while found == False:
-                for i in xrange(2):
-                    r_test[i] = r_test[i]/10.
-                    x_test[i] = xi[i] + r_test[i]
+                r_test[0] = r_test[0]/10.
+                x_test[0] = intersection.xi + r_test[0]
+
+                r_test[1] = r_test[1]/10.
+                x_test[1] = intersection.yi + r_test[1]
 
                 particle_copy_a.xpos = x_test[0]
                 particle_copy_a.ypos = x_test[1]
@@ -164,7 +161,7 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
                 if flag == IN_DOMAIN:
                     found = True
 
-            # Attempt to locate the new point using robust searching
+            # Attempt to locate the new point using global searching
             # ------------------------------------------------------
             flag = data_reader.find_host(&particle_copy_a, &particle_copy_b)
             
@@ -175,7 +172,7 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
                 return flag
             
             counter += 1
-        
+
         return BDY_ERROR
 
 
