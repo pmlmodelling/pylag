@@ -594,6 +594,10 @@ cdef class FVCOMDataReader(DataReader):
         cdef int x2_idx
         cdef int nbe_idx
 
+        # Variables for computing the number of land boundaries
+        cdef DTYPE_INT_t n_land_boundaries
+        cdef DTYPE_INT_t nbe
+
         # The intersection
         cdef Intersection intersection
 
@@ -620,23 +624,34 @@ cdef class FVCOMDataReader(DataReader):
             x2_idx = x2_indices[i]
             nbe_idx = nbe_indices[i]
 
-            if self._nbe[nbe_idx, particle_new.host_horizontal_elem] == -1:
+            nbe = self._nbe[nbe_idx, particle_new.host_horizontal_elem]
 
-                # End coordinates for the side
-                x1[0] = x_tri[x1_idx]; x1[1] = y_tri[x1_idx]
-                x2[0] = x_tri[x2_idx]; x2[1] = y_tri[x2_idx]
+            if nbe != -1:
+                # Compute the number of land boundaries the neighbour has - elements with two
+                # land boundaries are themselves treated as land
+                n_land_boundaries = 0
+                for i in xrange(3):
+                    if self._nbe[i, nbe] == -1:
+                        n_land_boundaries += 1
 
-                try:
-                    get_intersection_point(x1, x2, x3, x4, xi)
-                    intersection.x1 = x1[0]
-                    intersection.y1 = x1[1]
-                    intersection.x2 = x2[0]
-                    intersection.y2 = x2[1]
-                    intersection.xi = xi[0]
-                    intersection.yi = xi[1]
-                    return intersection
-                except ValueError:
+                if n_land_boundaries < 2:
                     continue
+
+            # End coordinates for the side
+            x1[0] = x_tri[x1_idx]; x1[1] = y_tri[x1_idx]
+            x2[0] = x_tri[x2_idx]; x2[1] = y_tri[x2_idx]
+
+            try:
+                get_intersection_point(x1, x2, x3, x4, xi)
+                intersection.x1 = x1[0]
+                intersection.y1 = x1[1]
+                intersection.x2 = x2[0]
+                intersection.y2 = x2[1]
+                intersection.xi = xi[0]
+                intersection.yi = xi[1]
+                return intersection
+            except ValueError:
+                continue
 
         raise RuntimeError('Failed to calculate boundary intersection.')
 
