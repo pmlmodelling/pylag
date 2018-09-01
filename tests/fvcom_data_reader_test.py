@@ -8,6 +8,7 @@ from ConfigParser import SafeConfigParser
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 
 from pylag.fvcom_data_reader import FVCOMDataReader
+from pylag.boundary_conditions import RefHorizBoundaryConditionCalculator
 from pylag.particle import ParticleSmartPtr
 from pylag import cwrappers
 
@@ -220,6 +221,34 @@ class FVCOMDataReader_test(TestCase):
         test.assert_almost_equal(intersection.xi+self.xmin, 1.6666666667)
         test.assert_almost_equal(intersection.yi+self.ymin, 1.0)
 
+    def test_get_boundary_intersection_when_a_particle_has_left_an_external_elements_edge(self):
+        particle_old = ParticleSmartPtr(xpos=1.5-self.xmin, ypos=1.0-self.ymin, host=1)
+        particle_new = ParticleSmartPtr(xpos=1.5-self.xmin, ypos=0.9-self.ymin, host=1)
+        intersection = self.data_reader.get_boundary_intersection_wrapper(particle_old, particle_new)
+        test.assert_almost_equal(intersection.x1+self.xmin, 2.0)
+        test.assert_almost_equal(intersection.y1+self.ymin, 1.0)
+        test.assert_almost_equal(intersection.x2+self.xmin, 1.0)
+        test.assert_almost_equal(intersection.y2+self.ymin, 1.0)
+        test.assert_almost_equal(intersection.xi+self.xmin, 1.5)
+        test.assert_almost_equal(intersection.yi+self.ymin, 1.0)
+
+    def test_get_boundary_intersection_when_a_particle_has_moved_to_an_external_elements_edge(self):
+        particle_old = ParticleSmartPtr(xpos=1.5-self.xmin, ypos=1.1-self.ymin, host=1)
+        particle_new = ParticleSmartPtr(xpos=1.5-self.xmin, ypos=1.0-self.ymin, host=1)
+        intersection = self.data_reader.get_boundary_intersection_wrapper(particle_old, particle_new)
+        test.assert_almost_equal(intersection.x1+self.xmin, 2.0)
+        test.assert_almost_equal(intersection.y1+self.ymin, 1.0)
+        test.assert_almost_equal(intersection.x2+self.xmin, 1.0)
+        test.assert_almost_equal(intersection.y2+self.ymin, 1.0)
+        test.assert_almost_equal(intersection.xi+self.xmin, 1.5)
+        test.assert_almost_equal(intersection.yi+self.ymin, 1.0)
+
+    def test_set_local_coordinates_when_a_particle_is_on_an_external_elements_side(self):
+        particle = ParticleSmartPtr(xpos=1.5-self.xmin, ypos=1.0-self.ymin, host=1)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        phi_min = np.min(np.array(particle.phi, dtype=float))
+        test.assert_equal(np.abs(phi_min), 0.0)
+
     def test_get_zmin(self):
         xpos = 1.3333333333-self.xmin
         ypos = 1.6666666667-self.ymin
@@ -278,7 +307,6 @@ class FVCOMDataReader_test(TestCase):
         test.assert_equal(particle.k_layer, 2)
         test.assert_equal(particle.in_vertical_boundary_layer, True)
         test.assert_almost_equal(particle.omega_interfaces, 0.0)
-
 
     def test_set_vertical_grid_vars_for_a_particle_in_the_surface_boundary_layer(self):
         time = 0.0
@@ -493,4 +521,74 @@ class FVCOMDataReader_test(TestCase):
 
         status = self.data_reader.is_wet(time, host)
         test.assert_equal(status, 1)
+
+
+class FVCOMReflectingHorizBoundaryCondition_test(TestCase):
+
+    def setUp(self):
+        # Create config
+        config = SafeConfigParser()
+        config.add_section("GENERAL")
+        config.set('GENERAL', 'log_level', 'info')
+        config.add_section("OCEAN_CIRCULATION_MODEL")
+        config.set('OCEAN_CIRCULATION_MODEL', 'has_Kh', 'True')
+        config.set('OCEAN_CIRCULATION_MODEL', 'has_Ah', 'True')
+        config.set('OCEAN_CIRCULATION_MODEL', 'has_is_wet', 'True')
+
+        # Create mediator
+        mediator = MockFVCOMMediator()
+        
+        # Create data reader
+        self.data_reader = FVCOMDataReader(config, mediator)
+        
+        # Read in data
+        datetime_start = datetime.datetime(2000,1,1) # Arbitrary start time, ignored by mock mediator
+        datetime_end = datetime.datetime(2000,1,1) # Arbitrary end time, ignored by mock mediator
+        self.data_reader.setup_data_access(datetime_start, datetime_end)
+
+        # Grid offsets
+        self.xmin = self.data_reader.get_xmin()
+        self.ymin = self.data_reader.get_ymin()
+
+        # Boundary condition calculator
+        self.horiz_boundary_condition_calculator = RefHorizBoundaryConditionCalculator()
+
+    def tearDown(self):
+        del(self.data_reader)
+
+    def test_reflect_particle_on_a_normal_trajectory(self):
+        particle_old = ParticleSmartPtr(xpos=1.6666666667 - self.xmin, ypos=1.2 - self.ymin, host=1)
+        particle_new = ParticleSmartPtr(xpos=1.6666666667 - self.xmin, ypos=0.9 - self.ymin, host=1)
+        flag = self.horiz_boundary_condition_calculator.apply_wrapper(self.data_reader, particle_old, particle_new)
+        test.assert_equal(flag, 0)
+        test.assert_equal(particle_new.xpos + self.xmin, 1.6666666667)
+        test.assert_equal(particle_new.ypos + self.ymin, 1.1)
+        test.assert_equal(particle_new.host_horizontal_elem, 1)
+
+    def test_reflect_particle_on_an_angled_trajectory(self):
+        particle_old = ParticleSmartPtr(xpos=1.4 - self.xmin, ypos=1.1 - self.ymin, host=1)
+        particle_new = ParticleSmartPtr(xpos=1.6 - self.xmin, ypos=0.9 - self.ymin, host=1)
+        flag = self.horiz_boundary_condition_calculator.apply_wrapper(self.data_reader, particle_old, particle_new)
+        test.assert_equal(flag, 0)
+        test.assert_equal(particle_new.xpos + self.xmin, 1.6)
+        test.assert_equal(particle_new.ypos + self.ymin, 1.1)
+        test.assert_equal(particle_new.host_horizontal_elem, 1)
+
+    def test_reflect_particle_that_sits_on_the_boundary(self):
+        particle_old = ParticleSmartPtr(xpos=1.5 - self.xmin, ypos=1.0 - self.ymin, host=1)
+        particle_new = ParticleSmartPtr(xpos=1.6 - self.xmin, ypos=0.9 - self.ymin, host=1)
+        flag = self.horiz_boundary_condition_calculator.apply_wrapper(self.data_reader, particle_old, particle_new)
+        test.assert_equal(flag, 0)
+        test.assert_equal(particle_new.xpos + self.xmin, 1.6)
+        test.assert_equal(particle_new.ypos + self.ymin, 1.1)
+        test.assert_equal(particle_new.host_horizontal_elem, 1)
+
+    def test_reflect_particle_that_undergoes_a_double_reflection_while_on_a_southeast_trajectory(self):
+        particle_old = ParticleSmartPtr(xpos=1.8 - self.xmin, ypos=1.1 - self.ymin, host=1)
+        particle_new = ParticleSmartPtr(xpos=2.1 - self.xmin, ypos=0.8 - self.ymin, host=1)
+        flag = self.horiz_boundary_condition_calculator.apply_wrapper(self.data_reader, particle_old, particle_new)
+        test.assert_equal(flag, 0)
+        test.assert_equal(particle_new.xpos + self.xmin, 1.9)
+        test.assert_equal(particle_new.ypos + self.ymin, 1.2)
+        test.assert_equal(particle_new.host_horizontal_elem, 1)
 
