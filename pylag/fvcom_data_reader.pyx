@@ -281,7 +281,7 @@ cdef class FVCOMDataReader(DataReader):
 
             # Check to see if the particle is in the current element
             phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
-            if phi_test >= -EPSILON:
+            if phi_test >= 0.0:
                 host_found = True
 
             # If the particle has walked into an element with two land
@@ -316,19 +316,7 @@ cdef class FVCOMDataReader(DataReader):
             
             # Check that we are not alternately checking the same two elements
             if guess == second_to_last_guess:
-                if self.config.get('GENERAL', 'log_level') == 'DEBUG':
-                    logger = logging.getLogger(__name__)
-                    logger.warning('FVCOM local host element search algorithm '
-                            'has failed to determine whether a particle lies '
-                            'within one of two elements. The two elements are '
-                            'element {} and element {}. The x and y coordinates '
-                            'of the particle are {} and {} respectively. One '
-                            'approach to solving this is to increase the value '
-                            'of epsilon which is used for floating point '
-                            'comparisons. See include/constants.pxi.'.format(guess,
-                            second_to_last_guess, particle.xpos, particle.ypos))
-                raise RuntimeError('Local host element search failed. See the '
-                        'log file for more details (with log_level == DEBUG).')
+                return BDY_ERROR
 
     cpdef find_host_using_particle_tracing(self, DTYPE_FLOAT_t xpos_old,
         DTYPE_FLOAT_t ypos_old, DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new,
@@ -534,11 +522,6 @@ cdef class FVCOMDataReader(DataReader):
             phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
             if phi_test >= 0.0:
                 host_found = True
-            elif phi_test >= -EPSILON:
-                if self.config.get('GENERAL', 'log_level') == 'DEBUG':
-                    logger = logging.getLogger(__name__)
-                    logger.warning('EPSILON applied during global host element search.')
-                host_found = True
 
             if host_found is True:
                 # If the element has two land boundaries, flag the particle as
@@ -676,11 +659,9 @@ cdef class FVCOMDataReader(DataReader):
         self._get_phi(particle.xpos, particle.ypos, 
                 particle.host_horizontal_elem, phi)
                 
-        # Check for negative values and flush near misses to zero.
+        # Check for negative values.
         for i in xrange(3):
-            if phi[i] >= -EPSILON and phi[i] < 0.0:
-                phi[i] = 0.0
-            elif phi[i] < -EPSILON:
+            if phi[i] < 0.0:
                 print phi[i]
                 s = to_string(particle)
                 msg = "One or more local coordinates are invalid \n\n"\
