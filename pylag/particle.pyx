@@ -98,6 +98,13 @@ cdef class ParticleSmartPtr:
     def in_vertical_boundary_layer(self):
         return self._particle.in_vertical_boundary_layer
 
+    @property
+    def phi(self):
+        phi = []
+        for i in xrange(3):
+            phi.append(self._particle.phi[i])
+        return phi
+
 cdef ParticleSmartPtr copy(ParticleSmartPtr particle_smart_ptr):
     """ Create a copy of a ParticleSmartPtr object
     
