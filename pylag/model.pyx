@@ -218,9 +218,6 @@ cdef class OPTModel:
             if flag == IN_DOMAIN:
                 particle_smart_ptr.get_ptr().in_domain = True
 
-                # Set local coordinates
-                self.data_reader.set_local_coordinates(particle_smart_ptr.get_ptr())
-
                 # Add particle to the particle set
                 self.particle_seed_smart_ptrs.append(particle_smart_ptr)
 

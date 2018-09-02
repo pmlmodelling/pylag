@@ -290,6 +290,11 @@ cdef class FVCOMDataReader(DataReader):
                 if n_host_land_boundaries < 2:
                     # Normal element
                     particle.host_horizontal_elem = guess
+
+                    # Set the particle's local coordiantes
+                    for i in xrange(3):
+                        particle.phi[i] = phi[i]
+
                     return IN_DOMAIN
                 else:
                     # Element has two land boundaries
@@ -474,6 +479,8 @@ cdef class FVCOMDataReader(DataReader):
                 # still reside in the domain
                 flag = IN_DOMAIN
                 particle_new.host_horizontal_elem = current_elem
+                self.set_local_coordinates(particle_new)
+
                 return flag
 
     cdef DTYPE_INT_t find_host_using_global_search(self, Particle *particle) except INT_ERR:
@@ -523,6 +530,11 @@ cdef class FVCOMDataReader(DataReader):
 
                 if n_host_land_boundaries < 2:
                     particle.host_horizontal_elem = guess
+
+                    # Set the particle's local coordiantes
+                    for i in xrange(3):
+                        particle.phi[i] = phi[i]
+
                     return IN_DOMAIN
                 else:
                     # Element has two land boundaries
@@ -666,20 +678,20 @@ cdef class FVCOMDataReader(DataReader):
                 
         # Check for negative values.
         for i in xrange(3):
-            if phi[i] < 0.0:
+            if phi[i] >= 0.0:
+                particle.phi[i] = phi[i]
+            elif phi[i] >= -EPSILON:
+                particle.phi[i] = 0.0
+            else:
                 print phi[i]
                 s = to_string(particle)
-                msg = "One or more local coordinates are invalid \n\n"\
+                msg = "One or more local coordinates are invalid (phi = {}) \n\n"\
                       "The following information may be used to study the \n"\
                       "failure in more detail. \n\n"\
-                      "{}".format(s)
+                      "{}".format(phi[i], s)
                 print msg
                 
                 raise ValueError('One or more local coordinates are negative')
-        
-        # Update the particle's coordiantes
-        for i in xrange(3):
-            particle.phi[i] = phi[i]
 
     cdef DTYPE_INT_t set_vertical_grid_vars(self, DTYPE_FLOAT_t time,
                                             Particle *particle) except INT_ERR:

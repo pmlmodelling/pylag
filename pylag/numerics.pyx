@@ -136,9 +136,6 @@ cdef class StdNumMethod(NumMethod):
         # Second check for an open boundary crossing
         if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
             return flag
-
-        # Update particle local coordinates
-        data_reader.set_local_coordinates(&_particle_copy)
         
         # Restore to a fixed depth?
         if self._depth_restoring is True:
@@ -319,8 +316,6 @@ cdef class OS0NumMethod(NumMethod):
         if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
             return flag
 
-        data_reader.set_local_coordinates(&_particle_copy_a)
-
         # Set vertical grid vars NB these are evaluated at time `time',
         # since this is when the diffusion loop starts
         flag = data_reader.set_vertical_grid_vars(time, &_particle_copy_a)
@@ -362,8 +357,6 @@ cdef class OS0NumMethod(NumMethod):
 
             if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
                 return flag
-
-            data_reader.set_local_coordinates(&_particle_copy_b)
 
             flag = data_reader.set_vertical_grid_vars(t+self._diff_time_step, &_particle_copy_b)
 
@@ -521,8 +514,6 @@ cdef class OS1NumMethod(NumMethod):
         if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
             return flag
 
-        data_reader.set_local_coordinates(&_particle_copy_a)
-
         # NB these are evaluated at time `time', since this is when the
         # advection update starts
         flag = data_reader.set_vertical_grid_vars(time, &_particle_copy_a)
@@ -564,8 +555,6 @@ cdef class OS1NumMethod(NumMethod):
         # Second check for an open boundary crossing
         if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
             return flag
-
-        data_reader.set_local_coordinates(&_particle_copy_b)
 
         # 2nd Diffusion step
         # ------------------
@@ -609,8 +598,6 @@ cdef class OS1NumMethod(NumMethod):
 
         # All steps complete - update the original particle's position
         # ------------------------------------------------------------
-
-        data_reader.set_local_coordinates(&_particle_copy_b)
 
         t = time + self._adv_time_step
 
@@ -781,7 +768,6 @@ cdef class AdvRK42DItMethod(ItMethod):
             return flag
 
         # Update particle local coordinates
-        data_reader.set_local_coordinates(&_particle)
         flag = data_reader.set_vertical_grid_vars(t, &_particle)
         if flag != IN_DOMAIN:
             return flag
@@ -804,7 +790,6 @@ cdef class AdvRK42DItMethod(ItMethod):
         if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR: return flag
 
         # Update particle local coordinates
-        data_reader.set_local_coordinates(&_particle)
         flag = data_reader.set_vertical_grid_vars(t, &_particle)
         if flag != IN_DOMAIN:
             return flag
@@ -828,7 +813,6 @@ cdef class AdvRK42DItMethod(ItMethod):
             return flag
 
         # Update particle local coordinates
-        data_reader.set_local_coordinates(&_particle)
         flag = data_reader.set_vertical_grid_vars(t, &_particle)
         if flag != IN_DOMAIN:
             return flag
@@ -947,10 +931,7 @@ cdef class AdvRK43DItMethod(ItMethod):
         if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
             return flag
 
-        # Update particle local coordinates
-        data_reader.set_local_coordinates(&_particle)
-
-        # Set vertical grid vars.
+        # Set vertical grid vars
         flag = data_reader.set_vertical_grid_vars(t, &_particle)
 
         # Apply surface/bottom boundary conditions if required
@@ -979,9 +960,6 @@ cdef class AdvRK43DItMethod(ItMethod):
         # Check for open boundary crossing
         if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
             return flag
-
-        # Update particle local coordinates
-        data_reader.set_local_coordinates(&_particle)
 
         # Set vertical grid vars.
         flag = data_reader.set_vertical_grid_vars(t, &_particle)
@@ -1012,9 +990,6 @@ cdef class AdvRK43DItMethod(ItMethod):
         # Check for open boundary crossing
         if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
             return flag
-
-        # Update particle local coordinates
-        data_reader.set_local_coordinates(&_particle)
 
         # Set vertical grid vars.
         flag = data_reader.set_vertical_grid_vars(t, &_particle)
