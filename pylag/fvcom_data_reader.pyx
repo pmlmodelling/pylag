@@ -681,7 +681,8 @@ cdef class FVCOMDataReader(DataReader):
         for i in xrange(3):
             particle.phi[i] = phi[i]
 
-    cdef set_vertical_grid_vars(self, DTYPE_FLOAT_t time, Particle* particle):
+    cdef DTYPE_INT_t set_vertical_grid_vars(self, DTYPE_FLOAT_t time,
+                                            Particle *particle) except INT_ERR:
         """ Find the host depth layer
         
         Find the depth layer containing zpos. In FVCOM, Sigma levels are counted
@@ -708,10 +709,7 @@ cdef class FVCOMDataReader(DataReader):
             sigma_upper_level = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, k)
             sigma_lower_level = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, k+1)
 
-            # We could implement a better floating pt comparison here, but I am
-            # not convinced it would yield much in the way of benefits. The
-            # worst offences (sigma = 0.0 or sigma = -1.0) pass unit testing.
-            if sigma <= (sigma_upper_level + EPSILON) and sigma >= (sigma_lower_level - EPSILON):
+            if sigma <= sigma_upper_level and sigma >= sigma_lower_level:
                 # Host layer found
                 particle.k_layer = k
 
@@ -726,7 +724,7 @@ cdef class FVCOMDataReader(DataReader):
                 # Is zpos in the top or bottom boundary layer?
                 if (k == 0 and sigma >= sigma_test) or (k == self._n_siglay - 1 and sigma <= sigma_test):
                         particle.in_vertical_boundary_layer = True
-                        return
+                        return IN_DOMAIN
 
                 # zpos bounded by upper and lower sigma layers
                 particle.in_vertical_boundary_layer = False
@@ -742,20 +740,9 @@ cdef class FVCOMDataReader(DataReader):
                 sigma_upper_layer = self._interp_on_sigma_layer(particle.phi, particle.host_horizontal_elem, particle.k_upper_layer)
                 particle.omega_layers = interp.get_linear_fraction(sigma, sigma_lower_layer, sigma_upper_layer)
 
-                return
-        
-        # The particle has not been found! Retrieve some (hopefully useful) 
-        # diagnostic data exit
-        s = to_string(particle)
-        msg = "ERROR encountered at time {} \n\n"\
-              "Failed to locat particle within FVCOMs vertical grid. \n"\
-              "With h = {:0.20f}, zeta = {:0.20f} and sigma = {:0.20f}. \n"\
-              "The following information may be used to study the failure in \n"\
-              "more detail. \n\n"\
-              "{}".format(time, h, zeta, sigma, s)
-        print msg
-        
-        raise ValueError("Failed to locate particle within FVCOM's vertical grid")
+                return IN_DOMAIN
+
+        return BDY_ERROR
 
     cpdef DTYPE_FLOAT_t get_xmin(self) except FLOAT_ERR:
         return self._xmin

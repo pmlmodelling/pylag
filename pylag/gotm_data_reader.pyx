@@ -212,7 +212,8 @@ cdef class GOTMDataReader(DataReader):
         """
         pass
 
-    cdef set_vertical_grid_vars(self, DTYPE_FLOAT_t time, Particle* particle):
+    cdef DTYPE_INT_t set_vertical_grid_vars(self, DTYPE_FLOAT_t time,
+                                            Particle *particle) except INT_ERR:
         """ Set variables describing the particle's position in z
         
         Find the host vertical layer. Begin with a local search using the old
@@ -229,17 +230,17 @@ cdef class GOTMDataReader(DataReader):
             if particle.zpos <= self._zlev[k+1] and particle.zpos >= self._zlev[k]:
                 particle.k_layer = k
                 particle.omega_interfaces = interp.get_linear_fraction_safe(particle.zpos, self._zlev[k], self._zlev[k+1])
-                return
+                return IN_DOMAIN
 
         # Search the full vertical grid
         for k in xrange(self._n_zlay): 
             if particle.zpos <= self._zlev[k+1] and particle.zpos >= self._zlev[k]:
                 particle.k_layer = k
                 particle.omega_interfaces = interp.get_linear_fraction_safe(particle.zpos, self._zlev[k], self._zlev[k+1])
-                return
+                return IN_DOMAIN
     
-        # Search failed
-        raise ValueError("Particle z position (={}) not found!".format(particle.zpos))
+        # Return error flag if particle not found
+        return BDY_ERROR
 
     cpdef DTYPE_FLOAT_t get_xmin(self) except FLOAT_ERR:
         return 0.0

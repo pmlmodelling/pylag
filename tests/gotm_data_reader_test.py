@@ -5,6 +5,7 @@ import datetime
 from ConfigParser import SafeConfigParser
 
 from pylag.gotm_data_reader import GOTMDataReader
+from pylag.boundary_conditions import RefVertBoundaryConditionCalculator
 from pylag.particle import ParticleSmartPtr
 from pylag import cwrappers
 
@@ -150,8 +151,9 @@ class GOTMDataReader_test(TestCase):
 
         self.data_reader.read_data(time)
         particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
-        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
-        
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+
+        test.assert_equal(flag, 0)
         test.assert_equal(particle.k_layer, 2)
         test.assert_almost_equal(particle.omega_interfaces, 0.5)
 
@@ -164,8 +166,9 @@ class GOTMDataReader_test(TestCase):
 
         self.data_reader.read_data(time)
         particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
-        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
-        
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+
+        test.assert_equal(flag, 0)
         test.assert_equal(particle.k_layer, 0)
         test.assert_almost_equal(particle.omega_interfaces, 0.5)
 
@@ -178,11 +181,11 @@ class GOTMDataReader_test(TestCase):
 
         self.data_reader.read_data(time)
         particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
-        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
-        
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+
+        test.assert_equal(flag, 0)
         test.assert_equal(particle.k_layer, 1)
         test.assert_almost_equal(particle.omega_interfaces, 0.5)
-
 
     def test_get_vertical_eddy_diffusivity(self):
         xpos = 0.0
@@ -193,24 +196,27 @@ class GOTMDataReader_test(TestCase):
         zpos = -2.0
         self.data_reader.read_data(time)
         particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
-        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
         diffusivity = self.data_reader.get_vertical_eddy_diffusivity_wrapper(time, particle)
+        test.assert_equal(flag, 0)
         test.assert_almost_equal(diffusivity,  1.0)
 
         time = 0.5
         zpos = -2.0
         self.data_reader.read_data(time)
         particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
-        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
         diffusivity = self.data_reader.get_vertical_eddy_diffusivity_wrapper(time, particle)
+        test.assert_equal(flag, 0)
         test.assert_almost_equal(diffusivity,  1.5)
 
         time = 1.0
         zpos = -2.0
         self.data_reader.read_data(time)
         particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
-        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
         diffusivity = self.data_reader.get_vertical_eddy_diffusivity_wrapper(time, particle)
+        test.assert_equal(flag, 0)
         test.assert_almost_equal(diffusivity,  2.0)
 
 
@@ -223,8 +229,9 @@ class GOTMDataReader_test(TestCase):
         zpos = -2.0
         self.data_reader.read_data(time)
         particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
-        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
         diffusivity_gradient = self.data_reader.get_vertical_eddy_diffusivity_derivative_wrapper(time, particle)
+        test.assert_equal(flag, 0)
         test.assert_almost_equal(diffusivity_gradient, 0.0)
 
         #time = 0.0
@@ -237,7 +244,87 @@ class GOTMDataReader_test(TestCase):
         zpos = 0.0
         self.data_reader.read_data(time)
         particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
-        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
         diffusivity_gradient = self.data_reader.get_vertical_eddy_diffusivity_derivative_wrapper(time, particle)
+        test.assert_equal(flag, 0)
         test.assert_almost_equal(diffusivity_gradient, -1.0)
+
+
+class GOTMReflectingVertBoundaryCondition_test(TestCase):
+
+    def setUp(self):
+        # Create config
+        config = SafeConfigParser()
+        config.add_section("OCEAN_CIRCULATION_MODEL")
+        config.set('OCEAN_CIRCULATION_MODEL', 'vertical_interpolation_scheme', 'linear')
         
+        # Create mediator
+        mediator = MockGOTMMediator()
+        
+        # Create data reader
+        self.data_reader = GOTMDataReader(config, mediator)
+        
+        # Read in data
+        datetime_start = datetime.datetime(2010,1,1) # Arbitrary start time
+        datetime_end = datetime.datetime(2010,1,1) # Arbitrary end time
+        self.data_reader.setup_data_access(datetime_start, datetime_end)
+
+        # Boundary condition calculator
+        self.vert_boundary_condition_calculator = RefVertBoundaryConditionCalculator()
+
+    def tearDown(self):
+        del(self.data_reader)
+
+
+    def test_apply_reflecting_boundary_condition_for_a_particle_that_has_pierced_the_free_surface(self):
+        zpos = 0.0 + 0.1
+        host = 0
+
+        time = 0.0
+        
+        particle = ParticleSmartPtr(zpos=zpos, host=host)
+        self.data_reader.read_data(time)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        flag = self.vert_boundary_condition_calculator.apply_wrapper(self.data_reader, time, particle)
+        test.assert_equal(flag, 0)
+        test.assert_almost_equal(particle.zpos, -0.1)
+
+    def test_apply_reflecting_boundary_condition_for_a_particle_that_has_just_pierced_the_free_surface(self):
+        zpos = 0.0 + 1.e-15
+        host = 0
+
+        time = 0.0
+        
+        particle = ParticleSmartPtr(zpos=zpos, host=host)
+        self.data_reader.read_data(time)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        flag = self.vert_boundary_condition_calculator.apply_wrapper(self.data_reader, time, particle)
+        test.assert_equal(flag, 0)
+        test.assert_almost_equal(particle.zpos, 0.0)
+
+    def test_apply_reflecting_boundary_condition_for_a_particle_that_has_pierced_the_sea_floor(self):
+        zpos = -4.0 - 0.1
+        host = 0
+
+        time = 0.0
+        
+        particle = ParticleSmartPtr(zpos=zpos, host=host)
+        self.data_reader.read_data(time)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        flag = self.vert_boundary_condition_calculator.apply_wrapper(self.data_reader, time, particle)
+        test.assert_equal(flag, 0)
+        test.assert_almost_equal(particle.zpos, -3.9)
+
+    def test_apply_reflecting_boundary_condition_for_a_particle_that_has_just_pierced_the_free_surface(self):
+        zpos = -4.0 - 1.e-15
+        host = 0
+
+        time = 0.0
+        
+        particle = ParticleSmartPtr(zpos=zpos, host=host)
+        self.data_reader.read_data(time)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        flag = self.vert_boundary_condition_calculator.apply_wrapper(self.data_reader, time, particle)
+        test.assert_equal(flag, 0)
+        test.assert_almost_equal(particle.zpos, -4.0)
+

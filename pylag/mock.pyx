@@ -41,8 +41,8 @@ cdef class MockVelocityDataReader(DataReader):
     cdef set_local_coordinates(self, Particle *particle):
         raise NotImplementedError
 
-    cdef set_vertical_grid_vars(self, DTYPE_FLOAT_t time, Particle *particle):
-        pass
+    cdef DTYPE_INT_t set_vertical_grid_vars(self, DTYPE_FLOAT_t time, Particle *particle) except INT_ERR:
+        return IN_DOMAIN
 
     cdef get_velocity(self, DTYPE_FLOAT_t time, Particle* particle, 
             DTYPE_FLOAT_t vel[3]):
@@ -153,8 +153,8 @@ cdef class MockVerticalDiffusivityDataReader(DataReader):
     cdef set_local_coordinates(self, Particle *particle):
         pass
 
-    cdef set_vertical_grid_vars(self, DTYPE_FLOAT_t time, Particle *particle):
-        pass
+    cdef DTYPE_INT_t set_vertical_grid_vars(self, DTYPE_FLOAT_t time, Particle *particle) except INT_ERR:
+        return IN_DOMAIN
 
     cdef get_velocity(self, DTYPE_FLOAT_t time, Particle* particle,
             DTYPE_FLOAT_t vel[3]):
@@ -265,8 +265,8 @@ cdef class MockHorizontalEddyViscosityDataReader(DataReader):
     cdef set_local_coordinates(self, Particle *particle):
         pass
 
-    cdef set_vertical_grid_vars(self, DTYPE_FLOAT_t time, Particle *particle):
-        pass
+    cdef DTYPE_INT_t set_vertical_grid_vars(self, DTYPE_FLOAT_t time, Particle *particle) except INT_ERR:
+        return IN_DOMAIN
 
     cdef get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
             Particle* particle):
@@ -373,8 +373,8 @@ cdef class MockVelocityEddyViscosityDataReader(DataReader):
     cdef set_local_coordinates(self, Particle *particle):
         pass
 
-    cdef set_vertical_grid_vars(self, DTYPE_FLOAT_t time, Particle *particle):
-        pass
+    cdef DTYPE_INT_t set_vertical_grid_vars(self, DTYPE_FLOAT_t time, Particle *particle) except INT_ERR:
+        return IN_DOMAIN
 
     cdef get_velocity(self, DTYPE_FLOAT_t time, Particle* particle, 
             DTYPE_FLOAT_t vel[3]):
@@ -450,7 +450,8 @@ cdef class MockOneDNumMethod:
             # of the particle within the vertical grid
             particle.get_ptr().zpos = zpos_arr[i]
             data_reader.set_local_coordinates(particle.get_ptr())
-            data_reader.set_vertical_grid_vars(time, particle.get_ptr())
+            if data_reader.set_vertical_grid_vars(time, particle.get_ptr()) != IN_DOMAIN:
+                raise RuntimeError('Test particle is not in the domain.')
 
             if self._num_method.step(data_reader, time, particle.get_ptr()) == IN_DOMAIN:
                 zpos_new_arr[i] = particle.get_ptr().zpos
@@ -492,12 +493,14 @@ cdef class MockTwoDNumMethod:
             particle.get_ptr().ypos = ypos_arr[i]
 
             data_reader.set_local_coordinates(particle.get_ptr())
-            data_reader.set_vertical_grid_vars(time, particle.get_ptr())
+            if data_reader.set_vertical_grid_vars(time, particle.get_ptr()) != IN_DOMAIN:
+                raise RuntimeError('Test particle is not in the domain.')
 
-            self._num_method.step(data_reader, time, particle.get_ptr())
-
-            xpos_new_arr[i] = particle.get_ptr().xpos
-            ypos_new_arr[i] = particle.get_ptr().ypos
+            if self._num_method.step(data_reader, time, particle.get_ptr()) == IN_DOMAIN:
+                xpos_new_arr[i] = particle.get_ptr().xpos
+                ypos_new_arr[i] = particle.get_ptr().ypos
+            else:
+                raise RuntimeError('Test particle left the domain.')
 
         return xpos_new_arr, ypos_new_arr
 
@@ -535,13 +538,15 @@ cdef class MockThreeDNumMethod:
             particle.get_ptr().zpos = zpos_arr[i]
 
             data_reader.set_local_coordinates(particle.get_ptr())
-            data_reader.set_vertical_grid_vars(time, particle.get_ptr())
+            if data_reader.set_vertical_grid_vars(time, particle.get_ptr()) != IN_DOMAIN:
+                raise RuntimeError('Test particle is not in the domain.')
 
-            self._num_method.step(data_reader, time, particle.get_ptr())
-
-            # Save new position
-            xpos_new_arr[i] = particle.get_ptr().xpos
-            ypos_new_arr[i] = particle.get_ptr().ypos
-            zpos_new_arr[i] = particle.get_ptr().zpos
+            if self._num_method.step(data_reader, time, particle.get_ptr()) == IN_DOMAIN:
+                # Save new position
+                xpos_new_arr[i] = particle.get_ptr().xpos
+                ypos_new_arr[i] = particle.get_ptr().ypos
+                zpos_new_arr[i] = particle.get_ptr().zpos
+            else:
+                raise RuntimeError('Test particle left the domain.')
 
         return xpos_new_arr, ypos_new_arr, zpos_new_arr

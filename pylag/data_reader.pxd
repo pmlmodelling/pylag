@@ -27,7 +27,8 @@ cdef class DataReader:
 
     cdef set_local_coordinates(self, Particle *particle)
 
-    cdef set_vertical_grid_vars(self, DTYPE_FLOAT_t time, Particle *particle)
+    cdef DTYPE_INT_t set_vertical_grid_vars(self, DTYPE_FLOAT_t time,
+                                            Particle *particle) except INT_ERR
 
     cpdef DTYPE_FLOAT_t get_xmin(self) except FLOAT_ERR
 

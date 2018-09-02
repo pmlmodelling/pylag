@@ -13,5 +13,5 @@ cdef class HorizBoundaryConditionCalculator:
 
 cdef class VertBoundaryConditionCalculator:
 
-     cpdef DTYPE_FLOAT_t apply(self, DTYPE_FLOAT_t zpos, DTYPE_FLOAT_t zmin,
-           DTYPE_FLOAT_t zmax)
+     cdef DTYPE_INT_t apply(self, DataReader data_reader, DTYPE_FLOAT_t time, 
+                            Particle *particle) except INT_ERR

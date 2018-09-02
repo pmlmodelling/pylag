@@ -178,24 +178,57 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
 
 cdef class VertBoundaryConditionCalculator:
 
-     cpdef DTYPE_FLOAT_t apply(self, DTYPE_FLOAT_t zpos, DTYPE_FLOAT_t zmin,
-             DTYPE_FLOAT_t zmax):
-        pass
-
-cdef class RefVertBoundaryConditionCalculator(VertBoundaryConditionCalculator):
-
-     cpdef DTYPE_FLOAT_t apply(self, DTYPE_FLOAT_t zpos, DTYPE_FLOAT_t zmin,
-             DTYPE_FLOAT_t zmax):
-        """Apply reflecting boundary conditions
+    def apply_wrapper(self, DataReader data_reader,
+                      DTYPE_FLOAT_t time,
+                      ParticleSmartPtr particle):
+        """ Python friendly wrapper for apply()
         
         """
+
+        return self.apply(data_reader, time, particle.get_ptr())
+
+    cdef DTYPE_INT_t apply(self, DataReader data_reader, DTYPE_FLOAT_t time, 
+                           Particle *particle) except INT_ERR:
+        raise NotImplementedError
+
+cdef class RefVertBoundaryConditionCalculator(VertBoundaryConditionCalculator):
+    """ Apply reflecting vertical boundary condition in cartesian coords """
+
+    cdef DTYPE_INT_t apply(self, DataReader data_reader, DTYPE_FLOAT_t time, 
+                           Particle *particle) except INT_ERR:
+        cdef DTYPE_FLOAT_t zmin
+        cdef DTYPE_FLOAT_t zmax
+        cdef DTYPE_FLOAT_t zpos
+        cdef DTYPE_INT_t flag
+
+        zmin = data_reader.get_zmin(time, particle)
+        zmax = data_reader.get_zmax(time, particle)
+        zpos = particle.zpos
+
         while zpos < zmin or zpos > zmax:
             if zpos < zmin:
                 zpos = zmin + zmin - zpos
             elif zpos > zmax:
                 zpos = zmax + zmax - zpos
 
-        return zpos
+        particle.zpos = zpos
+
+        flag = data_reader.set_vertical_grid_vars(time, particle)
+
+        if flag != IN_DOMAIN:
+            # This could happen if the grid search was performed using sigma
+            # coords and the computed sigma coordinate lies outside of the
+            # domain, even though zpos lies within the domain. To correct for
+            # this, adjust zpos by epsilon scaled by the column depth.
+            if abs(particle.zpos - zmax) < abs(particle.zpos - zmin):
+                particle.zpos = particle.zpos - EPSILON * (zmax - zmin)
+            else:
+                particle.zpos = particle.zpos + EPSILON * (zmax - zmin)                
+ 
+            flag = data_reader.set_vertical_grid_vars(time, particle)
+
+        return flag
+
 
 # Factory methods
 # ---------------

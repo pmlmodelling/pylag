@@ -54,7 +54,8 @@ cdef class DataReader:
                                        ParticleSmartPtr particle):
         return self.set_vertical_grid_vars(time, particle.get_ptr())
 
-    cdef set_vertical_grid_vars(self, DTYPE_FLOAT_t time, Particle *particle):
+    cdef DTYPE_INT_t set_vertical_grid_vars(self, DTYPE_FLOAT_t time,
+                                            Particle *particle) except INT_ERR:
         raise NotImplementedError
 
     cpdef DTYPE_FLOAT_t get_xmin(self) except FLOAT_ERR:

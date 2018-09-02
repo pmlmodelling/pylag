@@ -146,22 +146,27 @@ cdef class StdNumMethod(NumMethod):
             _particle_copy.zpos = self._fixed_depth_below_surface + zmax
             
             # Determine the new host zlayer
-            data_reader.set_vertical_grid_vars(time+self._time_step, &_particle_copy)
+            flag = data_reader.set_vertical_grid_vars(time+self._time_step, &_particle_copy)
+
+            # Return if failure recorded
+            if flag != IN_DOMAIN:
+                return flag
 
             # Copy back particle properties
             particle[0] = _particle_copy
 
             return flag
-        
-        # Apply surface/bottom boundary conditions and set zpos
-        # NB zmin and zmax evaluated at t+dt
-        zmin = data_reader.get_zmin(time+self._time_step, &_particle_copy)
-        zmax = data_reader.get_zmax(time+self._time_step, &_particle_copy)
-        if _particle_copy.zpos < zmin or _particle_copy.zpos > zmax:
-            _particle_copy.zpos = self._vert_bc_calculator.apply(_particle_copy.zpos, zmin, zmax)
 
-        # Determine the new host zlayer
-        data_reader.set_vertical_grid_vars(time+self._time_step, &_particle_copy)
+        # Set vertical grid vars. NB use t + dt!
+        flag = data_reader.set_vertical_grid_vars(time+self._time_step, &_particle_copy)
+
+        # Apply surface/bottom boundary conditions if required
+        if flag != IN_DOMAIN:
+            flag = self._vert_bc_calculator.apply(data_reader, time+self._time_step, &_particle_copy)
+
+            # Return if failure recorded
+            if flag == BDY_ERROR:
+                return flag
 
         # Copy back particle properties
         particle[0] = _particle_copy
@@ -316,14 +321,17 @@ cdef class OS0NumMethod(NumMethod):
 
         data_reader.set_local_coordinates(&_particle_copy_a)
 
-        # NB these are evaluated at time `time', since this is when the
-        # diffusion loop starts
-        zmin = data_reader.get_zmin(time, &_particle_copy_a)
-        zmax = data_reader.get_zmax(time, &_particle_copy_a)
-        if _particle_copy_a.zpos < zmin or _particle_copy_a.zpos > zmax:
-                _particle_copy_a.zpos = self._vert_bc_calculator.apply(_particle_copy_a.zpos, zmin, zmax)
+        # Set vertical grid vars NB these are evaluated at time `time',
+        # since this is when the diffusion loop starts
+        flag = data_reader.set_vertical_grid_vars(time, &_particle_copy_a)
 
-        data_reader.set_vertical_grid_vars(time, &_particle_copy_a)
+        # Apply surface/bottom boundary conditions if required
+        if flag != IN_DOMAIN:
+            flag = self._vert_bc_calculator.apply(data_reader, time, &_particle_copy_a)
+
+            # Return if failure recorded
+            if flag == BDY_ERROR:
+                return flag
 
         # Diffusion
         # ---------
@@ -357,12 +365,15 @@ cdef class OS0NumMethod(NumMethod):
 
             data_reader.set_local_coordinates(&_particle_copy_b)
 
-            zmin = data_reader.get_zmin(t+self._diff_time_step, &_particle_copy_b)
-            zmax = data_reader.get_zmax(t+self._diff_time_step, &_particle_copy_b)
-            if _particle_copy_b.zpos < zmin or _particle_copy_b.zpos > zmax:
-                _particle_copy_b.zpos = self._vert_bc_calculator.apply(_particle_copy_b.zpos, zmin, zmax)
+            flag = data_reader.set_vertical_grid_vars(t+self._diff_time_step, &_particle_copy_b)
 
-            data_reader.set_vertical_grid_vars(t+self._diff_time_step, &_particle_copy_b)
+            # Apply surface/bottom boundary conditions if required
+            if flag != IN_DOMAIN:
+                flag = self._vert_bc_calculator.apply(data_reader, t+self._diff_time_step, &_particle_copy_b)
+
+                # Return if failure recorded
+                if flag == BDY_ERROR:
+                    return flag
 
             # Save the particle's last position to help with host element searching
             _particle_copy_a = _particle_copy_b
@@ -373,7 +384,11 @@ cdef class OS0NumMethod(NumMethod):
             _particle_copy_b.zpos = self._fixed_depth_below_surface + zmax
             
             # Determine the new host zlayer
-            data_reader.set_vertical_grid_vars(time+self._adv_time_step, &_particle_copy_b)
+            flag = data_reader.set_vertical_grid_vars(time+self._adv_time_step, &_particle_copy_b)
+
+            # Return if failure recorded
+            if flag != IN_DOMAIN:
+                return flag
 
         particle[0] = _particle_copy_b
 
@@ -510,12 +525,15 @@ cdef class OS1NumMethod(NumMethod):
 
         # NB these are evaluated at time `time', since this is when the
         # advection update starts
-        zmin = data_reader.get_zmin(time, &_particle_copy_a)
-        zmax = data_reader.get_zmax(time, &_particle_copy_a)
-        if _particle_copy_a.zpos < zmin or _particle_copy_a.zpos > zmax:
-                _particle_copy_a.zpos = self._vert_bc_calculator.apply(_particle_copy_a.zpos, zmin, zmax)
+        flag = data_reader.set_vertical_grid_vars(time, &_particle_copy_a)
 
-        data_reader.set_vertical_grid_vars(time, &_particle_copy_a)
+        # Apply surface/bottom boundary conditions if required
+        if flag != IN_DOMAIN:
+            flag = self._vert_bc_calculator.apply(data_reader, time, &_particle_copy_a)
+
+            # Return if failure recorded
+            if flag == BDY_ERROR:
+                return flag
 
         # Advection step
         # --------------
@@ -555,12 +573,15 @@ cdef class OS1NumMethod(NumMethod):
         # Time at which to start the second diffusion step
         t = time + self._diff_time_step
 
-        zmin = data_reader.get_zmin(t, &_particle_copy_b)
-        zmax = data_reader.get_zmax(t, &_particle_copy_b)
-        if _particle_copy_b.zpos < zmin or _particle_copy_b.zpos > zmax:
-            _particle_copy_b.zpos = self._vert_bc_calculator.apply(_particle_copy_b.zpos, zmin, zmax)
+        flag = data_reader.set_vertical_grid_vars(t, &_particle_copy_b)
 
-        data_reader.set_vertical_grid_vars(t, &_particle_copy_b)
+        # Apply surface/bottom boundary conditions if required
+        if flag != IN_DOMAIN:
+            flag = self._vert_bc_calculator.apply(data_reader, t, &_particle_copy_b)
+
+            # Return if failure recorded
+            if flag == BDY_ERROR:
+                return flag
 
         # Save the particle's last position to help with host element searching
         _particle_copy_a = _particle_copy_b
@@ -599,20 +620,26 @@ cdef class OS1NumMethod(NumMethod):
             _particle_copy_b.zpos = self._fixed_depth_below_surface + zmax
             
             # Determine the new host zlayer
-            data_reader.set_vertical_grid_vars(t, &_particle_copy_b)
+            flag = data_reader.set_vertical_grid_vars(t, &_particle_copy_b)
+
+            # Return if failure recorded
+            if flag != IN_DOMAIN:
+                return flag
 
             # Copy back particle properties
             particle[0] = _particle_copy_b
 
             return flag
 
-        # Apply vertical boundary condition
-        zmin = data_reader.get_zmin(t, &_particle_copy_b)
-        zmax = data_reader.get_zmax(t, &_particle_copy_b)
-        if _particle_copy_b.zpos < zmin or _particle_copy_b.zpos > zmax:
-            _particle_copy_b.zpos = self._vert_bc_calculator.apply(_particle_copy_b.zpos, zmin, zmax)
+        flag = data_reader.set_vertical_grid_vars(t, &_particle_copy_b)
 
-        data_reader.set_vertical_grid_vars(t, &_particle_copy_b)
+        # Apply surface/bottom boundary conditions if required
+        if flag != IN_DOMAIN:
+            flag = self._vert_bc_calculator.apply(data_reader, t, &_particle_copy_b)
+
+            # Return if failure recorded
+            if flag == BDY_ERROR:
+                return flag
         
         # Copy back particle properties
         particle[0] = _particle_copy_b
@@ -755,8 +782,10 @@ cdef class AdvRK42DItMethod(ItMethod):
 
         # Update particle local coordinates
         data_reader.set_local_coordinates(&_particle)
+        flag = data_reader.set_vertical_grid_vars(t, &_particle)
+        if flag != IN_DOMAIN:
+            return flag
 
-        data_reader.set_vertical_grid_vars(t, &_particle)
         data_reader.get_horizontal_velocity(t, &_particle, vel) 
         for i in xrange(ndim):
             k2[i] = self._time_step * vel[i]
@@ -776,8 +805,10 @@ cdef class AdvRK42DItMethod(ItMethod):
 
         # Update particle local coordinates
         data_reader.set_local_coordinates(&_particle)
+        flag = data_reader.set_vertical_grid_vars(t, &_particle)
+        if flag != IN_DOMAIN:
+            return flag
 
-        data_reader.set_vertical_grid_vars(t, &_particle)
         data_reader.get_horizontal_velocity(t, &_particle, vel)
         for i in xrange(ndim):
             k3[i] = self._time_step * vel[i]
@@ -798,8 +829,10 @@ cdef class AdvRK42DItMethod(ItMethod):
 
         # Update particle local coordinates
         data_reader.set_local_coordinates(&_particle)
+        flag = data_reader.set_vertical_grid_vars(t, &_particle)
+        if flag != IN_DOMAIN:
+            return flag
 
-        data_reader.set_vertical_grid_vars(t, &_particle)
         data_reader.get_horizontal_velocity(t, &_particle, vel)
         for i in xrange(ndim):
             k4[i] = self._time_step * vel[i]
@@ -917,13 +950,16 @@ cdef class AdvRK43DItMethod(ItMethod):
         # Update particle local coordinates
         data_reader.set_local_coordinates(&_particle)
 
-        # Impose boundary condition in z
-        zmin = data_reader.get_zmin(t, &_particle)
-        zmax = data_reader.get_zmax(t, &_particle)
-        if _particle.zpos < zmin or _particle.zpos > zmax:
-            _particle.zpos = self._vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
+        # Set vertical grid vars.
+        flag = data_reader.set_vertical_grid_vars(t, &_particle)
 
-        data_reader.set_vertical_grid_vars(t, &_particle)
+        # Apply surface/bottom boundary conditions if required
+        if flag != IN_DOMAIN:
+            flag = self._vert_bc_calculator.apply(data_reader, t, &_particle)
+
+            # Return if failure recorded
+            if flag == BDY_ERROR:
+                return flag
 
         data_reader.get_velocity(t, &_particle, vel)
         for i in xrange(ndim):
@@ -947,13 +983,16 @@ cdef class AdvRK43DItMethod(ItMethod):
         # Update particle local coordinates
         data_reader.set_local_coordinates(&_particle)
 
-        # Impose boundary condition in z
-        zmin = data_reader.get_zmin(t, &_particle)
-        zmax = data_reader.get_zmax(t, &_particle)
-        if _particle.zpos < zmin or _particle.zpos > zmax:
-            _particle.zpos = self._vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
+        # Set vertical grid vars.
+        flag = data_reader.set_vertical_grid_vars(t, &_particle)
 
-        data_reader.set_vertical_grid_vars(t, &_particle)
+        # Apply surface/bottom boundary conditions if required
+        if flag != IN_DOMAIN:
+            flag = self._vert_bc_calculator.apply(data_reader, t, &_particle)
+
+            # Return if failure recorded
+            if flag == BDY_ERROR:
+                return flag
 
         data_reader.get_velocity(t, &_particle, vel)
         for i in xrange(ndim):
@@ -977,13 +1016,16 @@ cdef class AdvRK43DItMethod(ItMethod):
         # Update particle local coordinates
         data_reader.set_local_coordinates(&_particle)
 
-        # Impose boundary condition in z
-        zmin = data_reader.get_zmin(t, &_particle)
-        zmax = data_reader.get_zmax(t, &_particle)
-        if _particle.zpos < zmin or _particle.zpos > zmax:
-            _particle.zpos = self._vert_bc_calculator.apply(_particle.zpos, zmin, zmax)
+        # Set vertical grid vars.
+        flag = data_reader.set_vertical_grid_vars(t, &_particle)
 
-        data_reader.set_vertical_grid_vars(t, &_particle)
+        # Apply surface/bottom boundary conditions if required
+        if flag != IN_DOMAIN:
+            flag = self._vert_bc_calculator.apply(data_reader, t, &_particle)
+
+            # Return if failure recorded
+            if flag == BDY_ERROR:
+                return flag
 
         data_reader.get_velocity(t, &_particle, vel)
         for i in xrange(ndim):
@@ -1170,15 +1212,21 @@ cdef class DiffVisser1DItMethod(ItMethod):
         data_reader.get_velocity(time, particle, vel)
         
         zpos_offset = particle.zpos + 0.5 * (vel[2] + Kh_prime) * self._time_step
-        zmin = data_reader.get_zmin(time, particle)
-        zmax = data_reader.get_zmax(time, particle)
-        if zpos_offset < zmin or zpos_offset > zmax:
-            zpos_offset = self._vert_bc_calculator.apply(zpos_offset, zmin, zmax)
 
         # Create a copy of the particle and move it to the offset position
         _particle = particle[0]
         _particle.zpos = zpos_offset
-        data_reader.set_vertical_grid_vars(time, &_particle)
+
+        # Set vertical grid vars.
+        flag = data_reader.set_vertical_grid_vars(time, &_particle)
+
+        # Apply surface/bottom boundary conditions if required
+        if flag != IN_DOMAIN:
+            flag = self._vert_bc_calculator.apply(data_reader, time, &_particle)
+
+            # Return if failure recorded
+            if flag == BDY_ERROR:
+                return flag
 
         # Compute Kh at the offset position
         Kh = data_reader.get_vertical_eddy_diffusivity(time, &_particle)
@@ -1699,5 +1747,4 @@ def get_global_time_step(config):
             return config.getfloat("NUMERICS", "time_step_adv")
     else:
         raise ValueError("Unrecognised config option num_method={}".format(num_method))    
-        
-        
+

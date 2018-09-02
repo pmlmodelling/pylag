@@ -9,6 +9,7 @@ from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 
 from pylag.fvcom_data_reader import FVCOMDataReader
 from pylag.boundary_conditions import RefHorizBoundaryConditionCalculator
+from pylag.boundary_conditions import RefVertBoundaryConditionCalculator
 from pylag.particle import ParticleSmartPtr
 from pylag import cwrappers
 
@@ -287,8 +288,9 @@ class FVCOMDataReader_test(TestCase):
 
         particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
         self.data_reader.set_local_coordinates_wrapper(particle)
-        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
         
+        test.assert_equal(flag, 0)
         test.assert_equal(particle.k_layer, 0)
         test.assert_equal(particle.in_vertical_boundary_layer, True)
         test.assert_almost_equal(particle.omega_interfaces, 1.0)
@@ -302,8 +304,9 @@ class FVCOMDataReader_test(TestCase):
 
         particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
         self.data_reader.set_local_coordinates_wrapper(particle)
-        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
-        
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+
+        test.assert_equal(flag, 0)        
         test.assert_equal(particle.k_layer, 2)
         test.assert_equal(particle.in_vertical_boundary_layer, True)
         test.assert_almost_equal(particle.omega_interfaces, 0.0)
@@ -317,8 +320,9 @@ class FVCOMDataReader_test(TestCase):
 
         particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
         self.data_reader.set_local_coordinates_wrapper(particle)
-        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
-        
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+
+        test.assert_equal(flag, 0)
         test.assert_equal(particle.k_layer, 0)
         test.assert_equal(particle.in_vertical_boundary_layer, True)
         test.assert_almost_equal(particle.omega_interfaces, 0.75)
@@ -332,8 +336,9 @@ class FVCOMDataReader_test(TestCase):
 
         particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
         self.data_reader.set_local_coordinates_wrapper(particle)
-        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
-        
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+
+        test.assert_equal(flag, 0)
         test.assert_equal(particle.k_layer, 2)
         test.assert_equal(particle.in_vertical_boundary_layer, True)
         test.assert_almost_equal(particle.omega_interfaces, 0.25)
@@ -347,8 +352,9 @@ class FVCOMDataReader_test(TestCase):
 
         particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
         self.data_reader.set_local_coordinates_wrapper(particle)
-        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
-        
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+
+        test.assert_equal(flag, 0)
         test.assert_equal(particle.k_layer, 1)
         test.assert_equal(particle.in_vertical_boundary_layer, False)
         test.assert_equal(particle.k_upper_layer, 0)
@@ -367,11 +373,12 @@ class FVCOMDataReader_test(TestCase):
 
         particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
         self.data_reader.set_local_coordinates_wrapper(particle)
-        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
 
         vel = np.empty(3, dtype=DTYPE_FLOAT)
         self.data_reader.get_velocity_wrapper(time, particle, vel)
 
+        test.assert_equal(flag, 0)
         test.assert_array_almost_equal(vel, [2.0, 2.0, 2.0])
 
         # Test #2
@@ -379,10 +386,11 @@ class FVCOMDataReader_test(TestCase):
         time = 1800.0
         particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
         self.data_reader.set_local_coordinates_wrapper(particle)
-        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
 
         vel = np.empty(3, dtype=DTYPE_FLOAT)
         self.data_reader.get_velocity_wrapper(time, particle, vel)
+        test.assert_equal(flag, 0)
         test.assert_array_almost_equal(vel, [3.0, 3.0, 3.0])
 
         # Test #3
@@ -390,10 +398,11 @@ class FVCOMDataReader_test(TestCase):
         time = 0.0
         particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
         self.data_reader.set_local_coordinates_wrapper(particle)
-        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
 
         vel = np.empty(3, dtype=DTYPE_FLOAT)
         self.data_reader.get_velocity_wrapper(time, particle, vel)
+        test.assert_equal(flag, 0)
         test.assert_array_almost_equal(vel, [2.0, 2.0, 2.0])
 
     def test_get_velocity_in_middle_layer(self):
@@ -406,10 +415,11 @@ class FVCOMDataReader_test(TestCase):
         time = 0.0
         particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
         self.data_reader.set_local_coordinates_wrapper(particle)
-        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
 
         vel = np.empty(3, dtype=DTYPE_FLOAT)
         self.data_reader.get_velocity_wrapper(time, particle, vel)
+        test.assert_equal(flag, 0)
         test.assert_array_almost_equal(vel, [1.5, 1.5, 1.5])
 
         # Test #2
@@ -417,10 +427,11 @@ class FVCOMDataReader_test(TestCase):
         time = 1800.0
         particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
         self.data_reader.set_local_coordinates_wrapper(particle)
-        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
 
         vel = np.empty(3, dtype=DTYPE_FLOAT)
         self.data_reader.get_velocity_wrapper(time, particle, vel)
+        test.assert_equal(flag, 0)
         test.assert_array_almost_equal(vel, [2.25, 2.25, 2.25])
 
     def test_get_velocity_in_bottom_layer(self):
@@ -433,10 +444,11 @@ class FVCOMDataReader_test(TestCase):
         time = 0.0
         particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
         self.data_reader.set_local_coordinates_wrapper(particle)
-        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
 
         vel = np.empty(3, dtype=DTYPE_FLOAT)
         self.data_reader.get_velocity_wrapper(time, particle, vel)
+        test.assert_equal(flag, 0)
         test.assert_array_almost_equal(vel, [0.0, 0.0, 0.0])
 
         # Test #2
@@ -444,10 +456,11 @@ class FVCOMDataReader_test(TestCase):
         time = 1800.0
         particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
         self.data_reader.set_local_coordinates_wrapper(particle)
-        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
 
         vel = np.empty(3, dtype=DTYPE_FLOAT)
         self.data_reader.get_velocity_wrapper(time, particle, vel)
+        test.assert_equal(flag, 0)
         test.assert_array_almost_equal(vel, [0.0, 0.0, 0.0])
 
         # Test #3
@@ -455,10 +468,11 @@ class FVCOMDataReader_test(TestCase):
         time = 0.0
         particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
         self.data_reader.set_local_coordinates_wrapper(particle)
-        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
 
         vel = np.empty(3, dtype=DTYPE_FLOAT)
         self.data_reader.get_velocity_wrapper(time, particle, vel)
+        test.assert_equal(flag, 0)
         test.assert_array_almost_equal(vel, [0.0, 0.0, 0.0])
 
     def test_get_vertical_eddy_diffusivity(self):
@@ -470,8 +484,9 @@ class FVCOMDataReader_test(TestCase):
         time = 0.0
         particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
         self.data_reader.set_local_coordinates_wrapper(particle)
-        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
         diffusivity = self.data_reader.get_vertical_eddy_diffusivity_wrapper(time, particle)
+        test.assert_equal(flag, 0)
         test.assert_almost_equal(diffusivity,  0.005)
 
     def test_get_vertical_eddy_diffusivity_derivative(self):
@@ -483,8 +498,9 @@ class FVCOMDataReader_test(TestCase):
         time = 0.0
         particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
         self.data_reader.set_local_coordinates_wrapper(particle)
-        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
         diffusivity_gradient = self.data_reader.get_vertical_eddy_diffusivity_derivative_wrapper(time, particle)
+        test.assert_equal(flag, 0)
         test.assert_almost_equal(diffusivity_gradient, -0.0026042)
 
     def test_get_horizontal_eddy_viscosity(self):
@@ -496,8 +512,9 @@ class FVCOMDataReader_test(TestCase):
         time = 0.0
         particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
         self.data_reader.set_local_coordinates_wrapper(particle)
-        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
         viscosity = self.data_reader.get_horizontal_eddy_viscosity_wrapper(time, particle)
+        test.assert_equal(flag, 0)
         test.assert_almost_equal(viscosity,  0.01)
 
     def test_get_horizontal_eddy_viscosity_derivative(self):
@@ -509,10 +526,11 @@ class FVCOMDataReader_test(TestCase):
         time = 0.0
         particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
         self.data_reader.set_local_coordinates_wrapper(particle)
-        self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
 
         Ah_prime = np.empty(2, dtype=DTYPE_FLOAT)
         self.data_reader.get_horizontal_eddy_viscosity_derivative_wrapper(time, particle, Ah_prime)
+        test.assert_equal(flag, 0)
         test.assert_array_almost_equal(Ah_prime, [0.0, 0.0])
 
     def test_element_is_wet(self):
@@ -591,4 +609,94 @@ class FVCOMReflectingHorizBoundaryCondition_test(TestCase):
         test.assert_equal(particle_new.xpos + self.xmin, 1.9)
         test.assert_equal(particle_new.ypos + self.ymin, 1.2)
         test.assert_equal(particle_new.host_horizontal_elem, 1)
+
+
+class FVCOMReflectingVertBoundaryCondition_test(TestCase):
+
+    def setUp(self):
+        # Create config
+        config = SafeConfigParser()
+        config.add_section("GENERAL")
+        config.set('GENERAL', 'log_level', 'info')
+        config.add_section("OCEAN_CIRCULATION_MODEL")
+        config.set('OCEAN_CIRCULATION_MODEL', 'has_Kh', 'True')
+        config.set('OCEAN_CIRCULATION_MODEL', 'has_Ah', 'True')
+        config.set('OCEAN_CIRCULATION_MODEL', 'has_is_wet', 'True')
+
+        # Create mediator
+        mediator = MockFVCOMMediator()
+        
+        # Create data reader
+        self.data_reader = FVCOMDataReader(config, mediator)
+        
+        # Read in data
+        datetime_start = datetime.datetime(2000,1,1) # Arbitrary start time, ignored by mock mediator
+        datetime_end = datetime.datetime(2000,1,1) # Arbitrary end time, ignored by mock mediator
+        self.data_reader.setup_data_access(datetime_start, datetime_end)
+
+        # Grid offsets
+        self.xmin = self.data_reader.get_xmin()
+        self.ymin = self.data_reader.get_ymin()
+
+        # Boundary condition calculator
+        self.vert_boundary_condition_calculator = RefVertBoundaryConditionCalculator()
+
+    def tearDown(self):
+        del(self.data_reader)
+
+    def test_apply_reflecting_boundary_condition_for_a_particle_that_has_pierced_the_free_surface(self):
+        xpos = 1.3333333333-self.xmin
+        ypos = 1.6666666667-self.ymin
+        zpos = 1.0 + 0.1
+        host = 0
+
+        time = 0.0
+        
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        flag = self.vert_boundary_condition_calculator.apply_wrapper(self.data_reader, time, particle)
+        test.assert_equal(flag, 0)
+        test.assert_almost_equal(particle.zpos, 0.9)
+
+    def test_apply_reflecting_boundary_condition_for_a_particle_that_has_just_pierced_the_free_surface(self):
+        xpos = 1.3333333333-self.xmin
+        ypos = 1.6666666667-self.ymin
+        zpos = 1.0 + 1.e-14
+        host = 0
+
+        time = 0.0
+        
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        flag = self.vert_boundary_condition_calculator.apply_wrapper(self.data_reader, time, particle)
+        test.assert_equal(flag, 0)
+        test.assert_almost_equal(particle.zpos, 1.0)
+
+    def test_apply_reflecting_boundary_condition_for_a_particle_that_has_pierced_the_sea_floor(self):
+        xpos = 1.3333333333-self.xmin
+        ypos = 1.6666666667-self.ymin
+        zpos = -11.0 - 0.1
+        host = 0
+
+        time = 0.0
+        
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        flag = self.vert_boundary_condition_calculator.apply_wrapper(self.data_reader, time, particle)
+        test.assert_equal(flag, 0)
+        test.assert_almost_equal(particle.zpos, -10.9)
+
+    def test_apply_reflecting_boundary_condition_for_a_particle_that_has_just_pierced_the_free_surface(self):
+        xpos = 1.3333333333-self.xmin
+        ypos = 1.6666666667-self.ymin
+        zpos = -11.0 - 1.e-14
+        host = 0
+
+        time = 0.0
+        
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        flag = self.vert_boundary_condition_calculator.apply_wrapper(self.data_reader, time, particle)
+        test.assert_equal(flag, 0)
+        test.assert_almost_equal(particle.zpos, -11.0)
 

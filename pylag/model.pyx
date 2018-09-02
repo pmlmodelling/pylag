@@ -157,7 +157,10 @@ cdef class OPTModel:
                 raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(particle_ptr.zpos, zmax))
 
             # Find the host z layer
-            self.data_reader.set_vertical_grid_vars(time, particle_ptr)
+            flag = self.data_reader.set_vertical_grid_vars(time, particle_ptr)
+
+            if flag != IN_DOMAIN:
+                raise ValueError("Supplied depth z (= {}) is not within the grid (h = {}, zeta={}).".format(particle_ptr.zpos, zmin, zmax))
 
             # Determine if the host element is presently dry
             if self.data_reader.is_wet(time, particle_ptr.host_horizontal_elem) == 1:
