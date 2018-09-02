@@ -205,13 +205,8 @@ cdef class FVCOMDataReader(DataReader):
         if flag != IN_DOMAIN:
             # Local search failed to find the particle. Perform check to see if
             # the particle has indeed left the model domain
-            flag, host = self.find_host_using_particle_tracing(particle_old.xpos,
-                                                         particle_old.ypos,
-                                                         particle_new.xpos,
-                                                         particle_new.ypos,
-                                                         particle_old.host_horizontal_elem)
-
-            particle_new.host_horizontal_elem = host
+            flag = self.find_host_using_particle_tracing(particle_old,
+                                                         particle_new)
 
         return flag
 
@@ -318,19 +313,19 @@ cdef class FVCOMDataReader(DataReader):
             if guess == second_to_last_guess:
                 return BDY_ERROR
 
-    cpdef find_host_using_particle_tracing(self, DTYPE_FLOAT_t xpos_old,
-        DTYPE_FLOAT_t ypos_old, DTYPE_FLOAT_t xpos_new, DTYPE_FLOAT_t ypos_new,
-        DTYPE_INT_t last_host):
+    cdef DTYPE_INT_t find_host_using_particle_tracing(self, Particle *particle_old,
+                                                      Particle *particle_new) except INT_ERR:
         """ Try to find the new host element using the particle's pathline
         
         The algorithm navigates between elements by finding the exit point
         of the pathline from each element. If the pathline terminates within
-        a valid host element, the index of the new host element is returned
-        along with a flag indicating that a valid host element was successfully
-        found. If the pathline crosses a model boundary, the last element the
-        particle passed through before exiting the domain is returned along
-        with a flag indicating the type of boundary crossed. Flag conventions
-        are the same as those applied in local host element searching.
+        a valid host element, the index of the new host element is set and a
+        flag indicating that a valid host element was successfully found is
+        returned. If the pathline crosses a model boundary, the last element the
+        host horizontal element of the new particle is set to the last element the
+        particle passed through before exiting the domain and a flag indicating
+        the type of boundary crossed is returned. Flag conventions are the same
+        as those applied in local host element searching.
 
         Conventions
         -----------
@@ -350,28 +345,16 @@ cdef class FVCOMDataReader(DataReader):
 
         Parameters:
         -----------
-        xpos_old : float
-            x-position at the last time point.
+        particle_old: *Particle
+            The particle at its old position.
 
-        ypos_old : float
-            y-position at the next time point.
-
-        xpos_new : float
-            x-position at the last time point.
-
-        ypos_new : float
-            y-position at the next time point.        
-        
-        last_host : int
-            Element to use when computing the particle's barycentric coordinates
+        particle_new: *Particle
+            The particle at its new position. The host element will be updated.
         
         Returns:
         --------
         flag : int
             Integer flag that indicates whether or not the seach was successful.
-
-        host : int
-            ID of the host horizontal element or the last element searched.
         """
         cdef int i # Loop counter
         cdef int vertex # Vertex identifier
@@ -409,12 +392,12 @@ cdef class FVCOMDataReader(DataReader):
 
         # Construct arrays to hold the coordinates of the particle's previous
         # position vector and its new position vector
-        x3[0] = xpos_old; x3[1] = ypos_old
-        x4[0] = xpos_new; x4[1] = ypos_new
+        x3[0] = particle_old.xpos; x3[1] = particle_old.ypos
+        x4[0] = particle_new.xpos; x4[1] = particle_new.ypos
 
         # Start the search using the host known to contain (xpos_old, ypos_old)
-        elem = last_host
-        
+        elem = particle_old.host_horizontal_elem
+
         # Set last_elem equal to elem in the first instance
         last_elem = elem
 
@@ -464,7 +447,10 @@ cdef class FVCOMDataReader(DataReader):
                             n_host_boundaries += 1
                     if n_host_boundaries == 2:
                         flag = LAND_BDY_CROSSED
-                        return flag, last_elem
+
+                        # Set host to the last element the particle passed through
+                        particle_new.host_horizontal_elem = last_elem
+                        return flag
                     else:
                         # Intersection found but the pathline has not exited the
                         # domain
@@ -474,17 +460,21 @@ cdef class FVCOMDataReader(DataReader):
                     if elem == -1:
                         # Land boundary crossed
                         flag = LAND_BDY_CROSSED
-                        return flag, last_elem
                     elif elem == -2:
                         # Open ocean boundary crossed
                         flag = OPEN_BDY_CROSSED
-                        return flag, last_elem
+
+                    # Set host to the last element the particle passed through
+                    particle_new.host_horizontal_elem = last_elem
+
+                    return flag
 
             if current_elem == elem:
                 # Particle has not exited the current element meaning it must
                 # still reside in the domain
                 flag = IN_DOMAIN
-                return flag, current_elem
+                particle_new.host_horizontal_elem = current_elem
+                return flag
 
     cdef DTYPE_INT_t find_host_using_global_search(self, Particle *particle) except INT_ERR:
         """ Returns the host horizontal element through global searching.
