@@ -10,60 +10,60 @@ cdef class Intersection:
     """
 
     def __init__(self, x1=-999., y1=-999., x2=-999., y2=-999., xi=-999., yi=-999.):
-        self._x1 = x1
-        self._y1 = y1
-        self._x2 = x2
-        self._y2 = y2
-        self._xi = xi
-        self._yi = yi
+        self.x1 = x1
+        self.y1 = y1
+        self.x2 = x2
+        self.y2 = y2
+        self.xi = xi
+        self.yi = yi
 
     @property
-    def x1(self):
-        return self._x1
+    def x1_py(self):
+        return self.x1
 
-    @x1.setter
-    def x1(self, value):
-        self._x1 = value
-
-    @property
-    def y1(self):
-        return self._y1
-
-    @y1.setter
-    def y1(self, value):
-        self._y1 = value
+    @x1_py.setter
+    def x1_py(self, value):
+        self.x1 = value
 
     @property
-    def x2(self):
-        return self._x2
+    def y1_py(self):
+        return self.y1
 
-    @x2.setter
-    def x2(self, value):
-        self._x2 = value
-
-    @property
-    def y2(self):
-        return self._y2
-
-    @y2.setter
-    def y2(self, value):
-        self._y2 = value
+    @y1_py.setter
+    def y1_py(self, value):
+        self.y1 = value
 
     @property
-    def xi(self):
-        return self._xi
+    def x2_py(self):
+        return self.x2
 
-    @xi.setter
-    def xi(self, value):
-        self._xi = value
+    @x2_py.setter
+    def x2_py(self, value):
+        self.x2 = value
 
     @property
-    def yi(self):
-        return self._yi
+    def y2_py(self):
+        return self.y2
 
-    @yi.setter
-    def yi(self, value):
-        self._yi = value
+    @y2_py.setter
+    def y2_py(self, value):
+        self.y2 = value
+
+    @property
+    def xi_py(self):
+        return self.xi
+
+    @xi_py.setter
+    def xi_py(self, value):
+        self.xi = value
+
+    @property
+    def yi_py(self):
+        return self.yi
+
+    @yi_py.setter
+    def yi_py(self, value):
+        self.yi = value
 
 cdef get_intersection_point(DTYPE_FLOAT_t x1[2], DTYPE_FLOAT_t x2[2],
         DTYPE_FLOAT_t x3[2], DTYPE_FLOAT_t x4[2], DTYPE_FLOAT_t xi[2]):
