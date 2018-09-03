@@ -42,10 +42,6 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
         iterations is imposed. If this limit is exceeded, a boundary error is 
         returned and the particle's position is not updated.
         """
-        # 2D position vectors for the particle's previous and new position
-        cdef DTYPE_FLOAT_t x3[2]
-        cdef DTYPE_FLOAT_t x4[2]
-        
         # 2D position vector for the reflected position
         cdef DTYPE_FLOAT_t x4_prime[2]
         
@@ -57,7 +53,7 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
         # element
         cdef DTYPE_FLOAT_t n[2]     
         
-        # 2D direction vector pointing from xi to x4
+        # 2D direction vector pointing from xi to the new position
         cdef DTYPE_FLOAT_t d[2]
         
         # 2D direction vector pointing from xi to x4', where x4' is the
@@ -90,14 +86,6 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
 
         counter = 0
         while counter < 10:
-            # Construct arrays to hold the coordinates of the particle's previous
-            # position vector and its new position vector that lies outside of the
-            # model domain
-            x3[0] = particle_copy_a.xpos
-            x3[1] = particle_copy_a.ypos
-            x4[0] = particle_copy_b.xpos
-            x4[1] = particle_copy_b.ypos
-
             # Compute coordinates for the side of the element the particle crossed
             # before exiting the domain
             intersection = data_reader.get_boundary_intersection(&particle_copy_a,
@@ -105,8 +93,8 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
 
             # Compute the direction vector pointing from the intersection point
             # to the position vector that lies outside of the model domain
-            d[0] = x4[0] - intersection.xi
-            d[1] = x4[1] - intersection.yi
+            d[0] = particle_copy_b.xpos - intersection.xi
+            d[1] = particle_copy_b.ypos - intersection.yi
 
             # Compute the normal to the element side that points back into the
             # element given the clockwise ordering of element vertices
