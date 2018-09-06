@@ -1,6 +1,7 @@
 include "constants.pxi"
 
 import logging
+import ConfigParser
 
 # PyLag cimports
 from pylag.particle cimport ParticleSmartPtr
@@ -222,17 +223,28 @@ cdef class RefVertBoundaryConditionCalculator(VertBoundaryConditionCalculator):
 # ---------------
 
 def get_horiz_boundary_condition_calculator(config):
-    if config.get("BOUNDARY_CONDITIONS", "horiz_bound_cond") == "reflecting":
-        return RefHorizBoundaryConditionCalculator()
-    elif config.get("BOUNDARY_CONDITIONS", "horiz_bound_cond") == "None":
+    try:
+        boundary_condition = config.get("BOUNDARY_CONDITIONS", "horiz_bound_cond")
+    except (ConfigParser.NoSectionError, ConfigParser.NoOptionError) as e:
         return None
     else:
-        raise ValueError('Unsupported horizontal boundary condtion.')
+        if boundary_condition == "reflecting":
+            return RefHorizBoundaryConditionCalculator()
+        elif boundary_condition == "None":
+            return None
+        else:
+            raise ValueError('Unsupported horizontal boundary condtion.')
 
 def get_vert_boundary_condition_calculator(config):
-    if config.get("BOUNDARY_CONDITIONS", "vert_bound_cond") == "reflecting":
-        return RefVertBoundaryConditionCalculator()
-    elif config.get("BOUNDARY_CONDITIONS", "vert_bound_cond") == "None":
+    try:
+        boundary_condition = config.get("BOUNDARY_CONDITIONS", "vert_bound_cond")
+    except (ConfigParser.NoSectionError, ConfigParser.NoOptionError) as e:
         return None
     else:
-        raise ValueError('Unsupported vertical boundary condtion.')
+        if boundary_condition == "reflecting":
+            return RefVertBoundaryConditionCalculator()
+        elif boundary_condition == "None":
+            return None
+        else:
+            raise ValueError('Unsupported vertical boundary condtion.')
+
