@@ -23,16 +23,32 @@ from pylag.boundary_conditions cimport VertBoundaryConditionCalculator
 cdef class MockVelocityDataReader(DataReader):
     """ Test data reader for numerical integration schemes
     
-    Object passes back u/v/w velocity components for the system of ODEs:
-            dx/dt = x           (1)
-            dy/dt = 1.5y        (2)
-            dz/dt = 0.0         (3)
+    The example is taken from Kreyszig, E. (2006) Advanced Engineering
+    Mathematics, Ch. 18. P762. In the example, the complex potential
+    with F(z) = z^2 = x^2 - y^2 + 2ixy models a flow with:
+
+    Equipotential lines Phi = x^2 - y^2 = const,
+
+    Streamlines Psi = 2xy = const,
+
+    The velocity vector is then:
+
+    V = 2(x - iy) (1),
     
-    The velocity eqns are uncoupled and can be solved analytically, giving:
-            x = x_0 * exp(t)    (4)
-            y = y_0 * exp(1.5t) (5)
-            z = 0.0             (6)
-    
+    with components:
+
+    V1 = u =  2x (2),
+    V2 = v = -2y (3),
+
+    The speed is:
+
+    |V| = sqrt(x^2 + y^2).
+
+    An analytical expression for the postion vector (X, Y) can be found by
+    integrating (2) and (3):
+
+    X(t, x_0) = x_0 * exp^(2t)
+    Y(t, y_0) = y_0 * exp^(-2t)
     """
     cdef DTYPE_INT_t find_host(self, Particle *particle_old,
                                Particle *particle_new) except INT_ERR:
@@ -87,16 +103,16 @@ cdef class MockVelocityDataReader(DataReader):
         return x,y
 
     def _get_x(self, x0, t):
-        return x0 * np.exp(t)
+        return x0 * np.exp(2*t)
     
     def _get_y(self, y0, t):
-        return y0 * np.exp(1.5*t)
+        return y0 * np.exp(-2*t)
 
     def _get_u_component(self, DTYPE_FLOAT_t xpos):
-        return xpos
+        return 2.0 * xpos
 
     def _get_v_component(self, DTYPE_FLOAT_t ypos):
-        return 1.5 * ypos
+        return -2.0 * ypos
 
     def _get_w_component(self, DTYPE_FLOAT_t zpos):
         return 0.0
