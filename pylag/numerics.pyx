@@ -3,11 +3,13 @@ include "constants.pxi"
 from libc.math cimport sqrt
 
 import logging
+import ConfigParser
 
 from pylag.boundary_conditions import get_horiz_boundary_condition_calculator
 from pylag.boundary_conditions import get_vert_boundary_condition_calculator
 
 # PyLag cimports
+from pylag.particle cimport ParticleSmartPtr
 from pylag.boundary_conditions cimport HorizBoundaryConditionCalculator
 from pylag.boundary_conditions cimport VertBoundaryConditionCalculator
 from delta cimport reset
@@ -21,8 +23,15 @@ cdef class NumMethod:
     * :meth: `step`
     """
 
+    def step_wrapper(self, DataReader data_reader, DTYPE_FLOAT_t time,
+                     ParticleSmartPtr particle):
+        """ Python friendly wrapper for step()
+        
+        """
+        return self.step(data_reader, time, particle.get_ptr())
+
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
-            Particle *particle) except INT_ERR:
+                          Particle *particle) except INT_ERR:
         """ Perform one iteration of the numerical method
         
         Following the update, the particle's new position is saved.
