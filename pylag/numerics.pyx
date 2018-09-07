@@ -86,8 +86,15 @@ cdef class StdNumMethod(NumMethod):
 
         self._time_step = self._iterative_method.get_time_step()
 
-        self._depth_restoring = config.getboolean("SIMULATION", "depth_restoring")
-        self._fixed_depth_below_surface = config.getfloat("SIMULATION", "fixed_depth")
+        try:
+            self._depth_restoring = config.getboolean("SIMULATION", "depth_restoring")
+        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError) as e:
+            self._depth_restoring = False
+
+        try:
+            self._fixed_depth_below_surface = config.getfloat("SIMULATION", "fixed_depth")
+        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError) as e:
+            self._fixed_depth_below_surface = FLOAT_ERR
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
             Particle *particle) except INT_ERR:
