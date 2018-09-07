@@ -39,6 +39,9 @@ extensions = ['sphinx.ext.autodoc',
               'nbsphinx',
               'IPython.sphinxext.ipython_console_highlighting']
 
+# Use this kernel instead of the one stored in the notebook metadata:
+nbsphinx_kernel_name = 'python2'
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
