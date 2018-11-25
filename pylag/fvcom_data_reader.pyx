@@ -657,6 +657,16 @@ cdef class FVCOMDataReader(DataReader):
 
         raise RuntimeError('Failed to calculate boundary intersection.')
 
+    cdef set_default_location(self, Particle *particle):
+        """ Set default location
+
+        Move the particle to its host element's centroid.
+        """
+        particle.xpos = self._xc[particle.host_horizontal_elem]
+        particle.ypos = self._yc[particle.host_horizontal_elem]
+        self.set_local_coordinates(particle)
+        return
+
     cdef set_local_coordinates(self, Particle *particle):
         """ Set local coordinates
         

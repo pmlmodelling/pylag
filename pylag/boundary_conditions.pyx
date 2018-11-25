@@ -74,8 +74,8 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
         # Is found flag
         cdef bint found
 
-        # Loop counter
-        cdef DTYPE_INT_t counter
+        # Loop counters
+        cdef DTYPE_INT_t counter_a, counter_b
 
         # The intersection point
         cdef Intersection intersection
@@ -85,8 +85,8 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
         particle_copy_a = particle_old[0]
         particle_copy_b = particle_new[0]
 
-        counter = 0
-        while counter < 10:
+        counter_a = 0
+        while counter_a < 10:
             # Compute coordinates for the side of the element the particle crossed
             # before exiting the domain
             intersection = data_reader.get_boundary_intersection(&particle_copy_a,
@@ -110,8 +110,8 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
             r[1] = d[1] - mult*n[1]
             x4_prime[1] = intersection.yi + r[1]
 
-            # Attempt to find the particle using a local search
-            # -------------------------------------------------
+            # Attempt to find the particle using a (cheap) local search
+            # ---------------------------------------------------------
             particle_copy_b.xpos = x4_prime[0]
             particle_copy_b.ypos = x4_prime[1]
             flag = data_reader.find_host_using_local_search(&particle_copy_b,
@@ -124,18 +124,23 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
             # Local search failed
             # -------------------
             
-            # To locate the new particle's position, first find a location that
-            # sits safely in the model grid some way between the intersection
-            # point and the new position. This will allow us to use line
-            # crossings to definitely locate the particle. We don't use the
-            # intersection point itself for this, as it will be flagged as a
-            # line crossing, possibly affecting the result. To guarantee the
-            # search, we resort to global searching.
+            # To locate the new particle's position, we first try to find a
+            # location that sits safely in the model grid some way between
+            # the intersection point and the new position. This will allow us to
+            # use line crossings to definitely locate the particle. We don't use the
+            # intersection point itself for this, as it could be flagged as a
+            # line crossing, possibly affecting the result.
+            #
+            # Three attempts are made to find such an intermediate position, each
+            # using global searching. The approach may fail, if the particle is
+            # extremely close to the boundary. If this does happen, the search
+            # is aborted and the particle is simply moved to the last known
+            # host element's centroid.
             for i in xrange(2):
                 r_test[i] = r[i]
             
-            found = False
-            while found == False:
+            counter_b = 0
+            while counter_b < 3:
                 r_test[0] = r_test[0]/10.
                 x_test[0] = intersection.xi + r_test[0]
 
@@ -148,10 +153,17 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
                 flag = data_reader.find_host_using_global_search(&particle_copy_a)
 
                 if flag == IN_DOMAIN:
-                    found = True
+                    break
 
-            # Attempt to locate the new point using global searching
-            # ------------------------------------------------------
+                counter_b += 1
+
+            if flag != IN_DOMAIN:
+                # Search failed. Reset the particle's position.
+                data_reader.set_default_location(particle_new)
+                return IN_DOMAIN
+
+            # Attempt to locate the new point using a standard search
+            # -------------------------------------------------------
             flag = data_reader.find_host(&particle_copy_a, &particle_copy_b)
             
             if flag == IN_DOMAIN:
@@ -160,7 +172,7 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
             elif flag == OPEN_BDY_CROSSED:
                 return flag
             
-            counter += 1
+            counter_a += 1
 
         return BDY_ERROR
 

@@ -25,6 +25,8 @@ cdef class DataReader:
     cdef Intersection get_boundary_intersection(self, Particle *particle_old,
                                                 Particle *particle_new)
 
+    cdef set_default_location(self, Particle *particle)
+
     cdef set_local_coordinates(self, Particle *particle)
 
     cdef DTYPE_INT_t set_vertical_grid_vars(self, DTYPE_FLOAT_t time,

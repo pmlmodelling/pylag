@@ -44,6 +44,12 @@ cdef class DataReader:
                                                 Particle *particle_new):
         raise NotImplementedError
 
+    def set_default_location_wrapper(self, ParticleSmartPtr particle):
+        return self.set_default_location(particle.get_ptr())
+
+    cdef set_default_location(self, Particle *particle):
+        raise NotImplementedError
+
     def set_local_coordinates_wrapper(self, ParticleSmartPtr particle):
         return self.set_local_coordinates(particle.get_ptr())
 

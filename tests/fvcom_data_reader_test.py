@@ -244,6 +244,14 @@ class FVCOMDataReader_test(TestCase):
         test.assert_almost_equal(intersection.xi_py+self.xmin, 1.5)
         test.assert_almost_equal(intersection.yi_py+self.ymin, 1.0)
 
+    def test_set_default_location(self):
+        particle = ParticleSmartPtr(xpos=1.5-self.xmin, ypos=1.0-self.ymin, host=1)
+        self.data_reader.set_default_location_wrapper(particle)
+        test.assert_almost_equal(particle.xpos + self.xmin, 1.66666666667)
+        test.assert_almost_equal(particle.ypos + self.ymin, 1.33333333333)
+        test.assert_array_almost_equal(particle.phi, [0.3333333333, 0.3333333333, 0.3333333333])
+
+
     def test_set_local_coordinates_when_a_particle_is_on_an_external_elements_side(self):
         particle = ParticleSmartPtr(xpos=1.5-self.xmin, ypos=1.0-self.ymin, host=1)
         self.data_reader.set_local_coordinates_wrapper(particle)
