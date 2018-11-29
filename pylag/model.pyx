@@ -230,6 +230,9 @@ cdef class OPTModel:
                 particle_smart_ptr.get_ptr().in_domain = False
                 self.particle_seed_smart_ptrs.append(particle_smart_ptr)
 
+        if particles_in_domain == 0:
+            raise RuntimeError('All seed particles lie outside of the model domain!')
+
         if self.config.get('GENERAL', 'log_level') == 'DEBUG':
             logger = logging.getLogger(__name__)
             logger.info('{} of {} particles are located in the model domain.'.format(particles_in_domain, len(self.particle_seed_smart_ptrs)))
