@@ -39,7 +39,7 @@ cdef class NumMethod:
         raise NotImplementedError
 
 
-cdef class TestNumMethod:
+cdef class TestNumMethod(NumMethod):
     """ Test iterative method
 
     Class to assist in testing other parts of the code that may
