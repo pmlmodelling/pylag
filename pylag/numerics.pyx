@@ -38,6 +38,19 @@ cdef class NumMethod:
         """
         raise NotImplementedError
 
+
+cdef class TestNumMethod:
+    """ Test iterative method
+
+    Class to assist in testing other parts of the code that may
+    require an object of type NumMethod to exist, but which does
+    nothing.
+    """
+    cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
+                          Particle *particle) except INT_ERR:
+        return IN_DOMAIN
+
+
 cdef class StdNumMethod(NumMethod):
     """ Standard numerical method
     
@@ -649,6 +662,7 @@ cdef class OS1NumMethod(NumMethod):
 
         return flag
 
+
 def get_num_method(config):
     """ Factory method for constructing NumMethod objects
     
@@ -668,8 +682,11 @@ def get_num_method(config):
         return OS0NumMethod(config)
     elif config.get("NUMERICS", "num_method") == "operator_split_1":
         return OS1NumMethod(config)
+    elif config.get("NUMERICS", "num_method") == "test":
+        return TestNumMethod(config)
     else:
         raise ValueError('Unsupported numerical method specified.')
+
 
 cdef class ItMethod:
     """ An abstract base class for iterative methods
@@ -689,6 +706,7 @@ cdef class ItMethod:
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
             Particle *particle, Delta *delta_X) except INT_ERR:
         raise NotImplementedError
+
 
 cdef class AdvRK42DItMethod(ItMethod):
     """ 2D deterministic Fourth Order Runge-Kutta iterative method
