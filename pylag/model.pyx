@@ -137,6 +137,10 @@ cdef class OPTModel:
             particle_smart_ptr = copy(particle_seed_smart_ptr)
             particle_ptr = particle_smart_ptr.get_ptr()
             
+            # Ignore seed particles that lie outside of the domain
+            if particle_ptr.in_domain == False:
+                continue
+
             # Set z depending on the specified coordinate system
             zmin = self.data_reader.get_zmin(time, particle_ptr)
             zmax = self.data_reader.get_zmax(time, particle_ptr)
