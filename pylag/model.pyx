@@ -137,40 +137,39 @@ cdef class OPTModel:
             particle_smart_ptr = copy(particle_seed_smart_ptr)
             particle_ptr = particle_smart_ptr.get_ptr()
             
-            # Ignore seed particles that lie outside of the domain
-            if particle_ptr.in_domain == False:
-                continue
+            # Set vertical grid vars for particles that lie inside the domain
+            if particle_ptr.in_domain == True:
 
-            # Set z depending on the specified coordinate system
-            zmin = self.data_reader.get_zmin(time, particle_ptr)
-            zmax = self.data_reader.get_zmax(time, particle_ptr)
-            if self.config.get("SIMULATION", "depth_coordinates") == "depth_below_surface":
-                # z_temp is given as the depth below the moving free surface
-                # Use this and zeta (zmax) to compute z
-                particle_ptr.zpos = particle_ptr.zpos + zmax
+                # Set z depending on the specified coordinate system
+                zmin = self.data_reader.get_zmin(time, particle_ptr)
+                zmax = self.data_reader.get_zmax(time, particle_ptr)
+                if self.config.get("SIMULATION", "depth_coordinates") == "depth_below_surface":
+                    # z_temp is given as the depth below the moving free surface
+                    # Use this and zeta (zmax) to compute z
+                    particle_ptr.zpos = particle_ptr.zpos + zmax
 
-            elif self.config.get("SIMULATION", "depth_coordinates") == "height_above_bottom":
-                # z_temp is given as the height above the sea floor. Use this
-                # and h (zmin) to compute z
-                particle_ptr.zpos = particle_ptr.zpos + zmin
+                elif self.config.get("SIMULATION", "depth_coordinates") == "height_above_bottom":
+                    # z_temp is given as the height above the sea floor. Use this
+                    # and h (zmin) to compute z
+                    particle_ptr.zpos = particle_ptr.zpos + zmin
 
-            # Check that the given depth is valid
-            if particle_ptr.zpos < zmin:
-                raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(particle_ptr.zpos, zmin))
-            elif particle_ptr.zpos > zmax:
-                raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(particle_ptr.zpos, zmax))
+                # Check that the given depth is valid
+                if particle_ptr.zpos < zmin:
+                    raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(particle_ptr.zpos, zmin))
+                elif particle_ptr.zpos > zmax:
+                    raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(particle_ptr.zpos, zmax))
 
-            # Find the host z layer
-            flag = self.data_reader.set_vertical_grid_vars(time, particle_ptr)
+                # Find the host z layer
+                flag = self.data_reader.set_vertical_grid_vars(time, particle_ptr)
 
-            if flag != IN_DOMAIN:
-                raise ValueError("Supplied depth z (= {}) is not within the grid (h = {}, zeta={}).".format(particle_ptr.zpos, zmin, zmax))
+                if flag != IN_DOMAIN:
+                    raise ValueError("Supplied depth z (= {}) is not within the grid (h = {}, zeta={}).".format(particle_ptr.zpos, zmin, zmax))
 
-            # Determine if the host element is presently dry
-            if self.data_reader.is_wet(time, particle_ptr.host_horizontal_elem) == 1:
-                particle_ptr.is_beached = 0
-            else:
-                particle_ptr.is_beached = 1
+                # Determine if the host element is presently dry
+                if self.data_reader.is_wet(time, particle_ptr.host_horizontal_elem) == 1:
+                    particle_ptr.is_beached = 0
+                else:
+                    particle_ptr.is_beached = 1
             
             self.particle_smart_ptrs.append(particle_smart_ptr)
             self.particle_ptrs.push_back(particle_ptr)
