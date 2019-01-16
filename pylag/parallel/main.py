@@ -62,7 +62,7 @@ def main():
     # Seed the random number generator
     random.seed()
     if config.get('GENERAL', 'log_level') == 'DEBUG':
-        print 'Random seed for pocessor with rank {} is {}'.format(rank, random.get_seed())
+        print 'Random seed for processor with rank {} is {}'.format(rank, random.get_seed())
     
     # Run the simulation
     simulator = get_simulator(config)
