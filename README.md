@@ -6,9 +6,9 @@ Installation
 ------------
 
 0. Register for access to the PML GitLab at http://pml.ac.uk/Modelling_at_PML/Access_Code.
-1. git clone git@gitlab.ecosystem-modelling.pml.ac.uk:PyLag/PyLag
-2. cd PyLag
-3. pip install --user .
+1. `git clone git@gitlab.ecosystem-modelling.pml.ac.uk:PyLag/PyLag`
+2. `cd PyLag`
+3. `pip install --user .`
 
 Notes
 =====
