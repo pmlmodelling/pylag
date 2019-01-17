@@ -93,7 +93,7 @@ class TraceSimulator(Simulator):
 
         # Display particle count if running in debug mode
         if self._config.get('GENERAL', 'log_level') == 'DEBUG':
-            print 'Pocessor with rank {} is managing {} particles.'.format(rank, my_n_particles)
+            print 'Processor with rank {} is managing {} particles.'.format(rank, my_n_particles)
 
         # Initialise particle arrays
         self.model.set_particle_data(my_group_ids, my_x_positions, my_y_positions, my_z_positions)
