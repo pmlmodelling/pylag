@@ -183,7 +183,7 @@ setup(name="PyLag",
       packages=["pylag", "pylag.parallel", "pylag.tests"],
       ext_modules=ext_modules,
       install_requires=[
-          "cython",
+          "cython<=0.25",
           "numpy",
           "netCDF4",
           "mpi4py",
