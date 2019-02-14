@@ -3,7 +3,10 @@ from netCDF4 import Dataset, num2date
 import glob
 import natsort
 import logging
-import ConfigParser
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
 
 from pylag.data_types_python import DTYPE_FLOAT
 from pylag.utils import round_time
@@ -19,7 +22,7 @@ class FileReader(object):
         self._data_file_name_stem = self._config.get("OCEAN_CIRCULATION_MODEL", "data_file_stem")
         try:
             self._grid_metrics_file_name = self._config.get("OCEAN_CIRCULATION_MODEL", "grid_metrics_file")
-        except ConfigParser.NoOptionError:
+        except configparser.NoOptionError:
             logger = logging.getLogger(__name__)
             logger.error('A grid metrics file was not given. Please provide '\
                 'one an try again. If one needs to be generated, please '\
@@ -210,7 +213,7 @@ class FileReader(object):
         
         tidx_last = -1
         tidx_next = -1
-        for i in xrange(0, n_times-1):
+        for i in range(0, n_times-1):
             if time >= self._time[i] and time < self._time[i+1]:
                 tidx_last = i
                 tidx_next = tidx_last + 1

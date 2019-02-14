@@ -1,10 +1,13 @@
-import ConfigParser
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
 
 def get_config(config_filename=None):
     global _config
     if _config is None:
         # Create new configuration object
-        _config = ConfigParser.SafeConfigParser()
+        _config = configparser.SafeConfigParser()
         
         if config_filename:
             _config.read(config_filename)

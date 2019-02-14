@@ -3,7 +3,11 @@ include "constants.pxi"
 from libc.math cimport sqrt
 
 import logging
-import ConfigParser
+
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
 
 from pylag.boundary_conditions import get_horiz_boundary_condition_calculator
 from pylag.boundary_conditions import get_vert_boundary_condition_calculator
@@ -101,12 +105,12 @@ cdef class StdNumMethod(NumMethod):
 
         try:
             self._depth_restoring = config.getboolean("SIMULATION", "depth_restoring")
-        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError) as e:
+        except (configparser.NoSectionError, configparser.NoOptionError) as e:
             self._depth_restoring = False
 
         try:
             self._fixed_depth_below_surface = config.getfloat("SIMULATION", "fixed_depth")
-        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError) as e:
+        except (configparser.NoSectionError, configparser.NoOptionError) as e:
             self._fixed_depth_below_surface = FLOAT_ERR
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time, 

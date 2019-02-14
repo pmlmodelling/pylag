@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import numpy as np
 import os
 from netCDF4 import Dataset
@@ -51,7 +53,7 @@ def create_fvcom_grid_metrics_file(ncin_file_name, obc_file_name,
     ncout_file_name : str, optional
         The name of the grid metrics file that will be created        
     """
-    print "Creating FVCOM grid metrics file {}".format(ncout_file_name)
+    print('Creating FVCOM grid metrics file {}'.format(ncout_file_name))
 
     ob_nodes = get_open_boundary_nodes(obc_file_name)
     
@@ -184,7 +186,7 @@ def sort_interpolants(a1u, a2u, nbe, nbe_sorted):
     a2u_sorted[0,:] = a2u[0,:]
 
     for j in range(n_elems):
-        for i in xrange(3):
+        for i in range(3):
             if nbe_sorted[i,j] == nbe[0,j]:
                 a1u_sorted[i+1,j] = a1u[1,j]
                 a2u_sorted[i+1,j] = a2u[1,j]
@@ -212,7 +214,7 @@ def get_open_boundary_nodes(file_name):
     
     # Number of open boundary nodes given on first line
     n_obc_nodes = int(lines.pop(0).strip().split(' ')[-1])
-    print "Grid has {} nodes on the open boundary".format(n_obc_nodes)
+    print('Grid has {} nodes on the open boundary'.format(n_obc_nodes))
     
     nodes = []
     for line in lines:

@@ -1,7 +1,11 @@
 include "constants.pxi"
 
 import logging
-import ConfigParser
+
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
 
 # PyLag cimports
 from pylag.particle cimport ParticleSmartPtr
@@ -237,7 +241,7 @@ cdef class RefVertBoundaryConditionCalculator(VertBoundaryConditionCalculator):
 def get_horiz_boundary_condition_calculator(config):
     try:
         boundary_condition = config.get("BOUNDARY_CONDITIONS", "horiz_bound_cond")
-    except (ConfigParser.NoSectionError, ConfigParser.NoOptionError) as e:
+    except (configparser.NoSectionError, configparser.NoOptionError) as e:
         return None
     else:
         if boundary_condition == "reflecting":
@@ -250,7 +254,7 @@ def get_horiz_boundary_condition_calculator(config):
 def get_vert_boundary_condition_calculator(config):
     try:
         boundary_condition = config.get("BOUNDARY_CONDITIONS", "vert_bound_cond")
-    except (ConfigParser.NoSectionError, ConfigParser.NoOptionError) as e:
+    except (configparser.NoSectionError, configparser.NoOptionError) as e:
         return None
     else:
         if boundary_condition == "reflecting":

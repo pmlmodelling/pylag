@@ -1,7 +1,6 @@
 import numpy as np
 import copy
 import datetime
-import ConfigParser
 from netCDF4 import num2date
 
 # Data types used for constructing C data structures

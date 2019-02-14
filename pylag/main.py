@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import os
 import sys
 import argparse
@@ -18,9 +20,9 @@ def main():
     try:
         config = get_config(config_filename=parsed_args.config)
     except RuntimeError as re:
-        print 'Failed to create run config. Please make sure a config '\
-            'file is given using the -c or --config command line '\
-            'arguments.'
+        print('Failed to create run config. Please make sure a config '\
+              'file is given using the -c or --config command line '\
+              'arguments.')
         raise RuntimeError(re.message)
 
     # Create output directory if it does not exist already
@@ -40,7 +42,7 @@ def main():
     logger.info('Using PyLag version: {}'.format(version.version))
     
     # Record configuration to file
-    with open("{}/pylag_out.cfg".format(config.get('GENERAL', 'out_dir')), 'wb') as config_out:
+    with open("{}/pylag_out.cfg".format(config.get('GENERAL', 'out_dir')), 'w') as config_out:
         logger.info('Writing run config to file')
         config.write(config_out)
     

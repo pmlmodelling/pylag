@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import logging
 from progressbar import ProgressBar
 
@@ -78,8 +80,8 @@ class TraceSimulator(Simulator):
             self.data_logger.write(self.time_manager.time, particle_diagnostics)
 
             # The main update loop
-            print '\nStarting ensemble member {} ...'.format(self.time_manager.current_release)
-            print 'Progress:'
+            print('\nStarting ensemble member {} ...'.format(self.time_manager.current_release))
+            print('Progress:')
             pbar = ProgressBar(maxval=self.time_manager.time_end, term_width=50).start()
             while self.time_manager.time < self.time_manager.time_end:
                 self.model.update(self.time_manager.time)
