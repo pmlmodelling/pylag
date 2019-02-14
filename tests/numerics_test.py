@@ -1,12 +1,15 @@
 from nose.tools import raises
 
-from ConfigParser import SafeConfigParser
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
 
 from pylag.numerics import get_num_method
 
 def test_set_valid_OSONumMethod_advection_and_diffusion_time_steps():
     # Create config
-    config = SafeConfigParser()
+    config = configparser.SafeConfigParser()
 
     config.add_section("SIMULATION")
     config.set("SIMULATION", "depth_restoring", 'False')
@@ -30,7 +33,7 @@ def test_set_valid_OSONumMethod_advection_and_diffusion_time_steps():
 @raises(ValueError)
 def test_set_invalid_OSONumMethod_diffusion_time_step_that_is_greater_than_the_advection_time_step():
     # Create config
-    config = SafeConfigParser()
+    config = configparser.SafeConfigParser()
 
     config.add_section("SIMULATION")
     config.set("SIMULATION", "depth_restoring", 'False')
@@ -54,7 +57,7 @@ def test_set_invalid_OSONumMethod_diffusion_time_step_that_is_greater_than_the_a
 @raises(ValueError)
 def test_set_invalid_OS0NumMethod_diffusion_time_step_that_is_not_an_exact_multiple_of_the_advection_time_step():
     # Create config
-    config = SafeConfigParser()
+    config = configparser.SafeConfigParser()
 
     config.add_section("SIMULATION")
     config.set("SIMULATION", "depth_restoring", 'False')
@@ -77,7 +80,7 @@ def test_set_invalid_OS0NumMethod_diffusion_time_step_that_is_not_an_exact_multi
 
 def test_set_valid_OS1NumMethod_advection_and_diffusion_time_steps():
     # Create config
-    config = SafeConfigParser()
+    config = configparser.SafeConfigParser()
 
     config.add_section("SIMULATION")
     config.set("SIMULATION", "depth_restoring", 'False')
@@ -101,7 +104,7 @@ def test_set_valid_OS1NumMethod_advection_and_diffusion_time_steps():
 @raises(ValueError)
 def test_set_invalid_OS1NumMethod_diffusion_time_step_that_is_not_equal_to_half_the_advection_time_step():
     # Create config
-    config = SafeConfigParser()
+    config = configparser.SafeConfigParser()
 
     config.add_section("BOUNDARY_CONDITIONS")
     config.set('BOUNDARY_CONDITIONS', 'horiz_bound_cond', 'None')

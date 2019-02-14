@@ -1,7 +1,11 @@
 from unittest import TestCase
 import numpy.testing as test
 import numpy as np
-from ConfigParser import SafeConfigParser
+
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
 
 from pylag.model import OPTModel
 
@@ -12,7 +16,7 @@ class OPTModel_test1(TestCase):
 
     def setUp(self):
         # Create config
-        config = SafeConfigParser()
+        config = configparser.SafeConfigParser()
         config.add_section("GENERAL")
         config.set('GENERAL', 'log_level', 'info')
         config.add_section("SIMULATION")
@@ -48,7 +52,7 @@ class OPTModel_test2(TestCase):
 
     def setUp(self):
         # Create config
-        config = SafeConfigParser()
+        config = configparser.SafeConfigParser()
         config.add_section("GENERAL")
         config.set('GENERAL', 'log_level', 'info')
         config.add_section("SIMULATION")
@@ -84,7 +88,7 @@ class OPTModel_test3(TestCase):
 
     def setUp(self):
         # Create config
-        config = SafeConfigParser()
+        config = configparser.SafeConfigParser()
         config.add_section("GENERAL")
         config.set('GENERAL', 'log_level', 'info')
         config.add_section("SIMULATION")

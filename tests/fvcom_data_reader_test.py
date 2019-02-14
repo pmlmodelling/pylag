@@ -2,7 +2,11 @@ from unittest import TestCase
 import numpy.testing as test
 import numpy as np
 import datetime
-from ConfigParser import SafeConfigParser
+
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
 
 # PyLag data types
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
@@ -104,7 +108,7 @@ class FVCOMDataReader_test(TestCase):
 
     def setUp(self):
         # Create config
-        config = SafeConfigParser()
+        config = configparser.SafeConfigParser()
         config.add_section("GENERAL")
         config.set('GENERAL', 'log_level', 'info')
         config.add_section("OCEAN_CIRCULATION_MODEL")
@@ -553,7 +557,7 @@ class FVCOMReflectingHorizBoundaryCondition_test(TestCase):
 
     def setUp(self):
         # Create config
-        config = SafeConfigParser()
+        config = configparser.SafeConfigParser()
         config.add_section("GENERAL")
         config.set('GENERAL', 'log_level', 'info')
         config.add_section("OCEAN_CIRCULATION_MODEL")
@@ -623,7 +627,7 @@ class FVCOMReflectingVertBoundaryCondition_test(TestCase):
 
     def setUp(self):
         # Create config
-        config = SafeConfigParser()
+        config = configparser.SafeConfigParser()
         config.add_section("GENERAL")
         config.set('GENERAL', 'log_level', 'info')
         config.add_section("OCEAN_CIRCULATION_MODEL")

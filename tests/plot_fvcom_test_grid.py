@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from matplotlib import pyplot as plt
 from matplotlib.tri.triangulation import Triangulation
 
@@ -35,10 +37,10 @@ for idx, (x, y) in enumerate(zip(x_nodes, y_nodes)):
     ax.scatter(x, y)
     ax.annotate('xn_{}'.format(idx), xy=(x, y), xytext=(x, y))
 
-print 'Centroids'
-print '%.10f' %x_centroids[0], '%.10f' %y_centroids[0]
-print '%.10f' %x_centroids[1], '%.10f' %y_centroids[1]
-print '%.10f' %x_centroids[2], '%.10f' %y_centroids[2]
-print '%.10f' %x_centroids[3], '%.10f' %y_centroids[3]
+print('Centroids')
+print('%.10f' %x_centroids[0], '%.10f' %y_centroids[0])
+print('%.10f' %x_centroids[1], '%.10f' %y_centroids[1])
+print('%.10f' %x_centroids[2], '%.10f' %y_centroids[2])
+print('%.10f' %x_centroids[3], '%.10f' %y_centroids[3])
 
 plt.show()

@@ -2,7 +2,11 @@ from unittest import TestCase
 import numpy.testing as test
 import numpy as np
 import datetime
-from ConfigParser import SafeConfigParser
+
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
 
 from pylag.gotm_data_reader import GOTMDataReader
 from pylag.boundary_conditions import RefVertBoundaryConditionCalculator
@@ -61,7 +65,7 @@ class GOTMDataReader_test(TestCase):
 
     def setUp(self):
         # Create config
-        config = SafeConfigParser()
+        config = configparser.SafeConfigParser()
         config.add_section("OCEAN_CIRCULATION_MODEL")
         config.set('OCEAN_CIRCULATION_MODEL', 'vertical_interpolation_scheme', 'linear')
         
@@ -254,7 +258,7 @@ class GOTMReflectingVertBoundaryCondition_test(TestCase):
 
     def setUp(self):
         # Create config
-        config = SafeConfigParser()
+        config = configparser.SafeConfigParser()
         config.add_section("OCEAN_CIRCULATION_MODEL")
         config.set('OCEAN_CIRCULATION_MODEL', 'vertical_interpolation_scheme', 'linear')
         
