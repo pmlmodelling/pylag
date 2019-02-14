@@ -317,8 +317,13 @@ cdef class OPTModel:
             diags['status'].append(particle_ptr.status)
             
             # Environmental environmental variables
-            h = self.data_reader.get_zmin(time, particle_ptr)
-            zeta = self.data_reader.get_zmax(time, particle_ptr)
+            if particle_ptr.in_domain:
+                h = self.data_reader.get_zmin(time, particle_ptr)
+                zeta = self.data_reader.get_zmax(time, particle_ptr)
+            else:
+                h = FLOAT_ERR
+                zeta = FLOAT_ERR
             diags['h'].append(h)
             diags['zeta'].append(zeta)
+
         return diags
