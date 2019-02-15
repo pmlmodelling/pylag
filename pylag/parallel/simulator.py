@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import logging
 import traceback
 import numpy as np
@@ -61,7 +63,7 @@ class TraceSimulator(Simulator):
 
             # Insist on the even distribution of particles
             if self.n_particles % size == 0:
-                my_n_particles = self.n_particles/size
+                my_n_particles = self.n_particles//size
             else:
                 logger.error('For now the total number of particles must '\
                     'divide equally among the set of workers. The total '\
@@ -93,7 +95,7 @@ class TraceSimulator(Simulator):
 
         # Display particle count if running in debug mode
         if self._config.get('GENERAL', 'log_level') == 'DEBUG':
-            print 'Processor with rank {} is managing {} particles.'.format(rank, my_n_particles)
+            print('Processor with rank {} is managing {} particles.'.format(rank, my_n_particles))
 
         # Initialise particle arrays
         self.model.set_particle_data(my_group_ids, my_x_positions, my_y_positions, my_z_positions)
@@ -142,7 +144,7 @@ class TraceSimulator(Simulator):
 
                     self.model.read_input_data(self.time_manager.time)
                 except Exception as e:
-                    print traceback.format_exc()
+                    print(traceback.format_exc())
                     comm.Abort()
 
             # Close the current data logger
@@ -156,14 +158,14 @@ class TraceSimulator(Simulator):
         rank = comm.Get_rank()
 
         global_diags = {}
-        for diag in diags.keys():
+        for diag in list(diags.keys()):
             if rank == 0:
                 global_diags[diag] = np.empty(self.n_particles, dtype=type(diags[diag][0]))
             else:
                 global_diags[diag] = None
 
         # Pool diagnostics
-        for diag in diags.keys():
+        for diag in list(diags.keys()):
             comm.Gather(np.array(diags[diag]), global_diags[diag], root=0)
 
         # Write to file
