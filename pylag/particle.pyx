@@ -49,7 +49,28 @@ cdef class ParticleSmartPtr:
 
     cdef Particle* get_ptr(self):
         return self._particle
-    
+
+    def get_particle_data(self):
+        """ Get particle data
+
+        Return data describing the particle's basic state. Do not return
+        any derived data (e.g. particle local coordinates). The purpose
+        is to return just enough data to make it possible to recreate
+        the particle at some later time (e.g. from a restart file).
+
+        Returns:
+        --------
+        data : dict
+            Dictionary containing data that describes the particle's basic state.
+        """
+
+        data = {'group_id': self._particle.group_id,
+                'xpos': self._particle.xpos,
+                'ypos': self._particle.ypos,
+                'zpos': self._particle.zpos}
+
+        return data
+
     @property
     def xpos(self):
         return self._particle.xpos
