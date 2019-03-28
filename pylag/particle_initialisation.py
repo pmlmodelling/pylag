@@ -7,6 +7,7 @@ This module provides the following functionality:
 3) Writing of model restart files
 """
 
+import os
 import logging
 import numpy as np
 from netCDF4 import Dataset, date2num
@@ -88,6 +89,12 @@ class RestartFileCreator(object):
         # The directory in which restart files will be created
         self._restart_dir = self._config.get("RESTART", "restart_dir")
 
+        if not os.path.isdir(self._restart_dir):
+            logger = logging.getLogger(__name__)
+
+            logger.info('Creating restart file directory {}.'.format(self._restart_dir))
+            os.mkdir(self._restart_dir)
+
     def create(self, filename_stem, n_particles, datetime, particle_data):
         """ Create a restart file
 
@@ -122,7 +129,7 @@ class RestartFileCreator(object):
         time_stamp = datetime.strftime('%Y%m%d-%H%M%S')
 
         # Construct the file name from the filename stem and time stamp
-        file_name = './{}/{}_{}.nc'.format(self._restart_dir, filename_stem, time_stamp)
+        file_name = '{}/{}_{}.nc'.format(self._restart_dir, filename_stem, time_stamp)
 
         # Open the restart file for writing
         try:
@@ -139,14 +146,14 @@ class RestartFileCreator(object):
         self._create_file_structure(nc_file, n_particles, variable_names)
 
         # Save the current time
-        ncfile.variables['time'][0] = date2num(dt, units=ncfile.variables['time'].units)
+        nc_file.variables['time'][0] = date2num(datetime, units=nc_file.variables['time'].units)
 
         # Save variable data
         for var_name in variable_names:
-            ncfile.variables[var_name][0, :] = particle_data[var_name]
+            nc_file.variables[var_name][0, :] = particle_data[var_name]
 
         # Close the file
-        ncfile.close()
+        nc_file.close()
 
         return
 
@@ -188,7 +195,7 @@ class RestartFileCreator(object):
             units = variable_library.get_units(var_name)
             long_name = variable_library.get_long_name(var_name)
 
-            var = ncfile.createVariable(var_name, data_type, ('time', 'particles',), **ncopts)
+            var = nc_file.createVariable(var_name, data_type, ('time', 'particles',), **ncopts)
             var.units = units
             var.long_name = long_name
 
