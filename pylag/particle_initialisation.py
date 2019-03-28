@@ -12,7 +12,6 @@ import numpy as np
 from netCDF4 import Dataset, date2num
 
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
-
 from pylag import variable_library
 
 
@@ -189,7 +188,7 @@ class RestartFileCreator(object):
             units = variable_library.get_units(var_name)
             long_name = variable_library.get_long_name(var_name)
 
-            var = ncfile.createVariable(var_name, data_type, ('time', 'particles',), ncopts)
+            var = ncfile.createVariable(var_name, data_type, ('time', 'particles',), **ncopts)
             var.units = units
             var.long_name = long_name
 
