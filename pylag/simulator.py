@@ -4,7 +4,8 @@ import logging
 from progressbar import ProgressBar
 
 from pylag.time_manager import TimeManager
-from pylag.particle_positions_reader import read_particle_initial_positions
+from pylag.particle_initialisation import read_particle_initial_positions
+from pylag.particle_initialisation import RestartFileCreator
 from pylag.netcdf_logger import NetCDFLogger
 
 from pylag.model_factory import get_model
@@ -28,7 +29,12 @@ class TraceSimulator(Simulator):
         self.time_manager = TimeManager(self._config)
     
         # Model object
-        self.model = get_model(self._config)    
+        self.model = get_model(self._config)
+
+        # Restart creator
+        self.restart_creator = None
+        if self._config.getboolean('RESTART', 'create_restarts'):
+            self.restart_creator = RestartFileCreator(config)
     
     def run(self):
         # For logging
@@ -93,6 +99,14 @@ class TraceSimulator(Simulator):
                 
                 if self.time_manager.sync_data_to_disk() == 1:
                     self.data_logger.sync()
+
+                if self.restart_creator:
+                    if self.time_manager.create_restart_file() == 1:
+                        file_name_stem = 'restart_{}'.format(self.time_manager.current_release)
+                        datetime_current = self.time_manager.datetime_current
+                        particle_data = self.model.get_particle_data()
+
+                        self.restart_creator.create(file_name_stem, n_particles, datetime_current, particle_data)
 
                 # Check on status of reading frames and update if necessary
                 # Communicate updated arrays to the data reader if these are out of

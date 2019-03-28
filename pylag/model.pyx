@@ -7,7 +7,6 @@ from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 from pylag.numerics import get_num_method
-from pylag.particle_positions_reader import read_particle_initial_positions
 from pylag.particle import ParticleSmartPtr
 
 from libcpp.vector cimport vector
@@ -327,3 +326,39 @@ cdef class OPTModel:
             diags['zeta'].append(zeta)
 
         return diags
+
+    def get_particle_data(self):
+        """ Get particle data
+
+        Pool, sort and return data describing the basic state of each particle. The
+        main purpose of this function is to assist with the creation of restart files.
+        
+        Returns:
+        --------
+        all_particle_data : dict
+            Dictionary holding particle data.
+        """
+        # Initialise a dictionary of particle data with empty lists
+        all_particle_data = {}
+        for key in self.particle_smart_ptrs[0].get_particle_data().keys():
+            all_particle_data[key] = []
+
+        # Add data for the remaining particles
+        for particle_smart_ptr in self.particle_smart_ptrs:
+            particle_data = particle_smart_ptr.get_particle_data()
+            for key, value in list(particle_data.items()):
+                all_particle_data[key].append(value)
+
+        # Add grid offsets
+        if 'xpos' in all_particle_data.keys():
+            xmin = self.data_reader.get_xmin()
+            x_positions = all_particle_data['xpos']
+            all_particle_data['xpos'] = [x - xmin for x in x_positions]
+
+        if 'ypos' in all_particle_data.keys():
+            ymin = self.data_reader.get_ymin()
+            y_positions = all_particle_data['ypos']
+            all_particle_data['ypos'] = [y - ymin for y in y_positions]
+
+        return all_particle_data
+
