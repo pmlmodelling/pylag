@@ -7,7 +7,8 @@ import numpy as np
 from mpi4py import MPI
 
 from pylag.time_manager import TimeManager
-from pylag.particle_positions_reader import read_particle_initial_positions
+from pylag.particle_initialisation import read_particle_initial_positions
+from pylag.particle_initialisation import RestartFileCreator
 from pylag.netcdf_logger import NetCDFLogger
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 
@@ -25,6 +26,11 @@ class Simulator(object):
 
 class TraceSimulator(Simulator):
     def __init__(self, config):
+        # MPI objects and variables
+        comm = MPI.COMM_WORLD
+        rank = comm.Get_rank()
+        size = comm.Get_size()
+        
         # Configuration object
         self._config = config
 
@@ -33,6 +39,12 @@ class TraceSimulator(Simulator):
 
         # Model object
         self.model = get_model(self._config)
+
+        # Restart creator
+        self.restart_creator = None
+        if rank == 0:
+            if self._config.getboolean('RESTART', 'create_restarts'):
+                self.restart_creator = RestartFileCreator(config)
 
     def run(self):
         # MPI objects and variables
@@ -123,7 +135,7 @@ class TraceSimulator(Simulator):
 
             # Write initial state to file
             particle_diagnostics = self.model.get_diagnostics(self.time_manager.time)
-            self._record(self.time_manager.time, particle_diagnostics)
+            self._save_data(particle_diagnostics)
 
             # The main update loop
             if rank == 0: logger.info('Starting ensemble member {} ...'.format(self.time_manager.current_release))
@@ -133,14 +145,23 @@ class TraceSimulator(Simulator):
                     if percent_complete % 10 == 0:
                         logger.info('{}% complete ...'.format(int(percent_complete)))
                 try:
+                    # Update
                     self.model.update(self.time_manager.time)
                     self.time_manager.update_current_time()
+
+                    # Save diagnostic data
                     if self.time_manager.write_output_to_file() == 1:
                         particle_diagnostics = self.model.get_diagnostics(self.time_manager.time)
-                        self._record(self.time_manager.time, particle_diagnostics)
+                        self._save_data(particle_diagnostics)
 
+                    # Sync diagnostic data to disk
                     if rank == 0 and self.time_manager.sync_data_to_disk() == 1:
                         self.data_logger.sync()
+
+                    # Create restart
+                    if self.time_manager.create_restart_file() == 1:
+                        particle_data = self.model.get_particle_data()
+                        self._create_restart(particle_data)
 
                     self.model.read_input_data(self.time_manager.time)
                 except Exception as e:
@@ -152,7 +173,7 @@ class TraceSimulator(Simulator):
                 logger.info('100% complete ...')
                 self.data_logger.close()
 
-    def _record(self, time, diags):
+    def _save_data(self, diags):
         # MPI objects and variables
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
@@ -170,4 +191,43 @@ class TraceSimulator(Simulator):
 
         # Write to file
         if rank == 0:
-            self.data_logger.write(time, global_diags)
+            self.data_logger.write(self.time_manager.time, global_diags)
+
+    def _create_restart(self, data):
+        """ Create restart file
+
+        The real work is done by RestartFileCreator. Here, we simply pool
+        particle data from each process before passing it on. Writing
+        occurs on the root process only.
+
+        Parameters:
+        -----------
+        data : dict
+            Dictionary containing particle data.
+
+        Returns:
+        --------
+        N/A
+        """
+
+        # MPI objects and variables
+        comm = MPI.COMM_WORLD
+        rank = comm.Get_rank()
+
+        global_data = {}
+        for key in list(data.keys()):
+            if rank == 0:
+                global_data[key] = np.empty(self.n_particles, dtype=type(data[key][0]))
+            else:
+                global_data[key] = None
+
+        # Pool data
+        for key in list(data.keys()):
+            comm.Gather(np.array(data[key]), global_data[key], root=0)
+
+        # Write to file
+        if rank == 0:
+            file_name_stem = 'restart_{}'.format(self.time_manager.current_release)
+            datetime_current = self.time_manager.datetime_current
+            self.restart_creator.create(file_name_stem, self.n_particles, datetime_current, global_data)
+
