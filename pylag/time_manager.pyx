@@ -32,6 +32,7 @@ cdef class TimeManager(object):
 
     cdef DTYPE_FLOAT_t _output_frequency
     cdef DTYPE_FLOAT_t _sync_frequency
+    cdef DTYPE_FLOAT_t _restart_frequency
 
     def __init__(self, config):
         # Config object
@@ -52,6 +53,9 @@ cdef class TimeManager(object):
 
         # Period at which data is synced to disk
         self._sync_frequency = config.getfloat("SIMULATION", "sync_frequency")
+
+        # Period at which restart files are created
+        self._restart_frequency = config.getfloat("RESTART", "restart_frequency")
 
         # Simulation time step
         self._time_step = get_global_time_step(config)
@@ -132,7 +136,16 @@ cdef class TimeManager(object):
             return 1
         return 0
 
-    # Properties:
+    def create_restart_file(self):
+        cdef DTYPE_FLOAT_t time_diff
+
+        time_diff = self._time - self._time_start
+        if <int>time_diff % <int>self._restart_frequency == 0:
+            return 1
+        return 0
+
+    # Properties
+    # ----------
 
     # The total number of particle releases
     property number_of_particle_releases:
@@ -157,7 +170,7 @@ cdef class TimeManager(object):
     # Current datetime
     property datetime_current:
         def __get__(self):
-            return num2date(self._time, units='days since {}'.format(self._datetime_start_ref))
+            return num2date(self._time, units='seconds since {}'.format(self._datetime_start))
 
     # Current time (seconds elapsed since start of the current simulation)
     property time:
