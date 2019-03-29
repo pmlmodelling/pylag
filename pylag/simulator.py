@@ -5,10 +5,11 @@ from progressbar import ProgressBar
 
 from pylag.time_manager import TimeManager
 from pylag.particle_initialisation import read_particle_initial_positions
-from pylag.particle_initialisation import RestartFileCreator
+from pylag.restart import RestartFileCreator
 from pylag.netcdf_logger import NetCDFLogger
 
 from pylag.model_factory import get_model
+
 
 def get_simulator(config):
     if config.get("SIMULATION", "simulation_type") == "trace":
@@ -16,9 +17,11 @@ def get_simulator(config):
     else:
         raise ValueError('Unsupported simulation type.')  
 
+
 class Simulator(object):
     def run(self):
         pass
+
 
 class TraceSimulator(Simulator):
     def __init__(self, config):
