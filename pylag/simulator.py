@@ -4,7 +4,7 @@ import logging
 from progressbar import ProgressBar
 
 from pylag.time_manager import TimeManager
-from pylag.particle_initialisation import read_particle_initial_positions
+from pylag.particle_initialisation import get_initial_particle_state_reader
 from pylag.restart import RestartFileCreator
 from pylag.netcdf_logger import NetCDFLogger
 
@@ -34,6 +34,9 @@ class TraceSimulator(Simulator):
         # Model object
         self.model = get_model(self._config)
 
+        # Initial particle state reader
+        self.initial_particle_state_reader = get_initial_particle_state_reader(config)
+
         # Restart creator
         self.restart_creator = None
         if self._config.getboolean('RESTART', 'create_restarts'):
@@ -45,9 +48,8 @@ class TraceSimulator(Simulator):
 
         # Read in particle initial positions from file - these will be used to
         # create the initial particle set.
-        file_name = self._config.get('SIMULATION', 'initial_positions_file')
         n_particles, group_ids, x_positions, y_positions, z_positions = \
-            read_particle_initial_positions(file_name)
+            self.initial_particle_state_reader.get_particle_data()
 
         if n_particles == len(group_ids):
             logger.info('Particle seed contains {} '\
