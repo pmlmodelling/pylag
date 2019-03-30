@@ -139,18 +139,22 @@ cdef class OPTModel:
             # Set vertical grid vars for particles that lie inside the domain
             if particle_ptr.in_domain == True:
 
-                # Set z depending on the specified coordinate system
+                # Grid limits for error checking
                 zmin = self.data_reader.get_zmin(time, particle_ptr)
                 zmax = self.data_reader.get_zmax(time, particle_ptr)
-                if self.config.get("SIMULATION", "depth_coordinates") == "depth_below_surface":
-                    # z_temp is given as the depth below the moving free surface
-                    # Use this and zeta (zmax) to compute z
-                    particle_ptr.zpos = particle_ptr.zpos + zmax
 
-                elif self.config.get("SIMULATION", "depth_coordinates") == "height_above_bottom":
-                    # z_temp is given as the height above the sea floor. Use this
-                    # and h (zmin) to compute z
-                    particle_ptr.zpos = particle_ptr.zpos + zmin
+                # If not starting from a restart, set z depending on the specified coordinate system
+                if self.config.get("SIMULATION", "initialisation_method") != "restart_file":
+
+                    if self.config.get("SIMULATION", "depth_coordinates") == "depth_below_surface":
+                        # z_temp is given as the depth below the moving free surface
+                        # Use this and zeta (zmax) to compute z
+                        particle_ptr.zpos = particle_ptr.zpos + zmax
+
+                    elif self.config.get("SIMULATION", "depth_coordinates") == "height_above_bottom":
+                        # z_temp is given as the height above the sea floor. Use this
+                        # and h (zmin) to compute z
+                        particle_ptr.zpos = particle_ptr.zpos + zmin
 
                 # Check that the given depth is valid
                 if particle_ptr.zpos < zmin:
@@ -353,12 +357,12 @@ cdef class OPTModel:
         if 'xpos' in all_particle_data.keys():
             xmin = self.data_reader.get_xmin()
             x_positions = all_particle_data['xpos']
-            all_particle_data['xpos'] = [x - xmin for x in x_positions]
+            all_particle_data['xpos'] = [x + xmin for x in x_positions]
 
         if 'ypos' in all_particle_data.keys():
             ymin = self.data_reader.get_ymin()
             y_positions = all_particle_data['ypos']
-            all_particle_data['ypos'] = [y - ymin for y in y_positions]
+            all_particle_data['ypos'] = [y + ymin for y in y_positions]
 
         return all_particle_data
 

@@ -8,6 +8,9 @@ This module provides the following functionality:
 """
 
 import numpy as np
+import logging
+from netCDF4 import Dataset, num2date
+import datetime
 
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 
@@ -79,35 +82,68 @@ class ASCIIInitialParticleStateReader(InitialParticleStateReader):
         return type(value)
 
 
-# class RestartInitialParticleStateReader(InitialParticleStateReader):
-#     """ Restart initial particle state reader
-#
-#     RestartInitialParticleStateReaders read in particle state data from a
-#     restart file in NetCDF format.
-#     """
-#     def __init__(self, config):
-#         self._config = config
-#
-#         self.restart_file_name = config.get('RESTART', 'file_name')
-#
-#     def get_particle_data(self):
-#         """ Get particle data
-#
-#         Particle data is read in from a NetCDF file that has been created
-#         using an object of type RestartFileCreator.
-#
-#         Parameters:
-#         -----------
-#         file_name : str
-#             The name of the NetCDF file containing particle state data.
-#         """
+class RestartInitialParticleStateReader(InitialParticleStateReader):
+    """ Restart initial particle state reader
+
+    RestartInitialParticleStateReaders read in particle state data from a
+    restart file in NetCDF format.
+    """
+    def __init__(self, config):
+        self._config = config
+
+        self._restart_file_name = self._config.get('RESTART', 'restart_file_name')
+
+    def get_particle_data(self):
+        """ Get particle data
+
+        Particle data is read in from a NetCDF file that has been created
+        using an object of type RestartFileCreator.
+
+        Parameters:
+        -----------
+        file_name : str
+            The name of the NetCDF file containing particle state data.
+        """
+        logger = logging.getLogger(__name__)
+        logger.info('Using restart file {}'.format(self._restart_file_name))
+
+        # Open the file for reading
+        try:
+            restart = Dataset(self._restart_file_name, 'r')
+            logger.info('Opened data file {} for reading.'.format(self._restart_file_name))
+        except Exception:
+            logger.error('Failed to open restart file {}.'.format(self._restart_file_name))
+            raise
+
+        # Check time
+        datetime_start_str = self._config.get("SIMULATION", "start_datetime")
+        datetime_start = datetime.datetime.strptime(datetime_start_str, "%Y-%m-%d %H:%M:%S")
+        datetime_restart = num2date(restart.variables['time'][0],
+                                    units=restart.variables['time'].units,
+                                    calendar=restart.variables['time'].calendar)
+
+        if datetime_start != datetime_restart:
+            datetime_restart_str = datetime_restart.strftime("%Y-%m-%d %H:%M:%S")
+            logger.error("The specified start time `{}' and restart time `{}' do not match".format(datetime_start_str, datetime_restart_str))
+            raise ValueError("When restarting the model, the specified start time should match that given in the restart file.")
+
+        # Extract particle data
+        n_particles = restart.dimensions['particles'].size
+        group_ids = restart.variables['group_id'][0,:]
+        x_positions = restart.variables['xpos'][0,:]
+        y_positions = restart.variables['ypos'][0,:]
+        z_positions = restart.variables['zpos'][0,:]
+
+        restart.close()
+
+        return n_particles, group_ids, x_positions, y_positions, z_positions
 
 
 def get_initial_particle_state_reader(config):
     if config.get("SIMULATION", "initialisation_method") == "init_file":
         return ASCIIInitialParticleStateReader(config)
     elif config.get("SIMULATION", "initialisation_method") == "restart_file":
-        raise NotImplementedError
+        return RestartInitialParticleStateReader(config)
     elif config.get("SIMULATION", "initialisation_method") == "rectangular_grid":
         raise NotImplementedError
     else:
