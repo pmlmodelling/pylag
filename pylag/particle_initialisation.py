@@ -16,9 +16,11 @@ class InitialParticleStateReader(object):
     """ Initial particle state reader
 
     Abstract base class for initial particle state readers. Such
-    objects are are used to read or calculate particle initial positions in
-    different contexts. These are then returned to the caller. The
-    caller must manage the actual setting of particle properties.
+    objects are are used to read or calculate initial particle
+    state data such as initial positions or in different contexts.
+    These are then returned to the caller in the form of lists. The
+    caller must manage the actual setting of particle properties for
+    each Particle object it manages - this is not done here.
     """
     def get_particle_data(self):
         raise NotImplementedError
@@ -27,10 +29,10 @@ class InitialParticleStateReader(object):
 class ASCIIInitialParticleStateReader(InitialParticleStateReader):
     """ ASCII initial particle state reader
 
-    ASCIIInitialParticleStateReaders read in particle state data from an ascii file
-    and return it to the caller.
+    ASCIIInitialParticleStateReaders read in particle state data 
+    from an ascii file and return it to the caller.
 
-    TODO - At the moment, such object only read in particle position info.
+    TODO - At the moment, such objects only read in particle position info.
            It may be desirable to have them read other types of data in the
            future.
     """
@@ -43,11 +45,6 @@ class ASCIIInitialParticleStateReader(InitialParticleStateReader):
         """ Get particle data
 
         Particle data is read in from an ASCII file.
-
-        Parameters:
-        -----------
-        file_name : str
-            The name of the ascii file containing particle state data.
         """
         # Input file containing particle initial positions
         with open(self.file_name, 'r') as f:
