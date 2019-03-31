@@ -2,8 +2,10 @@
 
 This module provides the following functionality:
 
-1) TODO Reading of model restart files
-2) Writing of model restart files
+1) Writing of model restart files
+
+The reading of restart files is implemented in
+`particle_initialisation.py`.
 """
 
 import os
