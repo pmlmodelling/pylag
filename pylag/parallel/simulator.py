@@ -7,7 +7,7 @@ import numpy as np
 from mpi4py import MPI
 
 from pylag.time_manager import TimeManager
-from pylag.particle_initialisation import read_particle_initial_positions
+from pylag.particle_initialisation import get_initial_particle_state_reader
 from pylag.restart import RestartFileCreator
 from pylag.netcdf_logger import NetCDFLogger
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
@@ -43,11 +43,23 @@ class TraceSimulator(Simulator):
         # Model object
         self.model = get_model(self._config)
 
-        # Restart creator
+        # Initial particle state readers are used to read in intial
+        # particle state data. This only happens on the lead process,
+        # so we initialise it to None here, then override this below
+        # for the root process.
+        self.initial_particle_state_reader=None
+
+        # Restart creators create restart files. This only happens on
+        # the lead process, so we initialise it to None here, then
+        # override this below for the root process.
         self.restart_creator = None
+
+        # Overrides when on the root process
         if rank == 0:
+            self.initial_particle_state_reader = get_initial_particle_state_reader(self._config)
+     
             if self._config.getboolean('RESTART', 'create_restarts'):
-                self.restart_creator = RestartFileCreator(config)
+                self.restart_creator = RestartFileCreator(self._config)
 
     def run(self):
         # MPI objects and variables
@@ -60,10 +72,14 @@ class TraceSimulator(Simulator):
             # For logging
             logger = logging.getLogger(__name__)
 
-            file_name = self._config.get('SIMULATION', 'initial_positions_file')
-
-            n_particles, group_ids, x_positions, y_positions, z_positions = \
-                    read_particle_initial_positions(file_name)
+            # Read in particle initial positions from file - these will be used to
+            # create the initial particle set.
+            try:
+                n_particles, group_ids, x_positions, y_positions, z_positions = \
+                    self.initial_particle_state_reader.get_particle_data()
+            except Exception as e:
+                print(traceback.format_exc())
+                comm.Abort()
 
             if n_particles == len(group_ids):
                 self.n_particles = n_particles
