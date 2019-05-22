@@ -67,7 +67,8 @@ class TraceSimulator(Simulator):
         self.model.set_particle_data(group_ids, x_positions, y_positions, z_positions)
 
         # Run the ensemble
-        while self.time_manager.new_simulation():
+        run_simulation = True
+        while run_simulation:
             # Set up data access for the new simulation
             self.model.setup_input_data_access(self.time_manager.datetime_start,
                                                self.time_manager.datetime_end)
@@ -122,3 +123,7 @@ class TraceSimulator(Simulator):
             
             # Close the current data logger
             self.data_logger.close()
+
+            # Run another simulation?
+            run_simulation = self.time_manager.new_simulation()
+

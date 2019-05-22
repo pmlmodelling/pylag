@@ -73,6 +73,13 @@ cdef class TimeManager(object):
         # Initialise counter for the current particle release
         self._current_release = 0
 
+        # Initialise time variables
+        if self._number_of_particle_releases > 0:
+            self._set_time_vars()
+            self._current_release = 1
+        else:
+            raise ValueError("Invalid number of particle of particle releases `{}' specified.".format(self._number_of_particle_releases))
+
     def _set_time_vars(self):
         """ Set time variables for the current particle release
 
