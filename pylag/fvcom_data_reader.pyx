@@ -118,6 +118,8 @@ cdef class FVCOMDataReader(DataReader):
 
         self._read_grid()
 
+        self._read_time_dependent_vars()
+
     cpdef setup_data_access(self, start_datetime, end_datetime):
         """ Set up access to time-dependent variables.
         

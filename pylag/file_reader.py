@@ -15,7 +15,7 @@ class FileReader(object):
     """Read in and manage access to grid and field data stored in NetCDF files.
     
     """
-    def __init__(self, config):
+    def __init__(self, config, datetime_start, datetime_end):
         self._config = config
 
         self._data_dir = self._config.get("OCEAN_CIRCULATION_MODEL", "data_dir")
@@ -32,8 +32,11 @@ class FileReader(object):
             raise RuntimeError('A grid metrics file was not listed in the run '\
                 'configuration file. See the log file for more details.')
 
-        # Set up grid and data access
+        # Read in grid info. and search for input data files.
         self._setup_file_access()
+
+        # Setup data access using the given simulation start and end datetimes
+        self.setup_data_access(datetime_start, datetime_end)
 
     def update_reading_frames(self, time):
         # Load the next data file, if necessary
@@ -228,3 +231,4 @@ class FileReader(object):
         # Save time indices
         self._tidx_last = tidx_last
         self._tidx_next = tidx_next
+

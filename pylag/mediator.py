@@ -35,12 +35,12 @@ class Mediator(object):
         raise NotImplementedError
 
 class SerialMediator(Mediator):
-    def __init__(self, config):
+    def __init__(self, config, datetime_start, datetime_end):
         self.config = config
-        self.file_reader = FileReader(config)
+        self.file_reader = FileReader(config, datetime_start, datetime_end)
 
-    def setup_data_access(self, start_datetime, end_datetime):
-        self.file_reader.setup_data_access(start_datetime, end_datetime)
+    def setup_data_access(self, datetime_start, datetime_end):
+        self.file_reader.setup_data_access(datetime_start, datetime_end)
 
     def update_reading_frames(self, time):
         return self.file_reader.update_reading_frames(time)

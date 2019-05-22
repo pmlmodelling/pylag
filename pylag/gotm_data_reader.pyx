@@ -89,6 +89,8 @@ cdef class GOTMDataReader(DataReader):
         # Interpolator
         self._interpolator = interp.get_interpolator(self.config, self._n_zlev)
 
+        self._read_time_dependent_vars()
+
     cdef _read_time_dependent_vars(self):
         """ Update time variables and memory views for GOTM data fields
         

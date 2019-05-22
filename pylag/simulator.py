@@ -32,7 +32,7 @@ class TraceSimulator(Simulator):
         self.time_manager = TimeManager(self._config)
     
         # Model object
-        self.model = get_model(self._config)
+        self.model = get_model(self._config, self.time_manager.datetime_start, self.time_manager.datetime_end)
 
         # Initial particle state reader
         self.initial_particle_state_reader = get_initial_particle_state_reader(config)
@@ -69,10 +69,6 @@ class TraceSimulator(Simulator):
         # Run the ensemble
         run_simulation = True
         while run_simulation:
-            # Set up data access for the new simulation
-            self.model.setup_input_data_access(self.time_manager.datetime_start,
-                                               self.time_manager.datetime_end)
-
             # Read data into arrays
             self.model.read_input_data(self.time_manager.time)
             
@@ -125,5 +121,12 @@ class TraceSimulator(Simulator):
             self.data_logger.close()
 
             # Run another simulation?
-            run_simulation = self.time_manager.new_simulation()
+            if self.time_manager.new_simulation():
+                run_simulation = True
+
+                # Set up data access for the new simulation
+                self.model.setup_input_data_access(self.time_manager.datetime_start,
+                                                   self.time_manager.datetime_end)
+            else:
+                run_simulation = False
 

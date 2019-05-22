@@ -9,7 +9,7 @@ from pylag.file_reader import FileReader
 from pylag.mediator import Mediator
 
 class MPIMediator(Mediator):
-    def __init__(self, config):
+    def __init__(self, config, datetime_start, datetime_end):
         self.config = config
 
         # MPI objects and variables
@@ -19,7 +19,7 @@ class MPIMediator(Mediator):
         # Only the root process accesses the file system
         if rank == 0:
             try:
-                self.file_reader = FileReader(config)
+                self.file_reader = FileReader(config, datetime_start, datetime_end)
             except Exception as e:
                 logger = logging.getLogger(__name__)
                 logger.error('Caught exception when reading input file. '\
@@ -29,14 +29,14 @@ class MPIMediator(Mediator):
         else:
             self.file_reader = None
 
-    def setup_data_access(self, start_datetime, end_datetime):
+    def setup_data_access(self, datetime_start, datetime_end):
         # MPI objects and variables
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
 
         if rank == 0:
             try:
-                self.file_reader.setup_data_access(start_datetime, end_datetime)
+                self.file_reader.setup_data_access(datetime_start, datetime_end)
             except Exception as e:
                 logger = logging.getLogger(__name__)
                 logger.error('Caught exception when setting up data access. '\

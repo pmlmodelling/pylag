@@ -12,13 +12,13 @@ from pylag.gotm_data_reader import GOTMDataReader
 # Serial imports
 from pylag.mediator import SerialMediator
 
-def get_model(config):
+def get_model(config, datetime_start, datetime_end):
     if config.get("OCEAN_CIRCULATION_MODEL", "name") == "FVCOM":
-        mediator = SerialMediator(config)
+        mediator = SerialMediator(config, datetime_start, datetime_end)
         data_reader = FVCOMDataReader(config, mediator)
         return OPTModel(config, data_reader)
     elif config.get("OCEAN_CIRCULATION_MODEL", "name") == "GOTM":
-        mediator = SerialMediator(config)
+        mediator = SerialMediator(config, datetime_start, datetime_end)
         data_reader = GOTMDataReader(config, mediator)
         return OPTModel(config, data_reader)
     else:
