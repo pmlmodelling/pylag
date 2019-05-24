@@ -133,18 +133,27 @@ class FileReader(object):
 
         Parameters:
         -----------
-        datetime_start : Datetime
+        start_datetime : Datetime
             Simulation start date/time.
 
-        datetime_end : Datetime
+        end_datetime : Datetime
             Simulation end date/time.
         """
         
         logger = logging.getLogger(__name__)
-        logger.info('Initialising all time variables and counters.')      
+        logger.info('Setting up input data access.')
 
-        # Save a reference to the new simulation start and end times for time
-        # rebasing
+        if not self._check_date_time_is_valid(start_datetime):
+            raise ValueError('The start date/time {} lies '\
+                    'outside of the time period for which input data is '\
+                    'available.'.format(start_datetime))
+
+        if not self._check_date_time_is_valid(end_datetime):
+            raise ValueError('The end date/time {} lies '\
+                    'outside of the time period for which input data is '\
+                    'available.'.format(end_datetime))
+        
+        # Save a reference to the simulation start time for time rebasing
         self._sim_datetime_s = start_datetime
         self._sim_datetime_e = end_datetime
 
@@ -186,24 +195,37 @@ class FileReader(object):
             raise RuntimeError('Could not find an input data file spanning the '\
                     'specified start time: {}.'.format(self._sim_datetime_s))
                 
-        # Check that the simulation end time is covered by the available data
-        ds = Dataset(self._data_file_names[-1], 'r')
-        data_datetime_e = num2date(ds.variables['time'][-1], units = ds.variables['time'].units)
-        ds.close()
-        
-        # If the specified run time extends beyond the time period for which
-        # there exists input data, raise this.
-        if self._sim_datetime_e > data_datetime_e:
-            raise ValueError('The specified simulation endtime {} lies '\
-                    'outside of the time period for which input data is '\
-                    'available. Input data is available out to '\
-                    '{}.'.format(self._sim_datetime_e, data_datetime_e))
-
         # Open the current data file for reading and initialise the time array
         self._open_data_file_for_reading()
 
         # Set time indices for reading frames
         self._set_time_indices(0.0) # 0s as simulation start
+
+    def _check_date_time_is_valid(self, date_time):
+        """ Check that the given date time lies within the range covered by the input data
+
+        Parameters:
+        -----------
+        date_time : Datetime
+            Datetime object to check
+
+        Returns:
+        --------
+         : bool
+            Flag confirming whether the given date time is valid or not.
+        """
+        ds0 = Dataset(self._data_file_names[0], 'r')
+        data_datetime_0 = num2date(ds0.variables['time'][0], units = ds0.variables['time'].units)
+        ds0.close()
+
+        ds1 = Dataset(self._data_file_names[-1], 'r')
+        data_datetime_1 = num2date(ds1.variables['time'][-1], units = ds1.variables['time'].units)
+        ds1.close()
+
+        if data_datetime_0 <= date_time <= data_datetime_1:
+            return True
+
+        return False
 
     def update_reading_frames(self, time):
         # Load the next data file, if necessary
