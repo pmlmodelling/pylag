@@ -13,7 +13,7 @@ from pylag.utils import round_time
 
 class FileReader(object):
     """Read in and manage access to grid and field data stored in NetCDF files.
-   
+
     Parameters:
     -----------
     config : SafeConfigParser
@@ -48,40 +48,18 @@ class FileReader(object):
         # Setup data access using the given simulation start and end datetimes
         self.setup_data_access(datetime_start, datetime_end)
 
-    def update_reading_frames(self, time):
-        # Load the next data file, if necessary
-        if (time >= self._time[-1]):
-            idx = self._data_file_names.index(self._current_data_file_name) + 1
-            try:
-                self._current_data_file_name = self._data_file_names[idx]
-            except IndexError:
-                logger = logging.getLogger(__name__)
-                logger.error('Failed to find the next required input data file.')
-                raise RuntimeError('Failed to find the next input data file.')
-            self._open_data_file_for_reading()
-
-        # Update time indices
-        self._set_time_indices(time)
-
-    def get_dimension_variable(self, var_name):
-        return len(self._grid_file.dimensions[var_name])
-        
-    def get_grid_variable(self, var_name):
-        return self._grid_file.variables[var_name][:].squeeze()
-
-    def get_time_at_last_time_index(self):
-        return self._time[self._tidx_last]
-
-    def get_time_at_next_time_index(self):
-        return self._time[self._tidx_next]
-
-    def get_time_dependent_variable_at_last_time_index(self, var_name):
-        return self._current_data_file.variables[var_name][self._tidx_last,:]
-    
-    def get_time_dependent_variable_at_next_time_index(self, var_name):
-        return self._current_data_file.variables[var_name][self._tidx_next,:]
-
     def _setup_file_access(self):
+        """ Set up access to input data files
+
+        This method is called from __init__() during class initialisation.
+
+        The following instance variables are defined here:
+
+            _data_file_names - A list holding paths to input data files.
+
+            _grid_file - NetCDF4 dataset for the model's grid metrics file.
+        """
+
         logger = logging.getLogger(__name__)
         
         # First save output file names into a list
@@ -111,8 +89,18 @@ class FileReader(object):
             raise ValueError('Failed to read the grid metrics file.')
         
     def setup_data_access(self, start_datetime, end_datetime):
-        """Open data file for reading and initalise time variables.
-        
+        """Open data files for reading and initalise all time variables.
+
+        Use the supplied start and end times to establish which input data file(s)
+        contain data spanning the specified start time. 
+
+        Parameters:
+        -----------
+        datetime_start : Datetime
+            Simulation start date/time.
+
+        datetime_end : Datetime
+            Simulation end date/time.
         """
         
         logger = logging.getLogger(__name__)
@@ -179,6 +167,39 @@ class FileReader(object):
 
         # Set time indices for reading frames
         self._set_time_indices(0.0) # 0s as simulation start
+
+    def update_reading_frames(self, time):
+        # Load the next data file, if necessary
+        if (time >= self._time[-1]):
+            idx = self._data_file_names.index(self._current_data_file_name) + 1
+            try:
+                self._current_data_file_name = self._data_file_names[idx]
+            except IndexError:
+                logger = logging.getLogger(__name__)
+                logger.error('Failed to find the next required input data file.')
+                raise RuntimeError('Failed to find the next input data file.')
+            self._open_data_file_for_reading()
+
+        # Update time indices
+        self._set_time_indices(time)
+
+    def get_dimension_variable(self, var_name):
+        return len(self._grid_file.dimensions[var_name])
+        
+    def get_grid_variable(self, var_name):
+        return self._grid_file.variables[var_name][:].squeeze()
+
+    def get_time_at_last_time_index(self):
+        return self._time[self._tidx_last]
+
+    def get_time_at_next_time_index(self):
+        return self._time[self._tidx_next]
+
+    def get_time_dependent_variable_at_last_time_index(self, var_name):
+        return self._current_data_file.variables[var_name][self._tidx_last,:]
+    
+    def get_time_dependent_variable_at_next_time_index(self, var_name):
+        return self._current_data_file.variables[var_name][self._tidx_next,:]
 
     def _open_data_file_for_reading(self):
         """Open the current data file for reading and update time array.
