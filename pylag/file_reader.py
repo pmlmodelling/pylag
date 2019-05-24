@@ -172,18 +172,18 @@ class FileReader(object):
             logger.info("Trying file `{}'".format(data_file_name))
             ds = Dataset(data_file_name, 'r')
         
-            data_datetime_s = self._datetime_reader.get_datetime(ds, time_index=0)
-            data_datetime_e = self._datetime_reader.get_datetime(ds, time_index=-1)
+            data_start_datetime = self._datetime_reader.get_datetime(ds, time_index=0)
+            data_end_datetime = self._datetime_reader.get_datetime(ds, time_index=-1)
 
             ds.close()
 
-            if (self._sim_datetime_s >= data_datetime_s) and (self._sim_datetime_s < data_datetime_e):
+            if (self._sim_datetime_s >= data_start_datetime) and (self._sim_datetime_s < data_end_datetime):
                 self._current_data_file_name = data_file_name
                 logger.info('Found initial data file {}.'.format(self._current_data_file_name))
                 break
             else:
                 logger.info('Start point not found in file covering the period'\
-                ' {} to {}'.format(data_datetime_s, data_datetime_e))
+                ' {} to {}'.format(data_start_datetime, data_end_datetime))
 
         # Ensure the seach was a success
         if self._current_data_file_name is None:
