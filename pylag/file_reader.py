@@ -34,6 +34,9 @@ class FileReader(object):
     _grid_file : Dataset
         NetCDF4 dataset for the grid metrics file
 
+    _datetime_reader : DateTimeReader
+        Object to assist in reading dates/times in input data.
+
     _sim_datatime_s : Datetime
         The current simulation start date/time. This is not necessarily fixed
         for the lifetime of an object - it can be updated through calls
@@ -48,8 +51,6 @@ class FileReader(object):
 
     _current_data_file_name : str
         Path to the input data file covering the current time point.
-
-
 
     Parameters:
     -----------
@@ -78,6 +79,9 @@ class FileReader(object):
                 'of grid metrics files.')
             raise RuntimeError('A grid metrics file was not listed in the run '\
                 'configuration file. See the log file for more details.')
+
+        # Initialise datetime reader
+        self._datetime_reader = get_datetime_reader(config)
 
         # Read in grid info. and search for input data files.
         self._setup_file_access()
@@ -116,8 +120,7 @@ class FileReader(object):
         # Open grid metrics file for reading
         logger.info('Opening grid metrics file for reading.')
         
-        # Try to read grid data from the grid metrics file, in which neighbour
-        # element info (nbe) has been ordered to match node ordering in nv.
+        # Try to read grid data from the grid metrics file
         try:
             self._grid_file = Dataset('{}'.format(self._grid_metrics_file_name), 'r')
             logger.info('Openend grid metrics file {}.'.format(self._grid_metrics_file_name))
@@ -157,31 +160,20 @@ class FileReader(object):
         self._sim_datetime_s = start_datetime
         self._sim_datetime_e = end_datetime
 
-        # Simulation start time
-        rounding_interval = self._config.getint("OCEAN_CIRCULATION_MODEL", "rounding_interval")
-
         # Determine which data file holds data covering the simulation start time
         logger.info('Beginning search for the input data file spanning the '\
             'specified simulation start point.')  
+
         self._current_data_file_name = None
         for data_file_name in self._data_file_names:
             logger.info("Trying file `{}'".format(data_file_name))
             ds = Dataset(data_file_name, 'r')
-            
-            if self._config.get("OCEAN_CIRCULATION_MODEL", "name") == 'FVCOM':
-                # The time variable is FVCOM has the lowest precision. Instead,
-                # we construct the time array from the Itime and Itime2 vars
-                time = ds.variables['Itime'][:] + ds.variables['Itime2'][:] / 1000. / 60. / 60. / 24.
-                units = ds.variables['Itime'].units
-            else:
-                time = ds.variables['time']
-                units = ds.variables['time'].units        
+        
+            data_datetime_s = self._datetime_reader.get_datetime(ds, time_index=0)
+            data_datetime_e = self._datetime_reader.get_datetime(ds, time_index=-1)
 
-            # Start and end time points for this file 
-            data_datetime_s = round_time([num2date(time[0], units=units)], rounding_interval)[0]
-            data_datetime_e = round_time([num2date(time[-1], units=units)], rounding_interval)[0]
             ds.close()
-            
+
             if (self._sim_datetime_s >= data_datetime_s) and (self._sim_datetime_s < data_datetime_e):
                 self._current_data_file_name = data_file_name
                 logger.info('Found initial data file {}.'.format(self._current_data_file_name))
@@ -190,7 +182,7 @@ class FileReader(object):
                 logger.info('Start point not found in file covering the period'\
                 ' {} to {}'.format(data_datetime_s, data_datetime_e))
 
-        # Ensure the start time is covered by the available data
+        # Ensure the seach was a success
         if self._current_data_file_name is None:
             raise RuntimeError('Could not find an input data file spanning the '\
                     'specified start time: {}.'.format(self._sim_datetime_s))
@@ -212,7 +204,7 @@ class FileReader(object):
         Returns:
         --------
          : bool
-            Flag confirming whether the given date time is valid or not.
+            Flag confirming whether the given date time is valid or not
         """
         ds0 = Dataset(self._data_file_names[0], 'r')
         data_datetime_0 = num2date(ds0.variables['time'][0], units = ds0.variables['time'].units)
@@ -278,25 +270,11 @@ class FileReader(object):
             logger.error('Could not open data file {}.'.format(self._current_data_file_name))
             raise RuntimeError('Could not open data file for reading.')
 
-        # Rounding interval and the simulation start time
-        rounding_interval = self._config.getint("OCEAN_CIRCULATION_MODEL", "rounding_interval")
+        datetime = self._datetime_reader.get_datetime(self._current_data_file)
 
-        # Read in time from the current data file and convert to a list of 
-        # datetime objects. Apply rounding as specified.
-        if self._config.get("OCEAN_CIRCULATION_MODEL", "name") == 'FVCOM':
-            # The time variable is FVCOM has the lowest precision. Instead,
-            # we construct the time array from the Itime and Itime2 vars
-            time_raw = self._current_data_file.variables['Itime'][:] + self._current_data_file.variables['Itime2'][:] / 1000. / 60. / 60. / 24.
-            units = self._current_data_file.variables['Itime'].units
-        else:
-            time_raw = self._current_data_file.variables['time']
-            units = self._current_data_file.variables['time'].units   
-        datetime_raw = num2date(time_raw[:], units=units)
-        datetime_rounded = round_time(datetime_raw, rounding_interval)
-        
         # Convert to seconds using datetime_start as a reference point
         time_seconds = []
-        for time in datetime_rounded:
+        for time in datetime:
             time_seconds.append((time - self._sim_datetime_s).total_seconds())
         self._time = np.array(time_seconds, dtype=DTYPE_FLOAT)
 
@@ -321,4 +299,95 @@ class FileReader(object):
         # Save time indices
         self._tidx_last = tidx_last
         self._tidx_next = tidx_next
+
+# Helper classes to assist in reading dates/times
+#################################################
+
+
+def get_datetime_reader(config):
+    """ Factory method for datetime readers
+
+    Parameters:
+    -----------
+    config : SafeConfigParser
+        Configuration object
+    """
+    data_source =  config.get("OCEAN_CIRCULATION_MODEL", "name")
+
+    if data_source == "FVCOM":
+        return FVCOMDateTimeReader(config)
+
+    return DefaultDatetimeReader(config)
+
+
+class DateTimeReader(object):
+    """ Abstract base class for DatetimeReaders
+    """
+    def get_datetime(self, dataset, time_index=None):
+        raise NotImplementedError
+
+
+class DefaultDateTimeReader(DateTimeReader):
+
+    def __init__(self, config):
+        self._config = config
+
+    def get_datetime(self, dataset, time_index=None):
+        """ Get dates/times for the given dataset
+
+        This function searches for the basic variable `time'.
+        If a given source of data uses a different variable
+        name or approach to saving time points, support for
+        them can be added through subclassing (as with
+        FVCOM) DateTimeReader.
+
+        Parameters:
+        -----------
+        dataset : Dataset
+            Dataset object for an FVCOM data file.
+        """
+        time_raw = dataset.variables['time']
+        units = dataset.variables['time'].units   
+
+        # Apply rounding
+        rounding_interval = self._config.getint("OCEAN_CIRCULATION_MODEL", "rounding_interval")
+
+        if time_index is not None:
+            datetime_raw = num2date(time_raw[time_index], units=units)
+            return round_time([datetime_raw], rounding_interval)[0]
+        else:
+            datetime_raw = num2date(time_raw[:], units=units)
+            return round_time(datetime_raw, rounding_interval)
+
+
+class FVCOMDateTimeReader(DateTimeReader):
+
+    def __init__(self, config):
+        self._config = config
+
+    def get_datetime(self, dataset, time_index=None):
+        """ Get FVCOM dates/times for the given dataset
+
+        The time variable in FVCOM has the lowest precision. Instead,
+        we construct the time array from the Itime and Itime2 vars,
+        before then constructing datetime objects.
+
+        Parameters:
+        -----------
+        dataset : Dataset
+            Dataset object for an FVCOM data file.
+        """
+        time_raw = dataset.variables['Itime'][:] + dataset.variables['Itime2'][:] / 1000. / 60. / 60. / 24.
+        units = dataset.variables['Itime'].units
+
+        # Apply rounding
+        # TODO - Confirm this is necessary when using Itime and Itime2?
+        rounding_interval = self._config.getint("OCEAN_CIRCULATION_MODEL", "rounding_interval")
+
+        if time_index is not None:
+            datetime_raw = num2date(time_raw[time_index], units=units)
+            return round_time([datetime_raw], rounding_interval)[0]
+        else:
+            datetime_raw = num2date(time_raw[:], units=units)
+            return round_time(datetime_raw, rounding_interval)
 
