@@ -14,6 +14,43 @@ from pylag.utils import round_time
 class FileReader(object):
     """Read in and manage access to grid and field data stored in NetCDF files.
 
+    Attributes:
+    -----------
+    _config : SafeConfigParser
+        Run configuration object.
+
+    _data_dir : str
+        Path to the direction containing input data
+
+    _data_file_name_stem : str
+        File name stem, used for building path names
+
+    _grid_metrics_file_name : str
+        File name or path for the grid metrics file
+
+    _data_file_names : list[str]
+        A list of input data files that were found in data_dir
+
+    _grid_file : Dataset
+        NetCDF4 dataset for the grid metrics file
+
+    _sim_datatime_s : Datetime
+        The current simulation start date/time. This is not necessarily fixed
+        for the lifetime of an object - it can be updated through calls
+        to `setup_data_access'. This facility helps to support for the running
+        of ensemble simulations.
+
+    _sim_datatime_e : Datetime
+        The current simulation end date/time. This is not necessarily fixed
+        for the lifetime of an object - it can be updated through calls
+        to `setup_data_access'. This facility helps to support for the running
+        of ensemble simulations.
+
+    _current_data_file_name : str
+        Path to the input data file covering the current time point.
+
+
+
     Parameters:
     -----------
     config : SafeConfigParser
