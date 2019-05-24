@@ -160,8 +160,8 @@ class FileReader(object):
                     'available.'.format(end_datetime))
         
         # Save a reference to the simulation start time for time rebasing
-        self._sim_datetime_s = start_datetime
-        self._sim_datetime_e = end_datetime
+        self._sim_start_datetime = start_datetime
+        self._sim_end_datetime = end_datetime
 
         # Determine which data file holds data covering the simulation start time
         logger.info('Beginning search for the input data file spanning the '\
@@ -177,7 +177,7 @@ class FileReader(object):
 
             ds.close()
 
-            if (self._sim_datetime_s >= data_start_datetime) and (self._sim_datetime_s < data_end_datetime):
+            if (self._sim_start_datetime >= data_start_datetime) and (self._sim_start_datetime < data_end_datetime):
                 self._current_data_file_name = data_file_name
                 logger.info('Found initial data file {}.'.format(self._current_data_file_name))
                 break
@@ -188,7 +188,7 @@ class FileReader(object):
         # Ensure the seach was a success
         if self._current_data_file_name is None:
             raise RuntimeError('Could not find an input data file spanning the '\
-                    'specified start time: {}.'.format(self._sim_datetime_s))
+                    'specified start time: {}.'.format(self._sim_start_datetime))
                 
         # Open the current data file for reading and initialise the time array
         self._open_data_file_for_reading()
@@ -285,7 +285,7 @@ class FileReader(object):
         # Convert to seconds using datetime_start as a reference point
         time_seconds = []
         for time in datetime:
-            time_seconds.append((time - self._sim_datetime_s).total_seconds())
+            time_seconds.append((time - self._sim_start_datetime).total_seconds())
 
         self._time = np.array(time_seconds, dtype=DTYPE_FLOAT)
 
