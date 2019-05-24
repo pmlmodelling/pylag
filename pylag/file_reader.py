@@ -127,7 +127,10 @@ class FileReader(object):
         except RuntimeError:
             logger.error('Failed to read grid metrics file {}.'.format(self._grid_metrics_file_name))
             raise ValueError('Failed to read the grid metrics file.')
-        
+
+        # Initialise data file to None
+        self._current_data_file = None
+
     def setup_data_access(self, start_datetime, end_datetime):
         """Open data files for reading and initalise all time variables.
 
@@ -190,6 +193,9 @@ class FileReader(object):
         # Open the current data file for reading and initialise the time array
         self._open_data_file_for_reading()
 
+        # Set time arrays
+        self._set_time_array()
+
         # Set time indices for reading frames
         self._set_time_indices(0.0) # 0s as simulation start
 
@@ -229,7 +235,10 @@ class FileReader(object):
                 logger = logging.getLogger(__name__)
                 logger.error('Failed to find the next required input data file.')
                 raise RuntimeError('Failed to find the next input data file.')
+
             self._open_data_file_for_reading()
+
+            self._set_time_array()
 
         # Update time indices
         self._set_time_indices(time)
@@ -259,7 +268,7 @@ class FileReader(object):
         logger = logging.getLogger(__name__)
 
         # Close the current data file if one has been opened previously
-        if hasattr(self, '_current_data_file'):
+        if self._current_data_file:
             self._current_data_file.close()
 
         # Open the current data file
@@ -270,12 +279,14 @@ class FileReader(object):
             logger.error('Could not open data file {}.'.format(self._current_data_file_name))
             raise RuntimeError('Could not open data file for reading.')
 
+    def _set_time_array(self):
         datetime = self._datetime_reader.get_datetime(self._current_data_file)
 
         # Convert to seconds using datetime_start as a reference point
         time_seconds = []
         for time in datetime:
             time_seconds.append((time - self._sim_datetime_s).total_seconds())
+
         self._time = np.array(time_seconds, dtype=DTYPE_FLOAT)
 
     def _set_time_indices(self, time):
