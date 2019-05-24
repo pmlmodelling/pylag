@@ -13,7 +13,17 @@ from pylag.utils import round_time
 
 class FileReader(object):
     """Read in and manage access to grid and field data stored in NetCDF files.
-    
+   
+    Parameters:
+    -----------
+    config : SafeConfigParser
+        Configuration object.
+
+    datetime_start : Datetime
+        Simulation start date/time.
+
+    datetime_end : Datetime
+        Simulation end date/time.
     """
     def __init__(self, config, datetime_start, datetime_end):
         self._config = config
