@@ -21,7 +21,10 @@ class FileReader(object):
         Run configuration object.
 
     _file_name_reader : FileNameReader
-        Class to assist with reading in file names from disk.
+        Class to assist with reading in file names from disk
+
+    _dataset_reader : DatasetReader
+        Class to assist with reading in NetCDF4 datasets
 
     _data_dir : str
         Path to the direction containing input data
@@ -67,10 +70,12 @@ class FileReader(object):
     datetime_end : Datetime
         Simulation end date/time.
     """
-    def __init__(self, config, file_name_reader, datetime_start, datetime_end):
+    def __init__(self, config, file_name_reader, dataset_reader, datetime_start, datetime_end):
         self._config = config
 
         self._file_name_reader = file_name_reader
+
+        self._dataset_reader = dataset_reader
 
         self._data_dir = self._config.get("OCEAN_CIRCULATION_MODEL", "data_dir")
         self._data_file_name_stem = self._config.get("OCEAN_CIRCULATION_MODEL", "data_file_stem")
@@ -130,7 +135,7 @@ class FileReader(object):
         
         # Try to read grid data from the grid metrics file
         try:
-            self._grid_file = Dataset('{}'.format(self._grid_metrics_file_name), 'r')
+            self._grid_file = self._dataset_reader.read_dataset(self._grid_metrics_file_name)
             logger.info('Openend grid metrics file {}.'.format(self._grid_metrics_file_name))
         except RuntimeError:
             logger.error('Failed to read grid metrics file {}.'.format(self._grid_metrics_file_name))
@@ -184,7 +189,7 @@ class FileReader(object):
         self._second_data_file_name = None
         for idx, data_file_name in enumerate(self._data_file_names):
             logger.info("Trying file `{}'".format(data_file_name))
-            ds = Dataset(data_file_name, 'r')
+            ds = self._dataset_reader.read_dataset(data_file_name)
         
             data_start_datetime = self._datetime_reader.get_datetime(ds, time_index=0)
             data_end_datetime = self._datetime_reader.get_datetime(ds, time_index=-1)
@@ -233,11 +238,11 @@ class FileReader(object):
          : bool
             Flag confirming whether the given date time is valid or not
         """
-        ds0 = Dataset(self._data_file_names[0], 'r')
+        ds0 = self._dataset_reader.read_dataset(self._data_file_names[0])
         data_datetime_0 = num2date(ds0.variables['time'][0], units = ds0.variables['time'].units)
         ds0.close()
 
-        ds1 = Dataset(self._data_file_names[-1], 'r')
+        ds1 = self._dataset_reader.read_dataset(self._data_file_names[-1])
         data_datetime_1 = num2date(ds1.variables['time'][-1], units = ds1.variables['time'].units)
         ds1.close()
 
@@ -322,7 +327,7 @@ class FileReader(object):
 
         # Open the first data file
         try:
-            self._first_data_file = Dataset(self._first_data_file_name, 'r')
+            self._first_data_file = self._dataset_reader.read_dataset(self._first_data_file_name)
             logger.info('Opened first data file {} for reading.'.format(self._first_data_file_name))
         except RuntimeError:
             logger.error('Could not open data file {}.'.format(self._first_data_file_name))
@@ -337,7 +342,7 @@ class FileReader(object):
 
         # Open the second data file
         try:
-            self._second_data_file = Dataset(self._second_data_file_name, 'r')
+            self._second_data_file = self._dataset_reader.read_dataset(self._second_data_file_name)
             logger.info('Opened second data file {} for reading.'.format(self._second_data_file_name))
         except RuntimeError:
             logger.error('Could not open data file {}.'.format(self._second_data_file_name))
@@ -412,6 +417,7 @@ class FileReader(object):
         self._tidx_first = tidx_first
         self._tidx_second = tidx_second
 
+
 # Helper classes to assist in reading file names
 ################################################
 
@@ -427,6 +433,25 @@ class DiskFileNameReader(object):
     def get_file_names(self, file_dir, file_name_stem):
         return natsort.natsorted(glob.glob('{}/{}*.nc'.format(file_dir, file_name_stem)))
                 
+
+# Helper classes to assist in reading datasets
+##############################################
+
+class DatasetReader(object):
+    """ Abstract base class for DatasetReaders
+    """
+    def read_dataset(self, file_name):
+        raise NotImplementedError
+
+
+class NetCDFDatasetReader(object):
+    """ NetCDF dataset reader
+
+    Return a NetCDF4 dataset object.
+    """
+    def read_dataset(self, file_name):
+        return Dataset(file_name, 'r')
+
 
 # Helper classes to assist in reading dates/times
 #################################################

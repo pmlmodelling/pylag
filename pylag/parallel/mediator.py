@@ -7,6 +7,7 @@ from mpi4py import MPI
 
 from pylag.file_reader import FileReader
 from pylag.file_reader import DiskFileNameReader
+from pylag.file_reader import NetCDFDatasetReader
 from pylag.mediator import Mediator
 
 class MPIMediator(Mediator):
@@ -21,7 +22,8 @@ class MPIMediator(Mediator):
         if rank == 0:
             try:
                 file_name_reader = DiskFileNameReader()
-                self.file_reader = FileReader(config, file_name_reader, datetime_start, datetime_end)
+                dataset_reader = NetCDFDatasetReader()
+                self.file_reader = FileReader(config, file_name_reader, dataset_reader, datetime_start, datetime_end)
             except Exception as e:
                 logger = logging.getLogger(__name__)
                 logger.error('Caught exception when reading input file. '\
