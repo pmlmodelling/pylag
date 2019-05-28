@@ -211,7 +211,7 @@ class FileReader(object):
                 logger.info('Start point not found in file covering the period'\
                 ' {} to {}'.format(data_start_datetime, data_end_datetime))
 
-        # Ensure the seach was a success
+        # Ensure the search was a success
         if (self._first_data_file_name is None) or (self._second_data_file_name is None):
             raise RuntimeError('Could not find an input data file spanning the '\
                     'specified start time: {}.'.format(self._sim_start_datetime))
@@ -246,7 +246,7 @@ class FileReader(object):
         data_datetime_1 = num2date(ds1.variables['time'][-1], units = ds1.variables['time'].units)
         ds1.close()
 
-        if data_datetime_0 <= date_time <= data_datetime_1:
+        if data_datetime_0 <= date_time < data_datetime_1:
             return True
 
         return False
@@ -470,7 +470,7 @@ def get_datetime_reader(config):
     if data_source == "FVCOM":
         return FVCOMDateTimeReader(config)
 
-    return DefaultDatetimeReader(config)
+    return DefaultDateTimeReader(config)
 
 
 class DateTimeReader(object):
