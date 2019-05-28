@@ -1,5 +1,6 @@
 import numpy as np
 from netCDF4 import Dataset, num2date
+from datetime import timedelta
 import glob
 import natsort
 import logging
@@ -80,6 +81,9 @@ class FileReader(object):
             raise RuntimeError('A grid metrics file was not listed in the run '\
                 'configuration file. See the log file for more details.')
 
+        # Time interval between data points in input data files
+        self._rounding_interval = self._config.getint("OCEAN_CIRCULATION_MODEL", "rounding_interval")
+
         # Initialise datetime reader
         self._datetime_reader = get_datetime_reader(config)
 
@@ -128,8 +132,13 @@ class FileReader(object):
             logger.error('Failed to read grid metrics file {}.'.format(self._grid_metrics_file_name))
             raise ValueError('Failed to read the grid metrics file.')
 
-        # Initialise data file to None
-        self._current_data_file = None
+        # Initialise data file names to None
+        self._first_data_file_name = None
+        self._second_data_file_name = None
+
+        # Initialise data files to None
+        self._first_data_file = None
+        self._second_data_file = None
 
     def setup_data_access(self, start_datetime, end_datetime):
         """Open data files for reading and initalise all time variables.
@@ -167,8 +176,9 @@ class FileReader(object):
         logger.info('Beginning search for the input data file spanning the '\
             'specified simulation start point.')  
 
-        self._current_data_file_name = None
-        for data_file_name in self._data_file_names:
+        self._first_data_file_name = None
+        self._second_data_file_name = None
+        for idx, data_file_name in enumerate(self._data_file_names):
             logger.info("Trying file `{}'".format(data_file_name))
             ds = Dataset(data_file_name, 'r')
         
@@ -177,24 +187,31 @@ class FileReader(object):
 
             ds.close()
 
-            if (self._sim_start_datetime >= data_start_datetime) and (self._sim_start_datetime < data_end_datetime):
-                self._current_data_file_name = data_file_name
-                logger.info('Found initial data file {}.'.format(self._current_data_file_name))
+            if data_start_datetime <= self._sim_start_datetime < data_end_datetime + timedelta(seconds=self._rounding_interval):
+                self._first_data_file_name = data_file_name
+
+                if self._sim_start_datetime < data_end_datetime:
+                    self._second_data_file_name = data_file_name
+                else:
+                    self._second_data_file_name = self._data_file_names[idx + 1]
+                    
+                logger.info('Found first initial data file {}.'.format(self._first_data_file_name))
+                logger.info('Found second initial data file {}.'.format(self._second_data_file_name))
                 break
             else:
                 logger.info('Start point not found in file covering the period'\
                 ' {} to {}'.format(data_start_datetime, data_end_datetime))
 
         # Ensure the seach was a success
-        if self._current_data_file_name is None:
+        if (self._first_data_file_name is None) or (self._second_data_file_name is None):
             raise RuntimeError('Could not find an input data file spanning the '\
                     'specified start time: {}.'.format(self._sim_start_datetime))
                 
-        # Open the current data file for reading and initialise the time array
-        self._open_data_file_for_reading()
+        # Open the data files for reading and initialise the time array
+        self._open_data_files_for_reading()
 
         # Set time arrays
-        self._set_time_array()
+        self._set_time_arrays()
 
         # Set time indices for reading frames
         self._set_time_indices(0.0) # 0s as simulation start
@@ -226,19 +243,43 @@ class FileReader(object):
         return False
 
     def update_reading_frames(self, time):
-        # Load the next data file, if necessary
-        if (time >= self._time[-1]):
-            idx = self._data_file_names.index(self._current_data_file_name) + 1
+        # Load data file covering the first time point, if necessary
+        first_file_idx = None
+        if (time < self._first_time[0]):
+            first_file_idx = self._data_file_names.index(self._first_data_file_name) - 1
+        elif (time >= self._first_time[-1] + self._rounding_interval):
+            first_file_idx = self._data_file_names.index(self._first_data_file_name) + 1
+
+        if first_file_idx:
             try:
-                self._current_data_file_name = self._data_file_names[idx]
+                self._first_data_file_name = self._data_file_names[first_file_idx]
             except IndexError:
                 logger = logging.getLogger(__name__)
                 logger.error('Failed to find the next required input data file.')
                 raise RuntimeError('Failed to find the next input data file.')
 
-            self._open_data_file_for_reading()
+            self._open_first_data_file_for_reading()
 
-            self._set_time_array()
+            self._set_first_time_array()
+
+        # Load data file covering the second time point, if necessary
+        second_file_idx = None
+        if (time < self._second_time[0] - self._rounding_interval):
+            second_file_idx = self._data_file_names.index(self._second_data_file_name) - 1
+        elif (time >= self._second_time[-1]):
+            second_file_idx = self._data_file_names.index(self._second_data_file_name) + 1
+
+        if second_file_idx:
+            try:
+                self._second_data_file_name = self._data_file_names[second_file_idx]
+            except IndexError:
+                logger = logging.getLogger(__name__)
+                logger.error('Failed to find the next required input data file.')
+                raise RuntimeError('Failed to find the next input data file.')
+
+            self._open_second_data_file_for_reading()
+
+            self._set_second_time_array()
 
         # Update time indices
         self._set_time_indices(time)
@@ -250,66 +291,122 @@ class FileReader(object):
         return self._grid_file.variables[var_name][:].squeeze()
 
     def get_time_at_last_time_index(self):
-        return self._time[self._tidx_last]
+        return self._first_time[self._tidx_first]
 
     def get_time_at_next_time_index(self):
-        return self._time[self._tidx_next]
+        return self._second_time[self._tidx_second]
 
     def get_time_dependent_variable_at_last_time_index(self, var_name):
-        return self._current_data_file.variables[var_name][self._tidx_last,:]
+        return self._first_data_file.variables[var_name][self._tidx_first,:]
     
     def get_time_dependent_variable_at_next_time_index(self, var_name):
-        return self._current_data_file.variables[var_name][self._tidx_next,:]
+        return self._second_data_file.variables[var_name][self._tidx_second,:]
 
-    def _open_data_file_for_reading(self):
-        """Open the current data file for reading and update time array.
+    def _open_data_files_for_reading(self):
+        """Open the first and second data files for reading
         
         """
+        self._open_first_data_file_for_reading()
+        self._open_second_data_file_for_reading()
+
+    def _open_first_data_file_for_reading(self):
         logger = logging.getLogger(__name__)
 
-        # Close the current data file if one has been opened previously
-        if self._current_data_file:
-            self._current_data_file.close()
+        # Close the first data file if one has been opened previously
+        if self._first_data_file:
+            self._first_data_file.close()
 
-        # Open the current data file
+        # Open the first data file
         try:
-            self._current_data_file = Dataset(self._current_data_file_name, 'r')
-            logger.info('Opened data file {} for reading.'.format(self._current_data_file_name))
+            self._first_data_file = Dataset(self._first_data_file_name, 'r')
+            logger.info('Opened first data file {} for reading.'.format(self._first_data_file_name))
         except RuntimeError:
-            logger.error('Could not open data file {}.'.format(self._current_data_file_name))
+            logger.error('Could not open data file {}.'.format(self._first_data_file_name))
             raise RuntimeError('Could not open data file for reading.')
 
-    def _set_time_array(self):
-        datetime = self._datetime_reader.get_datetime(self._current_data_file)
+    def _open_second_data_file_for_reading(self):
+        logger = logging.getLogger(__name__)
+
+        # Close the second data file if one has been opened previously
+        if self._second_data_file:
+            self._second_data_file.close()
+
+        # Open the second data file
+        try:
+            self._second_data_file = Dataset(self._second_data_file_name, 'r')
+            logger.info('Opened second data file {} for reading.'.format(self._second_data_file_name))
+        except RuntimeError:
+            logger.error('Could not open data file {}.'.format(self._second_data_file_name))
+            raise RuntimeError('Could not open data file for reading.')
+
+    def _set_time_arrays(self):
+        self._set_first_time_array()
+        self._set_second_time_array()
+
+    def _set_first_time_array(self):
+        # First time array
+        # ----------------
+        first_datetime = self._datetime_reader.get_datetime(self._first_data_file)
 
         # Convert to seconds using datetime_start as a reference point
-        time_seconds = []
-        for time in datetime:
-            time_seconds.append((time - self._sim_start_datetime).total_seconds())
+        first_time_seconds = []
+        for time in first_datetime:
+            first_time_seconds.append((time - self._sim_start_datetime).total_seconds())
 
-        self._time = np.array(time_seconds, dtype=DTYPE_FLOAT)
+        self._first_time = np.array(first_time_seconds, dtype=DTYPE_FLOAT)
+
+    def _set_second_time_array(self):
+        # Second time array
+        # -----------------
+        second_datetime = self._datetime_reader.get_datetime(self._second_data_file)
+
+        # Convert to seconds using datetime_start as a reference point
+        second_time_seconds = []
+        for time in second_datetime:
+            second_time_seconds.append((time - self._sim_start_datetime).total_seconds())
+
+        self._second_time = np.array(second_time_seconds, dtype=DTYPE_FLOAT)
 
     def _set_time_indices(self, time):
-        # Find indices for times within time_array that bracket time_start
-        n_times = len(self._time)
+        # Set first time index
+        # --------------------
         
-        tidx_last = -1
-        tidx_next = -1
-        for i in range(0, n_times-1):
-            if time >= self._time[i] and time < self._time[i+1]:
-                tidx_last = i
-                tidx_next = tidx_last + 1
+        n_times = len(self._first_time)
+        
+        tidx_first = -1
+        for i in range(0, n_times):
+            t_delta = time - self._first_time[i]
+            if 0.0 <= t_delta < self._rounding_interval:
+                tidx_first = i
                 break
 
-        if tidx_last == -1:
+        if tidx_first == -1: 
             logger = logging.getLogger(__name__)
             logger.info('The provided time {}s lies outside of the range for which '\
-            'there exists input data: {} to {}s'.format(time, self._time[0], self._time[-1]))
+            'there exists input data: {} to {}s'.format(time, self._first_time[0], self._first_time[-1]))
+            raise ValueError('Time out of range.')
+
+        # Set second time index
+        # ---------------------
+        
+        n_times = len(self._second_time)
+        
+        tidx_second = -1
+        for i in range(0, n_times):
+            t_delta = self._second_time[i] - time
+            if 0.0 < t_delta <= self._rounding_interval:
+                tidx_second = i
+                break
+            
+        if tidx_second == -1: 
+            logger = logging.getLogger(__name__)
+            logger.info('The provided time {}s lies outside of the range for which '\
+            'there exists input data: {} to {}s'.format(time, self._second_time[0], self._second_time[-1]))
             raise ValueError('Time out of range.')
         
         # Save time indices
-        self._tidx_last = tidx_last
-        self._tidx_next = tidx_next
+        self._tidx_first = tidx_first
+        self._tidx_second = tidx_second
 
 # Helper classes to assist in reading dates/times
 #################################################
@@ -332,7 +429,7 @@ def get_datetime_reader(config):
 
 
 class DateTimeReader(object):
-    """ Abstract base class for DatetimeReaders
+    """ Abstract base class for DateTimeReaders
     """
     def get_datetime(self, dataset, time_index=None):
         raise NotImplementedError
