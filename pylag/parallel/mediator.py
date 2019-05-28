@@ -6,6 +6,7 @@ import traceback
 from mpi4py import MPI
 
 from pylag.file_reader import FileReader
+from pylag.file_reader import DiskFileNameReader
 from pylag.mediator import Mediator
 
 class MPIMediator(Mediator):
@@ -19,7 +20,8 @@ class MPIMediator(Mediator):
         # Only the root process accesses the file system
         if rank == 0:
             try:
-                self.file_reader = FileReader(config, datetime_start, datetime_end)
+                file_name_reader = DiskFileNameReader()
+                self.file_reader = FileReader(config, file_name_reader, datetime_start, datetime_end)
             except Exception as e:
                 logger = logging.getLogger(__name__)
                 logger.error('Caught exception when reading input file. '\

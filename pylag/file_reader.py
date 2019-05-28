@@ -20,6 +20,9 @@ class FileReader(object):
     _config : SafeConfigParser
         Run configuration object.
 
+    _file_name_reader : FileNameReader
+        Class to assist with reading in file names from disk.
+
     _data_dir : str
         Path to the direction containing input data
 
@@ -64,8 +67,10 @@ class FileReader(object):
     datetime_end : Datetime
         Simulation end date/time.
     """
-    def __init__(self, config, datetime_start, datetime_end):
+    def __init__(self, config, file_name_reader, datetime_start, datetime_end):
         self._config = config
+
+        self._file_name_reader = file_name_reader
 
         self._data_dir = self._config.get("OCEAN_CIRCULATION_MODEL", "data_dir")
         self._data_file_name_stem = self._config.get("OCEAN_CIRCULATION_MODEL", "data_file_stem")
@@ -109,9 +114,8 @@ class FileReader(object):
         
         # First save output file names into a list
         logger.info('Searching for input data files.')
-        self._data_file_names = natsort.natsorted(glob.glob('{}/{}*.nc'.format(self._data_dir, 
-                self._data_file_name_stem)))
-                
+        self._data_file_names = self._file_name_reader.get_file_names(self._data_dir, self._data_file_name_stem)
+    
         # Ensure files were found in the specified directory.
         if not self._data_file_names:
             raise RuntimeError('No input files found in location {}.'.format(self._data_dir))
@@ -407,6 +411,22 @@ class FileReader(object):
         # Save time indices
         self._tidx_first = tidx_first
         self._tidx_second = tidx_second
+
+# Helper classes to assist in reading file names
+################################################
+
+class FileNameReader(object):
+    """ Abstract base class for FileNameReaders
+    """
+    def get_file_names(self, file_dir, file_name_stem):
+        raise NotImplementedError
+
+class DiskFileNameReader(object):
+    """ Disk file name reader which reads in NetCDF file names from disk
+    """
+    def get_file_names(self, file_dir, file_name_stem):
+        return natsort.natsorted(glob.glob('{}/{}*.nc'.format(file_dir, file_name_stem)))
+                
 
 # Helper classes to assist in reading dates/times
 #################################################

@@ -1,4 +1,5 @@
 from pylag.file_reader import FileReader
+from pylag.file_reader import DiskFileNameReader
 
 class Mediator(object):
     """ Base class for objects of type Mediator.
@@ -37,7 +38,9 @@ class Mediator(object):
 class SerialMediator(Mediator):
     def __init__(self, config, datetime_start, datetime_end):
         self.config = config
-        self.file_reader = FileReader(config, datetime_start, datetime_end)
+
+        file_name_reader = DiskFileNameReader()
+        self.file_reader = FileReader(config, file_name_reader, datetime_start, datetime_end)
 
     def setup_data_access(self, datetime_start, datetime_end):
         self.file_reader.setup_data_access(datetime_start, datetime_end)
