@@ -26,6 +26,9 @@ class FileReader(object):
     _dataset_reader : DatasetReader
         Class to assist with reading in NetCDF4 datasets
 
+    _datetime_reader : DateTimeReader
+        Object to assist in reading dates/times in input data.
+
     _data_dir : str
         Path to the direction containing input data
 
@@ -35,14 +38,43 @@ class FileReader(object):
     _grid_metrics_file_name : str
         File name or path for the grid metrics file
 
-    _data_file_names : list[str]
-        A list of input data files that were found in data_dir
-
     _grid_file : Dataset
         NetCDF4 dataset for the grid metrics file
 
-    _datetime_reader : DateTimeReader
-        Object to assist in reading dates/times in input data.
+    _data_file_names : list[str]
+        A list of input data files that were found in data_dir
+
+    _first_data_file_name : str
+        Name of data file containing the `first' time point bounding the
+        current point in time.
+
+    _second_data_file_name : str
+        Name of data file containing the `second' time point bounding the
+        current point in time.
+
+    _first_data_file : Dataset
+        Dataset containing the `first' time point bounding the
+        current point in time.
+
+    _second_data_file : Dataset
+        Dataset containing the `second' time point bounding the
+        current point in time.
+
+    _first_time : array_like[float]
+        Time array containing the `first' time point bounding the
+        current point in time.
+
+    _second_time : array_like[float]
+        Time array containing the `second' time point bounding the
+        current point in time.
+
+    _first_tidx : int
+        Array index corresponding to the `first' time point bounding
+        the current point in time.
+
+    _second_tidx : int
+        Array index corresponding to the `second' time point bounding
+        the current point in time.
 
     _sim_datatime_s : Datetime
         The current simulation start date/time. This is not necessarily fixed
