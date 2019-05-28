@@ -259,7 +259,7 @@ class FileReader(object):
         elif (time >= self._first_time[-1] + self._rounding_interval):
             first_file_idx = self._data_file_names.index(self._first_data_file_name) + 1
 
-        if first_file_idx:
+        if first_file_idx is not None:
             try:
                 self._first_data_file_name = self._data_file_names[first_file_idx]
             except IndexError:
@@ -278,7 +278,7 @@ class FileReader(object):
         elif (time >= self._second_time[-1]):
             second_file_idx = self._data_file_names.index(self._second_data_file_name) + 1
 
-        if second_file_idx:
+        if second_file_idx is not None:
             try:
                 self._second_data_file_name = self._data_file_names[second_file_idx]
             except IndexError:
