@@ -156,10 +156,10 @@ cdef class MockVerticalDiffusivityDataReader(DataReader):
         self._zmin = 0.0
         self._zmax = 40.0
 
-    cdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, Particle *particle):
+    cdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR:
         return self._zmin
 
-    cdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, Particle *particle):
+    cdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR:
         return self._zmax
 
     cdef DTYPE_INT_t find_host(self, Particle *particle_old,
@@ -268,10 +268,10 @@ cdef class MockHorizontalEddyViscosityDataReader(DataReader):
         self._zmin = 0.0
         self._zmax = 0.0
 
-    cdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, Particle *particle):
+    cdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR:
         return self._zmin
 
-    cdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, Particle *particle):
+    cdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR:
         return self._zmax
 
     cdef DTYPE_INT_t find_host(self, Particle *particle_old,
@@ -376,10 +376,10 @@ cdef class MockVelocityEddyViscosityDataReader(DataReader):
     def M(self):
         return self._M
 
-    cdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, Particle *particle):
+    cdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR:
         return self._zmin
 
-    cdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, Particle *particle):
+    cdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR:
         return self._zmax
     
     cdef DTYPE_INT_t find_host(self, Particle *particle_old,

@@ -774,7 +774,7 @@ cdef class FVCOMDataReader(DataReader):
     cpdef DTYPE_FLOAT_t get_ymin(self) except FLOAT_ERR:
         return self._ymin
 
-    cdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, Particle *particle):
+    cdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR:
         """ Returns the bottom depth in cartesian coordinates
 
         h is defined at element nodes. Linear interpolation in space is used
@@ -807,7 +807,7 @@ cdef class FVCOMDataReader(DataReader):
 
         return -h
 
-    cdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, Particle *particle):
+    cdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR:
         """ Returns the sea surface height in cartesian coordinates
 
         zeta is defined at element nodes. Interpolation proceeds through linear

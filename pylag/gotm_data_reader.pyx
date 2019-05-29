@@ -250,7 +250,7 @@ cdef class GOTMDataReader(DataReader):
     cpdef DTYPE_FLOAT_t get_ymin(self) except FLOAT_ERR:
         return 0.0
 
-    cdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, Particle *particle):
+    cdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR:
         """ Returns the column depth
 
         Parameters:
@@ -273,7 +273,7 @@ cdef class GOTMDataReader(DataReader):
 
         return interp.linear_interp(time_fraction, self._zlev_last[0], self._zlev_next[0])
 
-    cdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, Particle *particle):
+    cdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR:
         """ Returns zmax in cartesian coordinates
 
         Returns the stored sea surface elevation that was set from the last

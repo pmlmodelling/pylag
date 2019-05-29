@@ -73,13 +73,13 @@ cdef class DataReader:
     def get_zmin_wrapper(self, DTYPE_FLOAT_t time, ParticleSmartPtr particle):
         return self.get_zmin(time, particle.get_ptr())
 
-    cdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, Particle *particle):
+    cdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR:
         raise NotImplementedError
 
     def get_zmax_wrapper(self, DTYPE_FLOAT_t time, ParticleSmartPtr particle):
         return self.get_zmax(time, particle.get_ptr())
 
-    cdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, Particle *particle):
+    cdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR:
         raise NotImplementedError
 
     def get_velocity_wrapper(self, DTYPE_FLOAT_t time, ParticleSmartPtr particle,

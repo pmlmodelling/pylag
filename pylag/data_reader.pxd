@@ -36,9 +36,9 @@ cdef class DataReader:
 
     cpdef DTYPE_FLOAT_t get_ymin(self) except FLOAT_ERR
 
-    cdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, Particle *particle)
+    cdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR
 
-    cdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, Particle *particle)
+    cdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR
 
     cdef get_velocity(self, DTYPE_FLOAT_t time, Particle *particle,
             DTYPE_FLOAT_t vel[3])
