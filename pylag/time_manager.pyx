@@ -7,7 +7,7 @@ from netCDF4 import num2date
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
-from pylag.numerics import get_global_time_step
+from pylag.numerics import get_global_time_step, get_time_direction
 
 cdef class TimeManager(object):
     cdef object _config
@@ -29,6 +29,7 @@ cdef class TimeManager(object):
     cdef DTYPE_FLOAT_t _time
 
     cdef DTYPE_FLOAT_t _time_step
+    cdef DTYPE_FLOAT_t _time_direction
 
     cdef DTYPE_FLOAT_t _output_frequency
     cdef DTYPE_FLOAT_t _sync_frequency
@@ -41,6 +42,9 @@ cdef class TimeManager(object):
         # Simulation start time - if running with multiple particle releases,
         # this is the time at which the first group of particles is released.
         self._datetime_start_str = config.get("SIMULATION", "start_datetime")
+
+        # Time direction (forward or reverse tracking)
+        self._time_direction = get_time_direction(config)
 
         # The number of particle releases
         self._number_of_particle_releases = config.getint("SIMULATION", "number_of_particle_releases")
@@ -95,12 +99,22 @@ cdef class TimeManager(object):
             datetime_end_str = self._config.get("SIMULATION", "end_datetime")
             self._datetime_end = datetime.datetime.strptime(datetime_end_str, "%Y-%m-%d %H:%M:%S")
         else:
-            duration_in_days = self._config.getfloat("SIMULATION", "duration_in_days")
+            duration_in_days = self._config.getfloat("SIMULATION", "duration_in_days") * self._time_direction
             self._datetime_end = self._datetime_start + datetime.timedelta(days=duration_in_days)
 
-        if self._datetime_end <= self._datetime_start:
-            raise ValueError("Invalid end time. The specified end time ({}) is before the simulation start "
+        # Check for misconfigurations
+        if self._datetime_end == self._datetime_start:
+            raise ValueError("Invalid end/start times. The specified end time ({}) matches the start "
                              "time ({})".format(self._datetime_end, self._datetime_start))
+
+        if self._time_direction == 1 and self._datetime_end < self._datetime_start:
+            raise ValueError("Invalid end/start times for forward tracking. The specified end "
+                             "time ({}) preceeds the specified start time ({})".format(self._datetime_end,
+                             self._datetime_start))
+        elif self._time_direction == -1 and self._datetime_end > self._datetime_start:
+            raise ValueError("Invalid end/start times for reverse tracking. The specified end "
+                             "time ({}) is after the specified start time ({})".format(self._datetime_end,
+                             self._datetime_start))
 
         # Convert time counters to seconds
         self._time_start = 0.0
@@ -125,12 +139,12 @@ cdef class TimeManager(object):
         return True
 
     def update_current_time(self):
-        self._time = self._time + self._time_step
+        self._time = self._time + self._time_step * self._time_direction
 
     def write_output_to_file(self):
         cdef DTYPE_FLOAT_t time_diff
 
-        time_diff = self._time - self._time_start
+        time_diff = abs(self._time - self._time_start)
         if <int>time_diff % <int>self._output_frequency == 0:
             return 1
         return 0
@@ -138,7 +152,7 @@ cdef class TimeManager(object):
     def sync_data_to_disk(self):
         cdef DTYPE_FLOAT_t time_diff
 
-        time_diff = self._time - self._time_start
+        time_diff = abs(self._time - self._time_start)
         if <int>time_diff % <int>self._sync_frequency == 0:
             return 1
         return 0
@@ -146,7 +160,7 @@ cdef class TimeManager(object):
     def create_restart_file(self):
         cdef DTYPE_FLOAT_t time_diff
 
-        time_diff = self._time - self._time_start
+        time_diff = abs(self._time - self._time_start)
         if <int>time_diff % <int>self._restart_frequency == 0:
             return 1
         return 0

@@ -90,10 +90,15 @@ class TraceSimulator(Simulator):
             # The main update loop
             print('\nStarting ensemble member {} ...'.format(self.time_manager.current_release))
             print('Progress:')
-            pbar = ProgressBar(maxval=self.time_manager.time_end, term_width=50).start()
-            while self.time_manager.time < self.time_manager.time_end:
+            pbar = ProgressBar(maxval=abs(self.time_manager.time_end), term_width=50).start()
+            while abs(self.time_manager.time) < abs(self.time_manager.time_end):
                 self.model.update(self.time_manager.time)
                 self.time_manager.update_current_time()
+
+                # Check on status of reading frames and update if necessary
+                # Communicate updated arrays to the data reader if these are out of
+                # date.
+                self.model.read_input_data(self.time_manager.time)
 
                 if self.time_manager.write_output_to_file() == 1:
                     particle_diagnostics = self.model.get_diagnostics(self.time_manager.time)
@@ -110,11 +115,7 @@ class TraceSimulator(Simulator):
 
                         self.restart_creator.create(file_name_stem, n_particles, datetime_current, particle_data)
 
-                # Check on status of reading frames and update if necessary
-                # Communicate updated arrays to the data reader if these are out of
-                # date.
-                self.model.read_input_data(self.time_manager.time)
-                pbar.update(self.time_manager.time)
+                pbar.update(abs(self.time_manager.time))
             pbar.finish()
             
             # Close the current data logger

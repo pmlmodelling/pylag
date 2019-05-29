@@ -17,6 +17,8 @@ cdef class NumMethod:
 cdef class ItMethod:
     cdef DTYPE_FLOAT_t _time_step
 
+    cdef DTYPE_FLOAT_t _time_direction
+
     cdef DTYPE_FLOAT_t get_time_step(self)
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,

@@ -19,6 +19,8 @@ from pylag.math cimport sigma_to_cartesian_coords
 cimport pylag.interpolation as interp
 import pylag.interpolation as interp
 
+from pylag.numerics import get_time_direction
+
 cdef class GOTMDataReader(DataReader):
     """ DataReader for GOTM.
     
@@ -49,6 +51,9 @@ cdef class GOTMDataReader(DataReader):
     # Number of z levels and layers
     cdef DTYPE_INT_t _n_zlay, _n_zlev
 
+    # Time direction
+    cdef DTYPE_INT_t _time_direction
+
     # Time
     cdef DTYPE_FLOAT_t _time_last, _time_next, _time_fraction
 
@@ -74,6 +79,8 @@ cdef class GOTMDataReader(DataReader):
         self.config = config
         self.mediator = mediator
         
+        self._time_direction = <int>get_time_direction(config)
+
         self._n_zlay = self.mediator.get_dimension_variable('z')
         self._n_zlev = self.mediator.get_dimension_variable('zi')
 
@@ -181,10 +188,15 @@ cdef class GOTMDataReader(DataReader):
             The current time.
         """
         time_fraction = interp.get_linear_fraction(time, self._time_last, self._time_next)
-        if time_fraction < 0.0 or time_fraction >= 1.0:
-            self.mediator.update_reading_frames(time)
-            self._read_time_dependent_vars()
-        
+        if self._time_direction == 1:
+            if time_fraction < 0.0 or time_fraction >= 1.0:
+                self.mediator.update_reading_frames(time)
+                self._read_time_dependent_vars()
+        else:
+            if time_fraction <= 0.0 or time_fraction > 1.0:
+                self.mediator.update_reading_frames(time)
+                self._read_time_dependent_vars()
+            
         self._interpolate_in_time(time)
 
     cdef DTYPE_INT_t find_host(self, Particle *particle_old,

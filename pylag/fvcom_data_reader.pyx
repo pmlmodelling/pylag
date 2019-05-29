@@ -20,6 +20,9 @@ from pylag.math cimport int_min, float_min, get_intersection_point
 from pylag.math cimport cartesian_to_sigma_coords, sigma_to_cartesian_coords
 from pylag.math cimport Intersection
 
+# PyLag python imports
+from pylag.numerics import get_time_direction
+
 cdef class FVCOMDataReader(DataReader):
     """ DataReader for FVCOM.
     
@@ -99,7 +102,10 @@ cdef class FVCOMDataReader(DataReader):
     # Wet/dry status of elements
     cdef DTYPE_INT_t[:] _wet_cells_last
     cdef DTYPE_INT_t[:] _wet_cells_next
-    
+
+    # Time direction
+    cdef DTYPE_INT_t _time_direction
+
     # Time array
     cdef DTYPE_FLOAT_t _time_last
     cdef DTYPE_FLOAT_t _time_next
@@ -110,6 +116,9 @@ cdef class FVCOMDataReader(DataReader):
     def __init__(self, config, mediator):
         self.config = config
         self.mediator = mediator
+
+        # Time direction
+        self._time_direction = <int>get_time_direction(config)
 
         # Set flags from config
         self._has_Kh = self.config.getboolean("OCEAN_CIRCULATION_MODEL", "has_Kh")
@@ -146,10 +155,17 @@ cdef class FVCOMDataReader(DataReader):
         time : float
             The current time.
         """
+        cdef DTYPE_FLOAT_t time_fraction
+
         time_fraction = interp.get_linear_fraction(time, self._time_last, self._time_next)
-        if time_fraction < 0.0 or time_fraction >= 1.0:
-            self.mediator.update_reading_frames(time)
-            self._read_time_dependent_vars()
+        if self._time_direction == 1:
+            if time_fraction < 0.0 or time_fraction >= 1.0:
+                self.mediator.update_reading_frames(time)
+                self._read_time_dependent_vars()
+        else:
+            if time_fraction <= 0.0 or time_fraction > 1.0:
+                self.mediator.update_reading_frames(time)
+                self._read_time_dependent_vars()
 
     cdef DTYPE_INT_t find_host(self, Particle *particle_old,
                                Particle *particle_new) except INT_ERR:

@@ -106,6 +106,7 @@ class FileReader_test(TestCase):
         self.config.set('OCEAN_CIRCULATION_MODEL', 'data_file_stem', '')
         self.config.set('OCEAN_CIRCULATION_MODEL', 'grid_metrics_file', 'grid_metrics')
         self.config.set('OCEAN_CIRCULATION_MODEL', 'rounding_interval', rounding_interval)
+        self.config.add_section("SIMULATION")
 
         # Mock file name reader
         self.file_name_reader = MockFileNameReader()
@@ -122,6 +123,8 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid - 0 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
+        self.config.set('SIMULATION', 'time_direction', 'forward')
+
         # Create file reader
         self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
 
@@ -129,6 +132,8 @@ class FileReader_test(TestCase):
         # Should be valid during reverse tracking
         start_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 second before data record end
         end_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid - 0 seconds after data record start
+
+        self.config.set('SIMULATION', 'time_direction', 'reverse')
 
         # Create file reader
         self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
@@ -138,6 +143,8 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,8,0) # Invalid - 0 seconds after data record end
         end_datetime = datetime.datetime(2000,1,1,0,0,0) # Invalid - 0 seconds after data record start
 
+        self.config.set('SIMULATION', 'time_direction', 'forward')
+
         # Create file reader
         self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
 
@@ -145,6 +152,8 @@ class FileReader_test(TestCase):
     def test_use_end_datetime_equal_to_data_record_end(self):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid - 0 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,8,0) # Invalid - 0 seconds after data record end
+
+        self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
         self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
@@ -154,6 +163,8 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(1999,1,1,0,0,0) # Invalid - 1 year before data start date
         end_datetime = datetime.datetime(2000,1,1,0,8,0) # Valid - 480 seconds
 
+        self.config.set('SIMULATION', 'time_direction', 'forward')
+
         # Create file reader
         self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
 
@@ -161,6 +172,8 @@ class FileReader_test(TestCase):
     def test_use_start_datetime_after_data_record_end(self):
         start_datetime = datetime.datetime(2001,1,1,8,0) # Invalid - 1 year after data end date
         end_datetime = datetime.datetime(2000,1,1,0,8,0) # Valid - 480 seconds
+
+        self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
         self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
@@ -170,6 +183,8 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid - 0 seconds after data record start
         end_datetime = datetime.datetime(1999,1,1,0,0,0) # Invalid - 1 year before data start date
 
+        self.config.set('SIMULATION', 'time_direction', 'forward')
+
         # Create file reader
         self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
 
@@ -178,12 +193,16 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid - 0 seconds after data record start
         end_datetime = datetime.datetime(2001,1,1,0,8,0) # Invalid - 1 year after data end date
 
+        self.config.set('SIMULATION', 'time_direction', 'forward')
+
         # Create file reader
         self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
 
     def test_set_file_names_with_start_datetime_equal_to_data_record_start(self):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid - 0 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
+
+        self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
         self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
@@ -196,6 +215,8 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,1,0) # Valid = 60 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
+        self.config.set('SIMULATION', 'time_direction', 'forward')
+
         # Create file reader
         self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
 
@@ -206,6 +227,8 @@ class FileReader_test(TestCase):
     def test_set_file_names_with_start_datetime_equal_to_the_last_time_point_in_the_first_data_file(self):
         start_datetime = datetime.datetime(2000,1,1,0,2,0) # Valid = 120 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
+
+        self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
         self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
@@ -218,6 +241,8 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,2,30) # Valid = 150 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
+        self.config.set('SIMULATION', 'time_direction', 'forward')
+
         # Create file reader
         self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
 
@@ -228,6 +253,8 @@ class FileReader_test(TestCase):
     def test_set_file_names_with_start_datetime_in_the_second_data_file(self):
         start_datetime = datetime.datetime(2000,1,1,0,4,0) # Valid = 240 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
+
+        self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
         self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
@@ -240,6 +267,8 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,5,0) # Valid = 300 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
+        self.config.set('SIMULATION', 'time_direction', 'forward')
+
         # Create file reader
         self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
 
@@ -251,6 +280,8 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid = 0 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
+        self.config.set('SIMULATION', 'time_direction', 'forward')
+
         # Create file reader
         self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
 
@@ -261,6 +292,8 @@ class FileReader_test(TestCase):
     def test_set_time_arrays_with_start_datetime_equal_to_the_last_time_point_in_the_first_data_file(self):
         start_datetime = datetime.datetime(2000,1,1,0,2,0) # Valid = 0 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
+
+        self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
         self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
@@ -284,6 +317,8 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,2,0) # Valid = 0 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
+        self.config.set('SIMULATION', 'time_direction', 'forward')
+
         # Create file reader
         self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
 
@@ -295,6 +330,8 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,5,0) # Valid = 300 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
+        self.config.set('SIMULATION', 'time_direction', 'forward')
+
         # Create file reader
         self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
 
@@ -305,6 +342,8 @@ class FileReader_test(TestCase):
     def test_set_file_names_when_updating_reading_frames_in_the_first_file(self):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid = 0 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
+
+        self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
         self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
@@ -320,6 +359,8 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid = 0 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
+        self.config.set('SIMULATION', 'time_direction', 'forward')
+
         # Create file reader
         self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
 
@@ -333,6 +374,8 @@ class FileReader_test(TestCase):
     def test_set_file_names_when_updating_reading_frames_at_the_end_of_the_first_file(self):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid = 0 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
+
+        self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
         self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
@@ -348,6 +391,8 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid = 0 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
+        self.config.set('SIMULATION', 'time_direction', 'forward')
+
         # Create file reader
         self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
 
@@ -361,6 +406,8 @@ class FileReader_test(TestCase):
     def test_set_file_names_when_updating_reading_frames_after_the_end_of_the_first_file(self):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid = 0 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
+
+        self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
         self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
@@ -376,6 +423,8 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid = 0 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
+        self.config.set('SIMULATION', 'time_direction', 'forward')
+
         # Create file reader
         self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
 
@@ -389,6 +438,8 @@ class FileReader_test(TestCase):
     def test_set_file_names_when_updating_reading_frames_at_the_start_of_the_second_file(self):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid = 0 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
+
+        self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
         self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
@@ -404,6 +455,8 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid = 0 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
+        self.config.set('SIMULATION', 'time_direction', 'forward')
+
         # Create file reader
         self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
 
@@ -414,9 +467,24 @@ class FileReader_test(TestCase):
         test.assert_equal(0, self.file_reader._tidx_first)
         test.assert_equal(1, self.file_reader._tidx_second)
 
+    def test_set_file_names_when_reverse_tracking(self):
+        start_datetime = datetime.datetime(2000,1,1,0,3,0) # Valid = 180 seconds after data record start
+        end_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid - 0 seconds before data record start
+
+        self.config.set('SIMULATION', 'time_direction', 'reverse')
+
+        # Create file reader
+        self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+
+        # Check file names
+        test.assert_array_equal('test_file_1', self.file_reader._first_data_file_name)
+        test.assert_array_equal('test_file_2', self.file_reader._second_data_file_name)
+
     def test_set_file_names_when_updating_reading_frames_during_reverse_tracking_between_data_files(self):
         start_datetime = datetime.datetime(2000,1,1,0,3,0) # Valid = 180 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid - 0 seconds before data record start
+
+        self.config.set('SIMULATION', 'time_direction', 'reverse')
 
         # Create file reader
         self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
@@ -426,11 +494,26 @@ class FileReader_test(TestCase):
 
         # Check file names
         test.assert_array_equal('test_file_1', self.file_reader._first_data_file_name)
-        test.assert_array_equal('test_file_2', self.file_reader._second_data_file_name)
+        test.assert_array_equal('test_file_1', self.file_reader._second_data_file_name)
+
+    def test_set_time_indices_when_reverse_tracking(self):
+        start_datetime = datetime.datetime(2000,1,1,0,3,0) # Valid = 180 seconds after data record start
+        end_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid - 0 seconds before data record start
+
+        self.config.set('SIMULATION', 'time_direction', 'reverse')
+
+        # Create file reader
+        self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+
+        # Check time indices
+        test.assert_equal(2, self.file_reader._tidx_first)
+        test.assert_equal(0, self.file_reader._tidx_second)
 
     def test_set_time_indices_when_updating_reading_frames_during_reverse_tracking_between_data_files(self):
         start_datetime = datetime.datetime(2000,1,1,0,3,0) # Valid = 180 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid - 0 seconds before data record start
+
+        self.config.set('SIMULATION', 'time_direction', 'reverse')
 
         # Create file reader
         self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
@@ -439,8 +522,8 @@ class FileReader_test(TestCase):
         self.file_reader.update_reading_frames(time=-60.)
 
         # Check time indices
-        test.assert_equal(2, self.file_reader._tidx_first)
-        test.assert_equal(0, self.file_reader._tidx_second)
+        test.assert_equal(1, self.file_reader._tidx_first)
+        test.assert_equal(2, self.file_reader._tidx_second)
 
     def test_set_file_names_when_updating_reading_frames_during_reverse_tracking_into_first_file(self):
         start_datetime = datetime.datetime(2000,1,1,0,3,0) # Valid = 180 seconds after data record start

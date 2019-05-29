@@ -10,6 +10,7 @@ except ImportError:
     import ConfigParser as configparser
 
 from pylag.data_types_python import DTYPE_FLOAT
+from pylag.numerics import get_time_direction
 from pylag.utils import round_time
 
 class FileReader(object):
@@ -59,6 +60,9 @@ class FileReader(object):
     _second_data_file : Dataset
         Dataset containing the `second' time point bounding the
         current point in time.
+
+    _time_direction : int
+        Flag indicating the direction of integration. 1 forward, -1 backward.
 
     _first_time : array_like[float]
         Time array containing the `first' time point bounding the
@@ -125,6 +129,9 @@ class FileReader(object):
 
         # Time interval between data points in input data files
         self._rounding_interval = self._config.getint("OCEAN_CIRCULATION_MODEL", "rounding_interval")
+
+        # Time direction
+        self._time_direction = int(get_time_direction(config))
 
         # Initialise datetime reader
         self._datetime_reader = get_datetime_reader(config)
@@ -229,12 +236,27 @@ class FileReader(object):
             ds.close()
 
             if data_start_datetime <= self._sim_start_datetime < data_end_datetime + timedelta(seconds=self._rounding_interval):
-                self._first_data_file_name = data_file_name
+                # Set file names depending on time direction
+                if self._time_direction == 1:
 
-                if self._sim_start_datetime < data_end_datetime:
-                    self._second_data_file_name = data_file_name
+                    self._first_data_file_name = data_file_name
+
+                    if self._sim_start_datetime < data_end_datetime:
+                        self._second_data_file_name = data_file_name
+                    else:
+                        self._second_data_file_name = self._data_file_names[idx + 1]
                 else:
-                    self._second_data_file_name = self._data_file_names[idx + 1]
+
+                    if self._sim_start_datetime == data_start_datetime:
+                        self._first_data_file_name = self._data_file_names[idx - 1]
+                        self._second_data_file_name = data_file_name
+                    else:
+                        if self._sim_start_datetime <= data_end_datetime:
+                            self._first_data_file_name = data_file_name
+                            self._second_data_file_name = data_file_name
+                        else:
+                            self._first_data_file_name = data_file_name
+                            self._second_data_file_name = self._data_file_names[idx + 1]
                     
                 logger.info('Found first initial data file {}.'.format(self._first_data_file_name))
                 logger.info('Found second initial data file {}.'.format(self._second_data_file_name))
@@ -286,10 +308,18 @@ class FileReader(object):
     def update_reading_frames(self, time):
         # Load data file covering the first time point, if necessary
         first_file_idx = None
-        if (time < self._first_time[0]):
-            first_file_idx = self._data_file_names.index(self._first_data_file_name) - 1
-        elif (time >= self._first_time[-1] + self._rounding_interval):
-            first_file_idx = self._data_file_names.index(self._first_data_file_name) + 1
+
+        if self._time_direction == 1:
+            if (time < self._first_time[0]):
+                first_file_idx = self._data_file_names.index(self._first_data_file_name) - 1
+            elif (time >= self._first_time[-1] + self._rounding_interval):
+                first_file_idx = self._data_file_names.index(self._first_data_file_name) + 1
+        else:
+            if (time <= self._first_time[0]):
+                first_file_idx = self._data_file_names.index(self._first_data_file_name) - 1
+            elif (time > self._first_time[-1] + self._rounding_interval):
+                first_file_idx = self._data_file_names.index(self._first_data_file_name) + 1
+
 
         if first_file_idx is not None:
             try:
@@ -305,10 +335,18 @@ class FileReader(object):
 
         # Load data file covering the second time point, if necessary
         second_file_idx = None
-        if (time < self._second_time[0] - self._rounding_interval):
-            second_file_idx = self._data_file_names.index(self._second_data_file_name) - 1
-        elif (time >= self._second_time[-1]):
-            second_file_idx = self._data_file_names.index(self._second_data_file_name) + 1
+
+        if self._time_direction == 1:
+            if (time < self._second_time[0] - self._rounding_interval):
+                second_file_idx = self._data_file_names.index(self._second_data_file_name) - 1
+            elif (time >= self._second_time[-1]):
+                second_file_idx = self._data_file_names.index(self._second_data_file_name) + 1
+        else:
+            if (time <= self._second_time[0] - self._rounding_interval):
+                second_file_idx = self._data_file_names.index(self._second_data_file_name) - 1
+            elif (time > self._second_time[-1]):
+                second_file_idx = self._data_file_names.index(self._second_data_file_name) + 1
+
 
         if second_file_idx is not None:
             try:
@@ -415,11 +453,19 @@ class FileReader(object):
         n_times = len(self._first_time)
         
         tidx_first = -1
-        for i in range(0, n_times):
-            t_delta = time - self._first_time[i]
-            if 0.0 <= t_delta < self._rounding_interval:
-                tidx_first = i
-                break
+
+        if self._time_direction == 1:
+            for i in range(0, n_times):
+                t_delta = time - self._first_time[i]
+                if 0.0 <= t_delta < self._rounding_interval:
+                    tidx_first = i
+                    break
+        else:
+            for i in range(0, n_times):
+                t_delta = time - self._first_time[i]
+                if 0.0 < t_delta <= self._rounding_interval:
+                    tidx_first = i
+                    break
 
         if tidx_first == -1: 
             logger = logging.getLogger(__name__)
@@ -433,12 +479,20 @@ class FileReader(object):
         n_times = len(self._second_time)
         
         tidx_second = -1
-        for i in range(0, n_times):
-            t_delta = self._second_time[i] - time
-            if 0.0 < t_delta <= self._rounding_interval:
-                tidx_second = i
-                break
-            
+
+        if self._time_direction == 1:
+            for i in range(0, n_times):
+                t_delta = self._second_time[i] - time
+                if 0.0 < t_delta <= self._rounding_interval:
+                    tidx_second = i
+                    break
+        else:
+            for i in range(0, n_times):
+                t_delta = self._second_time[i] - time
+                if 0.0 <= t_delta < self._rounding_interval:
+                    tidx_second = i
+                    break
+                
         if tidx_second == -1: 
             logger = logging.getLogger(__name__)
             logger.info('The provided time {}s lies outside of the range for which '\
