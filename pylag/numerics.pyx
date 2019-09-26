@@ -1075,12 +1075,8 @@ cdef class DiffNaive1DItMethod(ItMethod):
         -----------
         config : ConfigParser
         """
-        # Time direction (forward or reverse)
-        self._time_direction = get_time_direction(config)
-
-        # Set time step (-ve if reverse tracking)
-        self._time_step_abs = config.getfloat('NUMERICS', 'time_step_diff')
-        self._time_step = self._time_step_abs * self._time_direction
+        # Set time step
+        self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
             Particle *particle, Delta *delta_X) except INT_ERR:
@@ -1131,12 +1127,8 @@ cdef class DiffEuler1DItMethod(ItMethod):
         -----------
         config : ConfigParser
         """
-        # Time direction (forward or reverse)
-        self._time_direction = get_time_direction(config)
-
-        # Set time step (-ve if reverse tracking)
-        self._time_step_abs = config.getfloat('NUMERICS', 'time_step_diff')
-        self._time_step = self._time_step_abs * self._time_direction
+        # Set time step
+        self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
             Particle *particle, Delta *delta_X) except INT_ERR:
@@ -1204,12 +1196,8 @@ cdef class DiffVisser1DItMethod(ItMethod):
         -----------
         config : ConfigParser
         """
-        # Time direction (forward or reverse)
-        self._time_direction = get_time_direction(config)
-
-        # Set time step (-ve if reverse tracking)
-        self._time_step_abs = config.getfloat('NUMERICS', 'time_step_diff')
-        self._time_step = self._time_step * self._time_direction
+        # Set time step
+        self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
         self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
 
@@ -1295,12 +1283,8 @@ cdef class DiffMilstein1DItMethod(ItMethod):
         -----------
         config : ConfigParser
         """
-        # Time direction (forward or reverse)
-        self._time_direction = get_time_direction(config)
-
-        # Set time step (-ve if reverse tracking)
-        self._time_step_abs = config.getfloat('NUMERICS', 'time_step_diff')
-        self._time_step = self._time_step_abs * self._time_direction
+        # Set time step
+        self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
             Particle *particle, Delta *delta_X) except INT_ERR:
@@ -1363,12 +1347,8 @@ cdef class DiffConst2DItMethod(ItMethod):
         -----------
         config : ConfigParser
         """
-        # Time direction (forward or reverse)
-        self._time_direction = get_time_direction(config)
-
-        # Set time step (-ve if reverse tracking)
-        self._time_step_abs = config.getfloat('NUMERICS', 'time_step_diff')
-        self._time_step = self._time_step_abs * self._time_direction
+        # Set time step
+        self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
         self._Ah = config.getfloat("OCEAN_CIRCULATION_MODEL", "horizontal_eddy_viscosity_constant")
         
@@ -1422,12 +1402,8 @@ cdef class DiffNaive2DItMethod(ItMethod):
         -----------
         config : ConfigParser
         """
-        # Time direction (forward or reverse)
-        self._time_direction = get_time_direction(config)
-
-        # Set time step (-ve if reverse tracking)
-        self._time_step_abs = config.getfloat('NUMERICS', 'time_step_diff')
-        self._time_step = self._time_step_abs * self._time_direction
+        # Set time step
+        self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
             Particle *particle, Delta *delta_X) except INT_ERR:
@@ -1480,13 +1456,8 @@ cdef class DiffMilstein2DItMethod(ItMethod):
         -----------
         config : ConfigParser
         """
-        # Time direction (forward or reverse)
-        self._time_direction = get_time_direction(config)
-
-        # Set time step (-ve if reverse tracking)
-        self._time_step_abs = config.getfloat('NUMERICS', 'time_step_diff')
-        self._time_step = self._time_step_abs * self._time_direction
-
+        # Set time step
+        self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
             Particle *particle, Delta *delta_X) except INT_ERR:
@@ -1544,12 +1515,8 @@ cdef class DiffMilstein3DItMethod(ItMethod):
         -----------
         config : ConfigParser
         """
-        # Time direction (forward or reverse)
-        self._time_direction = get_time_direction(config)
-
-        # Set time step (-ve if reverse tracking)
-        self._time_step_abs = config.getfloat('NUMERICS', 'time_step_diff')
-        self._time_step = self._time_step_abs * self._time_direction
+        # Set time step
+        self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
             Particle *particle, Delta *delta_X) except INT_ERR:
@@ -1616,12 +1583,8 @@ cdef class AdvDiffMilstein3DItMethod(ItMethod):
         -----------
         config : ConfigParser
         """
-        # Time direction (forward or reverse)
-        self._time_direction = get_time_direction(config)
-
-        # Set time step (-ve if reverse tracking)
-        self._time_step_abs = config.getfloat('NUMERICS', 'time_step_diff')
-        self._time_step = self._time_step_abs * self._time_direction
+        # Set time step
+        self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
             Particle *particle, Delta *delta_X) except INT_ERR:
@@ -1702,6 +1665,10 @@ def get_iterative_method(config):
         raise ValueError("Failed to find the option `iterative_method' in the "\
                 "supplied configuration file.")
     
+    # Prevent backtracking when using RDMs
+    if "Diff" in config.get("NUMERICS", "iterative_method") and config.get("SIMULATION", "time_direction") == "reverse":
+        raise ValueError("The use of RDMs when reverse tracking is prohibited")
+
     # Return the specified iterative method
     if config.get("NUMERICS", "iterative_method") == "Adv_RK4_2D":
         return AdvRK42DItMethod(config)
@@ -1770,6 +1737,10 @@ def get_diff_iterative_method(config):
     if not config.has_option("NUMERICS", "diff_iterative_method"):
         raise ValueError("Failed to find the option `diff_iterative_method' in"\
                 " the supplied configuration file.")
+
+    # Prevent backtracking when using a RDM
+    if config.get("SIMULATION", "time_direction") == "reverse":
+        raise ValueError("The use of RDMs when reverse tracking is prohibited")
     
     # Return the specified numerical integrator.
     if config.get("NUMERICS", "diff_iterative_method") == "Diff_Const_2D":
