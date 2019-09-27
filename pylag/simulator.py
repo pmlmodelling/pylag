@@ -61,7 +61,7 @@ class TraceSimulator(Simulator):
                 '{}.'.format(n_particles, len(group_ids)))
 
             raise RuntimeError('Error encountered while reading the particle '\
-                'initial positions file {}.'.format(file_name))
+                'initial positions file. See the log for more details.')
 
         # Initialise particle arrays
         self.model.set_particle_data(group_ids, x_positions, y_positions, z_positions)
