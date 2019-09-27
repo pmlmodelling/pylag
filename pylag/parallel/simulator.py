@@ -49,6 +49,9 @@ class TraceSimulator(Simulator):
         # for the root process.
         self.initial_particle_state_reader=None
 
+        # Flag indicating whether or not restart files should be created
+        self.create_restarts = self._config.getboolean('RESTART', 'create_restarts') 
+
         # Restart creators create restart files. This only happens on
         # the lead process, so we initialise it to None here, then
         # override this below for the root process.
@@ -58,7 +61,7 @@ class TraceSimulator(Simulator):
         if rank == 0:
             self.initial_particle_state_reader = get_initial_particle_state_reader(self._config)
      
-            if self._config.getboolean('RESTART', 'create_restarts'):
+            if self.create_restarts:
                 self.restart_creator = RestartFileCreator(self._config)
 
     def run(self):
@@ -175,9 +178,10 @@ class TraceSimulator(Simulator):
                         self.data_logger.sync()
 
                     # Create restart
-                    if self.time_manager.create_restart_file() == 1:
-                        particle_data = self.model.get_particle_data()
-                        self._create_restart(particle_data)
+                    if self.create_restarts:
+                        if self.time_manager.create_restart_file() == 1:
+                            particle_data = self.model.get_particle_data()
+                            self._create_restart(particle_data)
 
                     self.model.read_input_data(self.time_manager.time)
                 except Exception as e:
