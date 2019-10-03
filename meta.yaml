@@ -1,0 +1,53 @@
+{% set name = "PyLag" %}
+{% set version = "0.1" %}
+
+package:
+  name: "{{ name|lower }}"
+  version: "{{ version }}"
+
+build:
+  number: 0
+  script: "{{ PYTHON }} -m pip install . --no-deps --ignore-installed -vv "
+
+source:
+  path: ./
+  
+requirements:
+  host:
+    - python
+    - pip
+    - openmpi
+    - mpi4py=*=*openmpi*
+    - numpy>=1.15
+    - cython>=0.29
+  build:
+    - {{ compiler('cxx') }}
+  run:
+    - python
+    - ipython
+    - mpi4py
+    - numpy>=1.15
+    - cython>=0.29
+    - progressbar
+    - natsort
+    - netCDF4
+    - configparser
+    - sphinx
+    - nbsphinx
+    - sphinx_rtd_theme
+    - jupyter
+    - jupyter_client
+    - ipykernel
+
+test:
+  import:
+    - pylag.main
+    - pylag.parallel.main
+  requires:
+    - nose
+
+about:
+#  home: https://palletsprojects.com/p/click/
+  license: GPL
+  license_family: GPL
+  summary: A particle tracking tool for marine applications
