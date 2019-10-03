@@ -6,6 +6,7 @@ import glob
 from setuptools import setup
 from setuptools.extension import Extension
 from Cython.Build import cythonize
+import numpy
 
 MAJOR               = 0
 MINOR               = 1
@@ -132,7 +133,7 @@ def makeExtension(ext_name, file_type):
         language="c++",
         extra_compile_args=["-std=c++11"],
         libraries=["stdc++"],
-        include_dirs=['.'],
+        include_dirs=['.', numpy.get_include()],
         )
 
 # Rewrite the version file everytime
@@ -182,15 +183,21 @@ setup(name="PyLag",
       ],
       packages=["pylag", "pylag.parallel", "pylag.tests"],
       ext_modules=ext_modules,
+      test_suite='nose.collector',
+      tests_require=['nose'],
       install_requires=[
-          "cython<=0.25",
-          "numpy",
+          "cython>=0.29",
+          "numpy>=1.15",
           "netCDF4",
           "mpi4py",
-          "ConfigParser2",
+          "configparser",
           "natsort",
           "progressbar",
-          "nose",
+          "sphinx",
+          "nbsphinx",
           "sphinx_rtd_theme",
+          "jupyter",
+          "jupyter_client",
+          "ipykernel",
       ],
 )
