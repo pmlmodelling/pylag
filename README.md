@@ -8,17 +8,27 @@ PyLag was created with the aim to make available a particle tracking model that 
 
 ## Installation
 
-The easiest way to install *PyLag* is using *Conda*. However, it is also possible to install *PyLag* using *pip*, assuming your environment has been correcly configured. Both approaches are described below. At the time of writing, only linux-based platforms are supported.
+The easiest way to install *PyLag* is using *Conda*, which will install *PyLag* and all its dependencies into a clean environment. However, it is also possible to install *PyLag* using *pip*, assuming your environment has been correctly configured. Both approaches are described below. For now, only linux-based platforms are supported.
 
 ### Installation using Conda
 
-The instructions below assume you are working with *Python 3*; however, *PyLag* supports both *Python 2* and *Python 3*. First [install miniconda3](https://conda.io/projects/conda/en/latest/user-guide/install/linux.html) in a location of your choosing. Then, activate *conda*; add the *conda-forge* channel; and install *conda-build* and *conda-verify*, which we will use to install *PyLag*.
+
+---
+**NOTE**
+
+The instructions below assume you are working with *Python 3*; however, *PyLag* supports both *Python 2* and *Python 3*.
+
+---
+
+First [install miniconda3](https://conda.io/projects/conda/en/latest/user-guide/install/linux.html) in a location of your choosing. Then, activate *conda*; add the *conda-forge* channel; and install *conda-build* and *conda-verify*, which we will use to install *PyLag*. For example:
 
 ```bash
 $ source /opt/miniconda/miniconda3/bin/activate
 $ conda config --append channels conda-forge
 $ conda install conda-build conda-verify
 ```
+
+The above code will install *miniconda3* into the directory `/opt/miniconda`, once the appropriate write permissions have been set (the default is to install *miniconda3* into your home directory, which is, of course, also fine).
 
 With *miniconda3* installed and configured, create a new environment in which to install *PyLag* using the following commands:
 
@@ -27,11 +37,11 @@ $ conda create -n particles
 $ conda activate particles
 ```
 
-Next, clone *PyLag* using *git*.
+Next, clone *PyLag* using *git*. The code below assumes that you have configured *ssh* access to *GitLab*:
 
 ```bash
 $ mkdir -p $HOME/code/git/PyLag && cd $HOME/code/git/PyLag
-$ git clone https://gitlab.ecosystem-modelling.pml.ac.uk/PyLag/PyLag.git>
+$ git clone git@gitlab.ecosystem-modelling.pml.ac.uk/PyLag/PyLag.git
 $ cd PyLag
 ```
 
@@ -41,6 +51,10 @@ Finally, build and install *PyLag* using conda:
 $ conda build .
 $ conda install -n particles --use-local pylag
 ```
+
+### Installation using pip
+
+
 
 Notes
 =====
