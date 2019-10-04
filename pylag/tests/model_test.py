@@ -9,7 +9,7 @@ except ImportError:
 
 from pylag.model import OPTModel
 
-from pylag.tests.model_test_helpers import TestOPTModelDataReader
+from pylag.model_test_helpers import TestOPTModelDataReader
 
 class OPTModel_test1(TestCase):
     """ Ensure the model behaves sensible given an invalid particle seed """
