@@ -28,6 +28,7 @@ requirements:
     - mpi4py
     - numpy>=1.15
     - cython>=0.29
+    - matplotlib
     - progressbar
     - natsort
     - netCDF4
@@ -47,7 +48,7 @@ test:
     - nose
 
 about:
-#  home: https://palletsprojects.com/p/click/
+  home: TODO
   license: GPL
   license_family: GPL
   summary: A particle tracking tool for marine applications
