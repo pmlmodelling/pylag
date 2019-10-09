@@ -21,6 +21,7 @@ from pylag.math cimport cartesian_to_sigma_coords, sigma_to_cartesian_coords
 from pylag.math cimport Intersection
 
 # PyLag python imports
+from pylag import variable_library
 from pylag.numerics import get_time_direction
 
 cdef class FVCOMDataReader(DataReader):
@@ -102,6 +103,14 @@ cdef class FVCOMDataReader(DataReader):
     # Wet/dry status of elements
     cdef DTYPE_INT_t[:] _wet_cells_last
     cdef DTYPE_INT_t[:] _wet_cells_next
+
+    # Sea water potential temperature
+    cdef DTYPE_FLOAT_t[:,:] _thetao_last
+    cdef DTYPE_FLOAT_t[:,:] _thetao_next
+
+    # Sea water salinity
+    cdef DTYPE_FLOAT_t[:,:] _so_last
+    cdef DTYPE_FLOAT_t[:,:] _so_next
 
     # Time direction
     cdef DTYPE_INT_t _time_direction
@@ -1688,6 +1697,20 @@ cdef class FVCOMDataReader(DataReader):
         if self._has_is_wet:
             self._wet_cells_last = self.mediator.get_time_dependent_variable_at_last_time_index('wet_cells', (self._n_elems), DTYPE_INT)
             self._wet_cells_next = self.mediator.get_time_dependent_variable_at_next_time_index('wet_cells', (self._n_elems), DTYPE_INT)
+
+        # Read in other environmental variables as requested
+        for var in self.config.get("OUTPUT", "environmental_variables").strip().split(','):
+            var_name = var.strip()
+            fvcom_var_name = variable_library.fvcom_variable_names[var_name]
+
+            if var_name == 'thetao':
+                self._thetao_last = self.mediator.get_time_dependent_variable_at_last_time_index(fvcom_var_name, (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
+                self._thetao_next = self.mediator.get_time_dependent_variable_at_next_time_index(fvcom_var_name, (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
+            elif var_name == 'so':
+                self._so_last = self.mediator.get_time_dependent_variable_at_last_time_index(fvcom_var_name, (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
+                self._so_next = self.mediator.get_time_dependent_variable_at_next_time_index(fvcom_var_name, (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
+            else:
+                raise ValueError("Support for saving the environmental variable `{}' has not been implemented within FVCOMDataReader.".format(var_name))
 
     cdef void _get_phi(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos,
             DTYPE_INT_t host, DTYPE_FLOAT_t phi[N_VERTICES]) except *:

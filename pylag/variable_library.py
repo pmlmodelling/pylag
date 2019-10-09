@@ -3,6 +3,10 @@
 This is a hardcoded library of standard variable names and units
 which is intended to help with the consistent writing of data to
 file.
+
+It includes maps for different types of input data, which map
+PyLag names (e.g. "temperature") to those used in different types
+of input data (e.g. "temp" in FVCOM).
 """
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 
@@ -44,3 +48,11 @@ _variable_long_names['ypos'] = 'Particle y-position'
 _variable_data_types['zpos'] = DTYPE_FLOAT
 _variable_units['zpos'] = 'Meters (m)'
 _variable_long_names['zpos'] = 'Particle z-position'
+
+# Tracer names
+# ------------
+#
+# Mapping provided of the form PyLag_standard_name -> FVCOM_standard_name.
+
+# FVCOM
+fvcom_variable_names = {'thetao': 'temp', 'so': 'salinity'}
