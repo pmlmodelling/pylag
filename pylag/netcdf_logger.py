@@ -3,6 +3,8 @@ from netCDF4 import Dataset, date2num, num2date
 
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT 
 
+from pylag import variable_library
+
 class NetCDFLogger(object):
     """ NetCDF data logger.
 
@@ -18,9 +20,11 @@ class NetCDFLogger(object):
     n_particles : int
         The number of particles.
     """
-    def __init__(self, file_name, start_datetime, n_particles):
+    def __init__(self, config, file_name, start_datetime, n_particles):
         
         logger = logging.getLogger(__name__)
+
+        self.config = config
 
         if file_name[-3:] == '.nc':
             self.file_name = file_name
@@ -38,6 +42,9 @@ class NetCDFLogger(object):
 
         # Time units
         self._simulation_time_units = 'seconds since {}'.format(start_datetime)
+
+        # Local environmental variables
+        self._env_vars = {}
 
         # Create coordinate variables etc.
         self._create_file_structure(n_particles)
@@ -77,18 +84,6 @@ class NetCDFLogger(object):
         self._host.units = 'None'
         self._host.long_name = 'Host horizontal element'
         
-        # Add local environmental variables
-        self._h = self._ncfile.createVariable('h', DTYPE_FLOAT, ('time', 'particles',), **self._ncopts)
-        self._h.units = 'meters (m)'
-        self._h.long_name = 'Water depth'
-        
-        self._zeta = self._ncfile.createVariable('zeta', DTYPE_FLOAT, ('time', 'particles',), **self._ncopts)
-        self._zeta.units = 'meters (m)'
-        self._zeta.long_name = 'Sea surface elevation'
-
-        self._is_beached = self._ncfile.createVariable('is_beached', DTYPE_INT, ('time', 'particles',), **self._ncopts)
-        self._is_beached.long_name = 'Is beached'
-        
         # Add status variables
         self._in_domain = self._ncfile.createVariable('in_domain', 'i4', ('time', 'particles',), **self._ncopts)
         self._in_domain.units = 'None'
@@ -97,6 +92,35 @@ class NetCDFLogger(object):
         self._status = self._ncfile.createVariable('status', 'i4', ('time', 'particles',), **self._ncopts)
         self._status.units = 'None'
         self._status.long_name = 'Status flag (1 - error state; 0 - ok)'
+
+        self._is_beached = self._ncfile.createVariable('is_beached', DTYPE_INT, ('time', 'particles',), **self._ncopts)
+        self._is_beached.long_name = 'Is beached'
+        
+        # Add grid variables
+        self._h = self._ncfile.createVariable('h', DTYPE_FLOAT, ('time', 'particles',), **self._ncopts)
+        self._h.units = 'meters (m)'
+        self._h.long_name = 'Water depth'
+        
+        self._zeta = self._ncfile.createVariable('zeta', DTYPE_FLOAT, ('time', 'particles',), **self._ncopts)
+        self._zeta.units = 'meters (m)'
+        self._zeta.long_name = 'Sea surface elevation'
+
+        # Add environmental variables, as requested
+        try:
+            var_names = self.config.get("OUTPUT", "environmental_variables").strip().split(',')
+        except (configparser.NoSectionError, configparser.NoOptionError) as e:
+            return
+
+        var_names = [var_name.strip() for var_name in var_names]
+
+        for var_name in var_names:
+            data_type = variable_library.get_data_type(var_name)
+            units = variable_library.get_units(var_name)
+            long_name = variable_library.get_long_name(var_name)
+
+            self._env_vars[var_name] = self._ncfile.createVariable(var_name, data_type, ('time', 'particles',), **self._ncopts)
+            self._env_vars[var_name].units = units
+            self._env_vars[var_name].long_name = long_name
 
     def write_group_ids(self, group_ids):
         self._group_id[:] = group_ids

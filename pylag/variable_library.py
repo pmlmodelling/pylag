@@ -49,10 +49,18 @@ _variable_data_types['zpos'] = DTYPE_FLOAT
 _variable_units['zpos'] = 'Meters (m)'
 _variable_long_names['zpos'] = 'Particle z-position'
 
-# Tracer names
-# ------------
-#
-# Mapping provided of the form PyLag_standard_name -> FVCOM_standard_name.
+# Environmental variables
+# -----------------------
 
-# FVCOM
+# thetao
+_variable_data_types['thetao'] = DTYPE_FLOAT
+_variable_units['thetao'] = 'degC'
+_variable_long_names['thetao'] = 'Sea Water Potential Temperature'
+
+# so
+_variable_data_types['so'] = DTYPE_FLOAT
+_variable_units['so'] = 'psu'
+_variable_long_names['so'] = 'Sea Water Salinity'
+
+# FVCOM name mappings
 fvcom_variable_names = {'thetao': 'temp', 'so': 'salinity'}

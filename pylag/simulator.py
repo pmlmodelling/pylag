@@ -78,7 +78,7 @@ class TraceSimulator(Simulator):
             # Create data logger
             file_name = ''.join([self._config.get('GENERAL', 'output_file'), '_{}'.format(self.time_manager.current_release)])
             start_datetime = self.time_manager.datetime_start
-            self.data_logger = NetCDFLogger(file_name, start_datetime, n_particles)
+            self.data_logger = NetCDFLogger(self._config, file_name, start_datetime, n_particles)
 
             # Write particle group ids to file
             self.data_logger.write_group_ids(group_ids)
