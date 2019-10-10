@@ -2,6 +2,11 @@ include "constants.pxi"
 
 import logging
 
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
+
 # Data types used for constructing C data structures
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
@@ -30,6 +35,7 @@ cdef class OPTModel:
     cdef object config
     cdef DataReader data_reader
     cdef NumMethod num_method
+    cdef object environmental_variables
     cdef object particle_seed_smart_ptrs
     cdef object particle_smart_ptrs
     cdef vector[Particle*] particle_ptrs
@@ -59,6 +65,13 @@ cdef class OPTModel:
 
         # Create num method object
         self.num_method = get_num_method(self.config)
+
+        # Save a list of environmental variables to be returned as diagnostics
+        try:
+            var_names = self.config.get("OUTPUT", "environmental_variables").strip().split(',')
+            self.environmental_variables = [var_name.strip() for var_name in var_names]
+        except (configparser.NoSectionError, configparser.NoOptionError) as e:
+            self.environmental_variables = []
 
     def set_particle_data(self, group_ids, x_positions, y_positions, z_positions):
         """Initialise memory views for data describing the particle seed.
@@ -307,19 +320,28 @@ cdef class OPTModel:
         xmin = self.data_reader.get_xmin()
         ymin = self.data_reader.get_ymin()
 
+        # Initialise lists
         diags = {'xpos': [], 'ypos': [], 'zpos': [], 'host_horizontal_elem': [],
                  'h': [], 'zeta': [], 'is_beached': [], 'in_domain': [],
                  'status': []}
+
+        # Initialise env var lists
+        for var_name in self.environmental_variables:
+            diags[var_name] = []
+
         for particle_ptr in self.particle_ptrs:
+            # Particle location data
             diags['xpos'].append(particle_ptr.xpos + xmin)
             diags['ypos'].append(particle_ptr.ypos + ymin)
             diags['zpos'].append(particle_ptr.zpos)
             diags['host_horizontal_elem'].append(particle_ptr.host_horizontal_elem)
+
+            # Particle state data
             diags['is_beached'].append(particle_ptr.is_beached)
             diags['in_domain'].append(particle_ptr.in_domain)
             diags['status'].append(particle_ptr.status)
             
-            # Environmental environmental variables
+            # Grid variables
             if particle_ptr.in_domain:
                 h = self.data_reader.get_zmin(time, particle_ptr)
                 zeta = self.data_reader.get_zmax(time, particle_ptr)
@@ -328,6 +350,11 @@ cdef class OPTModel:
                 zeta = FLOAT_ERR
             diags['h'].append(h)
             diags['zeta'].append(zeta)
+
+            # Environmental variables
+            for var_name in self.environmental_variables:
+                var = self.data_reader.get_environmental_variable(var_name, time, particle_ptr)
+                diags[var_name].append(var)
 
         return diags
 

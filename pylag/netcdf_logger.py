@@ -1,6 +1,11 @@
 import logging
 from netCDF4 import Dataset, date2num, num2date
 
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
+
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT 
 
 from pylag import variable_library
@@ -45,6 +50,14 @@ class NetCDFLogger(object):
 
         # Local environmental variables
         self._env_vars = {}
+
+        # Add environmental variables, as requested
+        try:
+            var_names = self.config.get("OUTPUT", "environmental_variables").strip().split(',')
+            self.environmental_variables = [var_name.strip() for var_name in var_names]
+        except (configparser.NoSectionError, configparser.NoOptionError) as e:
+            self.environmental_variables = []
+            pass
 
         # Create coordinate variables etc.
         self._create_file_structure(n_particles)
@@ -105,15 +118,7 @@ class NetCDFLogger(object):
         self._zeta.units = 'meters (m)'
         self._zeta.long_name = 'Sea surface elevation'
 
-        # Add environmental variables, as requested
-        try:
-            var_names = self.config.get("OUTPUT", "environmental_variables").strip().split(',')
-        except (configparser.NoSectionError, configparser.NoOptionError) as e:
-            return
-
-        var_names = [var_name.strip() for var_name in var_names]
-
-        for var_name in var_names:
+        for var_name in self.environmental_variables:
             data_type = variable_library.get_data_type(var_name)
             units = variable_library.get_units(var_name)
             long_name = variable_library.get_long_name(var_name)
@@ -142,7 +147,11 @@ class NetCDFLogger(object):
         self._is_beached[tidx, :] = particle_data['is_beached']
         self._in_domain[tidx, :] = particle_data['in_domain']
         self._status[tidx, :] = particle_data['status']
-    
+
+        # Add environmental variables
+        for var_name in self.environmental_variables:
+            self._env_vars[var_name][tidx, :] = particle_data[var_name]
+
     def sync(self):
         # Sync data to disk
         self._ncfile.sync()
