@@ -2,6 +2,11 @@ include "constants.pxi"
 
 import logging
 
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
+
 import numpy as np
 
 from cpython cimport bool
@@ -898,17 +903,100 @@ cdef class FVCOMDataReader(DataReader):
         self._get_velocity_using_shepard_interpolation(time, particle, vel)
         return
 
+    cdef DTYPE_FLOAT_t get_environmental_variable(self, var_name,
+            DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR:
+        """ Returns the value of the given environmental variable through linear interpolation
+
+        In FVCOM, active and passive tracers are defined at element nodes on sigma layers,
+        which is the same as viscofh. Above and below the top and bottom sigma layers respectively
+        values for the specified variable are extrapolated, taking a value equal to that at the layer
+        centre. Linear interpolation in the vertical is used for z positions lying between the top
+        and bottom sigma layers.
+
+        NB - All the hard work is farmed out to a private function, which both this function and the
+        function for computing viscofh use.
+
+        Support for extracting the following FVCOM environmental variables has been implemented:
+
+        thetao - Sea water potential temperature
+
+        so - Sea water salinty
+
+        Parameters:
+        -----------
+        var_name : str
+            The name of the variable. See above for a list of supported options.
+
+        time : float
+            Time at which to interpolate.
+
+        particle: *Particle
+            Pointer to a Particle object.
+
+        Returns:
+        --------
+        var : float
+            The interpolated value of the variable at the specified point in time and space.
+        """
+        cdef DTYPE_FLOAT_t var # Environmental variable at (t, xpos, ypos, zpos)
+
+        if var_name == 'thetao':
+            var = self._get_variable(self._thetao_last, self._thetao_next, time, particle)
+        elif var_name == 'so':
+            var = self._get_variable(self._so_last, self._so_next, time, particle)
+        else:
+            raise ValueError("Invalid variable name `{}'".format(var_name))
+
+        return var
+
     cdef get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
             Particle* particle):
         """ Returns the horizontal eddy viscosity through linear interpolation
-        
+
         viscofh is defined at element nodes on sigma layers. Above and below the
-        top and bottom sigma layers respectivey viscofh is extrapolated, taking
-        a value equal to that on the layer. Linear interpolation in the vertical
+        top and bottom sigma layers respectively viscofh is extrapolated, taking
+        a value equal to that at the layer centre. Linear interpolation in the vertical
+        is used for z positions lying between the top and bottom sigma layers.
+
+        This function is effectively a wrapper for the private method `_get_variable'.
+
+        Parameters:
+        -----------
+        time : float
+            Time at which to interpolate.
+
+        particle: *Particle
+            Pointer to a Particle object.
+
+        Returns:
+        --------
+        viscofh : float
+            The interpolated value of the horizontal eddy viscosity at the specified point in time and space.
+        """
+        cdef DTYPE_FLOAT_t var # viscofh at (t, xpos, ypos, zpos)
+
+        var = self._get_variable(self._viscofh_last, self._viscofh_next, time, particle)
+
+        return var
+
+    cdef _get_variable(self, DTYPE_FLOAT_t[:, :] var_last, DTYPE_FLOAT_t[:, :] var_next,
+            DTYPE_FLOAT_t time, Particle* particle):
+        """ Returns the value of the variable through linear interpolation
+
+        Private method for interpolating fields specified at element nodes on sigma layers.
+        This is the case for both viscofh and active and passive tracers. Above and below the
+        top and bottom sigma layers respectively values are extrapolated, taking
+        a value equal to that at the layer centre. Linear interpolation in the vertical
         is used for z positions lying between the top and bottom sigma layers.
         
         Parameters:
         -----------
+        var_last : 2D MemoryView
+            Array of variable values at the last time index.
+
+        var_next : 2D MemoryView
+            Array of variable values at the next time index.
+
         time : float
             Time at which to interpolate.
         
@@ -917,8 +1005,8 @@ cdef class FVCOMDataReader(DataReader):
         
         Returns:
         --------
-        viscofh : float
-            The horizontal eddy viscosity.      
+        var : float
+            The interpolated value of the variable at the specified point in time and space.
         """
         # No. of vertices and a temporary object used for determining variable
         # values at the host element's nodes
@@ -928,17 +1016,17 @@ cdef class FVCOMDataReader(DataReader):
         # Variables used in interpolation in time      
         cdef DTYPE_FLOAT_t time_fraction
         
-        # Intermediate arrays - viscofh
-        cdef DTYPE_FLOAT_t viscofh_tri_t_last_layer_1[N_VERTICES]
-        cdef DTYPE_FLOAT_t viscofh_tri_t_next_layer_1[N_VERTICES]
-        cdef DTYPE_FLOAT_t viscofh_tri_t_last_layer_2[N_VERTICES]
-        cdef DTYPE_FLOAT_t viscofh_tri_t_next_layer_2[N_VERTICES]
-        cdef DTYPE_FLOAT_t viscofh_tri_layer_1[N_VERTICES]
-        cdef DTYPE_FLOAT_t viscofh_tri_layer_2[N_VERTICES]     
+        # Intermediate arrays - var
+        cdef DTYPE_FLOAT_t var_tri_t_last_layer_1[N_VERTICES]
+        cdef DTYPE_FLOAT_t var_tri_t_next_layer_1[N_VERTICES]
+        cdef DTYPE_FLOAT_t var_tri_t_last_layer_2[N_VERTICES]
+        cdef DTYPE_FLOAT_t var_tri_t_next_layer_2[N_VERTICES]
+        cdef DTYPE_FLOAT_t var_tri_layer_1[N_VERTICES]
+        cdef DTYPE_FLOAT_t var_tri_layer_2[N_VERTICES]
         
-        # Interpolated diffusivities on lower and upper bounding sigma layers
-        cdef DTYPE_FLOAT_t viscofh_layer_1
-        cdef DTYPE_FLOAT_t viscofh_layer_2
+        # Interpolated values on lower and upper bounding sigma layers
+        cdef DTYPE_FLOAT_t var_layer_1
+        cdef DTYPE_FLOAT_t var_layer_2
 
         # Time fraction
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
@@ -946,45 +1034,45 @@ cdef class FVCOMDataReader(DataReader):
         # No vertical interpolation for particles near to the surface or bottom, 
         # i.e. above or below the top or bottom sigma layer depths respectively.
         if particle.in_vertical_boundary_layer is True:
-            # Extract viscofh near to the boundary
+            # Extract values near to the boundary
             for i in xrange(N_VERTICES):
                 vertex = self._nv[i,particle.host_horizontal_elem]
-                viscofh_tri_t_last_layer_1[i] = self._viscofh_last[particle.k_layer, vertex]
-                viscofh_tri_t_next_layer_1[i] = self._viscofh_next[particle.k_layer, vertex]
+                var_tri_t_last_layer_1[i] = var_last[particle.k_layer, vertex]
+                var_tri_t_next_layer_1[i] = var_next[particle.k_layer, vertex]
 
             # Interpolate in time
             for i in xrange(N_VERTICES):
-                viscofh_tri_layer_1[i] = interp.linear_interp(time_fraction, 
-                                            viscofh_tri_t_last_layer_1[i],
-                                            viscofh_tri_t_next_layer_1[i])
+                var_tri_layer_1[i] = interp.linear_interp(time_fraction,
+                                            var_tri_t_last_layer_1[i],
+                                            var_tri_t_next_layer_1[i])
 
-            # Interpolate viscofh within the host element
-            return interp.interpolate_within_element(viscofh_tri_layer_1, particle.phi)
+            # Interpolate var within the host element
+            return interp.interpolate_within_element(var_tri_layer_1, particle.phi)
 
         else:
-            # Extract viscofh on the lower and upper bounding sigma layers
+            # Extract var on the lower and upper bounding sigma layers
             for i in xrange(N_VERTICES):
                 vertex = self._nv[i,particle.host_horizontal_elem]
-                viscofh_tri_t_last_layer_1[i] = self._viscofh_last[particle.k_lower_layer, vertex]
-                viscofh_tri_t_next_layer_1[i] = self._viscofh_next[particle.k_lower_layer, vertex]
-                viscofh_tri_t_last_layer_2[i] = self._viscofh_last[particle.k_upper_layer, vertex]
-                viscofh_tri_t_next_layer_2[i] = self._viscofh_next[particle.k_upper_layer, vertex]
+                var_tri_t_last_layer_1[i] = var_last[particle.k_lower_layer, vertex]
+                var_tri_t_next_layer_1[i] = var_next[particle.k_lower_layer, vertex]
+                var_tri_t_last_layer_2[i] = var_last[particle.k_upper_layer, vertex]
+                var_tri_t_next_layer_2[i] = var_next[particle.k_upper_layer, vertex]
 
             # Interpolate in time
             for i in xrange(N_VERTICES):
-                viscofh_tri_layer_1[i] = interp.linear_interp(time_fraction, 
-                                            viscofh_tri_t_last_layer_1[i],
-                                            viscofh_tri_t_next_layer_1[i])
-                viscofh_tri_layer_2[i] = interp.linear_interp(time_fraction, 
-                                            viscofh_tri_t_last_layer_2[i],
-                                            viscofh_tri_t_next_layer_2[i])
+                var_tri_layer_1[i] = interp.linear_interp(time_fraction,
+                                            var_tri_t_last_layer_1[i],
+                                            var_tri_t_next_layer_1[i])
+                var_tri_layer_2[i] = interp.linear_interp(time_fraction,
+                                            var_tri_t_last_layer_2[i],
+                                            var_tri_t_next_layer_2[i])
 
-            # Interpolate viscofh within the host element on the upper and lower
+            # Interpolate var within the host element on the upper and lower
             # bounding sigma layers
-            viscofh_layer_1 = interp.interpolate_within_element(viscofh_tri_layer_1, particle.phi)
-            viscofh_layer_2 = interp.interpolate_within_element(viscofh_tri_layer_2, particle.phi)
+            var_layer_1 = interp.interpolate_within_element(var_tri_layer_1, particle.phi)
+            var_layer_2 = interp.interpolate_within_element(var_tri_layer_2, particle.phi)
 
-            return interp.linear_interp(particle.omega_layers, viscofh_layer_1, viscofh_layer_2)
+            return interp.linear_interp(particle.omega_layers, var_layer_1, var_layer_2)
 
     cdef get_horizontal_eddy_viscosity_derivative(self, DTYPE_FLOAT_t time,
             Particle* particle, DTYPE_FLOAT_t Ah_prime[2]):
@@ -1698,9 +1786,15 @@ cdef class FVCOMDataReader(DataReader):
             self._wet_cells_last = self.mediator.get_time_dependent_variable_at_last_time_index('wet_cells', (self._n_elems), DTYPE_INT)
             self._wet_cells_next = self.mediator.get_time_dependent_variable_at_next_time_index('wet_cells', (self._n_elems), DTYPE_INT)
 
-        # Read in other environmental variables as requested
-        for var in self.config.get("OUTPUT", "environmental_variables").strip().split(','):
-            var_name = var.strip()
+        # Check to see if any environmental variables are being saved. If they are, read in the appropriate data arrays
+        try:
+            var_names = self.config.get("OUTPUT", "environmental_variables").strip().split(',')
+        except (configparser.NoSectionError, configparser.NoOptionError) as e:
+            return
+
+        # Read in data as requested
+        for var_name in var_names:
+            var_name = var_name.strip()
             fvcom_var_name = variable_library.fvcom_variable_names[var_name]
 
             if var_name == 'thetao':
@@ -1711,6 +1805,8 @@ cdef class FVCOMDataReader(DataReader):
                 self._so_next = self.mediator.get_time_dependent_variable_at_next_time_index(fvcom_var_name, (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
             else:
                 raise ValueError("Support for saving the environmental variable `{}' has not been implemented within FVCOMDataReader.".format(var_name))
+
+        return
 
     cdef void _get_phi(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos,
             DTYPE_INT_t host, DTYPE_FLOAT_t phi[N_VERTICES]) except *:
