@@ -66,6 +66,16 @@ class MockFVCOMMediator(Mediator):
         viscofh_t1 = np.array([[0.1]*n_nodes,[0.1]*n_nodes,[0.]*n_nodes], dtype=float)
         viscofh = np.array([viscofh_t0, viscofh_t1], dtype=float)
 
+        # thetao is imposed, equal across nodes, variable with depth and increasing in time
+        thetao_t0 = np.array([[0.01]*n_nodes,[0.01]*n_nodes,[0.]*n_nodes], dtype=float)
+        thetao_t1 = np.array([[0.1]*n_nodes,[0.1]*n_nodes,[0.]*n_nodes], dtype=float)
+        thetao = np.array([thetao_t0, thetao_t1], dtype=float)
+
+        # so is imposed, equal across nodes, variable with depth and increasing in time
+        so_t0 = np.array([[0.01]*n_nodes,[0.01]*n_nodes,[0.]*n_nodes], dtype=float)
+        so_t1 = np.array([[0.1]*n_nodes,[0.1]*n_nodes,[0.]*n_nodes], dtype=float)
+        so = np.array([so_t0, so_t1], dtype=float)
+
         # Wet cells
         wet_cells = np.array([[1,1,1,1],[1,1,1,1]],dtype=int)
 
@@ -73,10 +83,12 @@ class MockFVCOMMediator(Mediator):
         self._time_dep_vars_last = {'zeta': zeta[0,:], 'u': u[0,:], 'v': v[0,:],
                                     'ww': ww[0,:], 'kh': kh[0,:],
                                     'viscofh': viscofh[0,:],
+                                    'temp': thetao[0,:], 'salinity': so[0,:],
                                     'wet_cells': wet_cells[0,:]}
         self._time_dep_vars_next = {'zeta': zeta[1,:], 'u': u[1,:], 'v': v[1,:],
                                     'ww': ww[1,:], 'kh': kh[1,:],
                                     'viscofh': viscofh[1,:],
+                                    'temp': thetao[1,:], 'salinity': so[1,:],
                                     'wet_cells': wet_cells[1,:]}
 
         # Time in seconds. ie two time pts, 1 hour apart
@@ -117,6 +129,8 @@ class FVCOMDataReader_test(TestCase):
         config.set('OCEAN_CIRCULATION_MODEL', 'has_Kh', 'True')
         config.set('OCEAN_CIRCULATION_MODEL', 'has_Ah', 'True')
         config.set('OCEAN_CIRCULATION_MODEL', 'has_is_wet', 'True')
+        config.add_section("OUTPUT")
+        config.set('OUTPUT', 'environmental_variables', 'thetao, so')
 
         # Create mediator
         mediator = MockFVCOMMediator()
@@ -488,6 +502,34 @@ class FVCOMDataReader_test(TestCase):
         self.data_reader.get_velocity_wrapper(time, particle, vel)
         test.assert_equal(flag, 0)
         test.assert_array_almost_equal(vel, [0.0, 0.0, 0.0])
+
+    def test_get_thetao(self):
+        xpos = 1.3333333333-self.xmin
+        ypos = 1.6666666667-self.ymin
+        host = 0
+
+        zpos = -0.1
+        time = 0.0
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        thetao = self.data_reader.get_environmental_variable_wrapper('thetao', time, particle)
+        test.assert_equal(flag, 0)
+        test.assert_almost_equal(thetao,  0.01)
+
+    def test_get_so(self):
+        xpos = 1.3333333333-self.xmin
+        ypos = 1.6666666667-self.ymin
+        host = 0
+
+        zpos = -0.1
+        time = 0.0
+        particle = ParticleSmartPtr(xpos=xpos, ypos=ypos, zpos=zpos, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        so = self.data_reader.get_environmental_variable_wrapper('so', time, particle)
+        test.assert_equal(flag, 0)
+        test.assert_almost_equal(so,  0.01)
 
     def test_get_vertical_eddy_diffusivity(self):
         xpos = 1.3333333333-self.xmin
