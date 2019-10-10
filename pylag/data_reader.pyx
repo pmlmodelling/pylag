@@ -172,3 +172,10 @@ cdef class DataReader:
     
     cpdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, DTYPE_INT_t host) except INT_ERR:
         raise NotImplementedError
+
+    cdef DTYPE_FLOAT_t get_environmental_variable(self, var_name, DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR:
+        raise NotImplementedError
+
+    def get_environmental_variable_wrapper(self, str var_name, DTYPE_FLOAT_t time,
+                                    ParticleSmartPtr particle):
+        return self.get_environmental_variable(var_name, time, particle.get_ptr())

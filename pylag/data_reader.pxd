@@ -61,3 +61,5 @@ cdef class DataReader:
             DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR
 
     cpdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, DTYPE_INT_t host) except INT_ERR
+
+    cdef DTYPE_FLOAT_t get_environmental_variable(self, var_name, DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR
