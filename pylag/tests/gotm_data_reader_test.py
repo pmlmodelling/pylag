@@ -34,11 +34,12 @@ class MockGOTMMediator(Mediator):
         
         # Dictionaries holding the value of time dependent and time independent variables
         zeta = np.array([[0.0]])
+        z = np.array([[[-3.5, -2.0, -0.5]]]).reshape(n_zlay, 1, 1)
         zi = np.array([[[-4.0, -3.0, -1.0, 0.0]]]).reshape(n_zlev, 1, 1)
         nuh_last = np.array([[[0.0, 1.0, 1.0, 0.0]]]).reshape(n_zlev, 1, 1)
         nuh_next = np.array([[[0.0, 2.0, 2.0, 0.0]]]).reshape(n_zlev, 1, 1)
-        self._time_dep_vars_last = {'zeta': zeta, 'zi': zi, 'nuh': nuh_last}
-        self._time_dep_vars_next = {'zeta': zeta, 'zi': zi, 'nuh': nuh_next}
+        self._time_dep_vars_last = {'zeta': zeta, 'z': z, 'zi': zi, 'nuh': nuh_last}
+        self._time_dep_vars_next = {'zeta': zeta, 'z': z, 'zi': zi, 'nuh': nuh_next}
 
     def setup_data_access(self, start_datetime, end_datetime):
         pass

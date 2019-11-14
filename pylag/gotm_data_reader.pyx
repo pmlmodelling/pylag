@@ -63,6 +63,9 @@ cdef class GOTMDataReader(DataReader):
     # Sea surface elevation
     cdef DTYPE_FLOAT_t _zeta_last, _zeta_next, _zeta
 
+    # Z layer depths
+    cdef DTYPE_FLOAT_t[:] _zlay_last, _zlay_next, _zlay
+
     # Z level depths
     cdef DTYPE_FLOAT_t[:] _zlev_last, _zlev_next, _zlev
 
@@ -86,6 +89,9 @@ cdef class GOTMDataReader(DataReader):
 
         # Initialise as empty arrays - these are set to meaningful values
         # through calls to _read_time_dependent_vars.
+        self._zlay_last = np.empty((self._n_zlay), dtype=DTYPE_FLOAT)
+        self._zlay_next = np.empty((self._n_zlay), dtype=DTYPE_FLOAT)
+        self._zlay = np.empty((self._n_zlay), dtype=DTYPE_FLOAT)
         self._zlev_last = np.empty((self._n_zlev), dtype=DTYPE_FLOAT)
         self._zlev_next = np.empty((self._n_zlev), dtype=DTYPE_FLOAT)
         self._zlev = np.empty((self._n_zlev), dtype=DTYPE_FLOAT)
@@ -108,11 +114,6 @@ cdef class GOTMDataReader(DataReader):
         All communications go via the mediator in order to guarantee support for
         both serial and parallel simulations.
         
-        Note that GOTM discards data for the bottom interface when saving data 
-        to file. To account for this the depth of z levels is set using the 
-        depth of layer centres and layer widths while kh is set equal to zero at
-        the missing interface.
-        
         Parameters:
         -----------
         N/A
@@ -128,6 +129,10 @@ cdef class GOTMDataReader(DataReader):
         # Update zeta
         self._zeta_last = self.mediator.get_time_dependent_variable_at_last_time_index('zeta', (1,1), DTYPE_FLOAT)[0,0]
         self._zeta_next = self.mediator.get_time_dependent_variable_at_next_time_index('zeta', (1,1), DTYPE_FLOAT)[0,0]
+
+        # Update z layers
+        self._zlay_last = self.mediator.get_time_dependent_variable_at_last_time_index('z', (self._n_zlay,1,1), DTYPE_FLOAT)[:,0,0]
+        self._zlay_next = self.mediator.get_time_dependent_variable_at_next_time_index('z', (self._n_zlay,1,1), DTYPE_FLOAT)[:,0,0]
 
         # Update z levels
         self._zlev_last = self.mediator.get_time_dependent_variable_at_last_time_index('zi', (self._n_zlev,1,1), DTYPE_FLOAT)[:,0,0]
@@ -159,6 +164,9 @@ cdef class GOTMDataReader(DataReader):
             self._kh[i] = interp.linear_interp(self._time_fraction, self._kh_last[i], self._kh_next[i])     
 
         self._interpolator.set_points(self._zlev, self._kh)
+
+        for i in xrange(self._n_zlay):
+            self._zlay[i] = interp.linear_interp(self._time_fraction, self._zlay_last[i], self._zlay_next[i])
 
     cpdef setup_data_access(self, start_datetime, end_datetime):
         """ Set up access to time-dependent variables.
