@@ -353,8 +353,11 @@ cdef class OPTModel:
 
             # Environmental variables
             for var_name in self.environmental_variables:
-                var = self.data_reader.get_environmental_variable(var_name, time, particle_ptr)
-                diags[var_name].append(var)
+                if particle_ptr.in_domain:
+                    var = self.data_reader.get_environmental_variable(var_name, time, particle_ptr)
+                    diags[var_name].append(var)
+                else:
+                    diags[var_name].append(FLOAT_ERR)
 
         return diags
 
