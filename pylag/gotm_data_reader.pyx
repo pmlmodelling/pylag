@@ -2,6 +2,11 @@ include "constants.pxi"
 
 import numpy as np
 
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
+
 # Cython imports
 cimport numpy as np
 np.import_array()
@@ -19,6 +24,7 @@ from pylag.math cimport sigma_to_cartesian_coords
 cimport pylag.interpolation as interp
 import pylag.interpolation as interp
 
+from pylag import variable_library
 from pylag.numerics import get_time_direction
 
 cdef class GOTMDataReader(DataReader):
@@ -48,6 +54,9 @@ cdef class GOTMDataReader(DataReader):
     # Mediator for accessing GOTM model data read in from file
     cdef object mediator
 
+    # List of environmental variables to read and save
+    cdef object env_var_names
+
     # Number of z levels and layers
     cdef DTYPE_INT_t _n_zlay, _n_zlev
 
@@ -75,8 +84,20 @@ cdef class GOTMDataReader(DataReader):
     # Eddy diffusivity derivative at layer interfaces
     cdef DTYPE_FLOAT_t[:] _kh_prime
 
+    # Temperature
+    cdef DTYPE_FLOAT_t[:] _thetao_last, _thetao_next, _thetao
+
+    # Salinity
+    cdef DTYPE_FLOAT_t[:] _so_last, _so_next, _so
+
+    # Short wave downwelling irradiance
+    cdef DTYPE_FLOAT_t[:] _rdso_last, _rdso_next, _rdso
+
     # Interpolator
     cdef interp.Interpolator _kh_interpolator
+    cdef interp.Interpolator _thetao_interpolator
+    cdef interp.Interpolator _so_interpolator
+    cdef interp.Interpolator _rdso_interpolator
 
     def __init__(self, config, mediator):
         self.config = config
@@ -98,9 +119,30 @@ cdef class GOTMDataReader(DataReader):
         self._kh_last = np.empty((self._n_zlev), dtype=DTYPE_FLOAT)
         self._kh_next = np.empty((self._n_zlev), dtype=DTYPE_FLOAT)
         self._kh = np.empty((self._n_zlev), dtype=DTYPE_FLOAT)
+        self._thetao_last = np.empty((self._n_zlay), dtype=DTYPE_FLOAT)
+        self._thetao_next = np.empty((self._n_zlay), dtype=DTYPE_FLOAT)
+        self._thetao = np.empty((self._n_zlay), dtype=DTYPE_FLOAT)
+        self._so_last = np.empty((self._n_zlay), dtype=DTYPE_FLOAT)
+        self._so_next = np.empty((self._n_zlay), dtype=DTYPE_FLOAT)
+        self._so = np.empty((self._n_zlay), dtype=DTYPE_FLOAT)
+        self._rdso_last = np.empty((self._n_zlay), dtype=DTYPE_FLOAT)
+        self._rdso_next = np.empty((self._n_zlay), dtype=DTYPE_FLOAT)
+        self._rdso = np.empty((self._n_zlay), dtype=DTYPE_FLOAT)
 
         # Interpolator
         self._kh_interpolator = interp.get_interpolator(self.config, self._n_zlev)
+        self._thetao_interpolator = interp.get_interpolator(self.config, self._n_zlay)
+        self._so_interpolator = interp.get_interpolator(self.config, self._n_zlay)
+        self._rdso_interpolator = interp.get_interpolator(self.config, self._n_zlay)
+
+        # Check to see if any environmental variables are being saved.
+        try:
+            env_var_names = self.config.get("OUTPUT", "environmental_variables").strip().split(',')
+            env_var_names.remove("") # If no variables have been specified, make sure the list is empty
+        except (configparser.NoSectionError, configparser.NoOptionError) as e:
+            env_var_names = []
+
+        self.env_var_names = [env_var_name.strip() for env_var_name in env_var_names]
 
         self._read_time_dependent_vars()
 
@@ -142,6 +184,24 @@ cdef class GOTMDataReader(DataReader):
         self._kh_last = self.mediator.get_time_dependent_variable_at_last_time_index('nuh', (self._n_zlev,1,1), DTYPE_FLOAT)[:,0,0]
         self._kh_next = self.mediator.get_time_dependent_variable_at_next_time_index('nuh', (self._n_zlev,1,1), DTYPE_FLOAT)[:,0,0]
 
+        # Read in data as requested
+        if 'thetao' in self.env_var_names:
+            gotm_var_name = variable_library.gotm_variable_names['thetao']
+            self._thetao_last = self.mediator.get_time_dependent_variable_at_last_time_index(gotm_var_name, (self._n_zlay, 1, 1), DTYPE_FLOAT)
+            self._thetao_next = self.mediator.get_time_dependent_variable_at_next_time_index(gotm_var_name, (self._n_zlay, 1, 1), DTYPE_FLOAT)
+
+        if 'so' in self.env_var_names:
+            gotm_var_name = variable_library.gotm_variable_names['so']
+            self._so_last = self.mediator.get_time_dependent_variable_at_last_time_index(gotm_var_name, (self._n_zlay, 1, 1), DTYPE_FLOAT)
+            self._so_next = self.mediator.get_time_dependent_variable_at_next_time_index(gotm_var_name, (self._n_zlay, 1, 1), DTYPE_FLOAT)
+
+        if 'rdso' in self.env_var_names:
+            gotm_var_name = variable_library.gotm_variable_names['rdso']
+            self._rdso_last = self.mediator.get_time_dependent_variable_at_last_time_index(gotm_var_name, (self._n_zlay, 1, 1), DTYPE_FLOAT)
+            self._rdso_next = self.mediator.get_time_dependent_variable_at_next_time_index(gotm_var_name, (self._n_zlay, 1, 1), DTYPE_FLOAT)
+
+        return
+
     cdef _interpolate_in_time(self, time):
         """ Linearly interpolate in time all time dependent variables
         
@@ -167,6 +227,25 @@ cdef class GOTMDataReader(DataReader):
 
         for i in xrange(self._n_zlay):
             self._zlay[i] = interp.linear_interp(self._time_fraction, self._zlay_last[i], self._zlay_next[i])
+
+        # Read in data as requested
+        if 'thetao' in self.env_var_names:
+            for i in xrange(self._n_zlay):
+                self._thetao[i] = interp.linear_interp(self._time_fraction, self._thetao_last[i], self._thetao_next[i])
+
+            self._thetao_interpolator.set_points(self._zlay, self._thetao)
+
+        if 'so' in self.env_var_names:
+            for i in xrange(self._n_zlay):
+                self._so[i] = interp.linear_interp(self._time_fraction, self._so_last[i], self._so_next[i])
+
+            self._so_interpolator.set_points(self._zlay, self._so)
+
+        if 'rdso' in self.env_var_names:
+            for i in xrange(self._n_zlay):
+                self._rdso[i] = interp.linear_interp(self._time_fraction, self._rdso_last[i], self._rdso_next[i])
+
+            self._rdso_interpolator.set_points(self._zlay, self._rdso)
 
     cpdef setup_data_access(self, start_datetime, end_datetime):
         """ Set up access to time-dependent variables.
@@ -397,6 +476,47 @@ cdef class GOTMDataReader(DataReader):
         """
         return self._kh_interpolator.get_first_derivative(particle)
 
+    cdef DTYPE_FLOAT_t get_environmental_variable(self, var_name,
+            DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR:
+        """ Returns the value of the given environmental variable
+
+        Support for extracting the following GOTM environmental variables has been implemented:
+
+        thetao - Sea water potential temperature
+
+        so - Sea water salinty
+
+        rdso - Short wave downwelling irradiance
+
+        Parameters:
+        -----------
+        var_name : str
+            The name of the variable. See above for a list of supported options.
+
+        time : float
+            Time at which to interpolate.
+
+        particle: *Particle
+            Pointer to a Particle object.
+
+        Returns:
+        --------
+        var : float
+            The interpolated value of the variable at the specified point in time and space.
+        """
+        cdef DTYPE_FLOAT_t value # Environmental variable at (t, zpos)
+
+        if var_name in self.env_var_names:
+            if var_name == 'thetao':
+                value = self._thetao_interpolator.get_value(particle)
+            elif var_name == 'so':
+                value = self._so_interpolator.get_value(particle)
+            elif var_name == 'rdso':
+                value = self._rdso_interpolator.get_value(particle)
+            return value
+        else:
+            raise ValueError("Received unsupported environmental variable `{}'".format(var_name))
+
     cpdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, DTYPE_INT_t host) except INT_ERR:
         """ Return an integer indicating whether `host' is wet or dry
         
@@ -414,3 +534,4 @@ cdef class GOTMDataReader(DataReader):
             Integer that identifies the host element in question
         """
         return 1
+

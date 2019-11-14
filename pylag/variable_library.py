@@ -64,3 +64,7 @@ _variable_long_names['so'] = 'Sea Water Salinity'
 
 # FVCOM name mappings
 fvcom_variable_names = {'thetao': 'temp', 'so': 'salinity'}
+
+# GOTM name mappings
+gotm_variable_names = {'thetao': 'temp', 'so': 'salt'}
+
