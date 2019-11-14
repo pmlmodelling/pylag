@@ -76,7 +76,7 @@ cdef class GOTMDataReader(DataReader):
     cdef DTYPE_FLOAT_t[:] _kh_prime
 
     # Interpolator
-    cdef interp.Interpolator _interpolator
+    cdef interp.Interpolator _kh_interpolator
 
     def __init__(self, config, mediator):
         self.config = config
@@ -100,7 +100,7 @@ cdef class GOTMDataReader(DataReader):
         self._kh = np.empty((self._n_zlev), dtype=DTYPE_FLOAT)
 
         # Interpolator
-        self._interpolator = interp.get_interpolator(self.config, self._n_zlev)
+        self._kh_interpolator = interp.get_interpolator(self.config, self._n_zlev)
 
         self._read_time_dependent_vars()
 
@@ -163,7 +163,7 @@ cdef class GOTMDataReader(DataReader):
 
             self._kh[i] = interp.linear_interp(self._time_fraction, self._kh_last[i], self._kh_next[i])     
 
-        self._interpolator.set_points(self._zlev, self._kh)
+        self._kh_interpolator.set_points(self._zlev, self._kh)
 
         for i in xrange(self._n_zlay):
             self._zlay[i] = interp.linear_interp(self._time_fraction, self._zlay_last[i], self._zlay_next[i])
@@ -370,7 +370,7 @@ cdef class GOTMDataReader(DataReader):
         """
         cdef DTYPE_FLOAT_t value
 
-        value = self._interpolator.get_value(particle)
+        value = self._kh_interpolator.get_value(particle)
         if value < 0.0:
             return 0.0
         return value
@@ -395,7 +395,7 @@ cdef class GOTMDataReader(DataReader):
         k_prime : float
             Gradient in the vertical eddy diffusivity field.
         """
-        return self._interpolator.get_first_derivative(particle)
+        return self._kh_interpolator.get_first_derivative(particle)
 
     cpdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, DTYPE_INT_t host) except INT_ERR:
         """ Return an integer indicating whether `host' is wet or dry
