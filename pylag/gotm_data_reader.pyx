@@ -143,9 +143,10 @@ cdef class GOTMDataReader(DataReader):
 
         self.env_var_names = []
         for env_var_name in env_var_names:
+            env_var_name = env_var_name.strip()
             if env_var_name is not None:
                 if env_var_name in variable_library.gotm_variable_names.keys():
-                    self.env_var_names.append(env_var_name.strip())
+                    self.env_var_names.append(env_var_name)
                 else:
                     raise ValueError('Received unsupported variable {}'.format(env_var_name))
 
