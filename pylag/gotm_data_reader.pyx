@@ -91,13 +91,13 @@ cdef class GOTMDataReader(DataReader):
     cdef DTYPE_FLOAT_t[:] _so_last, _so_next, _so
 
     # Short wave downwelling irradiance
-    cdef DTYPE_FLOAT_t[:] _rdso_last, _rdso_next, _rdso
+    cdef DTYPE_FLOAT_t[:] _rsdo_last, _rsdo_next, _rsdo
 
     # Interpolator
     cdef interp.Interpolator _kh_interpolator
     cdef interp.Interpolator _thetao_interpolator
     cdef interp.Interpolator _so_interpolator
-    cdef interp.Interpolator _rdso_interpolator
+    cdef interp.Interpolator _rsdo_interpolator
 
     def __init__(self, config, mediator):
         self.config = config
@@ -125,24 +125,29 @@ cdef class GOTMDataReader(DataReader):
         self._so_last = np.empty((self._n_zlay), dtype=DTYPE_FLOAT)
         self._so_next = np.empty((self._n_zlay), dtype=DTYPE_FLOAT)
         self._so = np.empty((self._n_zlay), dtype=DTYPE_FLOAT)
-        self._rdso_last = np.empty((self._n_zlay), dtype=DTYPE_FLOAT)
-        self._rdso_next = np.empty((self._n_zlay), dtype=DTYPE_FLOAT)
-        self._rdso = np.empty((self._n_zlay), dtype=DTYPE_FLOAT)
+        self._rsdo_last = np.empty((self._n_zlay), dtype=DTYPE_FLOAT)
+        self._rsdo_next = np.empty((self._n_zlay), dtype=DTYPE_FLOAT)
+        self._rsdo = np.empty((self._n_zlay), dtype=DTYPE_FLOAT)
 
         # Interpolator
         self._kh_interpolator = interp.get_interpolator(self.config, self._n_zlev)
         self._thetao_interpolator = interp.get_interpolator(self.config, self._n_zlay)
         self._so_interpolator = interp.get_interpolator(self.config, self._n_zlay)
-        self._rdso_interpolator = interp.get_interpolator(self.config, self._n_zlay)
+        self._rsdo_interpolator = interp.get_interpolator(self.config, self._n_zlay)
 
         # Check to see if any environmental variables are being saved.
         try:
             env_var_names = self.config.get("OUTPUT", "environmental_variables").strip().split(',')
-            env_var_names.remove("") # If no variables have been specified, make sure the list is empty
         except (configparser.NoSectionError, configparser.NoOptionError) as e:
             env_var_names = []
 
-        self.env_var_names = [env_var_name.strip() for env_var_name in env_var_names]
+        self.env_var_names = []
+        for env_var_name in env_var_names:
+            if env_var_name is not None:
+                if env_var_name in variable_library.gotm_variable_names.keys():
+                    self.env_var_names.append(env_var_name.strip())
+                else:
+                    raise ValueError('Received unsupported variable {}'.format(env_var_name))
 
         self._read_time_dependent_vars()
 
@@ -187,18 +192,18 @@ cdef class GOTMDataReader(DataReader):
         # Read in data as requested
         if 'thetao' in self.env_var_names:
             gotm_var_name = variable_library.gotm_variable_names['thetao']
-            self._thetao_last = self.mediator.get_time_dependent_variable_at_last_time_index(gotm_var_name, (self._n_zlay, 1, 1), DTYPE_FLOAT)
-            self._thetao_next = self.mediator.get_time_dependent_variable_at_next_time_index(gotm_var_name, (self._n_zlay, 1, 1), DTYPE_FLOAT)
+            self._thetao_last = self.mediator.get_time_dependent_variable_at_last_time_index(gotm_var_name, (self._n_zlay, 1, 1), DTYPE_FLOAT)[:, 0, 0]
+            self._thetao_next = self.mediator.get_time_dependent_variable_at_next_time_index(gotm_var_name, (self._n_zlay, 1, 1), DTYPE_FLOAT)[:, 0, 0]
 
         if 'so' in self.env_var_names:
             gotm_var_name = variable_library.gotm_variable_names['so']
-            self._so_last = self.mediator.get_time_dependent_variable_at_last_time_index(gotm_var_name, (self._n_zlay, 1, 1), DTYPE_FLOAT)
-            self._so_next = self.mediator.get_time_dependent_variable_at_next_time_index(gotm_var_name, (self._n_zlay, 1, 1), DTYPE_FLOAT)
+            self._so_last = self.mediator.get_time_dependent_variable_at_last_time_index(gotm_var_name, (self._n_zlay, 1, 1), DTYPE_FLOAT)[:, 0, 0]
+            self._so_next = self.mediator.get_time_dependent_variable_at_next_time_index(gotm_var_name, (self._n_zlay, 1, 1), DTYPE_FLOAT)[:, 0, 0]
 
-        if 'rdso' in self.env_var_names:
-            gotm_var_name = variable_library.gotm_variable_names['rdso']
-            self._rdso_last = self.mediator.get_time_dependent_variable_at_last_time_index(gotm_var_name, (self._n_zlay, 1, 1), DTYPE_FLOAT)
-            self._rdso_next = self.mediator.get_time_dependent_variable_at_next_time_index(gotm_var_name, (self._n_zlay, 1, 1), DTYPE_FLOAT)
+        if 'rsdo' in self.env_var_names:
+            gotm_var_name = variable_library.gotm_variable_names['rsdo']
+            self._rsdo_last = self.mediator.get_time_dependent_variable_at_last_time_index(gotm_var_name, (self._n_zlay, 1, 1), DTYPE_FLOAT)[:, 0, 0]
+            self._rsdo_next = self.mediator.get_time_dependent_variable_at_next_time_index(gotm_var_name, (self._n_zlay, 1, 1), DTYPE_FLOAT)[:, 0, 0]
 
         return
 
@@ -241,11 +246,11 @@ cdef class GOTMDataReader(DataReader):
 
             self._so_interpolator.set_points(self._zlay, self._so)
 
-        if 'rdso' in self.env_var_names:
+        if 'rsdo' in self.env_var_names:
             for i in xrange(self._n_zlay):
-                self._rdso[i] = interp.linear_interp(self._time_fraction, self._rdso_last[i], self._rdso_next[i])
+                self._rsdo[i] = interp.linear_interp(self._time_fraction, self._rsdo_last[i], self._rsdo_next[i])
 
-            self._rdso_interpolator.set_points(self._zlay, self._rdso)
+            self._rsdo_interpolator.set_points(self._zlay, self._rsdo)
 
     cpdef setup_data_access(self, start_datetime, end_datetime):
         """ Set up access to time-dependent variables.
@@ -486,7 +491,7 @@ cdef class GOTMDataReader(DataReader):
 
         so - Sea water salinty
 
-        rdso - Short wave downwelling irradiance
+        rsdo - Short wave downwelling irradiance
 
         Parameters:
         -----------
@@ -511,8 +516,8 @@ cdef class GOTMDataReader(DataReader):
                 value = self._thetao_interpolator.get_value(particle)
             elif var_name == 'so':
                 value = self._so_interpolator.get_value(particle)
-            elif var_name == 'rdso':
-                value = self._rdso_interpolator.get_value(particle)
+            elif var_name == 'rsdo':
+                value = self._rsdo_interpolator.get_value(particle)
             return value
         else:
             raise ValueError("Received unsupported environmental variable `{}'".format(var_name))

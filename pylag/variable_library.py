@@ -62,9 +62,14 @@ _variable_data_types['so'] = DTYPE_FLOAT
 _variable_units['so'] = 'psu'
 _variable_long_names['so'] = 'Sea Water Salinity'
 
+# rsdo
+_variable_data_types['rsdo'] = DTYPE_FLOAT
+_variable_units['rsdo'] = 'W m-2'
+_variable_long_names['rsdo'] = 'Downwelling Shortwave Radiation in Sea Water '
+
 # FVCOM name mappings
 fvcom_variable_names = {'thetao': 'temp', 'so': 'salinity'}
 
 # GOTM name mappings
-gotm_variable_names = {'thetao': 'temp', 'so': 'salt'}
+gotm_variable_names = {'thetao': 'temp', 'so': 'salt', 'rsdo': 'rad'}
 
