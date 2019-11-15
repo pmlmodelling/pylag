@@ -1066,8 +1066,6 @@ cdef class AdvRK43DItMethod(ItMethod):
 cdef class DiffNaive1DItMethod(ItMethod):
     """ Stochastic Naive Euler 1D iterative method
     """
-    cdef DTYPE_FLOAT_t _time_step_abs
-
     def __init__(self, config):
         """ Initialise class data members
         
@@ -1111,15 +1109,13 @@ cdef class DiffNaive1DItMethod(ItMethod):
 
         Kh = data_reader.get_vertical_eddy_diffusivity(time, particle)
         
-        delta_X.z += sqrt(2.0*Kh*self._time_step_abs) * random.gauss(0.0, 1.0)
+        delta_X.z += sqrt(2.0*Kh*self._time_step) * random.gauss(0.0, 1.0)
         
         return 0
 
 cdef class DiffEuler1DItMethod(ItMethod):
     """ Stochastic Euler 1D iterative method
     """
-    cdef DTYPE_FLOAT_t _time_step_abs
-
     def __init__(self, config):
         """ Initialise class data members
         
@@ -1165,7 +1161,7 @@ cdef class DiffEuler1DItMethod(ItMethod):
         Kh = data_reader.get_vertical_eddy_diffusivity(time, particle)
         Kh_prime = data_reader.get_vertical_eddy_diffusivity_derivative(time, particle)
 
-        delta_X.z = Kh_prime * self._time_step + sqrt(2.0*Kh*self._time_step_abs) * random.gauss(0.0, 1.0)
+        delta_X.z = Kh_prime * self._time_step + sqrt(2.0*Kh*self._time_step) * random.gauss(0.0, 1.0)
 
         return 0
 
@@ -1185,8 +1181,6 @@ cdef class DiffVisser1DItMethod(ItMethod):
     _vert_bc_calculator : VertBoundaryConditionCalculator
         The method used for computing vertical boundary conditions.
     """
-    cdef DTYPE_FLOAT_t _time_step_abs
-
     cdef VertBoundaryConditionCalculator _vert_bc_calculator
 
     def __init__(self, config):
@@ -1263,7 +1257,7 @@ cdef class DiffVisser1DItMethod(ItMethod):
         # Compute Kh at the offset position
         Kh = data_reader.get_vertical_eddy_diffusivity(time, &_particle)
 
-        delta_X.z = Kh_prime * self._time_step + sqrt(2.0*Kh*self._time_step_abs) * random.gauss(0.0, 1.0)
+        delta_X.z = Kh_prime * self._time_step + sqrt(2.0*Kh*self._time_step) * random.gauss(0.0, 1.0)
 
         return 0
 
@@ -1274,8 +1268,6 @@ cdef class DiffMilstein1DItMethod(ItMethod):
     accurate than the Euler or Visser schemes, but still computationally
     efficient.
     """
-    cdef DTYPE_FLOAT_t _time_step_abs
-
     def __init__(self, config):
         """ Initialise class data members
         
@@ -1324,7 +1316,7 @@ cdef class DiffMilstein1DItMethod(ItMethod):
         Kh = data_reader.get_vertical_eddy_diffusivity(time, particle)
         Kh_prime = data_reader.get_vertical_eddy_diffusivity_derivative(time, particle)
 
-        delta_X.z  = 0.5 * Kh_prime * self._time_step * (deviate*deviate + 1.0) + sqrt(2.0 * Kh * self._time_step_abs) * deviate
+        delta_X.z  = 0.5 * Kh_prime * self._time_step * (deviate*deviate + 1.0) + sqrt(2.0 * Kh * self._time_step) * deviate
 
         return 0
 
@@ -1336,8 +1328,6 @@ cdef class DiffConst2DItMethod(ItMethod):
     _Ah : float
         Horizontal eddy viscosity constant
     """
-    cdef DTYPE_FLOAT_t _time_step_abs
-
     cdef DTYPE_FLOAT_t _Ah
 
     def __init__(self, config):
@@ -1380,8 +1370,8 @@ cdef class DiffConst2DItMethod(ItMethod):
             always be zero since the method does not check for boundary
             crossings.
         """
-        delta_X.x += sqrt(2.0*self._Ah*self._time_step_abs) * random.gauss(0.0, 1.0)
-        delta_X.y += sqrt(2.0*self._Ah*self._time_step_abs) * random.gauss(0.0, 1.0)
+        delta_X.x += sqrt(2.0*self._Ah*self._time_step) * random.gauss(0.0, 1.0)
+        delta_X.y += sqrt(2.0*self._Ah*self._time_step) * random.gauss(0.0, 1.0)
         
         return 0
 
@@ -1393,8 +1383,6 @@ cdef class DiffNaive2DItMethod(ItMethod):
     As in the 1D case, this method should not be used when the eddy 
     viscosity field is inhomogeneous.
     """
-    cdef DTYPE_FLOAT_t _time_step_abs
-
     def __init__(self, config):
         """ Initialise class data members
         
@@ -1437,8 +1425,8 @@ cdef class DiffNaive2DItMethod(ItMethod):
         Ah = data_reader.get_horizontal_eddy_viscosity(time, particle)
         
         # Change in position
-        delta_X.x += sqrt(2.0*Ah*self._time_step_abs) * random.gauss(0.0, 1.0)
-        delta_X.y += sqrt(2.0*Ah*self._time_step_abs) * random.gauss(0.0, 1.0)
+        delta_X.x += sqrt(2.0*Ah*self._time_step) * random.gauss(0.0, 1.0)
+        delta_X.y += sqrt(2.0*Ah*self._time_step) * random.gauss(0.0, 1.0)
         
         return 0
 
@@ -1447,8 +1435,6 @@ cdef class DiffMilstein2DItMethod(ItMethod):
 
     This method is a 2D implementation of the Milstein scheme.
     """
-    cdef DTYPE_FLOAT_t _time_step_abs
-
     def __init__(self, config):
         """ Initialise class data members
         
@@ -1495,9 +1481,9 @@ cdef class DiffMilstein2DItMethod(ItMethod):
         deviate_y = random.gauss(0.0, 1.0)
 
         delta_X.x  = 0.5 * Ah_prime[0] * self._time_step * (deviate_x*deviate_x + 1.0) \
-                + sqrt(2.0 * Ah * self._time_step_abs) * deviate_x
+                + sqrt(2.0 * Ah * self._time_step) * deviate_x
         delta_X.y  = 0.5 * Ah_prime[1] * self._time_step * (deviate_y*deviate_y + 1.0) \
-                + sqrt(2.0 * Ah * self._time_step_abs) * deviate_y
+                + sqrt(2.0 * Ah * self._time_step) * deviate_y
 
         return 0
 
@@ -1506,8 +1492,6 @@ cdef class DiffMilstein3DItMethod(ItMethod):
 
     This method is a 3D implementation of the Milstein scheme.
     """
-    cdef DTYPE_FLOAT_t _time_step_abs
-
     def __init__(self, config):
         """ Initialise class data members
         
@@ -1560,11 +1544,11 @@ cdef class DiffMilstein3DItMethod(ItMethod):
         deviate_z = random.gauss(0.0, 1.0)
 
         delta_X.x  = 0.5 * Ah_prime[0] * self._time_step * (deviate_x*deviate_x + 1.0) \
-                + sqrt(2.0 * Ah * self._time_step_abs) * deviate_x
+                + sqrt(2.0 * Ah * self._time_step) * deviate_x
         delta_X.y  = 0.5 * Ah_prime[1] * self._time_step * (deviate_y*deviate_y + 1.0) \
-                + sqrt(2.0 * Ah * self._time_step_abs) * deviate_y
+                + sqrt(2.0 * Ah * self._time_step) * deviate_y
         delta_X.z  = 0.5 * Kh_prime * self._time_step * (deviate_z*deviate_z + 1.0) \
-                + sqrt(2.0 * Kh * self._time_step_abs) * deviate_z
+                + sqrt(2.0 * Kh * self._time_step) * deviate_z
 
         return 0
 
@@ -1574,8 +1558,6 @@ cdef class AdvDiffMilstein3DItMethod(ItMethod):
     In this class the contributions of both advection and diffusion are
     accounted for.
     """
-    cdef DTYPE_FLOAT_t _time_step_abs
-
     def __init__(self, config):
         """ Initialise class data members
         
@@ -1635,15 +1617,15 @@ cdef class AdvDiffMilstein3DItMethod(ItMethod):
 
         delta_X.x  = vel[0] * self._time_step \
                 + 0.5 * Ah_prime[0] * self._time_step * (deviate_x*deviate_x + 1.0) \
-                + sqrt(2.0 * Ah * self._time_step_abs) * deviate_x
+                + sqrt(2.0 * Ah * self._time_step) * deviate_x
 
         delta_X.y  = vel[1] * self._time_step \
                 + 0.5 * Ah_prime[1] * self._time_step * (deviate_y*deviate_y + 1.0) \
-                + sqrt(2.0 * Ah * self._time_step_abs) * deviate_y
+                + sqrt(2.0 * Ah * self._time_step) * deviate_y
 
         delta_X.z  = vel[2] * self._time_step \
                 + 0.5 * Kh_prime * self._time_step * (deviate_z*deviate_z + 1.0) \
-                + sqrt(2.0 * Kh * self._time_step_abs) * deviate_z
+                + sqrt(2.0 * Kh * self._time_step) * deviate_z
 
         return 0
 
