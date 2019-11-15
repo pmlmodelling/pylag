@@ -52,7 +52,10 @@ cdef class FVCOMDataReader(DataReader):
 
     # Mediator for accessing FVCOM model data read in from file
     cdef object mediator
-    
+
+    # List of environmental variables to read and save
+    cdef object env_var_names
+
     # Grid dimensions
     cdef DTYPE_INT_t _n_elems, _n_nodes, _n_siglay, _n_siglev
     
@@ -138,6 +141,21 @@ cdef class FVCOMDataReader(DataReader):
         self._has_Kh = self.config.getboolean("OCEAN_CIRCULATION_MODEL", "has_Kh")
         self._has_Ah = self.config.getboolean("OCEAN_CIRCULATION_MODEL", "has_Ah")
         self._has_is_wet = self.config.getboolean("OCEAN_CIRCULATION_MODEL", "has_is_wet")
+
+        # Check to see if any environmental variables are being saved.
+        try:
+            env_var_names = self.config.get("OUTPUT", "environmental_variables").strip().split(',')
+        except (configparser.NoSectionError, configparser.NoOptionError) as e:
+            env_var_names = []
+
+        self.env_var_names = []
+        for env_var_name in env_var_names:
+            env_var_name = env_var_name.strip()
+            if env_var_name is not None:
+                if env_var_name in variable_library.fvcom_variable_names.keys():
+                    self.env_var_names.append(env_var_name)
+                else:
+                    raise ValueError('Received unsupported variable {}'.format(env_var_name))
 
         self._read_grid()
 
@@ -940,14 +958,14 @@ cdef class FVCOMDataReader(DataReader):
         """
         cdef DTYPE_FLOAT_t var # Environmental variable at (t, xpos, ypos, zpos)
 
-        if var_name == 'thetao':
-            var = self._get_variable(self._thetao_last, self._thetao_next, time, particle)
-        elif var_name == 'so':
-            var = self._get_variable(self._so_last, self._so_next, time, particle)
+        if var_name in self.env_var_names:
+            if var_name == 'thetao':
+                var = self._get_variable(self._thetao_last, self._thetao_next, time, particle)
+            elif var_name == 'so':
+                var = self._get_variable(self._so_last, self._so_next, time, particle)
+            return var
         else:
             raise ValueError("Invalid variable name `{}'".format(var_name))
-
-        return var
 
     cdef get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
             Particle* particle):
@@ -1786,25 +1804,16 @@ cdef class FVCOMDataReader(DataReader):
             self._wet_cells_last = self.mediator.get_time_dependent_variable_at_last_time_index('wet_cells', (self._n_elems), DTYPE_INT)
             self._wet_cells_next = self.mediator.get_time_dependent_variable_at_next_time_index('wet_cells', (self._n_elems), DTYPE_INT)
 
-        # Check to see if any environmental variables are being saved. If they are, read in the appropriate data arrays
-        try:
-            var_names = self.config.get("OUTPUT", "environmental_variables").strip().split(',')
-        except (configparser.NoSectionError, configparser.NoOptionError) as e:
-            return
-
         # Read in data as requested
-        for var_name in var_names:
-            var_name = var_name.strip()
-            fvcom_var_name = variable_library.fvcom_variable_names[var_name]
+        if 'thetao' in self.env_var_names:
+            fvcom_var_name = variable_library.fvcom_variable_names['thetao']
+            self._thetao_last = self.mediator.get_time_dependent_variable_at_last_time_index(fvcom_var_name, (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
+            self._thetao_next = self.mediator.get_time_dependent_variable_at_next_time_index(fvcom_var_name, (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
 
-            if var_name == 'thetao':
-                self._thetao_last = self.mediator.get_time_dependent_variable_at_last_time_index(fvcom_var_name, (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
-                self._thetao_next = self.mediator.get_time_dependent_variable_at_next_time_index(fvcom_var_name, (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
-            elif var_name == 'so':
-                self._so_last = self.mediator.get_time_dependent_variable_at_last_time_index(fvcom_var_name, (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
-                self._so_next = self.mediator.get_time_dependent_variable_at_next_time_index(fvcom_var_name, (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
-            else:
-                raise ValueError("Support for saving the environmental variable `{}' has not been implemented within FVCOMDataReader.".format(var_name))
+        if 'so' in self.env_var_names:
+            fvcom_var_name = variable_library.fvcom_variable_names['so']
+            self._so_last = self.mediator.get_time_dependent_variable_at_last_time_index(fvcom_var_name, (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
+            self._so_next = self.mediator.get_time_dependent_variable_at_next_time_index(fvcom_var_name, (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
 
         return
 
