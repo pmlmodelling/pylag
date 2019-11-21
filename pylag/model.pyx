@@ -321,7 +321,7 @@ cdef class OPTModel:
         ymin = self.data_reader.get_ymin()
 
         # Initialise lists
-        diags = {'xpos': [], 'ypos': [], 'zpos': [], 'host_horizontal_elem': [],
+        diags = {'x1': [], 'x2': [], 'x3': [], 'host_horizontal_elem': [],
                  'h': [], 'zeta': [], 'is_beached': [], 'in_domain': [],
                  'status': []}
 
@@ -331,9 +331,9 @@ cdef class OPTModel:
 
         for particle_ptr in self.particle_ptrs:
             # Particle location data
-            diags['xpos'].append(particle_ptr.xpos + xmin)
-            diags['ypos'].append(particle_ptr.ypos + ymin)
-            diags['zpos'].append(particle_ptr.zpos)
+            diags['x1'].append(particle_ptr.xpos + xmin)
+            diags['x2'].append(particle_ptr.ypos + ymin)
+            diags['x3'].append(particle_ptr.zpos)
             diags['host_horizontal_elem'].append(particle_ptr.host_horizontal_elem)
 
             # Particle state data
@@ -384,15 +384,15 @@ cdef class OPTModel:
                 all_particle_data[key].append(value)
 
         # Add grid offsets
-        if 'xpos' in all_particle_data.keys():
-            xmin = self.data_reader.get_xmin()
-            x_positions = all_particle_data['xpos']
-            all_particle_data['xpos'] = [x + xmin for x in x_positions]
+        if 'x1' in all_particle_data.keys():
+            x1_min = self.data_reader.get_xmin()
+            x1_positions = all_particle_data['x1']
+            all_particle_data['x1'] = [x1 + x1_min for x1 in x1_positions]
 
-        if 'ypos' in all_particle_data.keys():
-            ymin = self.data_reader.get_ymin()
-            y_positions = all_particle_data['ypos']
-            all_particle_data['ypos'] = [y + ymin for y in y_positions]
+        if 'x2' in all_particle_data.keys():
+            x2_min = self.data_reader.get_xmin()
+            x2_positions = all_particle_data['x2']
+            all_particle_data['x2'] = [x2 + x2_min for x2 in x2_positions]
 
         return all_particle_data
 

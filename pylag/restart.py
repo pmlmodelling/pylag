@@ -36,6 +36,13 @@ class RestartFileCreator(object):
         # The directory in which restart files will be created
         self._restart_dir = self._config.get("RESTART", "restart_dir")
 
+        # Read in the coordinate system
+        coordinate_system = self._config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system").strip().lower()
+        if coordinate_system in ["cartesian", "spherical"]:
+            self.coordinate_system = coordinate_system
+        else:
+            raise ValueError("Unsupported model coordinate system `{}'".format(coordinate_system))
+
         if not os.path.isdir(self._restart_dir):
             logger = logging.getLogger(__name__)
 
@@ -97,7 +104,11 @@ class RestartFileCreator(object):
 
         # Save variable data
         for var_name in variable_names:
-            nc_file.variables[var_name][0, :] = particle_data[var_name]
+            if var_name in ['x1', 'x2', 'x3']:
+                var_name_key = variable_library.get_coordinate_variable_name(self.coordinate_system, var_name)
+            else:
+                var_name_key = var_name
+            nc_file.variables[var_name_key][0, :] = particle_data[var_name]
 
         # Close the file
         nc_file.close()
@@ -138,6 +149,8 @@ class RestartFileCreator(object):
 
         # Add particle variables
         for var_name in variable_names:
+            if var_name in ['x1', 'x2', 'x3']:
+                var_name = variable_library.get_coordinate_variable_name(self.coordinate_system, var_name)
             data_type = variable_library.get_data_type(var_name)
             units = variable_library.get_units(var_name)
             long_name = variable_library.get_long_name(var_name)

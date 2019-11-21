@@ -48,6 +48,13 @@ class NetCDFLogger(object):
         # Time units
         self._simulation_time_units = 'seconds since {}'.format(start_datetime)
 
+        # Read in the coordinate system
+        coordinate_system = self.config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system").strip().lower()
+        if coordinate_system in ["cartesian", "spherical"]:
+            self.coordinate_system = coordinate_system
+        else:
+            raise ValueError("Unsupported model coordinate system `{}'".format(coordinate_system))
+
         # Local environmental variables
         self._env_vars = {}
 
@@ -80,19 +87,31 @@ class NetCDFLogger(object):
         self._group_id = self._ncfile.createVariable('group_id', DTYPE_INT,('particles',))
         self._group_id.long_name = 'Particle group ID'
         
-        # Add position variables
-        self._xpos = self._ncfile.createVariable('xpos', DTYPE_FLOAT, ('time', 'particles',), **self._ncopts)
-        self._xpos.units = 'meters (m)'
-        self._xpos.long_name = 'Particle x position'
-        
-        self._ypos = self._ncfile.createVariable('ypos', DTYPE_FLOAT, ('time', 'particles',), **self._ncopts)
-        self._ypos.units = 'meters (m)'
-        self._ypos.long_name = 'Particle y position'        
-        
-        self._zpos = self._ncfile.createVariable('zpos', DTYPE_FLOAT, ('time', 'particles',), **self._ncopts)
-        self._zpos.units = 'meters (m)'
-        self._zpos.long_name = 'Particle z position'
+        # x1
+        x1_var_name = variable_library.get_coordinate_variable_name(self.coordinate_system, 'x1')
+        self._x1 = self._ncfile.createVariable(x1_var_name,
+                                               variable_library.get_data_type(x1_var_name),
+                                               ('time', 'particles',), **self._ncopts)
+        self._x1.units = variable_library.get_units(x1_var_name)
+        self._x1.long_name = variable_library.get_long_name(x1_var_name)
 
+        # x2
+        x2_var_name = variable_library.get_coordinate_variable_name(self.coordinate_system, 'x2')
+        self._x2 = self._ncfile.createVariable(x2_var_name,
+                                               variable_library.get_data_type(x2_var_name),
+                                               ('time', 'particles',), **self._ncopts)
+        self._x2.units = variable_library.get_units(x2_var_name)
+        self._x2.long_name = variable_library.get_long_name(x2_var_name)
+
+        # x3
+        x3_var_name = variable_library.get_coordinate_variable_name(self.coordinate_system, 'x3')
+        self._x3 = self._ncfile.createVariable(x3_var_name,
+                                               variable_library.get_data_type(x3_var_name),
+                                               ('time', 'particles',), **self._ncopts)
+        self._x3.units = variable_library.get_units(x3_var_name)
+        self._x3.long_name = variable_library.get_long_name(x3_var_name)
+
+        # Add host
         self._host = self._ncfile.createVariable('host', DTYPE_INT, ('time', 'particles',), **self._ncopts)
         self._host.units = 'None'
         self._host.long_name = 'Host horizontal element'
@@ -138,9 +157,9 @@ class NetCDFLogger(object):
         dt = num2date(time, units=self._simulation_time_units)
         self._time[tidx] = date2num(dt, units=self._time.units)
         
-        self._xpos[tidx, :] = particle_data['xpos']
-        self._ypos[tidx, :] = particle_data['ypos']
-        self._zpos[tidx, :] = particle_data['zpos']
+        self._x1[tidx, :] = particle_data['x1']
+        self._x2[tidx, :] = particle_data['x2']
+        self._x3[tidx, :] = particle_data['x3']
         self._host[tidx, :] = particle_data['host_horizontal_elem']
         self._h[tidx, :] = particle_data['h']
         self._zeta[tidx, :] = particle_data['zeta']
@@ -160,3 +179,4 @@ class NetCDFLogger(object):
         logger = logging.getLogger(__name__)
         logger.info('Closing data logger.')
         self._ncfile.close()
+

@@ -65,9 +65,9 @@ cdef class ParticleSmartPtr:
         """
 
         data = {'group_id': self._particle.group_id,
-                'xpos': self._particle.xpos,
-                'ypos': self._particle.ypos,
-                'zpos': self._particle.zpos}
+                'x1': self._particle.xpos,
+                'x2': self._particle.ypos,
+                'x3': self._particle.zpos}
 
         return data
 
