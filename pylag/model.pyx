@@ -162,24 +162,24 @@ cdef class OPTModel:
                     if self.config.get("SIMULATION", "depth_coordinates") == "depth_below_surface":
                         # z_temp is given as the depth below the moving free surface
                         # Use this and zeta (zmax) to compute z
-                        particle_ptr.zpos = particle_ptr.zpos + zmax
+                        particle_ptr.x3 = particle_ptr.x3 + zmax
 
                     elif self.config.get("SIMULATION", "depth_coordinates") == "height_above_bottom":
                         # z_temp is given as the height above the sea floor. Use this
                         # and h (zmin) to compute z
-                        particle_ptr.zpos = particle_ptr.zpos + zmin
+                        particle_ptr.x3 = particle_ptr.x3 + zmin
 
                 # Check that the given depth is valid
-                if particle_ptr.zpos < zmin:
-                    raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(particle_ptr.zpos, zmin))
-                elif particle_ptr.zpos > zmax:
-                    raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(particle_ptr.zpos, zmax))
+                if particle_ptr.x3 < zmin:
+                    raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(particle_ptr.x3, zmin))
+                elif particle_ptr.x3 > zmax:
+                    raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(particle_ptr.x3, zmax))
 
                 # Find the host z layer
                 flag = self.data_reader.set_vertical_grid_vars(time, particle_ptr)
 
                 if flag != IN_DOMAIN:
-                    raise ValueError("Supplied depth z (= {}) is not within the grid (h = {}, zeta={}).".format(particle_ptr.zpos, zmin, zmax))
+                    raise ValueError("Supplied depth z (= {}) is not within the grid (h = {}, zeta={}).".format(particle_ptr.x3, zmin, zmax))
 
                 # Determine if the host element is presently dry
                 if self.data_reader.is_wet(time, particle_ptr.host_horizontal_elem) == 1:
@@ -198,7 +198,7 @@ cdef class OPTModel:
         simulation. The separation allows the model to reseeded at later times;
         for example, during an ensemble simulation.
         
-        Note that while zpos is set here, this value is ultimately overwritten
+        Note that while x3 is set here, this value is ultimately overwritten
         in seed(), which accounts for the current position of the moving free
         surface and the specified depth coordinates. Other time dependent
         quantities (e.g. is_beached) are also set in seed().
@@ -221,7 +221,7 @@ cdef class OPTModel:
             id += 1
 
             # Create particle
-            particle_smart_ptr = ParticleSmartPtr(group_id=group, xpos=x1-xmin, ypos=x2-ymin, zpos=x3, id=id)
+            particle_smart_ptr = ParticleSmartPtr(group_id=group, x1=x1-xmin, x2=x2-ymin, x3=x3, id=id)
 
             # Find particle host element
             if guess is not None:
@@ -331,9 +331,9 @@ cdef class OPTModel:
 
         for particle_ptr in self.particle_ptrs:
             # Particle location data
-            diags['x1'].append(particle_ptr.xpos + xmin)
-            diags['x2'].append(particle_ptr.ypos + ymin)
-            diags['x3'].append(particle_ptr.zpos)
+            diags['x1'].append(particle_ptr.x1 + xmin)
+            diags['x2'].append(particle_ptr.x2 + ymin)
+            diags['x3'].append(particle_ptr.x3)
             diags['host_horizontal_elem'].append(particle_ptr.host_horizontal_elem)
 
             # Particle state data

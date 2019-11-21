@@ -98,8 +98,8 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
 
             # Compute the direction vector pointing from the intersection point
             # to the position vector that lies outside of the model domain
-            d[0] = particle_copy_b.xpos - intersection.xi
-            d[1] = particle_copy_b.ypos - intersection.yi
+            d[0] = particle_copy_b.x1 - intersection.xi
+            d[1] = particle_copy_b.x2 - intersection.yi
 
             # Compute the normal to the element side that points back into the
             # element given the clockwise ordering of element vertices
@@ -116,8 +116,8 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
 
             # Attempt to find the particle using a (cheap) local search
             # ---------------------------------------------------------
-            particle_copy_b.xpos = x4_prime[0]
-            particle_copy_b.ypos = x4_prime[1]
+            particle_copy_b.x1 = x4_prime[0]
+            particle_copy_b.x2 = x4_prime[1]
             flag = data_reader.find_host_using_local_search(&particle_copy_b,
                                                             particle_copy_b.host_horizontal_elem)
 
@@ -151,8 +151,8 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
                 r_test[1] = r_test[1]/10.
                 x_test[1] = intersection.yi + r_test[1]
 
-                particle_copy_a.xpos = x_test[0]
-                particle_copy_a.ypos = x_test[1]
+                particle_copy_a.x1 = x_test[0]
+                particle_copy_a.x2 = x_test[1]
 
                 flag = data_reader.find_host_using_global_search(&particle_copy_a)
 
@@ -203,32 +203,32 @@ cdef class RefVertBoundaryConditionCalculator(VertBoundaryConditionCalculator):
                            Particle *particle) except INT_ERR:
         cdef DTYPE_FLOAT_t zmin
         cdef DTYPE_FLOAT_t zmax
-        cdef DTYPE_FLOAT_t zpos
+        cdef DTYPE_FLOAT_t x3
         cdef DTYPE_INT_t flag
 
         zmin = data_reader.get_zmin(time, particle)
         zmax = data_reader.get_zmax(time, particle)
-        zpos = particle.zpos
+        x3 = particle.x3
 
-        while zpos < zmin or zpos > zmax:
-            if zpos < zmin:
-                zpos = zmin + zmin - zpos
-            elif zpos > zmax:
-                zpos = zmax + zmax - zpos
+        while x3 < zmin or x3 > zmax:
+            if x3 < zmin:
+                x3 = zmin + zmin - x3
+            elif x3 > zmax:
+                x3 = zmax + zmax - x3
 
-        particle.zpos = zpos
+        particle.x3 = x3
 
         flag = data_reader.set_vertical_grid_vars(time, particle)
 
         if flag != IN_DOMAIN:
             # This could happen if the grid search was performed using sigma
             # coords and the computed sigma coordinate lies outside of the
-            # domain, even though zpos lies within the domain. To correct for
-            # this, adjust zpos by epsilon scaled by the column depth.
-            if abs(particle.zpos - zmax) < abs(particle.zpos - zmin):
-                particle.zpos = particle.zpos - EPSILON * (zmax - zmin)
+            # domain, even though x3 lies within the domain. To correct for
+            # this, adjust x3 by epsilon scaled by the column depth.
+            if abs(particle.x3 - zmax) < abs(particle.x3 - zmin):
+                particle.x3 = particle.x3 - EPSILON * (zmax - zmin)
             else:
-                particle.zpos = particle.zpos + EPSILON * (zmax - zmin)                
+                particle.x3 = particle.x3 + EPSILON * (zmax - zmin)                
  
             flag = data_reader.set_vertical_grid_vars(time, particle)
 

@@ -334,16 +334,16 @@ cdef class GOTMDataReader(DataReader):
             if k < 0 or k >= self._n_zlay:
                 continue
 
-            if particle.zpos <= self._zlev[k+1] and particle.zpos >= self._zlev[k]:
+            if particle.x3 <= self._zlev[k+1] and particle.x3 >= self._zlev[k]:
                 particle.k_layer = k
-                particle.omega_interfaces = interp.get_linear_fraction_safe(particle.zpos, self._zlev[k], self._zlev[k+1])
+                particle.omega_interfaces = interp.get_linear_fraction_safe(particle.x3, self._zlev[k], self._zlev[k+1])
                 return IN_DOMAIN
 
         # Search the full vertical grid
         for k in xrange(self._n_zlay): 
-            if particle.zpos <= self._zlev[k+1] and particle.zpos >= self._zlev[k]:
+            if particle.x3 <= self._zlev[k+1] and particle.x3 >= self._zlev[k]:
                 particle.k_layer = k
-                particle.omega_interfaces = interp.get_linear_fraction_safe(particle.zpos, self._zlev[k], self._zlev[k+1])
+                particle.omega_interfaces = interp.get_linear_fraction_safe(particle.x3, self._zlev[k], self._zlev[k+1])
                 return IN_DOMAIN
     
         # Return error flag if particle not found
@@ -363,10 +363,10 @@ cdef class GOTMDataReader(DataReader):
         time : float
             Time.
 
-        xpos : float
+        x1 : float
             x-position (unused).
 
-        ypos : float
+        x2 : float
             y-position (unused).
         
         Returns:
@@ -392,10 +392,10 @@ cdef class GOTMDataReader(DataReader):
         time : float (unused)
             Time.
 
-        xpos : float
+        x1 : float
             x-position.
 
-        ypos : float
+        x2 : float
             y-position
         
         Return:
@@ -510,7 +510,7 @@ cdef class GOTMDataReader(DataReader):
         var : float
             The interpolated value of the variable at the specified point in time and space.
         """
-        cdef DTYPE_FLOAT_t value # Environmental variable at (t, zpos)
+        cdef DTYPE_FLOAT_t value # Environmental variable at (t, x3)
 
         if var_name in self.env_var_names:
             if var_name == 'thetao':

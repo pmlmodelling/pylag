@@ -19,13 +19,13 @@ cdef struct Particle:
     # ------------------
 
     # Particle x-position
-    DTYPE_FLOAT_t xpos
+    DTYPE_FLOAT_t x1
     
     # Particle y-position
-    DTYPE_FLOAT_t ypos
+    DTYPE_FLOAT_t x2
     
     # Particle z-position
-    DTYPE_FLOAT_t zpos
+    DTYPE_FLOAT_t x3
 
     # Local coordinates
     # -----------------

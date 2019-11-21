@@ -10,8 +10,8 @@ cdef class ParticleSmartPtr:
     the lifetime of a ParticleSmartPtr object.
     """
     
-    def __cinit__(self, DTYPE_INT_t group_id=-999, DTYPE_FLOAT_t xpos=-999., 
-            DTYPE_FLOAT_t ypos=-999., DTYPE_FLOAT_t zpos=-999.,
+    def __cinit__(self, DTYPE_INT_t group_id=-999, DTYPE_FLOAT_t x1=-999., 
+            DTYPE_FLOAT_t x2=-999., DTYPE_FLOAT_t x3=-999.,
             DTYPE_FLOAT_t phi1=-999.,  DTYPE_FLOAT_t phi2=-999.,
             DTYPE_FLOAT_t phi3=-999., DTYPE_FLOAT_t omega_interfaces=-999.,
             DTYPE_FLOAT_t omega_layers=-999., DTYPE_INT_t in_domain=False,
@@ -26,9 +26,9 @@ cdef class ParticleSmartPtr:
             raise MemoryError()
 
         self._particle.group_id = group_id
-        self._particle.xpos = xpos
-        self._particle.ypos = ypos
-        self._particle.zpos = zpos
+        self._particle.x1 = x1
+        self._particle.x2 = x2
+        self._particle.x3 = x3
         self._particle.phi[0] = phi1
         self._particle.phi[1] = phi2
         self._particle.phi[2] = phi3
@@ -65,23 +65,23 @@ cdef class ParticleSmartPtr:
         """
 
         data = {'group_id': self._particle.group_id,
-                'x1': self._particle.xpos,
-                'x2': self._particle.ypos,
-                'x3': self._particle.zpos}
+                'x1': self._particle.x1,
+                'x2': self._particle.x2,
+                'x3': self._particle.x3}
 
         return data
 
     @property
-    def xpos(self):
-        return self._particle.xpos
+    def x1(self):
+        return self._particle.x1
 
     @property
-    def ypos(self):
-        return self._particle.ypos
+    def x2(self):
+        return self._particle.x2
 
     @property
-    def zpos(self):
-        return self._particle.zpos
+    def x3(self):
+        return self._particle.x3
 
     @property
     def host_horizontal_elem(self):
@@ -148,9 +148,9 @@ cdef ParticleSmartPtr copy(ParticleSmartPtr particle_smart_ptr):
     particle_ptr = particle_smart_ptr.get_ptr()
 
     return ParticleSmartPtr(particle_ptr.group_id,
-                            particle_ptr.xpos,
-                            particle_ptr.ypos,
-                            particle_ptr.zpos,
+                            particle_ptr.x1,
+                            particle_ptr.x2,
+                            particle_ptr.x3,
                             particle_ptr.phi[0],
                             particle_ptr.phi[1],
                             particle_ptr.phi[2],
@@ -182,9 +182,9 @@ cdef to_string(Particle* particle):
     s = "Particle properties \n"\
         "------------------- \n"\
         "Particle id = {} \n"\
-        "Particle xpos = {} \n"\
-        "Particle ypos = {} \n"\
-        "Particle zpos = {} \n"\
+        "Particle x1 = {} \n"\
+        "Particle x2 = {} \n"\
+        "Particle x3 = {} \n"\
         "Particle phi[0] = {} \n"\
         "Particle phi[1] = {} \n"\
         "Particle phi[2] = {} \n"\
@@ -197,9 +197,9 @@ cdef to_string(Particle* particle):
         "Partilce k upper layer = {} \n"\
         "Particle in domain = {} \n"\
         "Particle is beached = {} \n".format(particle.id, 
-                                             particle.xpos,
-                                             particle.ypos,
-                                             particle.zpos,
+                                             particle.x1,
+                                             particle.x2,
+                                             particle.x3,
                                              particle.phi[0],
                                              particle.phi[1],
                                              particle.phi[2],

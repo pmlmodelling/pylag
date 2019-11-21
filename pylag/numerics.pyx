@@ -158,9 +158,9 @@ cdef class StdNumMethod(NumMethod):
             return flag
                 
         # Compute new position
-        _particle_copy.xpos += _delta_X.x1
-        _particle_copy.ypos += _delta_X.x2
-        _particle_copy.zpos += _delta_X.x3
+        _particle_copy.x1 += _delta_X.x1
+        _particle_copy.x2 += _delta_X.x2
+        _particle_copy.x3 += _delta_X.x3
         flag = data_reader.find_host(particle, &_particle_copy)
         
         if flag == LAND_BDY_CROSSED:
@@ -173,7 +173,7 @@ cdef class StdNumMethod(NumMethod):
         # Restore to a fixed depth?
         if self._depth_restoring is True:
             zmax = data_reader.get_zmax(time+self._time_step, &_particle_copy)
-            _particle_copy.zpos = self._fixed_depth_below_surface + zmax
+            _particle_copy.x3 = self._fixed_depth_below_surface + zmax
             
             # Determine the new host zlayer
             flag = data_reader.set_vertical_grid_vars(time+self._time_step, &_particle_copy)
@@ -337,9 +337,9 @@ cdef class OS0NumMethod(NumMethod):
             return flag
 
         # Compute new position
-        _particle_copy_a.xpos += _delta_X.x1
-        _particle_copy_a.ypos += _delta_X.x2
-        _particle_copy_a.zpos += _delta_X.x3
+        _particle_copy_a.x1 += _delta_X.x1
+        _particle_copy_a.x2 += _delta_X.x2
+        _particle_copy_a.x3 += _delta_X.x3
         flag = data_reader.find_host(particle, &_particle_copy_a)
 
         if flag == LAND_BDY_CROSSED:
@@ -380,9 +380,9 @@ cdef class OS0NumMethod(NumMethod):
                 return flag
 
             # Compute new position
-            _particle_copy_b.xpos += _delta_X.x1
-            _particle_copy_b.ypos += _delta_X.x2
-            _particle_copy_b.zpos += _delta_X.x3
+            _particle_copy_b.x1 += _delta_X.x1
+            _particle_copy_b.x2 += _delta_X.x2
+            _particle_copy_b.x3 += _delta_X.x3
             flag = data_reader.find_host(&_particle_copy_a, &_particle_copy_b)
 
             if flag == LAND_BDY_CROSSED:
@@ -407,7 +407,7 @@ cdef class OS0NumMethod(NumMethod):
         # Restore to a fixed depth?
         if self._depth_restoring is True:
             zmax = data_reader.get_zmax(time+self._adv_time_step, &_particle_copy_b)
-            _particle_copy_b.zpos = self._fixed_depth_below_surface + zmax
+            _particle_copy_b.x3 = self._fixed_depth_below_surface + zmax
             
             # Determine the new host zlayer
             flag = data_reader.set_vertical_grid_vars(time+self._adv_time_step, &_particle_copy_b)
@@ -535,9 +535,9 @@ cdef class OS1NumMethod(NumMethod):
             return flag
 
         # Compute new position
-        _particle_copy_a.xpos += _delta_X.x1
-        _particle_copy_a.ypos += _delta_X.x2
-        _particle_copy_a.zpos += _delta_X.x3
+        _particle_copy_a.x1 += _delta_X.x1
+        _particle_copy_a.x2 += _delta_X.x2
+        _particle_copy_a.x3 += _delta_X.x3
         flag = data_reader.find_host(particle, &_particle_copy_a)
 
         if flag == LAND_BDY_CROSSED:
@@ -577,9 +577,9 @@ cdef class OS1NumMethod(NumMethod):
             return flag
 
         # Compute new position
-        _particle_copy_b.xpos += _delta_X.x1
-        _particle_copy_b.ypos += _delta_X.x2
-        _particle_copy_b.zpos += _delta_X.x3
+        _particle_copy_b.x1 += _delta_X.x1
+        _particle_copy_b.x2 += _delta_X.x2
+        _particle_copy_b.x3 += _delta_X.x3
         flag = data_reader.find_host(&_particle_copy_a, &_particle_copy_b)
 
         if flag == LAND_BDY_CROSSED:
@@ -617,9 +617,9 @@ cdef class OS1NumMethod(NumMethod):
             return flag
 
         # Compute new position
-        _particle_copy_b.xpos += _delta_X.x1
-        _particle_copy_b.ypos += _delta_X.x2
-        _particle_copy_b.zpos += _delta_X.x3
+        _particle_copy_b.x1 += _delta_X.x1
+        _particle_copy_b.x2 += _delta_X.x2
+        _particle_copy_b.x3 += _delta_X.x3
         flag = data_reader.find_host(&_particle_copy_a, &_particle_copy_b)
 
         if flag == LAND_BDY_CROSSED:
@@ -637,7 +637,7 @@ cdef class OS1NumMethod(NumMethod):
         # Restore to a fixed depth?
         if self._depth_restoring is True:
             zmax = data_reader.get_zmax(t, &_particle_copy_b)
-            _particle_copy_b.zpos = self._fixed_depth_below_surface + zmax
+            _particle_copy_b.x3 = self._fixed_depth_below_surface + zmax
             
             # Determine the new host zlayer
             flag = data_reader.set_vertical_grid_vars(t, &_particle_copy_b)
@@ -801,8 +801,8 @@ cdef class AdvRK42DItMethod(ItMethod):
         
         # Stage 2
         t = time + 0.5 * self._time_step
-        _particle.xpos = particle.xpos + 0.5 * k1[0]
-        _particle.ypos = particle.ypos + 0.5 * k1[1]
+        _particle.x1 = particle.x1 + 0.5 * k1[0]
+        _particle.x2 = particle.x2 + 0.5 * k1[1]
         
         flag = data_reader.find_host(particle, &_particle)
 
@@ -824,8 +824,8 @@ cdef class AdvRK42DItMethod(ItMethod):
 
         # Stage 3
         t = time + 0.5 * self._time_step
-        _particle.xpos = particle.xpos + 0.5 * k2[0]
-        _particle.ypos = particle.ypos + 0.5 * k2[1]
+        _particle.x1 = particle.x1 + 0.5 * k2[0]
+        _particle.x2 = particle.x2 + 0.5 * k2[1]
         
         flag = data_reader.find_host(particle, &_particle)
 
@@ -846,8 +846,8 @@ cdef class AdvRK42DItMethod(ItMethod):
 
         # Stage 4
         t = time + self._time_step
-        _particle.xpos = particle.xpos + k3[0]
-        _particle.ypos = particle.ypos + k3[1]
+        _particle.x1 = particle.x1 + k3[0]
+        _particle.x2 = particle.x2 + k3[1]
 
         flag = data_reader.find_host(particle, &_particle)
 
@@ -968,9 +968,9 @@ cdef class AdvRK43DItMethod(ItMethod):
         
         # Stage 2
         t = time + 0.5 * self._time_step
-        _particle.xpos = particle.xpos + 0.5 * k1[0]
-        _particle.ypos = particle.ypos + 0.5 * k1[1]
-        _particle.zpos = particle.zpos + 0.5 * k1[2]
+        _particle.x1 = particle.x1 + 0.5 * k1[0]
+        _particle.x2 = particle.x2 + 0.5 * k1[1]
+        _particle.x3 = particle.x3 + 0.5 * k1[2]
         
         flag = data_reader.find_host(particle, &_particle)
 
@@ -998,9 +998,9 @@ cdef class AdvRK43DItMethod(ItMethod):
 
         # Stage 3
         t = time + 0.5 * self._time_step
-        _particle.xpos = particle.xpos + 0.5 * k2[0]
-        _particle.ypos = particle.ypos + 0.5 * k2[1]
-        _particle.zpos = particle.zpos + 0.5 * k2[2]
+        _particle.x1 = particle.x1 + 0.5 * k2[0]
+        _particle.x2 = particle.x2 + 0.5 * k2[1]
+        _particle.x3 = particle.x3 + 0.5 * k2[2]
         
         flag = data_reader.find_host(particle, &_particle)
 
@@ -1028,9 +1028,9 @@ cdef class AdvRK43DItMethod(ItMethod):
 
         # Stage 4
         t = time + self._time_step
-        _particle.xpos = particle.xpos + k3[0]
-        _particle.ypos = particle.ypos + k3[1]
-        _particle.zpos = particle.zpos + k3[2]
+        _particle.x1 = particle.x1 + k3[0]
+        _particle.x2 = particle.x2 + k3[1]
+        _particle.x3 = particle.x3 + k3[2]
 
         flag = data_reader.find_host(particle, &_particle)
 
@@ -1227,7 +1227,7 @@ cdef class DiffVisser1DItMethod(ItMethod):
         Marine Ecology Progress Series, 158, 275-281
         """
         cdef Particle _particle
-        cdef DTYPE_FLOAT_t zmin, zmax, zpos_offset
+        cdef DTYPE_FLOAT_t zmin, zmax, x3_offset
         cdef DTYPE_FLOAT_t Kh, Kh_prime
         cdef DTYPE_FLOAT_t vel[3]
 
@@ -1237,11 +1237,11 @@ cdef class DiffVisser1DItMethod(ItMethod):
 
         data_reader.get_velocity(time, particle, vel)
         
-        zpos_offset = particle.zpos + 0.5 * (vel[2] + Kh_prime) * self._time_step
+        x3_offset = particle.x3 + 0.5 * (vel[2] + Kh_prime) * self._time_step
 
         # Create a copy of the particle and move it to the offset position
         _particle = particle[0]
-        _particle.zpos = zpos_offset
+        _particle.x3 = x3_offset
 
         # Set vertical grid vars.
         flag = data_reader.set_vertical_grid_vars(time, &_particle)

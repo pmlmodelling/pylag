@@ -322,7 +322,7 @@ cdef class FVCOMDataReader(DataReader):
         
         while True:
             # Barycentric coordinates
-            self._get_phi(particle.xpos, particle.ypos, guess, phi)
+            self._get_phi(particle.x1, particle.x2, guess, phi)
 
             # Check to see if the particle is in the current element
             phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
@@ -447,10 +447,10 @@ cdef class FVCOMDataReader(DataReader):
 
         # Construct arrays to hold the coordinates of the particle's previous
         # position vector and its new position vector
-        x3[0] = particle_old.xpos; x3[1] = particle_old.ypos
-        x4[0] = particle_new.xpos; x4[1] = particle_new.ypos
+        x3[0] = particle_old.x1; x3[1] = particle_old.x2
+        x4[0] = particle_new.x1; x4[1] = particle_new.x2
 
-        # Start the search using the host known to contain (xpos_old, ypos_old)
+        # Start the search using the host known to contain (x1_old, x2_old)
         elem = particle_old.host_horizontal_elem
 
         # Set last_elem equal to elem in the first instance
@@ -563,7 +563,7 @@ cdef class FVCOMDataReader(DataReader):
         
         for guess in xrange(self._n_elems):
             # Barycentric coordinates
-            self._get_phi(particle.xpos, particle.ypos, guess, phi)
+            self._get_phi(particle.x1, particle.x2, guess, phi)
 
             # Check to see if the particle is in the current element
             phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
@@ -661,8 +661,8 @@ cdef class FVCOMDataReader(DataReader):
         
         # Construct arrays to hold the coordinates of the particle's previous
         # position vector and its new position vector
-        x3[0] = particle_old.xpos; x3[1] = particle_old.ypos
-        x4[0] = particle_new.xpos; x4[1] = particle_new.ypos
+        x3[0] = particle_old.x1; x3[1] = particle_old.x2
+        x4[0] = particle_new.x1; x4[1] = particle_new.x2
 
         # Extract nodal coordinates
         for i in xrange(3):
@@ -712,8 +712,8 @@ cdef class FVCOMDataReader(DataReader):
 
         Move the particle to its host element's centroid.
         """
-        particle.xpos = self._xc[particle.host_horizontal_elem]
-        particle.ypos = self._yc[particle.host_horizontal_elem]
+        particle.x1 = self._xc[particle.host_horizontal_elem]
+        particle.x2 = self._yc[particle.host_horizontal_elem]
         self.set_local_coordinates(particle)
         return
 
@@ -733,7 +733,7 @@ cdef class FVCOMDataReader(DataReader):
         
         cdef DTYPE_INT_t i
         
-        self._get_phi(particle.xpos, particle.ypos, 
+        self._get_phi(particle.x1, particle.x2, 
                 particle.host_horizontal_elem, phi)
                 
         # Check for negative values.
@@ -757,7 +757,7 @@ cdef class FVCOMDataReader(DataReader):
                                             Particle *particle) except INT_ERR:
         """ Find the host depth layer
         
-        Find the depth layer containing zpos. In FVCOM, Sigma levels are counted
+        Find the depth layer containing x3. In FVCOM, Sigma levels are counted
         up from 0 starting at the surface, where sigma = 0, and moving downwards
         to the sea floor where sigma = -1. The current sigma layer is
         found by determining the two sigma levels that bound the given z
@@ -774,7 +774,7 @@ cdef class FVCOMDataReader(DataReader):
         # Compute sigma
         h = self.get_zmin(time, particle)
         zeta = self.get_zmax(time, particle)
-        sigma = cartesian_to_sigma_coords(particle.zpos, h, zeta)
+        sigma = cartesian_to_sigma_coords(particle.x3, h, zeta)
 
         # Loop over all levels to find the host z layer
         for k in xrange(self._n_siglay):
@@ -793,12 +793,12 @@ cdef class FVCOMDataReader(DataReader):
                 # layer
                 sigma_test = self._interp_on_sigma_layer(particle.phi, particle.host_horizontal_elem, k)
 
-                # Is zpos in the top or bottom boundary layer?
+                # Is x3 in the top or bottom boundary layer?
                 if (k == 0 and sigma >= sigma_test) or (k == self._n_siglay - 1 and sigma <= sigma_test):
                         particle.in_vertical_boundary_layer = True
                         return IN_DOMAIN
 
-                # zpos bounded by upper and lower sigma layers
+                # x3 bounded by upper and lower sigma layers
                 particle.in_vertical_boundary_layer = False
                 if sigma >= sigma_test:
                     particle.k_upper_layer = k - 1
@@ -845,7 +845,7 @@ cdef class FVCOMDataReader(DataReader):
         cdef int i # Loop counters
         cdef int vertex # Vertex identifier  
         cdef DTYPE_FLOAT_t h_tri[N_VERTICES] # Bathymetry at nodes
-        cdef DTYPE_FLOAT_t h # Bathymetry at (xpos, ypos)
+        cdef DTYPE_FLOAT_t h # Bathymetry at (x1, x2)
 
         for i in xrange(N_VERTICES):
             vertex = self._nv[i,particle.host_horizontal_elem]
@@ -876,7 +876,7 @@ cdef class FVCOMDataReader(DataReader):
         """
         cdef int i # Loop counters
         cdef int vertex # Vertex identifier
-        cdef DTYPE_FLOAT_t zeta # Sea surface elevation at (t, xpos, ypos)
+        cdef DTYPE_FLOAT_t zeta # Sea surface elevation at (t, x1, x2)
 
         # Intermediate arrays
         cdef DTYPE_FLOAT_t zeta_tri_t_last[N_VERTICES]
@@ -956,7 +956,7 @@ cdef class FVCOMDataReader(DataReader):
         var : float
             The interpolated value of the variable at the specified point in time and space.
         """
-        cdef DTYPE_FLOAT_t var # Environmental variable at (t, xpos, ypos, zpos)
+        cdef DTYPE_FLOAT_t var # Environmental variable at (t, x1, x2, x3)
 
         if var_name in self.env_var_names:
             if var_name == 'thetao':
@@ -991,7 +991,7 @@ cdef class FVCOMDataReader(DataReader):
         viscofh : float
             The interpolated value of the horizontal eddy viscosity at the specified point in time and space.
         """
-        cdef DTYPE_FLOAT_t var # viscofh at (t, xpos, ypos, zpos)
+        cdef DTYPE_FLOAT_t var # viscofh at (t, x1, x2, x3)
 
         var = self._get_variable(self._viscofh_last, self._viscofh_next, time, particle)
 
@@ -1526,9 +1526,9 @@ cdef class FVCOMDataReader(DataReader):
                     vc1.push_back(interp.linear_interp(time_fraction, self._v_last[particle.k_layer, neighbour], self._v_next[particle.k_layer, neighbour]))
                     wc1.push_back(interp.linear_interp(time_fraction, self._w_last[particle.k_layer, neighbour], self._w_next[particle.k_layer, neighbour]))
 
-            vel[0] = interp.shepard_interpolation(particle.xpos, particle.ypos, xc, yc, uc1)
-            vel[1] = interp.shepard_interpolation(particle.xpos, particle.ypos, xc, yc, vc1)
-            vel[2] = interp.shepard_interpolation(particle.xpos, particle.ypos, xc, yc, wc1)
+            vel[0] = interp.shepard_interpolation(particle.x1, particle.x2, xc, yc, uc1)
+            vel[1] = interp.shepard_interpolation(particle.x1, particle.x2, xc, yc, vc1)
+            vel[2] = interp.shepard_interpolation(particle.x1, particle.x2, xc, yc, wc1)
             return  
         else:
             xc.push_back(self._xc[particle.host_horizontal_elem])
@@ -1552,14 +1552,14 @@ cdef class FVCOMDataReader(DataReader):
                     wc2.push_back(interp.linear_interp(time_fraction, self._w_last[particle.k_upper_layer, neighbour], self._w_next[particle.k_upper_layer, neighbour]))
 
         # ... lower bounding sigma layer
-        up1 = interp.shepard_interpolation(particle.xpos, particle.ypos, xc, yc, uc1)
-        vp1 = interp.shepard_interpolation(particle.xpos, particle.ypos, xc, yc, vc1)
-        wp1 = interp.shepard_interpolation(particle.xpos, particle.ypos, xc, yc, wc1)
+        up1 = interp.shepard_interpolation(particle.x1, particle.x2, xc, yc, uc1)
+        vp1 = interp.shepard_interpolation(particle.x1, particle.x2, xc, yc, vc1)
+        wp1 = interp.shepard_interpolation(particle.x1, particle.x2, xc, yc, wc1)
 
         # ... upper bounding sigma layer
-        up2 = interp.shepard_interpolation(particle.xpos, particle.ypos, xc, yc, uc2)
-        vp2 = interp.shepard_interpolation(particle.xpos, particle.ypos, xc, yc, vc2)
-        wp2 = interp.shepard_interpolation(particle.xpos, particle.ypos, xc, yc, wc2)
+        up2 = interp.shepard_interpolation(particle.x1, particle.x2, xc, yc, uc2)
+        vp2 = interp.shepard_interpolation(particle.x1, particle.x2, xc, yc, vc2)
+        wp2 = interp.shepard_interpolation(particle.x1, particle.x2, xc, yc, wc2)
 
         # Vertical interpolation
         vel[0] = interp.linear_interp(particle.omega_layers, up1, up2)
@@ -1665,9 +1665,9 @@ cdef class FVCOMDataReader(DataReader):
                     vc1[j] = interp.linear_interp(time_fraction, self._v_last[particle.k_layer, neighbour], self._v_next[particle.k_layer, neighbour])
                     wc1[j] = interp.linear_interp(time_fraction, self._w_last[particle.k_layer, neighbour], self._w_next[particle.k_layer, neighbour])
                 
-                vel[0] = self._interpolate_vel_between_elements(particle.xpos, particle.ypos, particle.host_horizontal_elem, uc1)
-                vel[1] = self._interpolate_vel_between_elements(particle.xpos, particle.ypos, particle.host_horizontal_elem, vc1)
-                vel[2] = self._interpolate_vel_between_elements(particle.xpos, particle.ypos, particle.host_horizontal_elem, wc1)
+                vel[0] = self._interpolate_vel_between_elements(particle.x1, particle.x2, particle.host_horizontal_elem, uc1)
+                vel[1] = self._interpolate_vel_between_elements(particle.x1, particle.x2, particle.host_horizontal_elem, vc1)
+                vel[2] = self._interpolate_vel_between_elements(particle.x1, particle.x2, particle.host_horizontal_elem, wc1)
                 return  
             else:
                 uc1[0] = interp.linear_interp(time_fraction, self._u_last[particle.k_lower_layer, particle.host_horizontal_elem], self._u_next[particle.k_lower_layer, particle.host_horizontal_elem])
@@ -1687,14 +1687,14 @@ cdef class FVCOMDataReader(DataReader):
                     wc2[j] = interp.linear_interp(time_fraction, self._w_last[particle.k_upper_layer, neighbour], self._w_next[particle.k_upper_layer, neighbour])
             
             # ... lower bounding sigma layer
-            up1 = self._interpolate_vel_between_elements(particle.xpos, particle.ypos, particle.host_horizontal_elem, uc1)
-            vp1 = self._interpolate_vel_between_elements(particle.xpos, particle.ypos, particle.host_horizontal_elem, vc1)
-            wp1 = self._interpolate_vel_between_elements(particle.xpos, particle.ypos, particle.host_horizontal_elem, wc1)
+            up1 = self._interpolate_vel_between_elements(particle.x1, particle.x2, particle.host_horizontal_elem, uc1)
+            vp1 = self._interpolate_vel_between_elements(particle.x1, particle.x2, particle.host_horizontal_elem, vc1)
+            wp1 = self._interpolate_vel_between_elements(particle.x1, particle.x2, particle.host_horizontal_elem, wc1)
 
             # ... upper bounding sigma layer
-            up2 = self._interpolate_vel_between_elements(particle.xpos, particle.ypos, particle.host_horizontal_elem, uc2)
-            vp2 = self._interpolate_vel_between_elements(particle.xpos, particle.ypos, particle.host_horizontal_elem, vc2)
-            wp2 = self._interpolate_vel_between_elements(particle.xpos, particle.ypos, particle.host_horizontal_elem, wc2)
+            up2 = self._interpolate_vel_between_elements(particle.x1, particle.x2, particle.host_horizontal_elem, uc2)
+            vp2 = self._interpolate_vel_between_elements(particle.x1, particle.x2, particle.host_horizontal_elem, vc2)
+            wp2 = self._interpolate_vel_between_elements(particle.x1, particle.x2, particle.host_horizontal_elem, wc2)
             
         # Vertical interpolation
         vel[0] = interp.linear_interp(particle.omega_layers, up1, up2)
@@ -1817,16 +1817,16 @@ cdef class FVCOMDataReader(DataReader):
 
         return
 
-    cdef void _get_phi(self, DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos,
+    cdef void _get_phi(self, DTYPE_FLOAT_t x1, DTYPE_FLOAT_t x2,
             DTYPE_INT_t host, DTYPE_FLOAT_t phi[N_VERTICES]) except *:
         """ Get barycentric coordinates.
         
         Parameters:
         -----------
-        xpos : float
+        x1 : float
             x-position in cartesian coordinates.
         
-        ypos : float
+        x2 : float
             y-position in cartesian coordinates.
         
         host : int
@@ -1851,7 +1851,7 @@ cdef class FVCOMDataReader(DataReader):
             y_tri[i] = self._y[vertex]
 
         # Calculate barycentric coordinates
-        interp.get_barycentric_coords(xpos, ypos, x_tri, y_tri, phi)
+        interp.get_barycentric_coords(x1, x2, x_tri, y_tri, phi)
 
     cdef void _get_grad_phi(self, DTYPE_INT_t host,
             DTYPE_FLOAT_t dphi_dx[N_VERTICES],
@@ -1958,19 +1958,19 @@ cdef class FVCOMDataReader(DataReader):
         return sigma
 
 #    cdef DTYPE_FLOAT_t _interpolate_vel_between_elements(self, 
-#            DTYPE_FLOAT_t xpos, DTYPE_FLOAT_t ypos, DTYPE_INT_t host, 
+#            DTYPE_FLOAT_t x1, DTYPE_FLOAT_t x2, DTYPE_INT_t host, 
 #            DTYPE_FLOAT_t vel_elem[N_NEIGH_ELEMS]) except FLOAT_ERR:
 #        """Interpolate between elements using linear least squares interpolation.
 #        
-#        Use the a1u and a2u interpolants to compute the velocity at xpos and
-#        ypos.
+#        Use the a1u and a2u interpolants to compute the velocity at x1 and
+#        x2.
 #        
 #        Parameters:
 #        -----------
-#        xpos : float
+#        x1 : float
 #            x position in cartesian coordinates.
 #
-#        ypos : float
+#        x2 : float
 #            y position in cartesian coordinates.
 #        
 #        host : int
@@ -1985,8 +1985,8 @@ cdef class FVCOMDataReader(DataReader):
 #        cdef DTYPE_FLOAT_t dudx, dudy
 #        
 #        # Interpolate horizontally
-#        rx = xpos - self._xc[host]
-#        ry = ypos - self._yc[host]
+#        rx = x1 - self._xc[host]
+#        ry = x2 - self._yc[host]
 #
 #        dudx = 0.0
 #        dudy = 0.0
