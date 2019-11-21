@@ -42,9 +42,9 @@ cdef class OPTModel:
     
     # Seed particle data (as read from file)
     cdef DTYPE_INT_t[:] _group_ids
-    cdef DTYPE_FLOAT_t[:] _x_positions
-    cdef DTYPE_FLOAT_t[:] _y_positions
-    cdef DTYPE_FLOAT_t[:] _z_positions
+    cdef DTYPE_FLOAT_t[:] _x1_positions
+    cdef DTYPE_FLOAT_t[:] _x2_positions
+    cdef DTYPE_FLOAT_t[:] _x3_positions
 
     def __init__(self, config, data_reader):
         """ Initialise class data members
@@ -73,7 +73,7 @@ cdef class OPTModel:
         except (configparser.NoSectionError, configparser.NoOptionError) as e:
             self.environmental_variables = []
 
-    def set_particle_data(self, group_ids, x_positions, y_positions, z_positions):
+    def set_particle_data(self, group_ids, x1_positions, x2_positions, x3_positions):
         """Initialise memory views for data describing the particle seed.
 
         Parameters:
@@ -81,19 +81,19 @@ cdef class OPTModel:
         group_ids : ndarray, int
             Particle groups IDs.
 
-        x_positions : ndarray, float
+        x1_positions : ndarray, float
             Particle x-positions.
 
-        y_positions : ndarray, float
+        x2_positions : ndarray, float
             Particle y-positions.
 
-        z_positions : ndarray, float
+        x3_positions : ndarray, float
             Particle z-positions.
         """
         self._group_ids = group_ids
-        self._x_positions = x_positions
-        self._y_positions = y_positions
-        self._z_positions = z_positions
+        self._x1_positions = x1_positions
+        self._x2_positions = x2_positions
+        self._x3_positions = x3_positions
 
     def setup_input_data_access(self, start_datetime, end_datetime):
         """Setup access to FVCOM time dependent variables.
@@ -216,12 +216,12 @@ cdef class OPTModel:
         guess = None
         particles_in_domain = 0
         id = 0
-        for group, x, y, z in zip(self._group_ids, self._x_positions, self._y_positions, self._z_positions):
+        for group, x1, x2, x3 in zip(self._group_ids, self._x1_positions, self._x2_positions, self._x3_positions):
             # Unique particle ID.
             id += 1
 
             # Create particle
-            particle_smart_ptr = ParticleSmartPtr(group_id=group, xpos=x-xmin, ypos=y-ymin, zpos=z, id=id)
+            particle_smart_ptr = ParticleSmartPtr(group_id=group, xpos=x1-xmin, ypos=x2-ymin, zpos=x3, id=id)
 
             # Find particle host element
             if guess is not None:
