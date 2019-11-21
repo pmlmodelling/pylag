@@ -1470,20 +1470,20 @@ cdef class DiffMilstein2DItMethod(ItMethod):
             always be zero since the method does not check for boundary
             crossings.
         """
-        cdef DTYPE_FLOAT_t deviate_x, deviate_y
+        cdef DTYPE_FLOAT_t deviate_x1, deviate_x2
         cdef DTYPE_FLOAT_t Ah
         cdef DTYPE_FLOAT_t Ah_prime[2]
 
         Ah = data_reader.get_horizontal_eddy_viscosity(time, particle)
         data_reader.get_horizontal_eddy_viscosity_derivative(time, particle, Ah_prime)
 
-        deviate_x = random.gauss(0.0, 1.0)
-        deviate_y = random.gauss(0.0, 1.0)
+        deviate_x1 = random.gauss(0.0, 1.0)
+        deviate_x2 = random.gauss(0.0, 1.0)
 
-        delta_X.x1  = 0.5 * Ah_prime[0] * self._time_step * (deviate_x*deviate_x + 1.0) \
-                + sqrt(2.0 * Ah * self._time_step) * deviate_x
-        delta_X.x2  = 0.5 * Ah_prime[1] * self._time_step * (deviate_y*deviate_y + 1.0) \
-                + sqrt(2.0 * Ah * self._time_step) * deviate_y
+        delta_X.x1  = 0.5 * Ah_prime[0] * self._time_step * (deviate_x1*deviate_x1 + 1.0) \
+                + sqrt(2.0 * Ah * self._time_step) * deviate_x1
+        delta_X.x2  = 0.5 * Ah_prime[1] * self._time_step * (deviate_x2*deviate_x2 + 1.0) \
+                + sqrt(2.0 * Ah * self._time_step) * deviate_x2
 
         return 0
 
@@ -1527,7 +1527,7 @@ cdef class DiffMilstein3DItMethod(ItMethod):
             always be zero since the method does not check for boundary
             crossings.
         """
-        cdef DTYPE_FLOAT_t deviate_x, deviate_y, deviate_z
+        cdef DTYPE_FLOAT_t deviate_x1, deviate_x2, deviate_x3
         cdef DTYPE_FLOAT_t Ah
         cdef DTYPE_FLOAT_t Kh
         cdef DTYPE_FLOAT_t Ah_prime[2]
@@ -1539,16 +1539,16 @@ cdef class DiffMilstein3DItMethod(ItMethod):
         Kh = data_reader.get_vertical_eddy_diffusivity(time, particle)
         Kh_prime = data_reader.get_vertical_eddy_diffusivity_derivative(time, particle)
 
-        deviate_x = random.gauss(0.0, 1.0)
-        deviate_y = random.gauss(0.0, 1.0)
-        deviate_z = random.gauss(0.0, 1.0)
+        deviate_x1 = random.gauss(0.0, 1.0)
+        deviate_x2 = random.gauss(0.0, 1.0)
+        deviate_x3 = random.gauss(0.0, 1.0)
 
-        delta_X.x1  = 0.5 * Ah_prime[0] * self._time_step * (deviate_x*deviate_x + 1.0) \
-                + sqrt(2.0 * Ah * self._time_step) * deviate_x
-        delta_X.x2  = 0.5 * Ah_prime[1] * self._time_step * (deviate_y*deviate_y + 1.0) \
-                + sqrt(2.0 * Ah * self._time_step) * deviate_y
-        delta_X.x3  = 0.5 * Kh_prime * self._time_step * (deviate_z*deviate_z + 1.0) \
-                + sqrt(2.0 * Kh * self._time_step) * deviate_z
+        delta_X.x1  = 0.5 * Ah_prime[0] * self._time_step * (deviate_x1*deviate_x1 + 1.0) \
+                + sqrt(2.0 * Ah * self._time_step) * deviate_x1
+        delta_X.x2  = 0.5 * Ah_prime[1] * self._time_step * (deviate_x2*deviate_x2 + 1.0) \
+                + sqrt(2.0 * Ah * self._time_step) * deviate_x2
+        delta_X.x3  = 0.5 * Kh_prime * self._time_step * (deviate_x3*deviate_x3 + 1.0) \
+                + sqrt(2.0 * Kh * self._time_step) * deviate_x3
 
         return 0
 
@@ -1597,7 +1597,7 @@ cdef class AdvDiffMilstein3DItMethod(ItMethod):
             crossings.
         """
         cdef DTYPE_FLOAT_t vel[3]
-        cdef DTYPE_FLOAT_t deviate_x, deviate_y, deviate_z
+        cdef DTYPE_FLOAT_t deviate_x1, deviate_x2, deviate_x3
         cdef DTYPE_FLOAT_t Ah
         cdef DTYPE_FLOAT_t Kh
         cdef DTYPE_FLOAT_t Ah_prime[2]
@@ -1611,21 +1611,21 @@ cdef class AdvDiffMilstein3DItMethod(ItMethod):
         Kh = data_reader.get_vertical_eddy_diffusivity(time, particle)
         Kh_prime = data_reader.get_vertical_eddy_diffusivity_derivative(time, particle)
 
-        deviate_x = random.gauss(0.0, 1.0)
-        deviate_y = random.gauss(0.0, 1.0)
-        deviate_z = random.gauss(0.0, 1.0)
+        deviate_x1 = random.gauss(0.0, 1.0)
+        deviate_x2 = random.gauss(0.0, 1.0)
+        deviate_x3 = random.gauss(0.0, 1.0)
 
         delta_X.x1  = vel[0] * self._time_step \
-                + 0.5 * Ah_prime[0] * self._time_step * (deviate_x*deviate_x + 1.0) \
-                + sqrt(2.0 * Ah * self._time_step) * deviate_x
+                + 0.5 * Ah_prime[0] * self._time_step * (deviate_x1*deviate_x1 + 1.0) \
+                + sqrt(2.0 * Ah * self._time_step) * deviate_x1
 
         delta_X.x2  = vel[1] * self._time_step \
-                + 0.5 * Ah_prime[1] * self._time_step * (deviate_y*deviate_y + 1.0) \
-                + sqrt(2.0 * Ah * self._time_step) * deviate_y
+                + 0.5 * Ah_prime[1] * self._time_step * (deviate_x2*deviate_x2 + 1.0) \
+                + sqrt(2.0 * Ah * self._time_step) * deviate_x2
 
         delta_X.x3  = vel[2] * self._time_step \
-                + 0.5 * Kh_prime * self._time_step * (deviate_z*deviate_z + 1.0) \
-                + sqrt(2.0 * Kh * self._time_step) * deviate_z
+                + 0.5 * Kh_prime * self._time_step * (deviate_x3*deviate_x3 + 1.0) \
+                + sqrt(2.0 * Kh * self._time_step) * deviate_x3
 
         return 0
 
