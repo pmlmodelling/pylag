@@ -158,9 +158,9 @@ cdef class StdNumMethod(NumMethod):
             return flag
                 
         # Compute new position
-        _particle_copy.xpos += _delta_X.x
-        _particle_copy.ypos += _delta_X.y
-        _particle_copy.zpos += _delta_X.z
+        _particle_copy.xpos += _delta_X.x1
+        _particle_copy.ypos += _delta_X.x2
+        _particle_copy.zpos += _delta_X.x3
         flag = data_reader.find_host(particle, &_particle_copy)
         
         if flag == LAND_BDY_CROSSED:
@@ -337,9 +337,9 @@ cdef class OS0NumMethod(NumMethod):
             return flag
 
         # Compute new position
-        _particle_copy_a.xpos += _delta_X.x
-        _particle_copy_a.ypos += _delta_X.y
-        _particle_copy_a.zpos += _delta_X.z
+        _particle_copy_a.xpos += _delta_X.x1
+        _particle_copy_a.ypos += _delta_X.x2
+        _particle_copy_a.zpos += _delta_X.x3
         flag = data_reader.find_host(particle, &_particle_copy_a)
 
         if flag == LAND_BDY_CROSSED:
@@ -380,9 +380,9 @@ cdef class OS0NumMethod(NumMethod):
                 return flag
 
             # Compute new position
-            _particle_copy_b.xpos += _delta_X.x
-            _particle_copy_b.ypos += _delta_X.y
-            _particle_copy_b.zpos += _delta_X.z
+            _particle_copy_b.xpos += _delta_X.x1
+            _particle_copy_b.ypos += _delta_X.x2
+            _particle_copy_b.zpos += _delta_X.x3
             flag = data_reader.find_host(&_particle_copy_a, &_particle_copy_b)
 
             if flag == LAND_BDY_CROSSED:
@@ -535,9 +535,9 @@ cdef class OS1NumMethod(NumMethod):
             return flag
 
         # Compute new position
-        _particle_copy_a.xpos += _delta_X.x
-        _particle_copy_a.ypos += _delta_X.y
-        _particle_copy_a.zpos += _delta_X.z
+        _particle_copy_a.xpos += _delta_X.x1
+        _particle_copy_a.ypos += _delta_X.x2
+        _particle_copy_a.zpos += _delta_X.x3
         flag = data_reader.find_host(particle, &_particle_copy_a)
 
         if flag == LAND_BDY_CROSSED:
@@ -577,9 +577,9 @@ cdef class OS1NumMethod(NumMethod):
             return flag
 
         # Compute new position
-        _particle_copy_b.xpos += _delta_X.x
-        _particle_copy_b.ypos += _delta_X.y
-        _particle_copy_b.zpos += _delta_X.z
+        _particle_copy_b.xpos += _delta_X.x1
+        _particle_copy_b.ypos += _delta_X.x2
+        _particle_copy_b.zpos += _delta_X.x3
         flag = data_reader.find_host(&_particle_copy_a, &_particle_copy_b)
 
         if flag == LAND_BDY_CROSSED:
@@ -617,9 +617,9 @@ cdef class OS1NumMethod(NumMethod):
             return flag
 
         # Compute new position
-        _particle_copy_b.xpos += _delta_X.x
-        _particle_copy_b.ypos += _delta_X.y
-        _particle_copy_b.zpos += _delta_X.z
+        _particle_copy_b.xpos += _delta_X.x1
+        _particle_copy_b.ypos += _delta_X.x2
+        _particle_copy_b.zpos += _delta_X.x3
         flag = data_reader.find_host(&_particle_copy_a, &_particle_copy_b)
 
         if flag == LAND_BDY_CROSSED:
@@ -868,8 +868,8 @@ cdef class AdvRK42DItMethod(ItMethod):
             k4[i] = self._time_step * vel[i]
 
         # Sum changes and save
-        delta_X.x += (k1[0] + 2.0*k2[0] + 2.0*k3[0] + k4[0])/6.0
-        delta_X.y += (k1[1] + 2.0*k2[1] + 2.0*k3[1] + k4[1])/6.0
+        delta_X.x1 += (k1[0] + 2.0*k2[0] + 2.0*k3[0] + k4[0])/6.0
+        delta_X.x2 += (k1[1] + 2.0*k2[1] + 2.0*k3[1] + k4[1])/6.0
         return flag
 
 cdef class AdvRK43DItMethod(ItMethod):
@@ -1057,9 +1057,9 @@ cdef class AdvRK43DItMethod(ItMethod):
             k4[i] = self._time_step * vel[i]
 
         # Sum changes and save
-        delta_X.x += (k1[0] + 2.0*k2[0] + 2.0*k3[0] + k4[0])/6.0
-        delta_X.y += (k1[1] + 2.0*k2[1] + 2.0*k3[1] + k4[1])/6.0
-        delta_X.z += (k1[2] + 2.0*k2[2] + 2.0*k3[2] + k4[2])/6.0
+        delta_X.x1 += (k1[0] + 2.0*k2[0] + 2.0*k3[0] + k4[0])/6.0
+        delta_X.x2 += (k1[1] + 2.0*k2[1] + 2.0*k3[1] + k4[1])/6.0
+        delta_X.x3 += (k1[2] + 2.0*k2[2] + 2.0*k3[2] + k4[2])/6.0
 
         return flag
 
@@ -1109,7 +1109,7 @@ cdef class DiffNaive1DItMethod(ItMethod):
 
         Kh = data_reader.get_vertical_eddy_diffusivity(time, particle)
         
-        delta_X.z += sqrt(2.0*Kh*self._time_step) * random.gauss(0.0, 1.0)
+        delta_X.x3 += sqrt(2.0*Kh*self._time_step) * random.gauss(0.0, 1.0)
         
         return 0
 
@@ -1161,7 +1161,7 @@ cdef class DiffEuler1DItMethod(ItMethod):
         Kh = data_reader.get_vertical_eddy_diffusivity(time, particle)
         Kh_prime = data_reader.get_vertical_eddy_diffusivity_derivative(time, particle)
 
-        delta_X.z = Kh_prime * self._time_step + sqrt(2.0*Kh*self._time_step) * random.gauss(0.0, 1.0)
+        delta_X.x3 = Kh_prime * self._time_step + sqrt(2.0*Kh*self._time_step) * random.gauss(0.0, 1.0)
 
         return 0
 
@@ -1257,7 +1257,7 @@ cdef class DiffVisser1DItMethod(ItMethod):
         # Compute Kh at the offset position
         Kh = data_reader.get_vertical_eddy_diffusivity(time, &_particle)
 
-        delta_X.z = Kh_prime * self._time_step + sqrt(2.0*Kh*self._time_step) * random.gauss(0.0, 1.0)
+        delta_X.x3 = Kh_prime * self._time_step + sqrt(2.0*Kh*self._time_step) * random.gauss(0.0, 1.0)
 
         return 0
 
@@ -1316,7 +1316,7 @@ cdef class DiffMilstein1DItMethod(ItMethod):
         Kh = data_reader.get_vertical_eddy_diffusivity(time, particle)
         Kh_prime = data_reader.get_vertical_eddy_diffusivity_derivative(time, particle)
 
-        delta_X.z  = 0.5 * Kh_prime * self._time_step * (deviate*deviate + 1.0) + sqrt(2.0 * Kh * self._time_step) * deviate
+        delta_X.x3  = 0.5 * Kh_prime * self._time_step * (deviate*deviate + 1.0) + sqrt(2.0 * Kh * self._time_step) * deviate
 
         return 0
 
@@ -1370,8 +1370,8 @@ cdef class DiffConst2DItMethod(ItMethod):
             always be zero since the method does not check for boundary
             crossings.
         """
-        delta_X.x += sqrt(2.0*self._Ah*self._time_step) * random.gauss(0.0, 1.0)
-        delta_X.y += sqrt(2.0*self._Ah*self._time_step) * random.gauss(0.0, 1.0)
+        delta_X.x1 += sqrt(2.0*self._Ah*self._time_step) * random.gauss(0.0, 1.0)
+        delta_X.x2 += sqrt(2.0*self._Ah*self._time_step) * random.gauss(0.0, 1.0)
         
         return 0
 
@@ -1425,8 +1425,8 @@ cdef class DiffNaive2DItMethod(ItMethod):
         Ah = data_reader.get_horizontal_eddy_viscosity(time, particle)
         
         # Change in position
-        delta_X.x += sqrt(2.0*Ah*self._time_step) * random.gauss(0.0, 1.0)
-        delta_X.y += sqrt(2.0*Ah*self._time_step) * random.gauss(0.0, 1.0)
+        delta_X.x1 += sqrt(2.0*Ah*self._time_step) * random.gauss(0.0, 1.0)
+        delta_X.x2 += sqrt(2.0*Ah*self._time_step) * random.gauss(0.0, 1.0)
         
         return 0
 
@@ -1480,9 +1480,9 @@ cdef class DiffMilstein2DItMethod(ItMethod):
         deviate_x = random.gauss(0.0, 1.0)
         deviate_y = random.gauss(0.0, 1.0)
 
-        delta_X.x  = 0.5 * Ah_prime[0] * self._time_step * (deviate_x*deviate_x + 1.0) \
+        delta_X.x1  = 0.5 * Ah_prime[0] * self._time_step * (deviate_x*deviate_x + 1.0) \
                 + sqrt(2.0 * Ah * self._time_step) * deviate_x
-        delta_X.y  = 0.5 * Ah_prime[1] * self._time_step * (deviate_y*deviate_y + 1.0) \
+        delta_X.x2  = 0.5 * Ah_prime[1] * self._time_step * (deviate_y*deviate_y + 1.0) \
                 + sqrt(2.0 * Ah * self._time_step) * deviate_y
 
         return 0
@@ -1543,11 +1543,11 @@ cdef class DiffMilstein3DItMethod(ItMethod):
         deviate_y = random.gauss(0.0, 1.0)
         deviate_z = random.gauss(0.0, 1.0)
 
-        delta_X.x  = 0.5 * Ah_prime[0] * self._time_step * (deviate_x*deviate_x + 1.0) \
+        delta_X.x1  = 0.5 * Ah_prime[0] * self._time_step * (deviate_x*deviate_x + 1.0) \
                 + sqrt(2.0 * Ah * self._time_step) * deviate_x
-        delta_X.y  = 0.5 * Ah_prime[1] * self._time_step * (deviate_y*deviate_y + 1.0) \
+        delta_X.x2  = 0.5 * Ah_prime[1] * self._time_step * (deviate_y*deviate_y + 1.0) \
                 + sqrt(2.0 * Ah * self._time_step) * deviate_y
-        delta_X.z  = 0.5 * Kh_prime * self._time_step * (deviate_z*deviate_z + 1.0) \
+        delta_X.x3  = 0.5 * Kh_prime * self._time_step * (deviate_z*deviate_z + 1.0) \
                 + sqrt(2.0 * Kh * self._time_step) * deviate_z
 
         return 0
@@ -1615,15 +1615,15 @@ cdef class AdvDiffMilstein3DItMethod(ItMethod):
         deviate_y = random.gauss(0.0, 1.0)
         deviate_z = random.gauss(0.0, 1.0)
 
-        delta_X.x  = vel[0] * self._time_step \
+        delta_X.x1  = vel[0] * self._time_step \
                 + 0.5 * Ah_prime[0] * self._time_step * (deviate_x*deviate_x + 1.0) \
                 + sqrt(2.0 * Ah * self._time_step) * deviate_x
 
-        delta_X.y  = vel[1] * self._time_step \
+        delta_X.x2  = vel[1] * self._time_step \
                 + 0.5 * Ah_prime[1] * self._time_step * (deviate_y*deviate_y + 1.0) \
                 + sqrt(2.0 * Ah * self._time_step) * deviate_y
 
-        delta_X.z  = vel[2] * self._time_step \
+        delta_X.x3  = vel[2] * self._time_step \
                 + 0.5 * Kh_prime * self._time_step * (deviate_z*deviate_z + 1.0) \
                 + sqrt(2.0 * Kh * self._time_step) * deviate_z
 
