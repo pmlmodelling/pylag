@@ -87,10 +87,6 @@ _variable_units['depth'] = 'm'
 _variable_long_names['depth'] = 'depth'
 
 
-# Vertical coordinates
-# --------------------
-
-
 # Environmental variables
 # -----------------------
 
