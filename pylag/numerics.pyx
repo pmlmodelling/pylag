@@ -11,13 +11,16 @@ except ImportError:
 
 from pylag.boundary_conditions import get_horiz_boundary_condition_calculator
 from pylag.boundary_conditions import get_vert_boundary_condition_calculator
+from pylag.position_modifier import get_position_modifier
 
 # PyLag cimports
 from pylag.particle cimport ParticleSmartPtr
 from pylag.boundary_conditions cimport HorizBoundaryConditionCalculator
 from pylag.boundary_conditions cimport VertBoundaryConditionCalculator
-from delta cimport reset
+from pylag.position_modifier cimport PositionModifier
+from pylag.delta cimport reset
 cimport pylag.random as random
+
 
 cdef class NumMethod:
     """ An abstract base class for numerical integration schemes
@@ -88,6 +91,8 @@ cdef class StdNumMethod(NumMethod):
     cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
     cdef VertBoundaryConditionCalculator _vert_bc_calculator
 
+    cdef PositionModifier _position_modifier
+
     def __init__(self, config):
         """ Initialise class data members
         
@@ -100,6 +105,8 @@ cdef class StdNumMethod(NumMethod):
         
         self._horiz_bc_calculator = get_horiz_boundary_condition_calculator(config)
         self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
+
+        self._position_modifier = get_position_modifier(config)
 
         self._time_step = self._iterative_method.get_time_step()
 
@@ -158,9 +165,7 @@ cdef class StdNumMethod(NumMethod):
             return flag
                 
         # Compute new position
-        _particle_copy.x1 += _delta_X.x1
-        _particle_copy.x2 += _delta_X.x2
-        _particle_copy.x3 += _delta_X.x3
+        self._position_modifier.update_position(&_particle_copy, &_delta_X)
         flag = data_reader.find_host(particle, &_particle_copy)
         
         if flag == LAND_BDY_CROSSED:
@@ -250,6 +255,8 @@ cdef class OS0NumMethod(NumMethod):
     cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
     cdef VertBoundaryConditionCalculator _vert_bc_calculator
 
+    cdef PositionModifier _position_modifier
+
     def __init__(self, config):
         """ Initialise class data members
 
@@ -267,6 +274,8 @@ cdef class OS0NumMethod(NumMethod):
         self._adv_time_step = self._adv_iterative_method.get_time_step()
         self._diff_time_step = self._diff_iterative_method.get_time_step()
         
+        self._position_modifier = get_position_modifier(config)
+
         if self._diff_time_step > self._adv_time_step:
             raise ValueError("The time step for advection "
                     "(time_step_adv, {} s) must be greater than or equal to "
@@ -337,9 +346,7 @@ cdef class OS0NumMethod(NumMethod):
             return flag
 
         # Compute new position
-        _particle_copy_a.x1 += _delta_X.x1
-        _particle_copy_a.x2 += _delta_X.x2
-        _particle_copy_a.x3 += _delta_X.x3
+        self._position_modifier.update_position(&_particle_copy_a, &_delta_X)
         flag = data_reader.find_host(particle, &_particle_copy_a)
 
         if flag == LAND_BDY_CROSSED:
@@ -380,9 +387,7 @@ cdef class OS0NumMethod(NumMethod):
                 return flag
 
             # Compute new position
-            _particle_copy_b.x1 += _delta_X.x1
-            _particle_copy_b.x2 += _delta_X.x2
-            _particle_copy_b.x3 += _delta_X.x3
+            self._position_modifier.update_position(&_particle_copy_b, &_delta_X)
             flag = data_reader.find_host(&_particle_copy_a, &_particle_copy_b)
 
             if flag == LAND_BDY_CROSSED:
@@ -459,6 +464,8 @@ cdef class OS1NumMethod(NumMethod):
     cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
     cdef VertBoundaryConditionCalculator _vert_bc_calculator
 
+    cdef PositionModifier _position_modifier
+
     def __init__(self, config):
         """ Initialise class data members
         
@@ -472,6 +479,8 @@ cdef class OS1NumMethod(NumMethod):
 
         self._horiz_bc_calculator = get_horiz_boundary_condition_calculator(config)
         self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
+
+        self._position_modifier = get_position_modifier(config)
 
         self._adv_time_step = self._adv_iterative_method.get_time_step()
         self._diff_time_step = self._diff_iterative_method.get_time_step()
@@ -535,9 +544,7 @@ cdef class OS1NumMethod(NumMethod):
             return flag
 
         # Compute new position
-        _particle_copy_a.x1 += _delta_X.x1
-        _particle_copy_a.x2 += _delta_X.x2
-        _particle_copy_a.x3 += _delta_X.x3
+        self._position_modifier.update_position(&_particle_copy_a, &_delta_X)
         flag = data_reader.find_host(particle, &_particle_copy_a)
 
         if flag == LAND_BDY_CROSSED:
@@ -577,9 +584,7 @@ cdef class OS1NumMethod(NumMethod):
             return flag
 
         # Compute new position
-        _particle_copy_b.x1 += _delta_X.x1
-        _particle_copy_b.x2 += _delta_X.x2
-        _particle_copy_b.x3 += _delta_X.x3
+        self._position_modifier.update_position(&_particle_copy_b, &_delta_X)
         flag = data_reader.find_host(&_particle_copy_a, &_particle_copy_b)
 
         if flag == LAND_BDY_CROSSED:
@@ -617,9 +622,7 @@ cdef class OS1NumMethod(NumMethod):
             return flag
 
         # Compute new position
-        _particle_copy_b.x1 += _delta_X.x1
-        _particle_copy_b.x2 += _delta_X.x2
-        _particle_copy_b.x3 += _delta_X.x3
+        self._position_modifier.update_position(&_particle_copy_b, &_delta_X)
         flag = data_reader.find_host(&_particle_copy_a, &_particle_copy_b)
 
         if flag == LAND_BDY_CROSSED:
