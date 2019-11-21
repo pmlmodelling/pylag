@@ -78,7 +78,7 @@ class TraceSimulator(Simulator):
             # Read in particle initial positions from file - these will be used to
             # create the initial particle set.
             try:
-                n_particles, group_ids, x_positions, y_positions, z_positions = \
+                n_particles, group_ids, x1_positions, x2_positions, x3_positions = \
                     self.initial_particle_state_reader.get_particle_data()
             except Exception as e:
                 print(traceback.format_exc())
@@ -106,9 +106,9 @@ class TraceSimulator(Simulator):
                 comm.Abort()
         else:
             group_ids = None
-            x_positions = None
-            y_positions = None
-            z_positions = None
+            x1_positions = None
+            x2_positions = None
+            x3_positions = None
 
             my_n_particles = None
 
@@ -117,22 +117,22 @@ class TraceSimulator(Simulator):
 
         # Local arrays for holding particle data
         my_group_ids = np.empty(my_n_particles, dtype=DTYPE_INT)
-        my_x_positions = np.empty(my_n_particles, dtype=DTYPE_FLOAT)
-        my_y_positions = np.empty(my_n_particles, dtype=DTYPE_FLOAT)
-        my_z_positions = np.empty(my_n_particles, dtype=DTYPE_FLOAT)
+        my_x1_positions = np.empty(my_n_particles, dtype=DTYPE_FLOAT)
+        my_x2_positions = np.empty(my_n_particles, dtype=DTYPE_FLOAT)
+        my_x3_positions = np.empty(my_n_particles, dtype=DTYPE_FLOAT)
 
         # Scatter particles across workers
         comm.Scatter(group_ids,my_group_ids,root=0)
-        comm.Scatter(x_positions,my_x_positions,root=0)
-        comm.Scatter(y_positions,my_y_positions,root=0)
-        comm.Scatter(z_positions,my_z_positions,root=0)
+        comm.Scatter(x1_positions,my_x1_positions,root=0)
+        comm.Scatter(x2_positions,my_x2_positions,root=0)
+        comm.Scatter(x3_positions,my_x3_positions,root=0)
 
         # Display particle count if running in debug mode
         if self._config.get('GENERAL', 'log_level') == 'DEBUG':
             print('Processor with rank {} is managing {} particles.'.format(rank, my_n_particles))
 
         # Initialise particle arrays
-        self.model.set_particle_data(my_group_ids, my_x_positions, my_y_positions, my_z_positions)
+        self.model.set_particle_data(my_group_ids, my_x1_positions, my_x2_positions, my_x3_positions)
 
         # Run the ensemble
         run_simulation = True

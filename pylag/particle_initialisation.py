@@ -14,6 +14,8 @@ import datetime
 
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 
+from pylag import variable_library
+
 
 class InitialParticleStateReader(object):
     """ Initial particle state reader
@@ -62,21 +64,21 @@ class ASCIIInitialParticleStateReader(InitialParticleStateReader):
 
         # Create seed particle set
         group_ids = []
-        x_positions = []
-        y_positions = []
-        z_positions = []
+        x1_positions = []
+        x2_positions = []
+        x3_positions = []
         for row in data:
             group_ids.append(self._get_entry(row[0], DTYPE_INT))
-            x_positions.append(self._get_entry(row[1], DTYPE_FLOAT))
-            y_positions.append(self._get_entry(row[2], DTYPE_FLOAT))
-            z_positions.append(self._get_entry(row[3], DTYPE_FLOAT))
+            x1_positions.append(self._get_entry(row[1], DTYPE_FLOAT))
+            x2_positions.append(self._get_entry(row[2], DTYPE_FLOAT))
+            x3_positions.append(self._get_entry(row[3], DTYPE_FLOAT))
 
         group_ids = np.array(group_ids)
-        x_positions = np.array(x_positions)
-        y_positions = np.array(y_positions)
-        z_positions = np.array(z_positions)
+        x1_positions = np.array(x1_positions)
+        x2_positions = np.array(x2_positions)
+        x3_positions = np.array(x3_positions)
 
-        return n_particles, group_ids, x_positions, y_positions, z_positions
+        return n_particles, group_ids, x1_positions, x2_positions, x3_positions
 
     def _get_entry(self, value, type):
         return type(value)
@@ -92,6 +94,13 @@ class RestartInitialParticleStateReader(InitialParticleStateReader):
         self._config = config
 
         self._restart_file_name = self._config.get('RESTART', 'restart_file_name')
+
+        # Read in the coordinate system
+        coordinate_system = self.config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system").strip().lower()
+        if coordinate_system in ["cartesian", "spherical"]:
+            self.coordinate_system = coordinate_system
+        else:
+            raise ValueError("Unsupported model coordinate system `{}'".format(coordinate_system))
 
     def get_particle_data(self):
         """ Get particle data
@@ -129,14 +138,20 @@ class RestartInitialParticleStateReader(InitialParticleStateReader):
 
         # Extract particle data
         n_particles = restart.dimensions['particles'].size
-        group_ids = restart.variables['group_id'][0,:]
-        x_positions = restart.variables['xpos'][0,:]
-        y_positions = restart.variables['ypos'][0,:]
-        z_positions = restart.variables['zpos'][0,:]
+        group_ids = restart.variables['group_id'][0, :]
+
+        x1_var_name = variable_library.get_coordinate_variable_name(self.coordinate_system, 'x1')
+        x1_positions = restart.variables[x1_var_name][0, :]
+
+        x2_var_name = variable_library.get_coordinate_variable_name(self.coordinate_system, 'x2')
+        x2_positions = restart.variables[x2_var_name][0, :]
+
+        x3_var_name = variable_library.get_coordinate_variable_name(self.coordinate_system, 'x3')
+        x3_positions = restart.variables[x3_var_name][0, :]
 
         restart.close()
 
-        return n_particles, group_ids, x_positions, y_positions, z_positions
+        return n_particles, group_ids, x1_positions, x2_positions, x3_positions
 
 
 def get_initial_particle_state_reader(config):

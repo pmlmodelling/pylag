@@ -48,7 +48,7 @@ class TraceSimulator(Simulator):
 
         # Read in particle initial positions from file - these will be used to
         # create the initial particle set.
-        n_particles, group_ids, x_positions, y_positions, z_positions = \
+        n_particles, group_ids, x1_positions, x2_positions, x3_positions = \
             self.initial_particle_state_reader.get_particle_data()
 
         if n_particles == len(group_ids):
@@ -64,7 +64,7 @@ class TraceSimulator(Simulator):
                 'initial positions file. See the log for more details.')
 
         # Initialise particle arrays
-        self.model.set_particle_data(group_ids, x_positions, y_positions, z_positions)
+        self.model.set_particle_data(group_ids, x1_positions, x2_positions, x3_positions)
 
         # Run the ensemble
         run_simulation = True
