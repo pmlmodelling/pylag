@@ -1726,15 +1726,29 @@ cdef class FVCOMDataReader(DataReader):
         self._nv = self.mediator.get_grid_variable('nv', (3, self._n_elems), DTYPE_INT)
         self._nbe = self.mediator.get_grid_variable('nbe', (3, self._n_elems), DTYPE_INT)
 
-        # Raw grid x/y coordinates
-        x = self.mediator.get_grid_variable('x', (self._n_nodes), DTYPE_FLOAT)
-        y = self.mediator.get_grid_variable('y', (self._n_nodes), DTYPE_FLOAT)
-        xc = self.mediator.get_grid_variable('xc', (self._n_elems), DTYPE_FLOAT)
-        yc = self.mediator.get_grid_variable('yc', (self._n_elems), DTYPE_FLOAT)
+        # Raw grid x/y or lat/lon coordinates
+        coordinate_system = self.config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system").strip().lower()
+        if coordinate_system == "cartesian":
+            x = self.mediator.get_grid_variable('x', (self._n_nodes), DTYPE_FLOAT)
+            y = self.mediator.get_grid_variable('y', (self._n_nodes), DTYPE_FLOAT)
+            xc = self.mediator.get_grid_variable('xc', (self._n_elems), DTYPE_FLOAT)
+            yc = self.mediator.get_grid_variable('yc', (self._n_elems), DTYPE_FLOAT)
 
-        # calculate offsets
-        self._xmin = np.min(x)
-        self._ymin = np.min(y)
+            # calculate offsets
+            self._xmin = np.min(x)
+            self._ymin = np.min(y)
+
+        elif coordinate_system == "spherical":
+            x = self.mediator.get_grid_variable('lon', (self._n_nodes), DTYPE_FLOAT)
+            y = self.mediator.get_grid_variable('lat', (self._n_nodes), DTYPE_FLOAT)
+            xc = self.mediator.get_grid_variable('lonc', (self._n_elems), DTYPE_FLOAT)
+            yc = self.mediator.get_grid_variable('latc', (self._n_elems), DTYPE_FLOAT)
+
+            # Don't apply offsets in spherical case - set them to 0.0!
+            self._xmin = 0.0
+            self._ymin = 0.0
+        else:
+            raise ValueError("Unsupported model coordinate system `{}'".format(coordinate_system))
 
         # Apply offsets
         self._x = x - self._xmin

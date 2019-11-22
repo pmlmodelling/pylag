@@ -33,6 +33,7 @@ cdef class OPTModel:
     4) Returning diagnostic data
     """
     cdef object config
+    cdef object coordinate_system
     cdef DataReader data_reader
     cdef NumMethod num_method
     cdef object environmental_variables
@@ -65,6 +66,13 @@ cdef class OPTModel:
 
         # Create num method object
         self.num_method = get_num_method(self.config)
+
+        # Read in the coordinate system
+        coordinate_system = self.config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system").strip().lower()
+        if coordinate_system in ["cartesian", "spherical"]:
+            self.coordinate_system = coordinate_system
+        else:
+            raise ValueError("Unsupported model coordinate system `{}'".format(coordinate_system))
 
         # Save a list of environmental variables to be returned as diagnostics
         try:
@@ -210,8 +218,12 @@ cdef class OPTModel:
         self.particle_seed_smart_ptrs = []
 
         # Grid offsets
-        xmin = self.data_reader.get_xmin()
-        ymin = self.data_reader.get_ymin()
+        if self.coordinate_system == "cartesian":
+            xmin = self.data_reader.get_xmin()
+            ymin = self.data_reader.get_ymin()
+        elif self.coordinate_system == "spherical":
+            xmin = 0.0
+            ymin = 0.0
 
         guess = None
         particles_in_domain = 0
@@ -317,8 +329,12 @@ cdef class OPTModel:
         cdef Particle* particle_ptr
 
         # Grid offsets
-        xmin = self.data_reader.get_xmin()
-        ymin = self.data_reader.get_ymin()
+        if self.coordinate_system == "cartesian":
+            xmin = self.data_reader.get_xmin()
+            ymin = self.data_reader.get_ymin()
+        elif self.coordinate_system == "spherical":
+            xmin = 0.0
+            ymin = 0.0
 
         # Initialise lists
         diags = {'x1': [], 'x2': [], 'x3': [], 'host_horizontal_elem': [],
@@ -372,6 +388,7 @@ cdef class OPTModel:
         all_particle_data : dict
             Dictionary holding particle data.
         """
+
         # Initialise a dictionary of particle data with empty lists
         all_particle_data = {}
         for key in self.particle_smart_ptrs[0].get_particle_data().keys():
@@ -383,16 +400,17 @@ cdef class OPTModel:
             for key, value in list(particle_data.items()):
                 all_particle_data[key].append(value)
 
-        # Add grid offsets
-        if 'x1' in all_particle_data.keys():
-            x1_min = self.data_reader.get_xmin()
-            x1_positions = all_particle_data['x1']
-            all_particle_data['x1'] = [x1 + x1_min for x1 in x1_positions]
+        # Grid offsets
+        if self.coordinate_system == "cartesian":
+            xmin = self.data_reader.get_xmin()
+            ymin = self.data_reader.get_ymin()
+        elif self.coordinate_system == "spherical":
+            xmin = 0.0
+            ymin = 0.0
 
-        if 'x2' in all_particle_data.keys():
-            x2_min = self.data_reader.get_xmin()
-            x2_positions = all_particle_data['x2']
-            all_particle_data['x2'] = [x2 + x2_min for x2 in x2_positions]
+        # Add grid offsets
+        all_particle_data['x1'] = [x1 + xmin for x1 in all_particle_data['x1']]
+        all_particle_data['x2'] = [x2 + ymin for x2 in all_particle_data['x2']]
 
         return all_particle_data
 
