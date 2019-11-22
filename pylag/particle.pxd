@@ -18,13 +18,13 @@ cdef struct Particle:
     # Global coordinates
     # ------------------
 
-    # Particle x-position
+    # Particle x1-position
     DTYPE_FLOAT_t x1
     
-    # Particle y-position
+    # Particle x2-position
     DTYPE_FLOAT_t x2
     
-    # Particle z-position
+    # Particle x3-position
     DTYPE_FLOAT_t x3
 
     # Local coordinates
@@ -68,6 +68,7 @@ cdef struct Particle:
     # position. Only set if the particle is not in the top or bottom boundary
     # layers
     DTYPE_INT_t k_upper_layer
+
 
 cdef class ParticleSmartPtr:
     cdef Particle* _particle
