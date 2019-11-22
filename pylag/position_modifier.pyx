@@ -20,6 +20,9 @@ cdef class CartesianPositionModifier(PositionModifier):
     """ Update particle positions within a cartesian coordinate system
 
     """
+    def __init__(self):
+        pass
+
     cdef void update_position(self, Particle *particle, Delta *delta_X) except *:
         """ Update the particle's position
 
@@ -77,9 +80,9 @@ def get_position_modifier(config):
 
     # Return the specified numerical integrator.
     if config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system") == "cartesian":
-        return CartesianPositionModifier(config)
+        return CartesianPositionModifier()
     elif config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system") == "spherical":
-        return SphericalPositionModifier(config)
+        return SphericalPositionModifier()
     else:
         raise ValueError("Unsupported coordinate system specified")
 
