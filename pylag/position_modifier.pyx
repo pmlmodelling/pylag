@@ -58,7 +58,7 @@ cdef class SphericalPositionModifier(PositionModifier):
         delta_X : C pointer
             C pointer to a Delta struct
         """
-        particle.x1 = particle.x1 + delta_X.x1 / (self.multiplier * cos(self.deg_to_rad * delta_X.x1))
+        particle.x1 = particle.x1 + delta_X.x1 / (self.multiplier * cos(self.deg_to_rad * particle.x2))
         particle.x2 = particle.x2 + delta_X.x2 / self.multiplier
         particle.x3 = particle.x3 + delta_X.x3
 
