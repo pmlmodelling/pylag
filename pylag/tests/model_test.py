@@ -24,6 +24,8 @@ class OPTModel_test1(TestCase):
         config.set('SIMULATION', 'depth_coordinates', 'depth_below_surface')
         config.add_section("NUMERICS")
         config.set('NUMERICS', 'num_method', 'test')
+        config.add_section("OCEAN_CIRCULATION_MODEL")
+        config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'cartesian')
         
         # Create test data reader
         data_reader = TestOPTModelDataReader()
@@ -61,6 +63,8 @@ class OPTModel_test2(TestCase):
         config.set('SIMULATION', 'depth_coordinates', 'depth_below_surface')
         config.add_section("NUMERICS")
         config.set('NUMERICS', 'num_method', 'test')
+        config.add_section("OCEAN_CIRCULATION_MODEL")
+        config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'cartesian')
         
         # Create test data reader
         data_reader = TestOPTModelDataReader()
@@ -98,6 +102,8 @@ class OPTModel_test3(TestCase):
         config.set('SIMULATION', 'depth_coordinates', 'depth_below_surface')
         config.add_section("NUMERICS")
         config.set('NUMERICS', 'num_method', 'test')
+        config.add_section("OCEAN_CIRCULATION_MODEL")
+        config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'cartesian')
         
         # Create test data reader
         data_reader = TestOPTModelDataReader()
