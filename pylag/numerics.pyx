@@ -728,6 +728,8 @@ cdef class AdvRK42DItMethod(ItMethod):
     """
     cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
 
+    cdef PositionModifier _position_modifier
+
     def __init__(self, config):
         """ Initialise class data members
         
@@ -745,6 +747,9 @@ cdef class AdvRK42DItMethod(ItMethod):
         
         # Create horizontal boundary conditions calculator
         self._horiz_bc_calculator = get_horiz_boundary_condition_calculator(config)
+
+        # Create position modifier
+        self._position_modifier = get_position_modifier(config)
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
             Particle *particle, Delta *delta_X) except INT_ERR:
@@ -787,6 +792,9 @@ cdef class AdvRK42DItMethod(ItMethod):
         # Temporary particle object
         cdef Particle _particle
 
+        # Delta object
+        cdef Delta _delta_X
+
         # Array indices/loop counters
         cdef DTYPE_INT_t ndim = 2
         cdef DTYPE_INT_t i
@@ -794,6 +802,8 @@ cdef class AdvRK42DItMethod(ItMethod):
 
         # Host search flag
         cdef DTYPE_INT_t flag
+
+        reset(&_delta_X)
         
         # Stage 1
         t = time
@@ -801,12 +811,13 @@ cdef class AdvRK42DItMethod(ItMethod):
         data_reader.get_horizontal_velocity(t, &_particle, vel) 
         for i in xrange(ndim):
             k1[i] = self._time_step * vel[i]
-        
+        _delta_X.x1 = 0.5 * k1[0]
+        _delta_X.x2 = 0.5 * k1[1]
+
         # Stage 2
         t = time + 0.5 * self._time_step
-        _particle.x1 = particle.x1 + 0.5 * k1[0]
-        _particle.x2 = particle.x2 + 0.5 * k1[1]
-        
+        self._position_modifier.update_position(&_particle, &_delta_X)
+
         flag = data_reader.find_host(particle, &_particle)
 
         if flag == LAND_BDY_CROSSED:
@@ -824,12 +835,15 @@ cdef class AdvRK42DItMethod(ItMethod):
         data_reader.get_horizontal_velocity(t, &_particle, vel) 
         for i in xrange(ndim):
             k2[i] = self._time_step * vel[i]
+        _particle.x1 = particle.x1
+        _particle.x2 = particle.x2
+        _delta_X.x1 = 0.5 * k2[0]
+        _delta_X.x2 = 0.5 * k2[1]
 
         # Stage 3
         t = time + 0.5 * self._time_step
-        _particle.x1 = particle.x1 + 0.5 * k2[0]
-        _particle.x2 = particle.x2 + 0.5 * k2[1]
-        
+        self._position_modifier.update_position(&_particle, &_delta_X)
+
         flag = data_reader.find_host(particle, &_particle)
 
         if flag == LAND_BDY_CROSSED:
@@ -846,11 +860,14 @@ cdef class AdvRK42DItMethod(ItMethod):
         data_reader.get_horizontal_velocity(t, &_particle, vel)
         for i in xrange(ndim):
             k3[i] = self._time_step * vel[i]
+        _particle.x1 = particle.x1
+        _particle.x2 = particle.x2
+        _delta_X.x1 = k3[0]
+        _delta_X.x2 = k3[1]
 
         # Stage 4
         t = time + self._time_step
-        _particle.x1 = particle.x1 + k3[0]
-        _particle.x2 = particle.x2 + k3[1]
+        self._position_modifier.update_position(&_particle, &_delta_X)
 
         flag = data_reader.find_host(particle, &_particle)
 
@@ -889,6 +906,8 @@ cdef class AdvRK43DItMethod(ItMethod):
     cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
     cdef VertBoundaryConditionCalculator _vert_bc_calculator
 
+    cdef PositionModifier _position_modifier
+
     def __init__(self, config):
         """ Initialise class data members
         
@@ -909,7 +928,10 @@ cdef class AdvRK43DItMethod(ItMethod):
 
         # Create vertical boundary conditions calculator
         self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)    
-    
+
+        # Create position modifier
+        self._position_modifier = get_position_modifier(config)
+
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
             Particle *particle, Delta *delta_X) except INT_ERR:
         """ Compute changes in a particle's position due to advection
@@ -950,6 +972,9 @@ cdef class AdvRK43DItMethod(ItMethod):
         
         # Temporary particle object
         cdef Particle _particle
+
+        # Temporary delta object
+        cdef Delta _delta_X
        
         # For applying vertical boundary conditions
         cdef DTYPE_FLOAT_t zmin, zmax
@@ -968,13 +993,15 @@ cdef class AdvRK43DItMethod(ItMethod):
         data_reader.get_velocity(t, &_particle, vel) 
         for i in xrange(ndim):
             k1[i] = self._time_step * vel[i]
+
+        _delta_X.x1 = 0.5 * k1[0]
+        _delta_X.x2 = 0.5 * k1[1]
+        _delta_X.x3 = 0.5 * k1[2]
         
         # Stage 2
         t = time + 0.5 * self._time_step
-        _particle.x1 = particle.x1 + 0.5 * k1[0]
-        _particle.x2 = particle.x2 + 0.5 * k1[1]
-        _particle.x3 = particle.x3 + 0.5 * k1[2]
-        
+        self._position_modifier.update_position(&_particle, &_delta_X)
+
         flag = data_reader.find_host(particle, &_particle)
 
         if flag == LAND_BDY_CROSSED:
@@ -999,12 +1026,17 @@ cdef class AdvRK43DItMethod(ItMethod):
         for i in xrange(ndim):
             k2[i] = self._time_step * vel[i]
 
+        _particle.x1 = particle.x1
+        _particle.x2 = particle.x2
+        _particle.x3 = particle.x3
+        _delta_X.x1 = 0.5 * k2[0]
+        _delta_X.x2 = 0.5 * k2[1]
+        _delta_X.x3 = 0.5 * k2[2]
+
         # Stage 3
         t = time + 0.5 * self._time_step
-        _particle.x1 = particle.x1 + 0.5 * k2[0]
-        _particle.x2 = particle.x2 + 0.5 * k2[1]
-        _particle.x3 = particle.x3 + 0.5 * k2[2]
-        
+        self._position_modifier.update_position(&_particle, &_delta_X)
+
         flag = data_reader.find_host(particle, &_particle)
 
         if flag == LAND_BDY_CROSSED:
@@ -1029,11 +1061,16 @@ cdef class AdvRK43DItMethod(ItMethod):
         for i in xrange(ndim):
             k3[i] = self._time_step * vel[i]
 
+        _particle.x1 = particle.x1
+        _particle.x2 = particle.x2
+        _particle.x3 = particle.x3
+        _delta_X.x1 = k3[0]
+        _delta_X.x2 = k3[1]
+        _delta_X.x3 = k3[2]
+
         # Stage 4
         t = time + self._time_step
-        _particle.x1 = particle.x1 + k3[0]
-        _particle.x2 = particle.x2 + k3[1]
-        _particle.x3 = particle.x3 + k3[2]
+        self._position_modifier.update_position(&_particle, &_delta_X)
 
         flag = data_reader.find_host(particle, &_particle)
 
