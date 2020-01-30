@@ -1,12 +1,146 @@
 from __future__ import print_function
 
 import numpy as np
-import os
+from collections import OrderedDict
 from netCDF4 import Dataset
 
 
-def create_fvcom_grid_metrics_file(ncin_file_name, obc_file_name,
-                                   ncout_file_name='./grid_metrics.nc'):
+class GridMetricsFileCreator(object):
+    """ Grid metrics file creator
+
+    Class to assist with the creation of PyLag grid metrics files
+
+    Parameters:
+    -----------
+    file_name : str, optional
+        The name of the grid metrics file that will be created.
+
+    Returns:
+    --------
+    N/A
+    """
+
+    def __init__(self, file_name='./grid_metrics.nc', format="NETCDF4_CLASSIC"):
+        self.file_name = file_name
+
+        self.format = format
+
+        # Coordinate dimensions
+        self.dims = dict()
+
+        # Coordinate variables
+        self.coordinates = dict()
+
+        # Dictionary holding netcdf variable data
+        self.vars = dict()
+
+        # Compression options for the netCDF variables.
+        self.ncopts = {'zlib': True, 'complevel': 7}
+
+        # Create attribute for the NetCDF4 dataset
+        self.ncfile = None
+
+    def create_file(self):
+        """ Create the file
+
+        Create a new, skeleton file. Dimensions and variables must be added separately.
+
+        Parameters:
+        -----------
+        N/A
+
+        Returns:
+        --------
+        N/A
+        """
+        # Create the file
+        self.ncfile = Dataset(self.file_name, mode='w', format=self.format)
+
+        # Add global attributes
+        self._set_global_attributes()
+
+        # Add universal dimension variables
+        self.create_dimension('three', 3)
+
+    def create_dimension(self, name, size):
+        """ Add dimension variable
+
+        Parameters:
+        -----------
+        name : str
+            Name of the dimension
+
+        size : int
+            Name of the string
+        """
+        self.dims[name] = self.ncfile.createDimension(name, size)
+
+    def create_variable(self, var_name, var_data, dimensions, dtype, fill_value=None, attrs=None):
+        """" Add variable
+
+        Parameters:
+        -----------
+        var_name : str
+            Name of the variable to add
+
+        var_data : ndarray
+            Data array
+
+        dimensions : tuple
+            Dimensions of the ndarray
+
+        dtype : str
+            Data type (e.g. float)
+
+        fill_value : int, float ...
+            Fill value to use
+
+        attrs : dict
+            Dictionary of attributes.
+        """
+        for dimension in dimensions:
+            if dimension not in self.dims.keys():
+                raise RuntimeError("Can't create variable `{}': the `{}' coordinate " \
+                                   "variable has not yet been created.".format(var_name, dimension))
+
+        if fill_value is not None:
+            self.vars[var_name] = self.ncfile.createVariable(var_name, dtype, dimensions, fill_value=fill_value,
+                                                             **self.ncopts)
+        else:
+            self.vars[var_name] = self.ncfile.createVariable(var_name, dtype, dimensions, **self.ncopts)
+
+        if attrs is not None:
+            self.vars[var_name].setncatts(attrs)
+
+        self.vars[var_name][:] = var_data
+
+    def _set_global_attributes(self):
+        """ Set global attributes
+
+        Add a set of global attributes to the grid metrics file.
+        """
+
+        global_attrs = OrderedDict()
+
+        global_attrs['Conventions'] = "CF-1.7"
+        global_attrs['title'] = "PyLag grid metrics file"
+        global_attrs['institution'] = 'Plymouth Marine Laboratory (PML)'
+        global_attrs['contact'] = 'James R. Clark (jcl@pml.ac.uk)'
+        global_attrs['netcdf-version-id'] = 'netCDF-4'
+        global_attrs['comment'] = ""
+
+        self.ncfile.setncatts(global_attrs)
+
+        return global_attrs
+
+    def close_file(self):
+        try:
+            self.ncfile.close()
+        except:
+            raise RuntimeError('Problem closing file')
+
+
+def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_file_name = './grid_metrics.nc'):
     """Create FVCOM grid metrics file
 
     In FVCOM output files, the grid variables nv and nbe are not ordered in the
@@ -20,50 +154,92 @@ def create_fvcom_grid_metrics_file(ncin_file_name, obc_file_name,
 
     Parameters:
     -----------
-    ncin_file_name : str
+    fvcom_file_name : str
         The path to an FVCOM output file that can be read in a processed
+
     obc_file_name : str
         The path to the text file containing a list of open boundary nodes
-    ncout_file_name : str, optional
+
+    grid_metrics_file_name : str, optional
         The name of the grid metrics file that will be created
     """
-    print('Creating FVCOM grid metrics file {}'.format(ncout_file_name))
+    # Open the FVCOM dataset for reading
+    fvcom_dataset = Dataset(fvcom_file_name, 'r')
 
-    ob_nodes = get_open_boundary_nodes(obc_file_name)
+    # Read in dimension variables
+    n_nodes = fvcom_dataset.dimensions['node'].size
+    n_elems = fvcom_dataset.dimensions['nele'].size
+    n_siglev = fvcom_dataset.dimensions['siglev'].size
+    n_siglay = fvcom_dataset.dimensions['siglay'].size
 
-    # Make new file with global attributes and copied variables
-    var_to_copy = ['nv', 'nbe', 'x', 'y', 'xc', 'yc', 'lat', 'lon', 'latc',
-                   'lonc', 'siglev', 'siglay', 'h', 'a1u', 'a2u']
-    os.system("ncks -O -v " + ",".join(var_to_copy) + " " + ncin_file_name + " " + ncout_file_name)
+    print('Creating FVCOM grid metrics file {}'.format(grid_metrics_file_name))
 
-    # Update nv, nbe, a1u and a2u
-    # ---------------------------
+    # Instantiate file creator
+    gm_file_creator = GridMetricsFileCreator()
 
-    ds_in = Dataset(ncin_file_name, 'r')
-    nv = ds_in.variables['nv'][:] - 1  # -1 for zero based numbering
-    nbe = ds_in.variables['nbe'][:] - 1  # -1 for zero based numbering
-    a1u = ds_in.variables['a1u'][:]
-    a2u = ds_in.variables['a2u'][:]
+    # Create skeleton file
+    gm_file_creator.create_file()
 
-    # Sort the adjacency array
-    nbe_sorted = sort_adjacency_array(nv, nbe)
+    # Add dimension variables
+    gm_file_creator.create_dimension('node', n_nodes)
+    gm_file_creator.create_dimension('nele', n_elems)
+    gm_file_creator.create_dimension('siglev', n_siglev)
+    gm_file_creator.create_dimension('siglay', n_siglay)
 
-    # Sort interpolation coefficients to match nbe_sorted
-    a1u_sorted, a2u_sorted = sort_interpolants(a1u, a2u, nbe, nbe_sorted)
+    # Add grid coordinate variables
+    # -----------------------------
+    for var_name in ['x', 'y', 'xc', 'yc', 'lat', 'lon', 'latc', 'lonc', 'siglev', 'siglay', 'h']:
+        nc_var = fvcom_dataset.variables[var_name]
 
-    # Flag open boundaries
-    nbe_sorted_with_ob_flags = add_open_boundary_flags(nv, nbe_sorted, ob_nodes)
+        var_data = nc_var[:]
 
-    # Write updates to the nv, nbe, a1u and a2u variables to file
-    ds_out = Dataset(ncout_file_name, 'a')
-    ds_out.variables['nv'][:] = nv[:]
-    ds_out.variables['nbe'][:] = nbe_sorted_with_ob_flags[:]
-    ds_out.variables['a1u'][:] = a1u_sorted[:]
-    ds_out.variables['a2u'][:] = a2u_sorted[:]
+        dtype = nc_var.dtype.name
 
-    # Close files
-    ds_in.close()
-    ds_out.close()
+        dimensions = nc_var.dimensions
+
+        # Form dictionary of attributes
+        attrs = {}
+        for attr_name in nc_var.ncattrs():
+            attrs[attr_name] = nc_var.getncattr(attr_name)
+
+        gm_file_creator.create_variable(var_name, var_data, dimensions, dtype, attrs=attrs)
+
+    # Add modified nv array
+    # ---------------------
+    nv_var = fvcom_dataset.variables['nv']
+    nv_data = nv_var[:] - 1
+    dtype = nv_var.dtype.name
+    dimensions = nv_var.dimensions
+    attrs = {}
+    for attr_name in nv_var.ncattrs():
+        attrs[attr_name] = nv_var.getncattr(attr_name)
+    gm_file_creator.create_variable('nv', nv_data, dimensions, dtype, attrs=attrs)
+
+    # Add modified nbe array
+    # ----------------------
+    nbe_var = fvcom_dataset.variables['nbe']
+    nbe_data = nbe_var[:] - 1
+    nbe_data = sort_adjacency_array(nv_data, nbe_data)
+
+    # Add open boundary flags
+    open_boundary_nodes = get_open_boundary_nodes(obc_file_name)
+    nbe_data = add_open_boundary_flags(nv_data, nbe_data, open_boundary_nodes)
+
+    # Add variable
+    dtype = nbe_var.dtype.name
+    dimensions = nbe_var.dimensions
+    attrs = {}
+    for attr_name in nbe_var.ncattrs():
+        attrs[attr_name] = nbe_var.getncattr(attr_name)
+    gm_file_creator.create_variable('nbe', nbe_data, dimensions, dtype, attrs=attrs)
+
+    # Close FVCOM dataset
+    fvcom_dataset.close()
+
+    # Close grid metrics file creator
+    gm_file_creator.close_file()
+
+    return
 
 
 def sort_adjacency_array(nv, nbe):
