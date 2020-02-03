@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import numpy as np
+from scipy.spatial import Delaunay
 from collections import OrderedDict
 from netCDF4 import Dataset
 
@@ -222,8 +223,8 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_
     nbe_data = sort_adjacency_array(nv_data, nbe_data)
 
     # Add open boundary flags
-    open_boundary_nodes = get_open_boundary_nodes(obc_file_name)
-    nbe_data = add_open_boundary_flags(nv_data, nbe_data, open_boundary_nodes)
+    open_boundary_nodes = get_fvcom_open_boundary_nodes(obc_file_name)
+    nbe_data = add_fvcom_open_boundary_flags(nv_data, nbe_data, open_boundary_nodes)
 
     # Add variable
     dtype = nbe_var.dtype.name
@@ -234,12 +235,111 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_
     gm_file_creator.create_variable('nbe', nbe_data, dimensions, dtype, attrs=attrs)
 
     # Close FVCOM dataset
+    # -------------------
     fvcom_dataset.close()
 
     # Close grid metrics file creator
     gm_file_creator.close_file()
 
     return
+
+
+def create_arakawa_a_grid_metrics_file(file_name, grid_metrics_file_name='./grid_metrics.nc'):
+    """Create a Arakawa A-grid metrics file
+
+    This function creates a grid metrics file for data defined on an Arakawa
+    A-grid. The function is intended to work with regularly gridded, CF
+    compliant datasets, which is usually a requirement for datasets submitted
+    to public catalogues.
+
+    The approach taken is to reinterpret the regular grid as a single, unstructured
+    grid which can be understood by PyLag.
+
+    NB This function only needs to be called once per model grid - the
+    grid metrics file generated can be reused by all future simulations.
+
+    Parameters:
+    -----------
+    file_name : str
+        The path to an file that can be read in a processed
+
+    grid_metrics_file_name : str, optional
+        The name of the grid metrics file that will be created
+    """
+    # Open the input file for reading
+    input_dataset = Dataset(file_name, 'r')
+
+    # Ensure masked variables are indeed masked
+    input_dataset.set_auto_maskandscale(True)
+
+    # Read in coordinate variables
+    lon_var = _get_longitude(input_dataset)
+    lat_var = _get_latitude(input_dataset)
+    lon2d, lat2d = np.meshgrid(lon_var[:], lat_var[:])
+
+    points = np.array([lon2d.flatten(), lat2d.flatten()]).T
+
+    # Create the Triangulation
+    tri = Delaunay(points)
+
+    # Save lon and lat points at nodes
+    lon_data = points[:, 0]
+    lat_data = points[:, 1]
+
+    # Save number of nodes
+    n_nodes = points.shape[0]
+
+    # Save simplices
+    #   - Flip to reverse ordering, as expected by PyLag
+    #   - Transpose to give it the dimension ordering expected by PyLag
+    nv_data = np.flip(tri.simplices, axis=1).T
+
+    # Save neighbours
+    #   - Transpose to give it the dimension ordering expected by PyLag
+    nbe_data = tri.neighbours.T
+
+    # Sort the array
+    nbe_data = sort_adjacency_array(nv_data, nbe_data)
+
+    # Find a masked variable - we will use it
+
+    nbe_data = flag_masked_cells
+
+    print('Creating grid metrics file {}'.format(grid_metrics_file_name))
+
+    # Instantiate file creator
+    gm_file_creator = GridMetricsFileCreator()
+
+    # Create skeleton file
+    gm_file_creator.create_file()
+
+
+def _get_longitude(dataset):
+    lon = None
+    for lon_var_name in ['lon', 'longitude']:
+        try:
+            lon = dataset.variables[lon_var_name]
+        except KeyError:
+            pass
+
+    if lon is not None:
+        return lon
+
+    raise RuntimeError('No longitude variable found in dataset')
+
+
+def _get_latitude(dataset):
+    lat = None
+    for lat_var_name in ['lat', 'latitude']:
+        try:
+            lat = dataset.variables[lat_var_name]
+        except KeyError:
+            pass
+
+    if lat is not None:
+        return lat
+
+    raise RuntimeError('No latitude variable found in dataset')
 
 
 def sort_adjacency_array(nv, nbe):
@@ -302,60 +402,8 @@ def sort_adjacency_array(nv, nbe):
     return nbe_sorted
 
 
-def sort_interpolants(a1u, a2u, nbe, nbe_sorted):
-    """Sort interpolant arrays
-
-    PyLag expects the arrays containing interpolation coefficients (a1u and a2u)
-    to be sorted in the same way as the sorted nbe array (see above). This
-    function matches entries in a{1,2}u to nbe_sorted, given that a{1,2}u is
-    currently matched to the array nbe.
-
-    Parameters:
-    -----------
-    a1u : 2D ndarray
-        FVCOM interpolation coefficients, shape (4, n_elems)
-
-    a2u : 2D ndarray
-        FVCOM interpolation coefficients, shape (4, n_elems)
-
-    nbe : 2D ndarray, int
-        Elements surrounding each element, shape (3, n_elems)
-
-    nbe_sorted : 2D ndarray, int
-        Sorted nbe array, shape (3, n_elems)
-    """
-
-    n_elems = a1u.shape[1]
-
-    if n_elems != a2u.shape[1] or n_elems != nbe.shape[1] or n_elems != nbe_sorted.shape[1]:
-        raise ValueError('Array dimensions do not match')
-
-    a1u_sorted = np.empty_like(a1u)
-    a2u_sorted = np.empty_like(a2u)
-
-    # Host element index is 0
-    a1u_sorted[0, :] = a1u[0, :]
-    a2u_sorted[0, :] = a2u[0, :]
-
-    for j in range(n_elems):
-        for i in range(3):
-            if nbe_sorted[i, j] == nbe[0, j]:
-                a1u_sorted[i + 1, j] = a1u[1, j]
-                a2u_sorted[i + 1, j] = a2u[1, j]
-            elif nbe_sorted[i, j] == nbe[1, j]:
-                a1u_sorted[i + 1, j] = a1u[2, j]
-                a2u_sorted[i + 1, j] = a2u[2, j]
-            elif nbe_sorted[i, j] == nbe[2, j]:
-                a1u_sorted[i + 1, j] = a1u[3, j]
-                a2u_sorted[i + 1, j] = a2u[3, j]
-            else:
-                raise ValueError('Failed to match entry in nbe and nbe_sorted.')
-
-    return a1u_sorted, a2u_sorted
-
-
-def get_open_boundary_nodes(file_name):
-    """Read open boundary nodes from file
+def get_fvcom_open_boundary_nodes(file_name):
+    """Read fvcom open boundary nodes from file
 
     Parameters:
     -----------
@@ -379,7 +427,7 @@ def get_open_boundary_nodes(file_name):
     return nodes
 
 
-def add_open_boundary_flags(nv, nbe, ob_nodes):
+def add_fvcom_open_boundary_flags(nv, nbe, ob_nodes):
     """Add open boundary flags
 
     For each element, the method checks to see if two of the element's nodes lie
@@ -430,3 +478,4 @@ def _get_number_of_matching_nodes(array1, array2):
             if a1 == a2: match = match + 1
 
     return match
+
