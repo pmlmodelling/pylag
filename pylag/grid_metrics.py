@@ -308,6 +308,13 @@ def create_arakawa_a_grid_metrics_file(file_name, grid_metrics_file_name='./grid
     nv = np.flip(tri.simplices.copy(), axis=1).T
     n_elems = nv.shape[1]
 
+    # Save lon and lat points at element centres
+    lon_elements = np.empty(n_elems, dtype=int)
+    lat_elements = np.empty(n_elems, dtype=int)
+    for i, element in enumerate(range(n_elems)):
+        lon_elements[i] = lon_nodes[(nv[:, element])].mean()
+        lat_elements[i] = lat_nodes[(nv[:, element])].mean()
+
     # Save neighbours
     #   - Transpose to give it the dimension ordering expected by PyLag
     #   - Sort to ensure match with nv
@@ -349,11 +356,17 @@ def create_arakawa_a_grid_metrics_file(file_name, grid_metrics_file_name='./grid
     gm_file_creator.create_dimension('element', n_elems)
     gm_file_creator.create_dimension('depth', n_levels)
 
-    # Add longitude
+    # Add longitude at nodes
     gm_file_creator.create_variable('longitude', lon_nodes, ('node',), float, attrs=lon_attrs)
 
-    # Add latitude
+    # Add longitude at element centres
+    gm_file_creator.create_variable('longitude_c', lon_elements, ('element',), float, attrs=lon_attrs)
+
+    # Add latitude at nodes
     gm_file_creator.create_variable('latitude', lat_nodes, ('node',), float, attrs=lat_attrs)
+
+    # Add latitude at element centres
+    gm_file_creator.create_variable('latitude_c', lat_elements, ('element',), float, attrs=lat_attrs)
 
     # Depth
     gm_file_creator.create_variable('depth', depth, ('depth',), float, attrs=depth_attrs)
