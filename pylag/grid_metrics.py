@@ -21,7 +21,7 @@ class GridMetricsFileCreator(object):
     N/A
     """
 
-    def __init__(self, file_name='./grid_metrics.nc', format="NETCDF4_CLASSIC"):
+    def __init__(self, file_name='./grid_metrics.nc', format="NETCDF4"):
         self.file_name = file_name
 
         self.format = format
@@ -272,74 +272,210 @@ def create_arakawa_a_grid_metrics_file(file_name, grid_metrics_file_name='./grid
     # Ensure masked variables are indeed masked
     input_dataset.set_auto_maskandscale(True)
 
-    # Read in coordinate variables
-    lon_var = _get_longitude(input_dataset)
-    lat_var = _get_latitude(input_dataset)
-    lon2d, lat2d = np.meshgrid(lon_var[:], lat_var[:])
+    # Read in coordinate variables. Use common names to try and ensure a hit.
+    lon_var = _get_variable(input_dataset, ['lon', 'longitude'])
+    lat_var = _get_variable(input_dataset, ['lat', 'latitude'])
+    depth_var = _get_variable(input_dataset, ['depth'])
+    bathy_var = _get_variable(input_dataset, ['h'])
+    mask_var = _get_variable(input_dataset, ['mask'])
 
-    points = np.array([lon2d.flatten(), lat2d.flatten()]).T
+    # Create points array
+    lon2d, lat2d = np.meshgrid(lon_var[:], lat_var[:], indexing='ij')
+    points = np.array([lon2d.flatten(order='C'), lat2d.flatten(order='C')]).T
+
+    # Save lon and lat points at nodes
+    lon_nodes = points[:, 0]
+    lat_nodes = points[:, 1]
+    n_nodes = points.shape[0]
+
+    # Save depth
+    depth = depth_var[:]
+    n_levels = depth_var.shape[0]
+
+    # Save bathymetry
+    bathy = sort_axes(bathy_var)
+    if len(bathy.shape) == 2:
+        bathy = bathy.reshape(np.prod(bathy.shape), order='C')
+    else:
+        raise RuntimeError('Bathymetry array is not 2D.')
 
     # Create the Triangulation
     tri = Delaunay(points)
 
-    # Save lon and lat points at nodes
-    lon_data = points[:, 0]
-    lat_data = points[:, 1]
-
-    # Save number of nodes
-    n_nodes = points.shape[0]
-
     # Save simplices
     #   - Flip to reverse ordering, as expected by PyLag
     #   - Transpose to give it the dimension ordering expected by PyLag
-    nv_data = np.flip(tri.simplices, axis=1).T
+    nv = np.flip(tri.simplices.copy(), axis=1).T
+    n_elems = nv.shape[1]
 
     # Save neighbours
     #   - Transpose to give it the dimension ordering expected by PyLag
-    nbe_data = tri.neighbours.T
+    #   - Sort to ensure match with nv
+    nbe = tri.neighbors.T
+    nbe = sort_adjacency_array(nv, nbe)
 
-    # Sort the array
-    nbe_data = sort_adjacency_array(nv_data, nbe_data)
+    # Generate land-sea mask at nodes
+    land_sea_mask_nodes = sort_axes(mask_var)
+    if len(land_sea_mask_nodes.shape) == 3:
+        land_sea_mask_nodes = land_sea_mask_nodes[0, :, :]  # Use surface mask only
+        land_sea_mask_nodes = land_sea_mask_nodes.reshape(np.prod(land_sea_mask_nodes.shape), order='C')
 
-    # Find a masked variable - we will use it
+    # Generate the land-sea mask at elements
+    land_sea_mask_elements = np.empty(n_elems, dtype=int)
+    for i in range(n_elems):
+        element_nodes = nv[:, i]
+        land_sea_mask_elements[i] = 0 if np.any(land_sea_mask_nodes[(element_nodes)] == 0) else 1
 
-    nbe_data = flag_masked_cells
+    # Flag open boundaries with -2 flag
+    nbe[np.where(nbe == -1)] = -2
 
+    # Flag land boundaries with -1 flag
+    #for i, mask in enumerate(land_sea_mask_elements):
+    #    if mask == 1:
+    #        nbe[np.where(nbe == i)] = -1
+
+    # Create grid metrics file
+    # ------------------------
     print('Creating grid metrics file {}'.format(grid_metrics_file_name))
 
     # Instantiate file creator
-    gm_file_creator = GridMetricsFileCreator()
+    gm_file_creator = GridMetricsFileCreator(grid_metrics_file_name)
 
     # Create skeleton file
     gm_file_creator.create_file()
 
+    # Add dimension variables
+    gm_file_creator.create_dimension('node', n_nodes)
+    gm_file_creator.create_dimension('element', n_elems)
+    gm_file_creator.create_dimension('depth', n_levels)
 
-def _get_longitude(dataset):
-    lon = None
-    for lon_var_name in ['lon', 'longitude']:
+    # Add longitude
+    attrs = None #_get_netcdf_attributes('longitude')
+    gm_file_creator.create_variable('longitude', lon_nodes, ('node',), float, attrs=attrs)
+
+    # Add latitude
+    attrs = None #_get_netcdf_attributes('latitude')
+    gm_file_creator.create_variable('latitude', lat_nodes, ('node',), float, attrs=attrs)
+
+    # Depth
+    attrs = None #_get_netcdf_attributes('depth')
+    gm_file_creator.create_variable('depth', depth, ('depth',), float, attrs=attrs)
+
+    # Bathymetry
+    attrs = None #_get_netcdf_attributes('depth')
+    gm_file_creator.create_variable('h', bathy, ('node',), float, attrs=attrs)
+
+    # Add simplices
+    gm_file_creator.create_variable('nv', nv, ('three', 'element',), int)
+
+    # Add neighbours
+    gm_file_creator.create_variable('nbe', nbe, ('three', 'element',), int)
+
+    # Add land sea mask
+    gm_file_creator.create_variable('mask', land_sea_mask_elements, ('element',), int)
+
+    # Close input dataset
+    input_dataset.close()
+
+    # Close grid metrics file creator
+    gm_file_creator.close_file()
+
+    return
+
+
+def sort_axes(nc_var):
+    """ Sort variables axes
+
+    Variables with the following dimensions are supported:
+
+    2D - [lat, lon] in any order
+
+    3D - [depth, lat, lon] in any order
+
+    4D - [time, depth, lat, lon] in any order
+
+    The function will attempt to reorder variables given common time,
+    depth, longitude and latitude names.
+
+    Parameters:
+    -----------
+    nc_var : NetCDF4 variable
+        NetCDF variable to sort
+
+    Returns:
+    --------
+    var : NumPy NDArray
+        Variable array with sorted axes.
+    """
+    print('Sorting axes for variable {}'.format(nc_var.name))
+    var = nc_var[:]
+    dimensions = nc_var.dimensions
+    if len(dimensions) == 2:
+        lat_index = _get_dimension_index(dimensions, ['lat', 'latitude'])
+        lon_index = _get_dimension_index(dimensions, ['lon', 'longitude'])
+
+        # Shift axes to give [x, y]
+        var = np.moveaxis(var, lat_index, 0)
+        var = np.moveaxis(var, lon_index, 1)
+
+        return var
+
+    elif len(dimensions) == 3:
+        depth_index = _get_dimension_index(dimensions, ['depth'])
+        lat_index = _get_dimension_index(dimensions, ['lat', 'latitude'])
+        lon_index = _get_dimension_index(dimensions, ['lon', 'longitude'])
+
+        # Shift axes to give [z, x, y]
+        var = np.moveaxis(var, depth_index, 0)
+        var = np.moveaxis(var, lat_index, 1)
+        var = np.moveaxis(var, lon_index, 2)
+
+        return var
+
+    elif len(dimensions) == 4:
+        time_index = _get_dimension_index(dimensions, ['time'])
+        depth_index = _get_dimension_index(dimensions, ['depth'])
+        lat_index = _get_dimension_index(dimensions, ['lat', 'latitude'])
+        lon_index = _get_dimension_index(dimensions, ['lon', 'longitude'])
+
+        # Shift axes to give [t, z, x, y]
+        var = np.moveaxis(var, time_index, 0)
+        var = np.moveaxis(var, depth_index, 1)
+        var = np.moveaxis(var, lat_index, 2)
+        var = np.moveaxis(var, lon_index, 3)
+
+        return var
+
+    else:
+        raise RuntimeError('Unsupported number of dimensions associated with variable {}'.format(nc_var.name))
+
+
+def _get_dimension_index(dimensions, names):
+    index = None
+    for dimension_name in names:
         try:
-            lon = dataset.variables[lon_var_name]
+            index = dimensions.index(dimension_name)
+        except ValueError:
+            pass
+
+    if index is None:
+        raise RuntimeError('Failed to find dimension index. Dimensions were {}; supplied '
+                           'names were {}.'.format(dimensions, names))
+    return index
+
+
+def _get_variable(dataset, var_names):
+    var = None
+    for var_name in var_names:
+        try:
+            var = dataset.variables[var_name]
         except KeyError:
             pass
 
-    if lon is not None:
-        return lon
+    if var is not None:
+        return var
 
-    raise RuntimeError('No longitude variable found in dataset')
-
-
-def _get_latitude(dataset):
-    lat = None
-    for lat_var_name in ['lat', 'latitude']:
-        try:
-            lat = dataset.variables[lat_var_name]
-        except KeyError:
-            pass
-
-    if lat is not None:
-        return lat
-
-    raise RuntimeError('No latitude variable found in dataset')
+    raise RuntimeError('Variable not found in dataset')
 
 
 def sort_adjacency_array(nv, nbe):
