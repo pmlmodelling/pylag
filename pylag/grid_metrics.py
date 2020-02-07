@@ -415,8 +415,7 @@ def sort_axes(nc_var):
         lon_index = _get_dimension_index(dimensions, ['lon', 'longitude'])
 
         # Shift axes to give [x, y]
-        var = np.moveaxis(var, lat_index, 0)
-        var = np.moveaxis(var, lon_index, 1)
+        var = np.moveaxis(var, lon_index, 0)
 
         return var
 
@@ -427,8 +426,14 @@ def sort_axes(nc_var):
 
         # Shift axes to give [z, x, y]
         var = np.moveaxis(var, depth_index, 0)
-        var = np.moveaxis(var, lat_index, 1)
-        var = np.moveaxis(var, lon_index, 2)
+
+        # Update lat/lon indices if needed
+        if depth_index > lat_index:
+            lat_index += 1
+        if depth_index > lon_index:
+            lon_index += 1
+
+        var = np.moveaxis(var, lon_index, 1)
 
         return var
 
@@ -438,11 +443,27 @@ def sort_axes(nc_var):
         lat_index = _get_dimension_index(dimensions, ['lat', 'latitude'])
         lon_index = _get_dimension_index(dimensions, ['lon', 'longitude'])
 
-        # Shift axes to give [t, z, x, y]
+        # Shift t axis
         var = np.moveaxis(var, time_index, 0)
+
+        # Update lat/lon indices if needed
+        if time_index > depth_index:
+            depth_index += 1
+        if time_index > lat_index:
+            lat_index += 1
+        if time_index > lon_index:
+            lon_index += 1
+
+        # Shift depth axis
         var = np.moveaxis(var, depth_index, 1)
-        var = np.moveaxis(var, lat_index, 2)
-        var = np.moveaxis(var, lon_index, 3)
+
+        # Update lat/lon indices if needed
+        if depth_index > lat_index:
+            lat_index += 1
+        if depth_index > lon_index:
+            lon_index += 1
+
+        var = np.moveaxis(var, lon_index, 2)
 
         return var
 
