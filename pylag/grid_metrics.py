@@ -273,11 +273,11 @@ def create_arakawa_a_grid_metrics_file(file_name, grid_metrics_file_name='./grid
     input_dataset.set_auto_maskandscale(True)
 
     # Read in coordinate variables. Use common names to try and ensure a hit.
-    lon_var = _get_variable(input_dataset, ['lon', 'longitude'])
-    lat_var = _get_variable(input_dataset, ['lat', 'latitude'])
-    depth_var = _get_variable(input_dataset, ['depth'])
-    bathy_var = _get_variable(input_dataset, ['h'])
-    mask_var = _get_variable(input_dataset, ['mask'])
+    lon_var, lon_attrs = _get_variable(input_dataset, ['lon', 'longitude'])
+    lat_var, lat_attrs = _get_variable(input_dataset, ['lat', 'latitude'])
+    depth_var, depth_attrs = _get_variable(input_dataset, ['depth'])
+    bathy_var, bathy_attrs = _get_variable(input_dataset, ['h'])
+    mask_var, mask_attrs = _get_variable(input_dataset, ['mask'])
 
     # Create points array
     lon2d, lat2d = np.meshgrid(lon_var[:], lat_var[:], indexing='ij')
@@ -350,29 +350,27 @@ def create_arakawa_a_grid_metrics_file(file_name, grid_metrics_file_name='./grid
     gm_file_creator.create_dimension('depth', n_levels)
 
     # Add longitude
-    attrs = None #_get_netcdf_attributes('longitude')
-    gm_file_creator.create_variable('longitude', lon_nodes, ('node',), float, attrs=attrs)
+    gm_file_creator.create_variable('longitude', lon_nodes, ('node',), float, attrs=lon_attrs)
 
     # Add latitude
-    attrs = None #_get_netcdf_attributes('latitude')
-    gm_file_creator.create_variable('latitude', lat_nodes, ('node',), float, attrs=attrs)
+    gm_file_creator.create_variable('latitude', lat_nodes, ('node',), float, attrs=lat_attrs)
 
     # Depth
-    attrs = None #_get_netcdf_attributes('depth')
-    gm_file_creator.create_variable('depth', depth, ('depth',), float, attrs=attrs)
+    gm_file_creator.create_variable('depth', depth, ('depth',), float, attrs=depth_attrs)
 
     # Bathymetry
-    attrs = None #_get_netcdf_attributes('depth')
-    gm_file_creator.create_variable('h', bathy, ('node',), float, attrs=attrs)
+    gm_file_creator.create_variable('h', bathy, ('node',), float, attrs=bathy_attrs)
 
     # Add simplices
-    gm_file_creator.create_variable('nv', nv, ('three', 'element',), int)
+    gm_file_creator.create_variable('nv', nv, ('three', 'element',), int,
+                                    attrs={'long_name': 'nodes surrounding each element'})
 
     # Add neighbours
-    gm_file_creator.create_variable('nbe', nbe, ('three', 'element',), int)
+    gm_file_creator.create_variable('nbe', nbe, ('three', 'element',), int,
+                                    attrs={'long_name': 'elements surrounding each element'})
 
     # Add land sea mask
-    gm_file_creator.create_variable('mask', land_sea_mask_elements, ('element',), int)
+    gm_file_creator.create_variable('mask', land_sea_mask_elements, ('element',), int, attrs=mask_attrs)
 
     # Close input dataset
     input_dataset.close()
@@ -494,7 +492,12 @@ def _get_variable(dataset, var_names):
             pass
 
     if var is not None:
-        return var
+        # Form dictionary of attributes
+        attrs = {}
+        for attr_name in var.ncattrs():
+            attrs[attr_name] = var.getncattr(attr_name)
+
+        return var, attrs
 
     raise RuntimeError('Variable not found in dataset')
 
