@@ -330,9 +330,9 @@ def create_arakawa_a_grid_metrics_file(file_name, grid_metrics_file_name='./grid
     nbe[np.where(nbe == -1)] = -2
 
     # Flag land boundaries with -1 flag
-    #for i, mask in enumerate(land_sea_mask_elements):
-    #    if mask == 1:
-    #        nbe[np.where(nbe == i)] = -1
+    for i, mask in enumerate(land_sea_mask_elements):
+        if mask == 1:
+            nbe[np.where(nbe == i)] = -1
 
     # Create grid metrics file
     # ------------------------
