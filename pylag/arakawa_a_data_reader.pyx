@@ -1375,43 +1375,7 @@ cdef class ArakawaADataReader(DataReader):
         # Calculate gradient in barycentric coordinates
         interp.get_barycentric_gradients(x_tri, y_tri, dphi_dx, dphi_dy)
 
-    cdef DTYPE_FLOAT_t _interp_on_sigma_layer(self, 
-            DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_INT_t host,
-            DTYPE_INT_t kidx)  except FLOAT_ERR:
-        """ Return the linearly interpolated value of sigma on the sigma layer.
-        
-        Compute sigma on the specified sigma layer within the given host 
-        element.
-        
-        Parameters
-        ----------
-        phi : c array, float
-            Array of length three giving the barycentric coordinates at which 
-            to interpolate
-
-        host : int
-            Host element index
-
-        kidx : int
-            Sigma layer on which to interpolate
-
-        Returns
-        -------
-        sigma: float
-            Interpolated value of sigma.
-        """
-        cdef int vertex # Vertex identifier
-        cdef DTYPE_FLOAT_t sigma_nodes[N_VERTICES]
-        cdef DTYPE_FLOAT_t sigma # Sigma
-
-        for i in xrange(N_VERTICES):
-            vertex = self._nv[i,host]
-            sigma_nodes[i] = self._siglay[kidx, vertex]                  
-
-        sigma = interp.interpolate_within_element(sigma_nodes, phi)
-        return sigma
-
-    cdef DTYPE_FLOAT_t _interp_on_sigma_level(self, 
+    cdef DTYPE_FLOAT_t _interp_on_sigma_level(self,
             DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_INT_t host,
             DTYPE_INT_t kidx) except FLOAT_ERR:
         """ Return the linearly interpolated value of sigma.
