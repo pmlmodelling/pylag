@@ -204,39 +204,39 @@ class ArawawaADataReader_test(TestCase):
         test.assert_equal(flag, 0)
         test.assert_equal(particle_new.host_horizontal_elem, 1)
 
-    # def test_get_boundary_intersection(self):
-    #     particle_old = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.3333333333-self.ymin, host=1)
-    #     particle_new = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=0.9-self.ymin, host=1)
-    #     intersection = self.data_reader.get_boundary_intersection_wrapper(particle_old, particle_new)
-    #     test.assert_almost_equal(intersection.x1_py+self.xmin, 2.0)
-    #     test.assert_almost_equal(intersection.y1_py+self.ymin, 1.0)
-    #     test.assert_almost_equal(intersection.x2_py+self.xmin, 1.0)
-    #     test.assert_almost_equal(intersection.y2_py+self.ymin, 1.0)
-    #     test.assert_almost_equal(intersection.xi_py+self.xmin, 1.6666666667)
-    #     test.assert_almost_equal(intersection.yi_py+self.ymin, 1.0)
-    #
-    # def test_get_boundary_intersection_when_a_particle_has_left_an_external_elements_edge(self):
-    #     particle_old = ParticleSmartPtr(x1=1.5-self.xmin, x2=1.0-self.ymin, host=1)
-    #     particle_new = ParticleSmartPtr(x1=1.5-self.xmin, x2=0.9-self.ymin, host=1)
-    #     intersection = self.data_reader.get_boundary_intersection_wrapper(particle_old, particle_new)
-    #     test.assert_almost_equal(intersection.x1_py+self.xmin, 2.0)
-    #     test.assert_almost_equal(intersection.y1_py+self.ymin, 1.0)
-    #     test.assert_almost_equal(intersection.x2_py+self.xmin, 1.0)
-    #     test.assert_almost_equal(intersection.y2_py+self.ymin, 1.0)
-    #     test.assert_almost_equal(intersection.xi_py+self.xmin, 1.5)
-    #     test.assert_almost_equal(intersection.yi_py+self.ymin, 1.0)
-    #
-    # def test_get_boundary_intersection_when_a_particle_has_moved_to_an_external_elements_edge(self):
-    #     particle_old = ParticleSmartPtr(x1=1.5-self.xmin, x2=1.1-self.ymin, host=1)
-    #     particle_new = ParticleSmartPtr(x1=1.5-self.xmin, x2=1.0-self.ymin, host=1)
-    #     intersection = self.data_reader.get_boundary_intersection_wrapper(particle_old, particle_new)
-    #     test.assert_almost_equal(intersection.x1_py+self.xmin, 2.0)
-    #     test.assert_almost_equal(intersection.y1_py+self.ymin, 1.0)
-    #     test.assert_almost_equal(intersection.x2_py+self.xmin, 1.0)
-    #     test.assert_almost_equal(intersection.y2_py+self.ymin, 1.0)
-    #     test.assert_almost_equal(intersection.xi_py+self.xmin, 1.5)
-    #     test.assert_almost_equal(intersection.yi_py+self.ymin, 1.0)
-    #
+    def test_get_boundary_intersection(self):
+         particle_old = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.3333333333-self.ymin, host=1)
+         particle_new = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=0.9-self.ymin, host=1)
+         intersection = self.data_reader.get_boundary_intersection_wrapper(particle_old, particle_new)
+         test.assert_almost_equal(intersection.x1_py+self.xmin, 2.0)
+         test.assert_almost_equal(intersection.y1_py+self.ymin, 1.0)
+         test.assert_almost_equal(intersection.x2_py+self.xmin, 1.0)
+         test.assert_almost_equal(intersection.y2_py+self.ymin, 1.0)
+         test.assert_almost_equal(intersection.xi_py+self.xmin, 1.6666666667)
+         test.assert_almost_equal(intersection.yi_py+self.ymin, 1.0)
+
+    def test_get_boundary_intersection_when_a_particle_has_left_an_external_elements_edge(self):
+         particle_old = ParticleSmartPtr(x1=1.5-self.xmin, x2=1.0-self.ymin, host=1)
+         particle_new = ParticleSmartPtr(x1=1.5-self.xmin, x2=0.9-self.ymin, host=1)
+         intersection = self.data_reader.get_boundary_intersection_wrapper(particle_old, particle_new)
+         test.assert_almost_equal(intersection.x1_py+self.xmin, 2.0)
+         test.assert_almost_equal(intersection.y1_py+self.ymin, 1.0)
+         test.assert_almost_equal(intersection.x2_py+self.xmin, 1.0)
+         test.assert_almost_equal(intersection.y2_py+self.ymin, 1.0)
+         test.assert_almost_equal(intersection.xi_py+self.xmin, 1.5)
+         test.assert_almost_equal(intersection.yi_py+self.ymin, 1.0)
+
+    def test_get_boundary_intersection_when_a_particle_has_moved_to_an_external_elements_edge(self):
+         particle_old = ParticleSmartPtr(x1=1.5-self.xmin, x2=1.1-self.ymin, host=1)
+         particle_new = ParticleSmartPtr(x1=1.5-self.xmin, x2=1.0-self.ymin, host=1)
+         intersection = self.data_reader.get_boundary_intersection_wrapper(particle_old, particle_new)
+         test.assert_almost_equal(intersection.x1_py+self.xmin, 2.0)
+         test.assert_almost_equal(intersection.y1_py+self.ymin, 1.0)
+         test.assert_almost_equal(intersection.x2_py+self.xmin, 1.0)
+         test.assert_almost_equal(intersection.y2_py+self.ymin, 1.0)
+         test.assert_almost_equal(intersection.xi_py+self.xmin, 1.5)
+         test.assert_almost_equal(intersection.yi_py+self.ymin, 1.0)
+
     # def test_set_default_location(self):
     #     particle = ParticleSmartPtr(x1=1.5-self.xmin, x2=1.0-self.ymin, host=1)
     #     self.data_reader.set_default_location_wrapper(particle)
