@@ -68,6 +68,10 @@ cdef class ArakawaADataReader(DataReader):
     cdef DTYPE_FLOAT_t[:] _x
     cdef DTYPE_FLOAT_t[:] _y
 
+    # Element centre coordinates
+    cdef DTYPE_FLOAT_t[:] _xc
+    cdef DTYPE_FLOAT_t[:] _yc
+
     # Minimum nodal x/y values
     cdef DTYPE_FLOAT_t _xmin
     cdef DTYPE_FLOAT_t _ymin
@@ -92,10 +96,10 @@ cdef class ArakawaADataReader(DataReader):
     # Vertical eddy diffusivities
     cdef DTYPE_FLOAT_t[:,:] _kh_last
     cdef DTYPE_FLOAT_t[:,:] _kh_next
-    
+
     # Horizontal eddy viscosities
-    cdef DTYPE_FLOAT_t[:,:] _viscofh_last
-    cdef DTYPE_FLOAT_t[:,:] _viscofh_next
+    cdef DTYPE_FLOAT_t[:,:] _ah_last
+    cdef DTYPE_FLOAT_t[:,:] _ah_next
 
     # Wet/dry status of elements
     cdef DTYPE_INT_t[:] _wet_cells_last
@@ -1203,55 +1207,41 @@ cdef class ArakawaADataReader(DataReader):
         --------
         N/A
         """
-        pass
-#        # Read in the grid's dimensions
-#        self._n_nodes = self.mediator.get_dimension_variable('node')
-#        self._n_elems = self.mediator.get_dimension_variable('nele')
-#        self._n_siglev = self.mediator.get_dimension_variable('siglev')
-#        self._n_siglay = self.mediator.get_dimension_variable('siglay')
-#
-#        # Grid connectivity/adjacency
-#        self._nv = self.mediator.get_grid_variable('nv', (3, self._n_elems), DTYPE_INT)
-#        self._nbe = self.mediator.get_grid_variable('nbe', (3, self._n_elems), DTYPE_INT)
-#
-#        # Raw grid x/y or lat/lon coordinates
-#        coordinate_system = self.config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system").strip().lower()
-#        if coordinate_system == "cartesian":
-#            x = self.mediator.get_grid_variable('x', (self._n_nodes), DTYPE_FLOAT)
-#            y = self.mediator.get_grid_variable('y', (self._n_nodes), DTYPE_FLOAT)
-#            xc = self.mediator.get_grid_variable('xc', (self._n_elems), DTYPE_FLOAT)
-#            yc = self.mediator.get_grid_variable('yc', (self._n_elems), DTYPE_FLOAT)
-#
-#            # calculate offsets
-#            self._xmin = np.min(x)
-#            self._ymin = np.min(y)
-#
-#        elif coordinate_system == "spherical":
-#            x = self.mediator.get_grid_variable('lon', (self._n_nodes), DTYPE_FLOAT)
-#            y = self.mediator.get_grid_variable('lat', (self._n_nodes), DTYPE_FLOAT)
-#            xc = self.mediator.get_grid_variable('lonc', (self._n_elems), DTYPE_FLOAT)
-#            yc = self.mediator.get_grid_variable('latc', (self._n_elems), DTYPE_FLOAT)
-#
-#            # Don't apply offsets in spherical case - set them to 0.0!
-#            self._xmin = 0.0
-#            self._ymin = 0.0
-#        else:
-#            raise ValueError("Unsupported model coordinate system `{}'".format(coordinate_system))
-#
-#        # Apply offsets
-#        self._x = x - self._xmin
-#        self._y = y - self._ymin
-#        self._xc = xc - self._xmin
-#        self._yc = yc - self._ymin
-#
-#        # Sigma levels at nodal coordinates
-#        self._siglev = self.mediator.get_grid_variable('siglev', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)
-#
-#        # Sigma layers at nodal coordinates
-#        self._siglay = self.mediator.get_grid_variable('siglay', (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
-#
-#        # Bathymetry
-#        self._h = self.mediator.get_grid_variable('h', (self._n_nodes), DTYPE_FLOAT)
+        # Read in the grid's dimensions
+        self._n_nodes = self.mediator.get_dimension_variable('node')
+        self._n_elems = self.mediator.get_dimension_variable('element')
+        self._n_depth_levels = self.mediator.get_dimension_variable('depth')
+
+        # Grid connectivity/adjacency
+        self._nv = self.mediator.get_grid_variable('nv', (3, self._n_elems), DTYPE_INT)
+        self._nbe = self.mediator.get_grid_variable('nbe', (3, self._n_elems), DTYPE_INT)
+
+        # Raw grid x/y or lat/lon coordinates
+        coordinate_system = self.config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system").strip().lower()
+
+        if coordinate_system == "spherical":
+            x = self.mediator.get_grid_variable('longitude', (self._n_nodes), DTYPE_FLOAT)
+            y = self.mediator.get_grid_variable('latitude', (self._n_nodes), DTYPE_FLOAT)
+            xc = self.mediator.get_grid_variable('longitude_c', (self._n_elems), DTYPE_FLOAT)
+            yc = self.mediator.get_grid_variable('latitude_c', (self._n_elems), DTYPE_FLOAT)
+
+            # Don't apply offsets in spherical case - set them to 0.0!
+            self._xmin = 0.0
+            self._ymin = 0.0
+        else:
+            raise ValueError("Unsupported model coordinate system `{}'".format(coordinate_system))
+
+        # Apply offsets
+        self._x = x - self._xmin
+        self._y = y - self._ymin
+        self._xc = xc - self._xmin
+        self._yc = yc - self._ymin
+
+        # Sigma levels at nodal coordinates
+        self._depth_levels = self.mediator.get_grid_variable('depth', (self._n_depth_levels), DTYPE_FLOAT)
+
+        # Bathymetry
+        self._h = self.mediator.get_grid_variable('h', (self._n_nodes), DTYPE_FLOAT)
 
     cdef _read_time_dependent_vars(self):
         """ Update time variables and memory views for FVCOM data fields.
@@ -1271,22 +1261,23 @@ cdef class ArakawaADataReader(DataReader):
         --------
         N/A
         """
-        pass
-#        # Update time references
-#        self._time_last = self.mediator.get_time_at_last_time_index()
-#        self._time_next = self.mediator.get_time_at_next_time_index()
-#
-#        # Update memory views for zeta
-#        self._zeta_last = self.mediator.get_time_dependent_variable_at_last_time_index('zeta', (self._n_nodes), DTYPE_FLOAT)
-#        self._zeta_next = self.mediator.get_time_dependent_variable_at_next_time_index('zeta', (self._n_nodes), DTYPE_FLOAT)
-#
-#        # Update memory views for u, v and w
-#        self._u_last = self.mediator.get_time_dependent_variable_at_last_time_index('u', (self._n_siglay, self._n_elems), DTYPE_FLOAT)
-#        self._u_next = self.mediator.get_time_dependent_variable_at_next_time_index('u', (self._n_siglay, self._n_elems), DTYPE_FLOAT)
-#        self._v_last = self.mediator.get_time_dependent_variable_at_last_time_index('v', (self._n_siglay, self._n_elems), DTYPE_FLOAT)
-#        self._v_next = self.mediator.get_time_dependent_variable_at_next_time_index('v', (self._n_siglay, self._n_elems), DTYPE_FLOAT)
-#        self._w_last = self.mediator.get_time_dependent_variable_at_last_time_index('ww', (self._n_siglay, self._n_elems), DTYPE_FLOAT)
-#        self._w_next = self.mediator.get_time_dependent_variable_at_next_time_index('ww', (self._n_siglay, self._n_elems), DTYPE_FLOAT)
+        # Update time references
+        self._time_last = self.mediator.get_time_at_last_time_index()
+        self._time_next = self.mediator.get_time_at_next_time_index()
+
+        # Update memory views for zeta
+        self._zeta_last = self.mediator.get_time_dependent_variable_at_last_time_index('zeta', (self._n_nodes), DTYPE_FLOAT)
+        self._zeta_next = self.mediator.get_time_dependent_variable_at_next_time_index('zeta', (self._n_nodes), DTYPE_FLOAT)
+
+        # Update memory views for u, v and w
+        self._u_last = self.mediator.get_time_dependent_variable_at_last_time_index('uo', (self._n_depth_levels, self._n_nodes), DTYPE_FLOAT)
+        self._u_next = self.mediator.get_time_dependent_variable_at_next_time_index('uo', (self._n_depth_levels, self._n_nodes), DTYPE_FLOAT)
+        self._v_last = self.mediator.get_time_dependent_variable_at_last_time_index('vo', (self._n_depth_levels, self._n_nodes), DTYPE_FLOAT)
+        self._v_next = self.mediator.get_time_dependent_variable_at_next_time_index('vo', (self._n_depth_levels, self._n_nodes), DTYPE_FLOAT)
+
+        if self._has_w:
+            self._w_last = self.mediator.get_time_dependent_variable_at_last_time_index('wo', (self._n_depth_levels, self._n_nodes), DTYPE_FLOAT)
+            self._w_next = self.mediator.get_time_dependent_variable_at_next_time_index('wo', (self._n_depth_levels, self._n_nodes), DTYPE_FLOAT)
 #
 #        # Update memory views for kh
 #        if self._has_Kh:
@@ -1314,7 +1305,7 @@ cdef class ArakawaADataReader(DataReader):
 #            self._so_last = self.mediator.get_time_dependent_variable_at_last_time_index(fvcom_var_name, (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
 #            self._so_next = self.mediator.get_time_dependent_variable_at_next_time_index(fvcom_var_name, (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
 #
-#        return
+        return
 
     cdef void _get_phi(self, DTYPE_FLOAT_t x1, DTYPE_FLOAT_t x2,
             DTYPE_INT_t host, DTYPE_FLOAT_t phi[N_VERTICES]) except *:
