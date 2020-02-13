@@ -323,9 +323,14 @@ def create_arakawa_a_grid_metrics_file(file_name, grid_metrics_file_name='./grid
 
     # Generate land-sea mask at nodes
     land_sea_mask_nodes = sort_axes(mask_var)
+    if len(land_sea_mask_nodes.shape) < 2 or len(land_sea_mask_nodes.shape) > 3:
+        raise ValueError('Unsupported land sea mask with shape {}'.format(land_sea_mask_nodes.shape))
+
+    # Use surface mask only if shape is 3D
     if len(land_sea_mask_nodes.shape) == 3:
-        land_sea_mask_nodes = land_sea_mask_nodes[0, :, :]  # Use surface mask only
-        land_sea_mask_nodes = land_sea_mask_nodes.reshape(np.prod(land_sea_mask_nodes.shape), order='C')
+        land_sea_mask_nodes = land_sea_mask_nodes[0, :, :]
+
+    land_sea_mask_nodes = land_sea_mask_nodes.reshape(np.prod(land_sea_mask_nodes.shape), order='C')
 
     # Generate the land-sea mask at elements
     land_sea_mask_elements = np.empty(n_elems, dtype=int)
