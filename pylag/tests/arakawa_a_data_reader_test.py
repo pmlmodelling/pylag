@@ -206,18 +206,18 @@ class ArawawaADataReader_test(TestCase):
         test.assert_equal(flag, -1)
         test.assert_equal(particle_new.host_horizontal_elem, 2)
 
-    # def test_get_zmin(self):
-    #     x1 = 1.3333333333-self.xmin
-    #     x2 = 1.6666666667-self.ymin
-    #     host = 0
-    #
-    #     time = 0.0
-    #
-    #     particle = ParticleSmartPtr(x1=x1, x2=x2, host=host)
-    #     self.data_reader.set_local_coordinates_wrapper(particle)
-    #     bathy = self.data_reader.get_zmin_wrapper(time, particle)
-    #     test.assert_almost_equal(bathy, -11.0)
-    #
+    def test_get_zmin(self):
+        x1 = 2.333333333-self.xmin
+        x2 = 11.66666667-self.ymin
+        host = 2
+
+        time = 0.0
+
+        particle = ParticleSmartPtr(x1=x1, x2=x2, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        bathy = self.data_reader.get_zmin_wrapper(time, particle)
+        test.assert_almost_equal(bathy, -15.0)
+
     # def test_get_zmax(self):
     #     x1 = 1.3333333333-self.xmin
     #     x2 = 1.6666666667-self.ymin
