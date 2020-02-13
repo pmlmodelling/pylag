@@ -1266,18 +1266,18 @@ cdef class ArakawaADataReader(DataReader):
         self._time_next = self.mediator.get_time_at_next_time_index()
 
         # Update memory views for zeta
-        self._zeta_last = self.mediator.get_time_dependent_variable_at_last_time_index('zeta', (self._n_nodes), DTYPE_FLOAT)
-        self._zeta_next = self.mediator.get_time_dependent_variable_at_next_time_index('zeta', (self._n_nodes), DTYPE_FLOAT)
+#        self._zeta_last = self.mediator.get_time_dependent_variable_at_last_time_index('zeta', (self._n_nodes), DTYPE_FLOAT)
+#        self._zeta_next = self.mediator.get_time_dependent_variable_at_next_time_index('zeta', (self._n_nodes), DTYPE_FLOAT)
 
         # Update memory views for u, v and w
-        self._u_last = self.mediator.get_time_dependent_variable_at_last_time_index('uo', (self._n_depth_levels, self._n_nodes), DTYPE_FLOAT)
-        self._u_next = self.mediator.get_time_dependent_variable_at_next_time_index('uo', (self._n_depth_levels, self._n_nodes), DTYPE_FLOAT)
-        self._v_last = self.mediator.get_time_dependent_variable_at_last_time_index('vo', (self._n_depth_levels, self._n_nodes), DTYPE_FLOAT)
-        self._v_next = self.mediator.get_time_dependent_variable_at_next_time_index('vo', (self._n_depth_levels, self._n_nodes), DTYPE_FLOAT)
+#        self._u_last = self.mediator.get_time_dependent_variable_at_last_time_index('uo', (self._n_depth_levels, self._n_nodes), DTYPE_FLOAT)
+#        self._u_next = self.mediator.get_time_dependent_variable_at_next_time_index('uo', (self._n_depth_levels, self._n_nodes), DTYPE_FLOAT)
+#        self._v_last = self.mediator.get_time_dependent_variable_at_last_time_index('vo', (self._n_depth_levels, self._n_nodes), DTYPE_FLOAT)
+#        self._v_next = self.mediator.get_time_dependent_variable_at_next_time_index('vo', (self._n_depth_levels, self._n_nodes), DTYPE_FLOAT)
 
-        if self._has_w:
-            self._w_last = self.mediator.get_time_dependent_variable_at_last_time_index('wo', (self._n_depth_levels, self._n_nodes), DTYPE_FLOAT)
-            self._w_next = self.mediator.get_time_dependent_variable_at_next_time_index('wo', (self._n_depth_levels, self._n_nodes), DTYPE_FLOAT)
+#        if self._has_w:
+#            self._w_last = self.mediator.get_time_dependent_variable_at_last_time_index('wo', (self._n_depth_levels, self._n_nodes), DTYPE_FLOAT)
+#            self._w_next = self.mediator.get_time_dependent_variable_at_next_time_index('wo', (self._n_depth_levels, self._n_nodes), DTYPE_FLOAT)
 #
 #        # Update memory views for kh
 #        if self._has_Kh:
