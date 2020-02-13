@@ -2,6 +2,7 @@ from unittest import TestCase
 import numpy.testing as test
 import numpy as np
 import datetime
+from scipy.spatial import Delaunay
 
 try:
     import configparser
@@ -12,53 +13,107 @@ except ImportError:
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 
 from pylag.arakawa_a_data_reader import ArakawaADataReader
-from pylag.boundary_conditions import RefHorizBoundaryConditionCalculator
-from pylag.boundary_conditions import RefVertBoundaryConditionCalculator
+#from pylag.boundary_conditions import RefHorizBoundaryConditionCalculator
+#from pylag.boundary_conditions import RefVertBoundaryConditionCalculator
 from pylag.particle import ParticleSmartPtr
 from pylag import cwrappers
 
 from pylag.mediator import Mediator
+from pylag.grid_metrics import sort_adjacency_array
 
 
 class MockArakawaAMediator(Mediator):
     """ Test mediator for Arakawa-a gridded data
 
+    We first define a structured 3x3x3 grid with depth, lat, and lon dimensions, in that
+    order. From this we construct the unstructured grid using the approach adopted within
+    create_arakawa_a_grid_metrics_file() in grid_metrics.py. This gives the unstructured
+    grid variables (lat, lon, lat_c, lon_c, depth, h, land_sea_mask) to be readby PyLag.
+    Next, we create the masked, time dependent variables (zeta, u, v, w). These are kept
+    on their native structured grid - it is down to PyLag to correctly interpret and handle
+    these, with accompanying unit tests put in place to ensure this is so.
     """
     def __init__(self):
-        # Dimension variables
-        n_elements = 5
-        n_nodes = 7
-        n_depth = 4
-        self._dim_vars = {'element': n_elements, 'node': n_nodes, 'depth': n_depth}
-                          
-        # Grid variables
-        nv = np.array([[4, 0, 2, 4, 3], [3, 1, 4, 5, 6], [1, 3, 1, 3, 0]], dtype=int)
-        nbe = np.array([[1, 0, 0, -1, -1], [2, 4, -1, 0, 1], [3, -1, -1, -1, -1]], dtype=int)
-        longitude = np.array([2.0, 1.0, 0.0, 2.0, 1.0, 1.5, 3.0], dtype=float)
-        latitude = np.array([1.0, 1.0, 1.0, 2.0, 2.0, 3.0, 1.0], dtype=float)
-        longitude_c = np.array([1.3333333333, 1.6666666667, 0.6666666667, 1.5000000000, 2.3333333333], dtype=float)
-        latitude_c = np.array([1.6666666667, 1.3333333333, 1.3333333333, 2.3333333333, 1.3333333333], dtype=float)
-        depth = np.array([0., -.2, -.8, -1.], dtype=float).transpose()
-        h = np.array([10., 11., 10., 11., 11., 10.], dtype=float)
-        self._grid_vars = {'nv': nv, 'nbe': nbe, 'longitude': longitude, 'latitude': latitude, 'longitude_c': longitude_c,
-                           'latitude_c': latitude_c, 'depth': depth, 'h': h}
-        
-        # Dictionaries holding the value of time dependent and time independent variables
-        zeta = np.array([[0., 1., 0., 1., 1., 0.], [0., 2., 0., 2., 2., 0.]], dtype=float)
-        
-        # u/v/w are imposed, equal across elements, decreasing with depth and increasing in time
-        uvw_t0 = np.array([[0.]*n_nodes, [2.]*n_nodes, [1.]*n_nodes, [0.]*n_nodes], dtype=float)
-        uvw_t1 = np.array([[0.]*n_nodes, [4.]*n_nodes, [2.]*n_nodes, [0.]*n_nodes], dtype=float)
-        u = np.array([uvw_t0, uvw_t1], dtype=float)
-        v = np.array([uvw_t0, uvw_t1], dtype=float)
-        w = np.array([uvw_t0, uvw_t1], dtype=float)
-        
-        # Store in dictionaries
-        self._time_dep_vars_last = {'zeta': zeta[0, :], 'uo': u[0, :], 'vo': v[0, :],
-                                    'wo': w[0, :]}
+        # Basic grid (3 x 3 x 3)
+        latitude = np.array([11., 12., 13.], dtype=float)
+        longitude = np.array([1., 2., 3.], dtype=float)
+        depth = np.array([0., 10., 20.], dtype=float)
 
-        self._time_dep_vars_next = {'zeta': zeta[1, :], 'uo': u[1, :], 'vo': v[1, :],
-                                    'wo': w[1, :]}
+        # Bathymetry [lat, lon]
+        h = np.array([[25., 25., 25.], [10., 10., 10.], [0., 0., 0.]])
+        h = np.moveaxis(h, 1, 0)  # Move to [lon, lat]
+        h = h.reshape(np.prod(h.shape), order='C')
+
+        # Mask [depth, lat, lon]. 1 is sea, 0 land.
+        mask = np.array([[[1, 1, 1], [1, 1, 1], [0, 0, 0]],
+                         [[1, 1, 1], [1, 1, 1], [0, 0, 0]],
+                         [[1, 1, 1], [0, 0, 0], [0, 0, 0]]], dtype=int)
+
+        # Separately save the surface mask at nodes, This is taken as the land sea mask.
+        land_sea_mask = mask[0, :, :]
+        land_sea_mask_nodes = np.moveaxis(land_sea_mask, 0, 1)  # Move to [lon, lat]
+        land_sea_mask_nodes = land_sea_mask_nodes.reshape(np.prod(land_sea_mask_nodes.shape), order='C')
+
+        # Zeta (time = 0) [lat, lon]
+        zeta_t0 = np.ma.masked_array([[1., 1., 1.], [0., 0., 0.], [0., 0., 0.]], mask=land_sea_mask, dtype=float)
+        zeta_t1 = np.ma.copy(zeta_t0)
+
+        # u/v/w (time = 0) [depth, lat, lon]
+        uvw_t0 = np.ma.masked_array([[[2., 2., 2.], [1., 1., 1.], [0., 0., 0.]],
+                                     [[2., 2., 2.], [1., 1., 1.], [0., 0., 0.]],
+                                     [[2., 2., 2.], [1., 1., 1.], [0., 0., 0.]]], mask=mask, dtype=float)
+        uvw_t1 = np.ma.copy(uvw_t0)
+
+        # Form the unstructured grid
+        lon2d, lat2d = np.meshgrid(longitude[:], latitude[:], indexing='ij')
+        points = np.array([lon2d.flatten(order='C'), lat2d.flatten(order='C')]).T
+
+        # Save lon and lat points at nodes
+        lon_nodes = points[:, 0]
+        lat_nodes = points[:, 1]
+        n_nodes = points.shape[0]
+
+        # Save number of depth levels
+        n_depth = depth.shape[0]
+
+        # Create the Triangulation
+        tri = Delaunay(points)
+
+        # Save simplices
+        #   - Flip to reverse ordering, as expected by PyLag
+        #   - Transpose to give it the dimension ordering expected by PyLag
+        nv = np.flip(tri.simplices.copy(), axis=1).T
+        n_elements = nv.shape[1]
+
+        # Save neighbours
+        #   - Transpose to give it the dimension ordering expected by PyLag
+        #   - Sort to ensure match with nv
+        nbe = tri.neighbors.T
+        nbe = sort_adjacency_array(nv, nbe)
+
+        # Save lon and lat points at element centres
+        lon_elements = np.empty(n_elements, dtype=float)
+        lat_elements = np.empty(n_elements, dtype=float)
+        for i, element in enumerate(range(n_elements)):
+            lon_elements[i] = lon_nodes[(nv[:, element])].mean()
+            lat_elements[i] = lat_nodes[(nv[:, element])].mean()
+
+        # Generate the land-sea mask at elements
+        land_sea_mask_elements = np.empty(n_elements, dtype=int)
+        for i in range(n_elements):
+            element_nodes = nv[:, i]
+            land_sea_mask_elements[i] = 0 if np.any(land_sea_mask_nodes[(element_nodes)] == 0) else 1
+
+            # Add to grid dimensions and variables
+        self._dim_vars = {'node': n_nodes, 'element': n_elements, 'depth': n_depth}
+        self._grid_vars = {'nv': nv, 'nbe': nbe, 'longitude': lon_nodes, 'longitude_c': lon_elements,
+                           'latitude': lat_nodes, 'latitude_c': lat_elements, 'depth': depth, 'h': h,
+                           'mask': land_sea_mask_elements}
+
+        # Store in dictionaries
+        self._time_dep_vars_last = {'zeta': zeta_t0, 'uo': uvw_t0, 'vo': uvw_t0, 'wo': uvw_t0}
+
+        self._time_dep_vars_next = {'zeta': zeta_t1, 'uo': uvw_t1, 'vo': uvw_t1, 'wo': uvw_t1}
 
         # Time in seconds. ie two time pts, 1 hour apart
         self._t_last = 0.0
@@ -99,7 +154,7 @@ class ArawawaADataReader_test(TestCase):
         config.add_section("SIMULATION")
         config.set('SIMULATION', 'time_direction', 'forward')
         config.add_section("OCEAN_CIRCULATION_MODEL")
-        config.set('OCEAN_CIRCULATION_MODEL', 'has_w', 'False')
+        config.set('OCEAN_CIRCULATION_MODEL', 'has_w', 'True')
         config.set('OCEAN_CIRCULATION_MODEL', 'has_Kh', 'False')
         config.set('OCEAN_CIRCULATION_MODEL', 'has_Ah', 'False')
         config.set('OCEAN_CIRCULATION_MODEL', 'has_is_wet', 'False')
@@ -124,161 +179,161 @@ class ArawawaADataReader_test(TestCase):
         del(self.data_reader)
 
     def test_find_host_using_global_search(self):
-        particle = ParticleSmartPtr(x1=1.3333333333-self.xmin, x2=1.6666666667-self.ymin)
+        particle = ParticleSmartPtr(x1=1.666666667-self.xmin, x2=11.666666667-self.ymin)
         flag = self.data_reader.find_host_using_global_search_wrapper(particle)
         test.assert_equal(particle.host_horizontal_elem, 0)
         test.assert_equal(flag, 0)
 
-    def test_find_host_using_global_search_when_a_particle_is_in_an_element_with_two_land_boundaries(self):
-        particle = ParticleSmartPtr(x1=0.6666666667-self.xmin, x2=1.3333333333-self.ymin, host=-1)
-        flag = self.data_reader.find_host_using_global_search_wrapper(particle)
-        test.assert_equal(particle.host_horizontal_elem, -1)
-
-    def test_find_host_when_particle_is_in_the_domain(self):
-        particle_old = ParticleSmartPtr(x1=1.5-self.xmin, x2=2.3333333333-self.ymin, host=3)
-        particle_new = ParticleSmartPtr(x1=1.3333333333-self.xmin, x2=1.6666666667-self.ymin)
-        flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
-        test.assert_equal(flag, 0)
-        test.assert_equal(particle_new.host_horizontal_elem, 0)
-
-    def test_find_host_when_particle_has_crossed_a_land_boundary(self):
-        particle_old = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.3333333333-self.ymin, host=1)
-        particle_new = ParticleSmartPtr(x1=1.5-self.xmin, x2=0.0-self.ymin)
-        flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
-        test.assert_equal(flag, -1)
-        test.assert_equal(particle_new.host_horizontal_elem, 1)
-
-    def test_find_host_when_particle_has_crossed_into_an_element_with_two_land_boundaries(self):
-        particle_old = ParticleSmartPtr(x1=1.3333333333-self.xmin, x2=1.6666666667-self.ymin, host=0)
-        particle_new = ParticleSmartPtr(x1=0.6666666667-self.xmin, x2=1.3333333333-self.ymin)
-        flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
-        test.assert_equal(flag, -1)
-        test.assert_equal(particle_new.host_horizontal_elem, 0)
-
-    def test_find_host_when_particle_has_crossed_multiple_elements_to_an_element_with_two_land_boundaries(self):
-        particle_old = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.3333333333-self.ymin, host=1)
-        particle_new = ParticleSmartPtr(x1=0.6666666667-self.xmin, x2=1.3333333333-self.ymin)
-        flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
-        test.assert_equal(flag, -1)
-        test.assert_equal(particle_new.host_horizontal_elem, 0)
-
-    def test_find_host_when_particle_is_just_inside_an_internal_element(self):
-        particle_old = ParticleSmartPtr(x1=1.4-self.xmin, x2=1.5-self.ymin, host=0)
-        particle_new = ParticleSmartPtr(x1=1.5 - 1.e-15 - self.xmin, x2=1.5 - self.ymin)
-        flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
-        test.assert_equal(flag, 0)
-        test.assert_equal(particle_new.host_horizontal_elem, 0)
-
-    def test_find_host_when_particle_is_just_outside_an_internal_element(self):
-        particle_old = ParticleSmartPtr(x1=1.4-self.xmin, x2=1.5-self.ymin, host=0)
-        particle_new = ParticleSmartPtr(x1=1.5 + 1.e-15 - self.xmin, x2=1.5 - self.ymin)
-        flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
-        test.assert_equal(flag, 0)
-        test.assert_equal(particle_new.host_horizontal_elem, 1)
-
-    def test_find_host_when_particle_is_on_an_internal_elements_side(self):
-        particle_old = ParticleSmartPtr(x1=1.4 - self.xmin, x2=1.5 - self.ymin, host=0)
-        particle_new = ParticleSmartPtr(x1=1.5 - self.xmin, x2=1.5 - self.ymin)
-        flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
-        test.assert_equal(flag, 0)
-        test.assert_equal(particle_new.host_horizontal_elem, 0)
-
-    def test_find_host_when_particle_is_just_inside_an_external_element(self):
-        particle_old = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.3333333333-self.ymin, host=1)
-        particle_new = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.0 + 1.e-15 - self.ymin)
-        flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
-        test.assert_equal(flag, 0)
-        test.assert_equal(particle_new.host_horizontal_elem, 1)
-
-    def test_find_host_when_particle_is_just_outside_an_external_element(self):
-        particle_old = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.3333333333-self.ymin, host=1)
-        particle_new = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.0 - 1.e-15 - self.ymin)
-        flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
-        test.assert_equal(flag, -1)
-        test.assert_equal(particle_new.host_horizontal_elem, 1)
-
-    def test_find_host_when_particle_is_on_an_external_elements_side(self):
-        particle_old = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.3333333333-self.ymin, host=1)
-        particle_new = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.0-self.ymin)
-        flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
-        test.assert_equal(flag, 0)
-        test.assert_equal(particle_new.host_horizontal_elem, 1)
-
-    def test_get_boundary_intersection(self):
-         particle_old = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.3333333333-self.ymin, host=1)
-         particle_new = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=0.9-self.ymin, host=1)
-         intersection = self.data_reader.get_boundary_intersection_wrapper(particle_old, particle_new)
-         test.assert_almost_equal(intersection.x1_py+self.xmin, 2.0)
-         test.assert_almost_equal(intersection.y1_py+self.ymin, 1.0)
-         test.assert_almost_equal(intersection.x2_py+self.xmin, 1.0)
-         test.assert_almost_equal(intersection.y2_py+self.ymin, 1.0)
-         test.assert_almost_equal(intersection.xi_py+self.xmin, 1.6666666667)
-         test.assert_almost_equal(intersection.yi_py+self.ymin, 1.0)
-
-    def test_get_boundary_intersection_when_a_particle_has_left_an_external_elements_edge(self):
-         particle_old = ParticleSmartPtr(x1=1.5-self.xmin, x2=1.0-self.ymin, host=1)
-         particle_new = ParticleSmartPtr(x1=1.5-self.xmin, x2=0.9-self.ymin, host=1)
-         intersection = self.data_reader.get_boundary_intersection_wrapper(particle_old, particle_new)
-         test.assert_almost_equal(intersection.x1_py+self.xmin, 2.0)
-         test.assert_almost_equal(intersection.y1_py+self.ymin, 1.0)
-         test.assert_almost_equal(intersection.x2_py+self.xmin, 1.0)
-         test.assert_almost_equal(intersection.y2_py+self.ymin, 1.0)
-         test.assert_almost_equal(intersection.xi_py+self.xmin, 1.5)
-         test.assert_almost_equal(intersection.yi_py+self.ymin, 1.0)
-
-    def test_get_boundary_intersection_when_a_particle_has_moved_to_an_external_elements_edge(self):
-         particle_old = ParticleSmartPtr(x1=1.5-self.xmin, x2=1.1-self.ymin, host=1)
-         particle_new = ParticleSmartPtr(x1=1.5-self.xmin, x2=1.0-self.ymin, host=1)
-         intersection = self.data_reader.get_boundary_intersection_wrapper(particle_old, particle_new)
-         test.assert_almost_equal(intersection.x1_py+self.xmin, 2.0)
-         test.assert_almost_equal(intersection.y1_py+self.ymin, 1.0)
-         test.assert_almost_equal(intersection.x2_py+self.xmin, 1.0)
-         test.assert_almost_equal(intersection.y2_py+self.ymin, 1.0)
-         test.assert_almost_equal(intersection.xi_py+self.xmin, 1.5)
-         test.assert_almost_equal(intersection.yi_py+self.ymin, 1.0)
-
-    def test_set_default_location(self):
-        particle = ParticleSmartPtr(x1=1.5-self.xmin, x2=1.0-self.ymin, host=1)
-        self.data_reader.set_default_location_wrapper(particle)
-        test.assert_almost_equal(particle.x1 + self.xmin, 1.66666666667)
-        test.assert_almost_equal(particle.x2 + self.ymin, 1.33333333333)
-        test.assert_array_almost_equal(particle.phi, [0.3333333333, 0.3333333333, 0.3333333333])
-
-
-    def test_set_local_coordinates_when_a_particle_is_on_an_external_elements_side(self):
-        particle = ParticleSmartPtr(x1=1.5-self.xmin, x2=1.0-self.ymin, host=1)
-        self.data_reader.set_local_coordinates_wrapper(particle)
-        phi_min = np.min(np.array(particle.phi, dtype=float))
-        test.assert_equal(np.abs(phi_min), 0.0)
-
-    def test_get_zmin(self):
-        x1 = 1.3333333333-self.xmin
-        x2 = 1.6666666667-self.ymin
-        host = 0
-
-        time = 0.0
-
-        particle = ParticleSmartPtr(x1=x1, x2=x2, host=host)
-        self.data_reader.set_local_coordinates_wrapper(particle)
-        bathy = self.data_reader.get_zmin_wrapper(time, particle)
-        test.assert_almost_equal(bathy, -11.0)
-
-    def test_get_zmax(self):
-        x1 = 1.3333333333-self.xmin
-        x2 = 1.6666666667-self.ymin
-        host = 0
-
-        time = 0.0
-        particle = ParticleSmartPtr(x1=x1, x2=x2, host=host)
-        self.data_reader.set_local_coordinates_wrapper(particle)
-        zeta = self.data_reader.get_zmax_wrapper(time, particle)
-        test.assert_almost_equal(zeta, 1.0)
-
-        time = 1800.0
-        particle = ParticleSmartPtr(x1=x1, x2=x2, host=host)
-        self.data_reader.set_local_coordinates_wrapper(particle)
-        zeta = self.data_reader.get_zmax_wrapper(time, particle)
-        test.assert_almost_equal(zeta, 1.5)
+    # def test_find_host_using_global_search_when_a_particle_is_in_an_element_with_two_land_boundaries(self):
+    #     particle = ParticleSmartPtr(x1=0.6666666667-self.xmin, x2=1.3333333333-self.ymin, host=-1)
+    #     flag = self.data_reader.find_host_using_global_search_wrapper(particle)
+    #     test.assert_equal(particle.host_horizontal_elem, -1)
+    #
+    # def test_find_host_when_particle_is_in_the_domain(self):
+    #     particle_old = ParticleSmartPtr(x1=1.5-self.xmin, x2=2.3333333333-self.ymin, host=3)
+    #     particle_new = ParticleSmartPtr(x1=1.3333333333-self.xmin, x2=1.6666666667-self.ymin)
+    #     flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
+    #     test.assert_equal(flag, 0)
+    #     test.assert_equal(particle_new.host_horizontal_elem, 0)
+    #
+    # def test_find_host_when_particle_has_crossed_a_land_boundary(self):
+    #     particle_old = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.3333333333-self.ymin, host=1)
+    #     particle_new = ParticleSmartPtr(x1=1.5-self.xmin, x2=0.0-self.ymin)
+    #     flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
+    #     test.assert_equal(flag, -1)
+    #     test.assert_equal(particle_new.host_horizontal_elem, 1)
+    #
+    # def test_find_host_when_particle_has_crossed_into_an_element_with_two_land_boundaries(self):
+    #     particle_old = ParticleSmartPtr(x1=1.3333333333-self.xmin, x2=1.6666666667-self.ymin, host=0)
+    #     particle_new = ParticleSmartPtr(x1=0.6666666667-self.xmin, x2=1.3333333333-self.ymin)
+    #     flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
+    #     test.assert_equal(flag, -1)
+    #     test.assert_equal(particle_new.host_horizontal_elem, 0)
+    #
+    # def test_find_host_when_particle_has_crossed_multiple_elements_to_an_element_with_two_land_boundaries(self):
+    #     particle_old = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.3333333333-self.ymin, host=1)
+    #     particle_new = ParticleSmartPtr(x1=0.6666666667-self.xmin, x2=1.3333333333-self.ymin)
+    #     flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
+    #     test.assert_equal(flag, -1)
+    #     test.assert_equal(particle_new.host_horizontal_elem, 0)
+    #
+    # def test_find_host_when_particle_is_just_inside_an_internal_element(self):
+    #     particle_old = ParticleSmartPtr(x1=1.4-self.xmin, x2=1.5-self.ymin, host=0)
+    #     particle_new = ParticleSmartPtr(x1=1.5 - 1.e-15 - self.xmin, x2=1.5 - self.ymin)
+    #     flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
+    #     test.assert_equal(flag, 0)
+    #     test.assert_equal(particle_new.host_horizontal_elem, 0)
+    #
+    # def test_find_host_when_particle_is_just_outside_an_internal_element(self):
+    #     particle_old = ParticleSmartPtr(x1=1.4-self.xmin, x2=1.5-self.ymin, host=0)
+    #     particle_new = ParticleSmartPtr(x1=1.5 + 1.e-15 - self.xmin, x2=1.5 - self.ymin)
+    #     flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
+    #     test.assert_equal(flag, 0)
+    #     test.assert_equal(particle_new.host_horizontal_elem, 1)
+    #
+    # def test_find_host_when_particle_is_on_an_internal_elements_side(self):
+    #     particle_old = ParticleSmartPtr(x1=1.4 - self.xmin, x2=1.5 - self.ymin, host=0)
+    #     particle_new = ParticleSmartPtr(x1=1.5 - self.xmin, x2=1.5 - self.ymin)
+    #     flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
+    #     test.assert_equal(flag, 0)
+    #     test.assert_equal(particle_new.host_horizontal_elem, 0)
+    #
+    # def test_find_host_when_particle_is_just_inside_an_external_element(self):
+    #     particle_old = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.3333333333-self.ymin, host=1)
+    #     particle_new = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.0 + 1.e-15 - self.ymin)
+    #     flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
+    #     test.assert_equal(flag, 0)
+    #     test.assert_equal(particle_new.host_horizontal_elem, 1)
+    #
+    # def test_find_host_when_particle_is_just_outside_an_external_element(self):
+    #     particle_old = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.3333333333-self.ymin, host=1)
+    #     particle_new = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.0 - 1.e-15 - self.ymin)
+    #     flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
+    #     test.assert_equal(flag, -1)
+    #     test.assert_equal(particle_new.host_horizontal_elem, 1)
+    #
+    # def test_find_host_when_particle_is_on_an_external_elements_side(self):
+    #     particle_old = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.3333333333-self.ymin, host=1)
+    #     particle_new = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.0-self.ymin)
+    #     flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
+    #     test.assert_equal(flag, 0)
+    #     test.assert_equal(particle_new.host_horizontal_elem, 1)
+    #
+    # def test_get_boundary_intersection(self):
+    #      particle_old = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.3333333333-self.ymin, host=1)
+    #      particle_new = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=0.9-self.ymin, host=1)
+    #      intersection = self.data_reader.get_boundary_intersection_wrapper(particle_old, particle_new)
+    #      test.assert_almost_equal(intersection.x1_py+self.xmin, 2.0)
+    #      test.assert_almost_equal(intersection.y1_py+self.ymin, 1.0)
+    #      test.assert_almost_equal(intersection.x2_py+self.xmin, 1.0)
+    #      test.assert_almost_equal(intersection.y2_py+self.ymin, 1.0)
+    #      test.assert_almost_equal(intersection.xi_py+self.xmin, 1.6666666667)
+    #      test.assert_almost_equal(intersection.yi_py+self.ymin, 1.0)
+    #
+    # def test_get_boundary_intersection_when_a_particle_has_left_an_external_elements_edge(self):
+    #      particle_old = ParticleSmartPtr(x1=1.5-self.xmin, x2=1.0-self.ymin, host=1)
+    #      particle_new = ParticleSmartPtr(x1=1.5-self.xmin, x2=0.9-self.ymin, host=1)
+    #      intersection = self.data_reader.get_boundary_intersection_wrapper(particle_old, particle_new)
+    #      test.assert_almost_equal(intersection.x1_py+self.xmin, 2.0)
+    #      test.assert_almost_equal(intersection.y1_py+self.ymin, 1.0)
+    #      test.assert_almost_equal(intersection.x2_py+self.xmin, 1.0)
+    #      test.assert_almost_equal(intersection.y2_py+self.ymin, 1.0)
+    #      test.assert_almost_equal(intersection.xi_py+self.xmin, 1.5)
+    #      test.assert_almost_equal(intersection.yi_py+self.ymin, 1.0)
+    #
+    # def test_get_boundary_intersection_when_a_particle_has_moved_to_an_external_elements_edge(self):
+    #      particle_old = ParticleSmartPtr(x1=1.5-self.xmin, x2=1.1-self.ymin, host=1)
+    #      particle_new = ParticleSmartPtr(x1=1.5-self.xmin, x2=1.0-self.ymin, host=1)
+    #      intersection = self.data_reader.get_boundary_intersection_wrapper(particle_old, particle_new)
+    #      test.assert_almost_equal(intersection.x1_py+self.xmin, 2.0)
+    #      test.assert_almost_equal(intersection.y1_py+self.ymin, 1.0)
+    #      test.assert_almost_equal(intersection.x2_py+self.xmin, 1.0)
+    #      test.assert_almost_equal(intersection.y2_py+self.ymin, 1.0)
+    #      test.assert_almost_equal(intersection.xi_py+self.xmin, 1.5)
+    #      test.assert_almost_equal(intersection.yi_py+self.ymin, 1.0)
+    #
+    # def test_set_default_location(self):
+    #     particle = ParticleSmartPtr(x1=1.5-self.xmin, x2=1.0-self.ymin, host=1)
+    #     self.data_reader.set_default_location_wrapper(particle)
+    #     test.assert_almost_equal(particle.x1 + self.xmin, 1.66666666667)
+    #     test.assert_almost_equal(particle.x2 + self.ymin, 1.33333333333)
+    #     test.assert_array_almost_equal(particle.phi, [0.3333333333, 0.3333333333, 0.3333333333])
+    #
+    #
+    # def test_set_local_coordinates_when_a_particle_is_on_an_external_elements_side(self):
+    #     particle = ParticleSmartPtr(x1=1.5-self.xmin, x2=1.0-self.ymin, host=1)
+    #     self.data_reader.set_local_coordinates_wrapper(particle)
+    #     phi_min = np.min(np.array(particle.phi, dtype=float))
+    #     test.assert_equal(np.abs(phi_min), 0.0)
+    #
+    # def test_get_zmin(self):
+    #     x1 = 1.3333333333-self.xmin
+    #     x2 = 1.6666666667-self.ymin
+    #     host = 0
+    #
+    #     time = 0.0
+    #
+    #     particle = ParticleSmartPtr(x1=x1, x2=x2, host=host)
+    #     self.data_reader.set_local_coordinates_wrapper(particle)
+    #     bathy = self.data_reader.get_zmin_wrapper(time, particle)
+    #     test.assert_almost_equal(bathy, -11.0)
+    #
+    # def test_get_zmax(self):
+    #     x1 = 1.3333333333-self.xmin
+    #     x2 = 1.6666666667-self.ymin
+    #     host = 0
+    #
+    #     time = 0.0
+    #     particle = ParticleSmartPtr(x1=x1, x2=x2, host=host)
+    #     self.data_reader.set_local_coordinates_wrapper(particle)
+    #     zeta = self.data_reader.get_zmax_wrapper(time, particle)
+    #     test.assert_almost_equal(zeta, 1.0)
+    #
+    #     time = 1800.0
+    #     particle = ParticleSmartPtr(x1=x1, x2=x2, host=host)
+    #     self.data_reader.set_local_coordinates_wrapper(particle)
+    #     zeta = self.data_reader.get_zmax_wrapper(time, particle)
+    #     test.assert_almost_equal(zeta, 1.5)
 
     # def test_set_vertical_grid_vars_for_a_particle_on_the_sea_surface(self):
     #     time = 0.0
