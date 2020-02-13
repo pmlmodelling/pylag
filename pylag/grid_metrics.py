@@ -309,8 +309,8 @@ def create_arakawa_a_grid_metrics_file(file_name, grid_metrics_file_name='./grid
     n_elems = nv.shape[1]
 
     # Save lon and lat points at element centres
-    lon_elements = np.empty(n_elems, dtype=int)
-    lat_elements = np.empty(n_elems, dtype=int)
+    lon_elements = np.empty(n_elems, dtype=float)
+    lat_elements = np.empty(n_elems, dtype=float)
     for i, element in enumerate(range(n_elems)):
         lon_elements[i] = lon_nodes[(nv[:, element])].mean()
         lat_elements[i] = lat_nodes[(nv[:, element])].mean()
