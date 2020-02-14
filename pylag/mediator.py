@@ -1,6 +1,8 @@
+from pylag.data_types_python import DTYPE_INT
 from pylag.file_reader import FileReader
 from pylag.file_reader import DiskFileNameReader
 from pylag.file_reader import NetCDFDatasetReader
+
 
 class Mediator(object):
     """ Base class for objects of type Mediator.
@@ -36,6 +38,13 @@ class Mediator(object):
     def get_time_dependent_variable_at_next_time_index(self, var_name, var_dims, var_type):
         raise NotImplementedError
 
+    def get_mask_at_last_time_index(self, var_name, var_dims):
+        raise NotImplementedError
+
+    def get_mask_at_next_time_index(self, var_name, var_dims):
+        raise NotImplementedError
+
+
 class SerialMediator(Mediator):
     def __init__(self, config, datetime_start, datetime_end):
         self.config = config
@@ -69,3 +78,9 @@ class SerialMediator(Mediator):
 
     def get_time_dependent_variable_at_next_time_index(self, var_name, var_dims, var_type):
         return self.file_reader.get_time_dependent_variable_at_next_time_index(var_name).astype(var_type)
+
+    def get_mask_at_last_time_index(self, var_name, var_dims):
+        return self.file_reader.get_mask_at_last_time_index(var_name).astype(DTYPE_INT)
+
+    def get_mask_at_next_time_index(self, var_name, var_dims):
+        return self.file_reader.get_mask_at_next_time_index(var_name).astype(DTYPE_INT)
