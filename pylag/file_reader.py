@@ -391,6 +391,22 @@ class FileReader(object):
 
         return var
 
+    def get_mask_at_last_time_index(self, var_name):
+        var = self._first_data_file.variables[var_name][self._tidx_first, :]
+
+        if np.ma.isMaskedArray(var):
+            return var.mask
+
+        raise RuntimeError('Variable {} is not a masked array.'.format(var_name))
+
+    def get_mask_at_next_time_index(self, var_name):
+        var = self._second_data_file.variables[var_name][self._tidx_second, :]
+
+        if np.ma.isMaskedArray(var):
+            return var.mask
+
+        raise RuntimeError('Variable {} is not a masked array.'.format(var_name))
+
     def _open_data_files_for_reading(self):
         """Open the first and second data files for reading
         
