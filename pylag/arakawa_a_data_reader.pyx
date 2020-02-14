@@ -763,13 +763,50 @@ cdef class ArakawaADataReader(DataReader):
                                             Particle *particle) except INT_ERR:
         """ Find the host depth layer
         
-        Find the depth layer containing x3. In FVCOM, Sigma levels are counted
-        up from 0 starting at the surface, where sigma = 0, and moving downwards
-        to the sea floor where sigma = -1. The current sigma layer is
-        found by determining the two sigma levels that bound the given z
-        position.
+        Find the depth layer containing x3.
         """
-        pass
+        cdef DTYPE_FLOAT_t depth_upper_level, depth_lower_level
+
+        cdef DTYPE_INT_t mask_upper_level, mask_lower_level
+
+        cdef DTYPE_FLOAT_t h, zeta
+
+        cdef DTYPE_INT_t k
+
+        # Compute sigma
+        h = self.get_zmin(time, particle)
+        zeta = self.get_zmax(time, particle)
+
+        # Loop over all levels to find the host z layer
+        for k in xrange(self._n_depth):
+            depth_upper_level = self._interp_depth_on_level(time, particle.phi, particle.host_horizontal_elem, k)
+            depth_lower_level = self._interp_depth_on_level(time, particle.phi, particle.host_horizontal_elem, k+1)
+
+            if particle.x3 <= depth_upper_level and particle.x3 >= depth_lower_level:
+                # Host layer found
+                particle.k_layer = k
+
+                # Set the sigma level interpolation coefficient
+                particle.omega_interfaces = interp.get_linear_fraction(particle.x3, depth_lower_level, depth_upper_level)
+
+                # Check to see if any of the nodes on each level are masked
+                mask_upper_level = self._interp_mask_status_on_level(particle.phi, particle.host_horizontal_elem, k)
+                mask_lower_level = self._interp_mask_status_on_level(particle.phi, particle.host_horizontal_elem, k+1)
+
+                # If the overlying layer is masked, something has gone wrong
+                if mask_upper_level == True:
+                    return BDY_ERROR
+ 
+                # If the bottom layer is masked, flag the particle as being in the bottom boundary layer
+                if mask_lower_level == True:
+                    particle.in_vertical_boundary_layer = True
+
+                return IN_DOMAIN
+
+        if particle.x3 < h or particle.x3 > zeta:
+            return BDY_ERROR
+
+        return BDY_ERROR
 
     cpdef DTYPE_FLOAT_t get_xmin(self) except FLOAT_ERR:
         return self._xmin
@@ -1251,8 +1288,9 @@ cdef class ArakawaADataReader(DataReader):
         self._xc = xc - self._xmin
         self._yc = yc - self._ymin
 
-        # Depth levels at nodal coordinates
-        self._reference_depth_levels = self.mediator.get_grid_variable('depth', (self._n_depth), DTYPE_FLOAT)
+        # Depth levels at nodal coordinates. Assumes and requires that depth is positive down. The -1 multiplier
+        # flips this so that depth is positive up from the zero geoid.
+        self._reference_depth_levels = -1.0 * self.mediator.get_grid_variable('depth', (self._n_depth), DTYPE_FLOAT)
 
         # Bathymetry
         self._h = self.mediator.get_grid_variable('h', (self._n_nodes), DTYPE_FLOAT)
@@ -1483,14 +1521,59 @@ cdef class ArakawaADataReader(DataReader):
         # Calculate gradient in barycentric coordinates
         interp.get_barycentric_gradients(x_tri, y_tri, dphi_dx, dphi_dy)
 
-    cdef DTYPE_FLOAT_t _interp_on_sigma_level(self,
+    cdef DTYPE_FLOAT_t _interp_depth_on_level(self, DTYPE_FLOAT_t time,
             DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_INT_t host,
             DTYPE_INT_t kidx) except FLOAT_ERR:
-        """ Return the linearly interpolated value of sigma.
+        """ Return the linearly interpolated depth on the given level
         
-        Compute sigma on the specified sigma level within the given host 
+        Compute depth on the specified level within the given host 
         element.
-        
+ 
+        Parameters:
+        -----------
+        time : float
+            The time.
+
+        phi : c array, float
+            Array of length three giving the barycentric coordinates at which 
+            to interpolate.
+ 
+        host : int
+            Host element index.
+
+        kidx : int
+            Depth level on which to interpolate.
+
+        Returns:
+        --------
+        depth: float
+            Interpolated value of depth.
+        """
+        cdef int vertex # Vertex identifier
+        cdef DTYPE_FLOAT_t time_fraction
+        cdef DTYPE_FLOAT_t depth_last, depth_next
+        cdef DTYPE_FLOAT_t depth_nodes[N_VERTICES]
+        cdef DTYPE_FLOAT_t depth
+        cdef DTYPE_INT_t i
+
+        # Time fraction
+        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
+
+        for i in xrange(N_VERTICES):
+            vertex = self._nv[i, host]
+            depth_last = self._depth_levels_last[kidx, vertex]
+            depth_next = self._depth_levels_next[kidx, vertex]
+            depth_nodes[i] = interp.get_linear_fraction(time_fraction, depth_last, depth_next)
+
+        depth = interp.interpolate_within_element(depth_nodes, phi)
+
+        return depth
+
+    cdef DTYPE_INT_t _interp_mask_status_on_level(self,
+            DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_INT_t host,
+            DTYPE_INT_t kidx) except INT_ERR:
+        """ Return the masked status of the given depth level
+ 
         Parameters:
         -----------
         phi : c array, float
@@ -1505,16 +1588,23 @@ cdef class ArakawaADataReader(DataReader):
 
         Returns:
         --------
-        sigma: float
-            Interpolated value of sigma.
+        mask : int
+            Masked status (True is masked, False is not masked).
         """
         cdef int vertex # Vertex identifier
-        cdef DTYPE_FLOAT_t sigma_nodes[N_VERTICES]
-        cdef DTYPE_FLOAT_t sigma # Sigma
+        cdef DTYPE_INT_t mask_status_last, mask_status_next
+        cdef DTYPE_INT_t mask
+        cdef DTYPE_INT_t i
 
+        mask = 1
         for i in xrange(N_VERTICES):
             vertex = self._nv[i,host]
-            sigma_nodes[i] = self._siglev[kidx, vertex]                  
+            mask_status_last = self._depth_mask_last[kidx, vertex]
+            mask_status_next = self._depth_mask_next[kidx, vertex]
 
-        sigma = interp.interpolate_within_element(sigma_nodes, phi)
-        return sigma
+            if mask_status_last == 0 or mask_status_next == 0:
+                mask = 0
+                break
+
+        return mask
+
