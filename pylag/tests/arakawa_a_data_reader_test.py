@@ -39,6 +39,11 @@ class MockArakawaAMediator(Mediator):
         longitude = np.array([1., 2., 3.], dtype=float)
         depth = np.array([0., 10., 20.], dtype=float)
 
+        # Save original grid dimensions
+        n_latitude = latitude.shape[0]
+        n_longitude = longitude.shape[0]
+        n_depth = depth.shape[0]
+
         # Bathymetry [lat, lon]
         h = np.array([[25., 25., 25.], [10., 10., 10.], [0., 0., 0.]])
         h = np.moveaxis(h, 1, 0)  # Move to [lon, lat]
@@ -72,9 +77,6 @@ class MockArakawaAMediator(Mediator):
         lon_nodes = points[:, 0]
         lat_nodes = points[:, 1]
         n_nodes = points.shape[0]
-
-        # Save number of depth levels
-        n_depth = depth.shape[0]
 
         # Create the Triangulation
         tri = Delaunay(points)
@@ -113,7 +115,8 @@ class MockArakawaAMediator(Mediator):
                 nbe[np.where(nbe == i)] = -1
 
         # Add to grid dimensions and variables
-        self._dim_vars = {'node': n_nodes, 'element': n_elements, 'depth': n_depth}
+        self._dim_vars = {'latitude': n_latitude, 'longitude': n_longitude, 'depth': n_depth,
+                          'node': n_nodes, 'element': n_elements}
         self._grid_vars = {'nv': nv, 'nbe': nbe, 'longitude': lon_nodes, 'longitude_c': lon_elements,
                            'latitude': lat_nodes, 'latitude_c': lat_elements, 'depth': depth, 'h': h,
                            'mask': land_sea_mask_elements}
@@ -146,11 +149,26 @@ class MockArakawaAMediator(Mediator):
         return self._grid_vars[var_name][:].astype(var_type)
 
     def get_time_dependent_variable_at_last_time_index(self, var_name, var_dims, var_type):
-        return self._time_dep_vars_last[var_name][:].astype(var_type)
+        var = self._time_dep_vars_last[var_name][:].astype(var_type)
+
+        if np.ma.isMaskedArray(var):
+            return var.data
+
+        return var
 
     def get_time_dependent_variable_at_next_time_index(self, var_name, var_dims, var_type):
-        return self._time_dep_vars_next[var_name][:].astype(var_type)
+        var = self._time_dep_vars_next[var_name][:].astype(var_type)
 
+        if np.ma.isMaskedArray(var):
+            return var.data
+
+        return var
+
+    def get_mask_at_last_time_index(self, var_name):
+        raise NotImplementedError
+
+    def get_mask_at_next_time_index(self, var_name):
+        raise NotImplementedError
 
 class ArawawaADataReader_test(TestCase):
 
