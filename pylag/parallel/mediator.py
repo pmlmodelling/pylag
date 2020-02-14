@@ -5,10 +5,12 @@ import traceback
 # For parallel simulations
 from mpi4py import MPI
 
+from pylag.data_types_python import DTYPE_INT
 from pylag.file_reader import FileReader
 from pylag.file_reader import DiskFileNameReader
 from pylag.file_reader import NetCDFDatasetReader
 from pylag.mediator import Mediator
+
 
 class MPIMediator(Mediator):
     def __init__(self, config, datetime_start, datetime_end):
@@ -188,4 +190,46 @@ class MPIMediator(Mediator):
         comm.Bcast(var, root=0)
         
         return var
-    
+
+    def get_mask_at_last_time_index(self, var_name, var_dims):
+        # MPI objects and variables
+        comm = MPI.COMM_WORLD
+        rank = comm.Get_rank()
+
+        if rank == 0:
+            try:
+                mask = self.file_reader.get_mask_at_last_time_index(var_name).astype(DTYPE_INT)
+            except Exception as e:
+                logger = logging.getLogger(__name__)
+                logger.error('Caught exception when getting mask at ' \
+                             'last time index. Terminating all tasks ...')
+                logger.error(traceback.format_exc())
+                comm.Abort()
+        else:
+            mask = np.empty(var_dims, dtype=DTYPE_INT)
+
+        comm.Bcast(mask, root=0)
+
+        return mask
+
+    def get_mask_at_next_time_index(self, var_name, var_dims):
+        # MPI objects and variables
+        comm = MPI.COMM_WORLD
+        rank = comm.Get_rank()
+
+        if rank == 0:
+            try:
+                mask = self.file_reader.get_mask_at_next_time_index(var_name).astype(DTYPE_INT)
+            except Exception as e:
+                logger = logging.getLogger(__name__)
+                logger.error('Caught exception when getting mask at ' \
+                             'next time index. Terminating all tasks ...')
+                logger.error(traceback.format_exc())
+                comm.Abort()
+        else:
+            mask = np.empty(var_dims, dtype=DTYPE_INT)
+
+        comm.Bcast(mask, root=0)
+
+        return mask
+
