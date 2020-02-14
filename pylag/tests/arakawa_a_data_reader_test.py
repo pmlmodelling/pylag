@@ -263,22 +263,22 @@ class ArawawaADataReader_test(TestCase):
         zeta = self.data_reader.get_zmax_wrapper(time, particle)
         test.assert_almost_equal(zeta, 0.333333333)
 
-    # def test_set_vertical_grid_vars_for_a_particle_on_the_sea_surface(self):
-    #     time = 0.0
-    #     x1 = 1.3333333333-self.xmin
-    #     x2 = 1.6666666667-self.ymin
-    #     x3 = 1.0
-    #     host = 0
-    #
-    #     particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
-    #     self.data_reader.set_local_coordinates_wrapper(particle)
-    #     flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
-    #
-    #     test.assert_equal(flag, 0)
-    #     test.assert_equal(particle.k_layer, 0)
-    #     test.assert_equal(particle.in_vertical_boundary_layer, True)
-    #     test.assert_almost_equal(particle.omega_interfaces, 1.0)
-    #
+    def test_set_vertical_grid_vars_for_a_particle_on_the_sea_surface(self):
+        time = 0.0
+        x1 = 2.3333333333-self.xmin
+        x2 = 11.6666666667-self.ymin
+        x3 = 0.333333333
+        host = 2
+
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+
+        test.assert_equal(flag, 0)
+        test.assert_equal(particle.k_layer, 0)
+        test.assert_equal(particle.in_vertical_boundary_layer, False)
+        test.assert_almost_equal(particle.omega_interfaces, 1.0)
+
     # def test_set_vertical_grid_vars_for_a_particle_on_the_sea_floor(self):
     #     time = 0.0
     #     x1 = 1.3333333333-self.xmin

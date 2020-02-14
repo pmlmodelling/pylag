@@ -794,11 +794,11 @@ cdef class ArakawaADataReader(DataReader):
                 mask_lower_level = self._interp_mask_status_on_level(particle.phi, particle.host_horizontal_elem, k+1)
 
                 # If the overlying layer is masked, something has gone wrong
-                if mask_upper_level == True:
+                if mask_upper_level == 0:
                     return BDY_ERROR
- 
+
                 # If the bottom layer is masked, flag the particle as being in the bottom boundary layer
-                if mask_lower_level == True:
+                if mask_lower_level == 0:
                     particle.in_vertical_boundary_layer = True
 
                 return IN_DOMAIN
@@ -1563,7 +1563,11 @@ cdef class ArakawaADataReader(DataReader):
             vertex = self._nv[i, host]
             depth_last = self._depth_levels_last[kidx, vertex]
             depth_next = self._depth_levels_next[kidx, vertex]
-            depth_nodes[i] = interp.get_linear_fraction(time_fraction, depth_last, depth_next)
+
+            if depth_last == depth_next:
+                depth_nodes[i] = depth_last
+            else:
+                depth_nodes[i] = interp.get_linear_fraction(time_fraction, depth_last, depth_next)
 
         depth = interp.interpolate_within_element(depth_nodes, phi)
 
