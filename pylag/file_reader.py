@@ -376,10 +376,20 @@ class FileReader(object):
         return self._second_time[self._tidx_second]
 
     def get_time_dependent_variable_at_last_time_index(self, var_name):
-        return self._first_data_file.variables[var_name][self._tidx_first,:]
-    
+        var = self._first_data_file.variables[var_name][self._tidx_first, :]
+
+        if np.ma.isMaskedArray(var):
+            return var.data
+
+        return var
+
     def get_time_dependent_variable_at_next_time_index(self, var_name):
-        return self._second_data_file.variables[var_name][self._tidx_second,:]
+        var = self._second_data_file.variables[var_name][self._tidx_second, :]
+
+        if np.ma.isMaskedArray(var):
+            return var.data
+
+        return var
 
     def _open_data_files_for_reading(self):
         """Open the first and second data files for reading
@@ -526,7 +536,7 @@ class DiskFileNameReader(object):
 class DatasetReader(object):
     """ Abstract base class for DatasetReaders
     """
-    def read_dataset(self, file_name):
+    def read_dataset(self, file_name, set_auto_mask_and_scale=True):
         raise NotImplementedError
 
 
@@ -535,8 +545,10 @@ class NetCDFDatasetReader(object):
 
     Return a NetCDF4 dataset object.
     """
-    def read_dataset(self, file_name):
-        return Dataset(file_name, 'r')
+    def read_dataset(self, file_name, set_auto_maskandscale=True):
+        ds = Dataset(file_name, 'r')
+        ds.set_auto_maskandscale(set_auto_maskandscale)
+        return ds
 
 
 # Helper classes to assist in reading dates/times
