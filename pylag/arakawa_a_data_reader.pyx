@@ -1274,16 +1274,28 @@ cdef class ArakawaADataReader(DataReader):
         zeta_next = self.mediator.get_time_dependent_variable_at_next_time_index('zeta', (self._n_latitude, self._n_longitude), DTYPE_FLOAT)
         self._zeta_next = self._reshape_var(zeta_next, ('latitude', 'longitude'))
 
-        # Update memory views for u, v and w
-#        self._u_last = self.mediator.get_time_dependent_variable_at_last_time_index('uo', (self._n_depth_levels, self._n_nodes), DTYPE_FLOAT)
-#        self._u_next = self.mediator.get_time_dependent_variable_at_next_time_index('uo', (self._n_depth_levels, self._n_nodes), DTYPE_FLOAT)
-#        self._v_last = self.mediator.get_time_dependent_variable_at_last_time_index('vo', (self._n_depth_levels, self._n_nodes), DTYPE_FLOAT)
-#        self._v_next = self.mediator.get_time_dependent_variable_at_next_time_index('vo', (self._n_depth_levels, self._n_nodes), DTYPE_FLOAT)
+        # Update memory views for u
+        u_last = self.mediator.get_time_dependent_variable_at_last_time_index('uo', (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+        self._u_last = self._reshape_var(u_last, ('depth', 'latitude', 'longitude'))
 
-#        if self._has_w:
-#            self._w_last = self.mediator.get_time_dependent_variable_at_last_time_index('wo', (self._n_depth_levels, self._n_nodes), DTYPE_FLOAT)
-#            self._w_next = self.mediator.get_time_dependent_variable_at_next_time_index('wo', (self._n_depth_levels, self._n_nodes), DTYPE_FLOAT)
-#
+        u_next = self.mediator.get_time_dependent_variable_at_next_time_index('uo', (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+        self._u_next = self._reshape_var(u_next, ('depth', 'latitude', 'longitude'))
+
+        # Update memory views for v
+        v_last = self.mediator.get_time_dependent_variable_at_last_time_index('vo', (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+        self._v_last = self._reshape_var(v_last, ('depth', 'latitude', 'longitude'))
+
+        v_next = self.mediator.get_time_dependent_variable_at_next_time_index('vo', (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+        self._v_next = self._reshape_var(v_next, ('depth', 'latitude', 'longitude'))
+
+        # Update memory views for w
+        if self._has_w:
+            w_last = self.mediator.get_time_dependent_variable_at_last_time_index('wo', (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+            self._w_last = self._reshape_var(w_last, ('depth', 'latitude', 'longitude'))
+
+            w_next = self.mediator.get_time_dependent_variable_at_next_time_index('wo', (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+            self._w_next = self._reshape_var(w_next, ('depth', 'latitude', 'longitude'))
+
 #        # Update memory views for kh
 #        if self._has_Kh:
 #            self._kh_last = self.mediator.get_time_dependent_variable_at_last_time_index('kh', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)
