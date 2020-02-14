@@ -170,6 +170,7 @@ class MockArakawaAMediator(Mediator):
     def get_mask_at_next_time_index(self, var_name):
         raise NotImplementedError
 
+
 class ArawawaADataReader_test(TestCase):
 
     def setUp(self):
@@ -236,22 +237,22 @@ class ArawawaADataReader_test(TestCase):
         bathy = self.data_reader.get_zmin_wrapper(time, particle)
         test.assert_almost_equal(bathy, -15.0)
 
-    # def test_get_zmax(self):
-    #     x1 = 1.3333333333-self.xmin
-    #     x2 = 1.6666666667-self.ymin
-    #     host = 0
-    #
-    #     time = 0.0
-    #     particle = ParticleSmartPtr(x1=x1, x2=x2, host=host)
-    #     self.data_reader.set_local_coordinates_wrapper(particle)
-    #     zeta = self.data_reader.get_zmax_wrapper(time, particle)
-    #     test.assert_almost_equal(zeta, 1.0)
-    #
-    #     time = 1800.0
-    #     particle = ParticleSmartPtr(x1=x1, x2=x2, host=host)
-    #     self.data_reader.set_local_coordinates_wrapper(particle)
-    #     zeta = self.data_reader.get_zmax_wrapper(time, particle)
-    #     test.assert_almost_equal(zeta, 1.5)
+    def test_get_zmax(self):
+        x1 = 2.3333333333-self.xmin
+        x2 = 11.6666666667-self.ymin
+        host = 2
+
+        time = 0.0
+        particle = ParticleSmartPtr(x1=x1, x2=x2, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        zeta = self.data_reader.get_zmax_wrapper(time, particle)
+        test.assert_almost_equal(zeta, 0.333333333)
+
+        time = 1800.0
+        particle = ParticleSmartPtr(x1=x1, x2=x2, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        zeta = self.data_reader.get_zmax_wrapper(time, particle)
+        test.assert_almost_equal(zeta, 0.333333333)
 
     # def test_set_vertical_grid_vars_for_a_particle_on_the_sea_surface(self):
     #     time = 0.0
