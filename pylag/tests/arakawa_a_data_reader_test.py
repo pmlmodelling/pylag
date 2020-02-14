@@ -164,12 +164,21 @@ class MockArakawaAMediator(Mediator):
 
         return var
 
-    def get_mask_at_last_time_index(self, var_name):
-        raise NotImplementedError
+    def get_mask_at_last_time_index(self, var_name, var_dims):
+        var = self._time_dep_vars_last[var_name][:]
 
-    def get_mask_at_next_time_index(self, var_name):
-        raise NotImplementedError
+        if np.ma.isMaskedArray(var):
+            return var.mask.astype(DTYPE_INT)
 
+        raise RuntimeError('Variable {} is not a masked array.'.format(var_name))
+
+    def get_mask_at_next_time_index(self, var_name, var_dims):
+        var = self._time_dep_vars_next[var_name][:]
+
+        if np.ma.isMaskedArray(var):
+            return var.mask.astype(DTYPE_INT)
+
+        raise RuntimeError('Variable {} is not a masked array.'.format(var_name))
 
 class ArawawaADataReader_test(TestCase):
 

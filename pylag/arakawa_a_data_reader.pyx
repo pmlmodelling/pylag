@@ -76,11 +76,22 @@ cdef class ArakawaADataReader(DataReader):
     cdef DTYPE_FLOAT_t _xmin
     cdef DTYPE_FLOAT_t _ymin
     
+    # Reference depth levels, ignoring any changes in sea surface elevation
+    cdef DTYPE_FLOAT_t[:] _reference_depth_levels
+
+    # Actual depth levels, accounting for changes in sea surface elevation
     cdef DTYPE_FLOAT_t[:] _depth_levels
 
     # Bathymetry
     cdef DTYPE_FLOAT_t[:] _h
-    
+
+    # Land sea mask on elements (1 - sea point, 0 - land point)
+    cdef DTYPE_INT_t[:] _land_sea_mask
+
+    # Full depth mask (1 - sea point, 0 - land point)
+    cdef DTYPE_INT_t[:, :] _depth_mask_last
+    cdef DTYPE_INT_t[:, :] _depth_mask_next
+
     # Sea surface elevation
     cdef DTYPE_FLOAT_t[:] _zeta_last
     cdef DTYPE_FLOAT_t[:] _zeta_next
@@ -1245,6 +1256,9 @@ cdef class ArakawaADataReader(DataReader):
         # Bathymetry
         self._h = self.mediator.get_grid_variable('h', (self._n_nodes), DTYPE_FLOAT)
 
+        # Land sea mask
+        self._land_sea_mask = self.mediator.get_grid_variable('mask', (self._n_elems), DTYPE_INT)
+
     cdef _read_time_dependent_vars(self):
         """ Update time variables and memory views for FVCOM data fields.
         
@@ -1295,6 +1309,13 @@ cdef class ArakawaADataReader(DataReader):
 
             w_next = self.mediator.get_time_dependent_variable_at_next_time_index('wo', (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
             self._w_next = self._reshape_var(w_next, ('depth', 'latitude', 'longitude'))
+
+        # Update depth mask
+        depth_mask_last = self.mediator.get_mask_at_last_time_index('uo', (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_INT)
+        self._depth_mask_last = self._reshape_var(depth_mask_last, ('depth', 'latitude', 'longitude'))
+
+        depth_mask_next = self.mediator.get_mask_at_next_time_index('uo', (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_INT)
+        self._depth_mask_next = self._reshape_var(depth_mask_next, ('depth', 'latitude', 'longitude'))
 
 #        # Update memory views for kh
 #        if self._has_Kh:
