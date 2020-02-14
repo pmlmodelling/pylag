@@ -56,7 +56,7 @@ cdef class ArakawaADataReader(DataReader):
     cdef object env_var_names
 
     # Grid dimensions
-    cdef DTYPE_INT_t _n_elems, _n_nodes, _n_depth_levels
+    cdef DTYPE_INT_t _n_longitude, _n_latitude, _n_depth, _n_elems, _n_nodes
     
     # Element connectivity
     cdef DTYPE_INT_t[:,:] _nv
@@ -1208,9 +1208,11 @@ cdef class ArakawaADataReader(DataReader):
         N/A
         """
         # Read in the grid's dimensions
+        self._n_longitude = self.mediator.get_dimension_variable('longitude')
+        self._n_latitude = self.mediator.get_dimension_variable('latitude')
+        self._n_depth = self.mediator.get_dimension_variable('depth')
         self._n_nodes = self.mediator.get_dimension_variable('node')
         self._n_elems = self.mediator.get_dimension_variable('element')
-        self._n_depth_levels = self.mediator.get_dimension_variable('depth')
 
         # Grid connectivity/adjacency
         self._nv = self.mediator.get_grid_variable('nv', (3, self._n_elems), DTYPE_INT)
@@ -1237,8 +1239,8 @@ cdef class ArakawaADataReader(DataReader):
         self._xc = xc - self._xmin
         self._yc = yc - self._ymin
 
-        # Sigma levels at nodal coordinates
-        self._depth_levels = self.mediator.get_grid_variable('depth', (self._n_depth_levels), DTYPE_FLOAT)
+        # Depth levels at nodal coordinates
+        self._depth_levels = self.mediator.get_grid_variable('depth', (self._n_depth), DTYPE_FLOAT)
 
         # Bathymetry
         self._h = self.mediator.get_grid_variable('h', (self._n_nodes), DTYPE_FLOAT)
@@ -1266,8 +1268,11 @@ cdef class ArakawaADataReader(DataReader):
         self._time_next = self.mediator.get_time_at_next_time_index()
 
         # Update memory views for zeta
-#        self._zeta_last = self.mediator.get_time_dependent_variable_at_last_time_index('zeta', (self._n_nodes), DTYPE_FLOAT)
-#        self._zeta_next = self.mediator.get_time_dependent_variable_at_next_time_index('zeta', (self._n_nodes), DTYPE_FLOAT)
+        zeta_last = self.mediator.get_time_dependent_variable_at_last_time_index('zeta', (self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+        self._zeta_last = self._reshape_var(zeta_last, ('latitude', 'longitude'))
+
+        zeta_next = self.mediator.get_time_dependent_variable_at_next_time_index('zeta', (self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+        self._zeta_next = self._reshape_var(zeta_next, ('latitude', 'longitude'))
 
         # Update memory views for u, v and w
 #        self._u_last = self.mediator.get_time_dependent_variable_at_last_time_index('uo', (self._n_depth_levels, self._n_nodes), DTYPE_FLOAT)
@@ -1306,6 +1311,63 @@ cdef class ArakawaADataReader(DataReader):
 #            self._so_next = self.mediator.get_time_dependent_variable_at_next_time_index(fvcom_var_name, (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
 #
         return
+
+    def _reshape_var(self, var, dimensions):
+        """ Reshape variable for PyLag
+
+        Variables with the following dimensions are supported:
+
+        2D - [lat, lon] in any order
+
+        3D - [depth, lat, lon] in any order
+
+        Parameters:
+        -----------
+        var : NDArray
+            The variable to sort
+
+        dimensions : tuple(str, str, ...)
+            List of dimensions
+
+        Returns:
+        --------
+        var_reshaped : NDArray
+            Reshaped variable
+        """
+        n_var_dimensions = len(var.shape)
+        n_dimensions = len(dimensions)
+
+        if n_var_dimensions != n_dimensions:
+            raise ValueError('Array dimension sizes do not match')
+
+        if n_dimensions == 2:
+            lat_index = dimensions.index('latitude')
+            lon_index = dimensions.index('longitude')
+
+            # Shift axes to give [x, y]
+            var = np.moveaxis(var, lon_index, 0)
+
+            return var.reshape(np.prod(var.shape), order='C')[:]
+
+        elif n_dimensions == 3:
+            depth_index = dimensions.index('depth')
+            lat_index = dimensions.index('latitude')
+            lon_index = dimensions.index('longitude')
+
+            # Shift axes to give [z, x, y]
+            var = np.moveaxis(var, depth_index, 0)
+
+            # Update lat/lon indices if needed
+            if depth_index > lat_index:
+                lat_index += 1
+            if depth_index > lon_index:
+                lon_index += 1
+
+            var = np.moveaxis(var, lon_index, 1)
+
+            return var.reshape(var.shape[0], np.prod(var.shape[1:]), order='C')[:]
+        else:
+            raise ValueError('Unsupported number of dimensions {}.'.format(n_dimensions))
 
     cdef void _get_phi(self, DTYPE_FLOAT_t x1, DTYPE_FLOAT_t x2,
             DTYPE_INT_t host, DTYPE_FLOAT_t phi[N_VERTICES]) except *:
