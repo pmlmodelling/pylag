@@ -80,7 +80,8 @@ cdef class ArakawaADataReader(DataReader):
     cdef DTYPE_FLOAT_t[:] _reference_depth_levels
 
     # Actual depth levels, accounting for changes in sea surface elevation
-    cdef DTYPE_FLOAT_t[:] _depth_levels
+    cdef DTYPE_FLOAT_t[:, :] _depth_levels_last
+    cdef DTYPE_FLOAT_t[:, :] _depth_levels_next
 
     # Bathymetry
     cdef DTYPE_FLOAT_t[:] _h
@@ -1251,13 +1252,17 @@ cdef class ArakawaADataReader(DataReader):
         self._yc = yc - self._ymin
 
         # Depth levels at nodal coordinates
-        self._depth_levels = self.mediator.get_grid_variable('depth', (self._n_depth), DTYPE_FLOAT)
+        self._reference_depth_levels = self.mediator.get_grid_variable('depth', (self._n_depth), DTYPE_FLOAT)
 
         # Bathymetry
         self._h = self.mediator.get_grid_variable('h', (self._n_nodes), DTYPE_FLOAT)
 
         # Land sea mask
         self._land_sea_mask = self.mediator.get_grid_variable('mask', (self._n_elems), DTYPE_INT)
+
+        # Initialise depth level arrays (but don't fill for now)
+        self._depth_levels_last = np.empty((self._n_depth, self._n_nodes), dtype=DTYPE_FLOAT)
+        self._depth_levels_next = np.empty((self._n_depth, self._n_nodes), dtype=DTYPE_FLOAT)
 
     cdef _read_time_dependent_vars(self):
         """ Update time variables and memory views for FVCOM data fields.
@@ -1277,6 +1282,8 @@ cdef class ArakawaADataReader(DataReader):
         --------
         N/A
         """
+        cdef DTYPE_INT_t i, k
+
         # Update time references
         self._time_last = self.mediator.get_time_at_last_time_index()
         self._time_next = self.mediator.get_time_at_next_time_index()
@@ -1311,11 +1318,17 @@ cdef class ArakawaADataReader(DataReader):
             self._w_next = self._reshape_var(w_next, ('depth', 'latitude', 'longitude'))
 
         # Update depth mask
-        depth_mask_last = self.mediator.get_mask_at_last_time_index('uo', (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_INT)
+        depth_mask_last = self.mediator.get_mask_at_last_time_index('uo', (self._n_depth, self._n_latitude, self._n_longitude))
         self._depth_mask_last = self._reshape_var(depth_mask_last, ('depth', 'latitude', 'longitude'))
 
-        depth_mask_next = self.mediator.get_mask_at_next_time_index('uo', (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_INT)
+        depth_mask_next = self.mediator.get_mask_at_next_time_index('uo', (self._n_depth, self._n_latitude, self._n_longitude))
         self._depth_mask_next = self._reshape_var(depth_mask_next, ('depth', 'latitude', 'longitude'))
+
+        # Compute actual depth levels using reference values and zeta
+        for k in xrange(self._n_depth):
+            for i in xrange(self._n_nodes):
+                self._depth_levels_last[k, i] = self._reference_depth_levels[k] + self._zeta_last[i]
+                self._depth_levels_next[k, i] = self._reference_depth_levels[k] + self._zeta_next[i]
 
 #        # Update memory views for kh
 #        if self._has_Kh:
