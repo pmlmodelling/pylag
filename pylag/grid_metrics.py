@@ -288,6 +288,10 @@ def create_arakawa_a_grid_metrics_file(file_name, grid_metrics_file_name='./grid
     lat_nodes = points[:, 1]
     n_nodes = points.shape[0]
 
+    # Save original lon and lat sizes
+    n_longitude = lon_var.shape[0]
+    n_latitude = lat_var.shape[0]
+
     # Save depth
     depth = depth_var[:]
     n_levels = depth_var.shape[0]
@@ -357,9 +361,11 @@ def create_arakawa_a_grid_metrics_file(file_name, grid_metrics_file_name='./grid
     gm_file_creator.create_file()
 
     # Add dimension variables
+    gm_file_creator.create_dimension('longitude', n_longitude)
+    gm_file_creator.create_dimension('latitude', n_latitude)
+    gm_file_creator.create_dimension('depth', n_levels)
     gm_file_creator.create_dimension('node', n_nodes)
     gm_file_creator.create_dimension('element', n_elems)
-    gm_file_creator.create_dimension('depth', n_levels)
 
     # Add longitude at nodes
     gm_file_creator.create_variable('longitude', lon_nodes, ('node',), float, attrs=lon_attrs)
