@@ -316,12 +316,12 @@ class ArawawaADataReader_test(TestCase):
         test.assert_almost_equal(particle.omega_interfaces, 0.9)
 
     def test_get_velocity_in_surface_layer(self):
-        x1 = 1.3333333333-self.xmin
-        x2 = 1.6666666667-self.ymin
-        host = 0
+        x1 = 2.3333333333-self.xmin
+        x2 = 11.6666666667-self.ymin
+        host = 2
 
         # Test #1
-        x3 = 1.0
+        x3 = 0.333333333
         time = 0.0
 
         particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
@@ -332,10 +332,10 @@ class ArawawaADataReader_test(TestCase):
         self.data_reader.get_velocity_wrapper(time, particle, vel)
 
         test.assert_equal(flag, 0)
-        test.assert_array_almost_equal(vel, [2.0, 2.0, 2.0])
+        test.assert_array_almost_equal(vel, [1.333333333, 1.333333333, 1.333333333])
 
         # Test #2
-        x3 = 1.5
+        x3 = 0.0
         time = 1800.0
         particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
         self.data_reader.set_local_coordinates_wrapper(particle)
@@ -344,10 +344,15 @@ class ArawawaADataReader_test(TestCase):
         vel = np.empty(3, dtype=DTYPE_FLOAT)
         self.data_reader.get_velocity_wrapper(time, particle, vel)
         test.assert_equal(flag, 0)
-        test.assert_array_almost_equal(vel, [3.0, 3.0, 3.0])
+        test.assert_array_almost_equal(vel, [1.333333333, 1.333333333, 1.333333333])
 
-        # Test #3
-        x3 = -0.2
+    def test_get_velocity_in_middle_layer(self):
+        x1 = 2.3333333333-self.xmin
+        x2 = 11.6666666667-self.ymin
+        host = 2
+
+        # Test #1
+        x3 = -0.333333333
         time = 0.0
         particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
         self.data_reader.set_local_coordinates_wrapper(particle)
@@ -356,77 +361,24 @@ class ArawawaADataReader_test(TestCase):
         vel = np.empty(3, dtype=DTYPE_FLOAT)
         self.data_reader.get_velocity_wrapper(time, particle, vel)
         test.assert_equal(flag, 0)
-        test.assert_array_almost_equal(vel, [2.0, 2.0, 2.0])
+        test.assert_array_almost_equal(vel, [1.333333333, 1.333333333, 1.333333333])
 
-    def test_get_velocity_in_middle_layer(self):
-    #     x1 = 1.3333333333-self.xmin
-    #     x2 = 1.6666666667-self.ymin
-    #     host = 0
-    #
-    #     # Test #1
-    #     x3 = -2.6
-    #     time = 0.0
-    #     particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
-    #     self.data_reader.set_local_coordinates_wrapper(particle)
-    #     flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
-    #
-    #     vel = np.empty(3, dtype=DTYPE_FLOAT)
-    #     self.data_reader.get_velocity_wrapper(time, particle, vel)
-    #     test.assert_equal(flag, 0)
-    #     test.assert_array_almost_equal(vel, [1.5, 1.5, 1.5])
-    #
-    #     # Test #2
-    #     x3 = -2.25
-    #     time = 1800.0
-    #     particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
-    #     self.data_reader.set_local_coordinates_wrapper(particle)
-    #     flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
-    #
-    #     vel = np.empty(3, dtype=DTYPE_FLOAT)
-    #     self.data_reader.get_velocity_wrapper(time, particle, vel)
-    #     test.assert_equal(flag, 0)
-    #     test.assert_array_almost_equal(vel, [2.25, 2.25, 2.25])
-    #
-    # def test_get_velocity_in_bottom_layer(self):
-    #     x1 = 1.3333333333-self.xmin
-    #     x2 = 1.6666666667-self.ymin
-    #     host = 0
-    #
-    #     # Test #1
-    #     x3 = -10.999
-    #     time = 0.0
-    #     particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
-    #     self.data_reader.set_local_coordinates_wrapper(particle)
-    #     flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
-    #
-    #     vel = np.empty(3, dtype=DTYPE_FLOAT)
-    #     self.data_reader.get_velocity_wrapper(time, particle, vel)
-    #     test.assert_equal(flag, 0)
-    #     test.assert_array_almost_equal(vel, [0.0, 0.0, 0.0])
-    #
-    #     # Test #2
-    #     x3 = -10.999
-    #     time = 1800.0
-    #     particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
-    #     self.data_reader.set_local_coordinates_wrapper(particle)
-    #     flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
-    #
-    #     vel = np.empty(3, dtype=DTYPE_FLOAT)
-    #     self.data_reader.get_velocity_wrapper(time, particle, vel)
-    #     test.assert_equal(flag, 0)
-    #     test.assert_array_almost_equal(vel, [0.0, 0.0, 0.0])
-    #
-    #     # Test #3
-    #     x3 = -9.8
-    #     time = 0.0
-    #     particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
-    #     self.data_reader.set_local_coordinates_wrapper(particle)
-    #     flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
-    #
-    #     vel = np.empty(3, dtype=DTYPE_FLOAT)
-    #     self.data_reader.get_velocity_wrapper(time, particle, vel)
-    #     test.assert_equal(flag, 0)
-    #     test.assert_array_almost_equal(vel, [0.0, 0.0, 0.0])
+    def test_get_velocity_in_bottom_layer(self):
+        x1 = 2.3333333333-self.xmin
+        x2 = 11.6666666667-self.ymin
+        host = 2
+
+        # Test #1
+        x3 = -15.
+        time = 0.0
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+
+        vel = np.empty(3, dtype=DTYPE_FLOAT)
+        self.data_reader.get_velocity_wrapper(time, particle, vel)
+        test.assert_equal(flag, 0)
+        test.assert_array_almost_equal(vel, [1.333333333, 1.333333333, 1.333333333])
     #
     # def test_get_thetao(self):
     #     x1 = 1.3333333333-self.xmin

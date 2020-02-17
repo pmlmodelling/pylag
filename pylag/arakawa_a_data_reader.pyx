@@ -910,7 +910,14 @@ cdef class ArakawaADataReader(DataReader):
         vel : C array, float
             u/v/w velocity components stored in a C array.           
         """
-        pass
+        vel[0] = self._get_variable(self._u_last, self._u_next, time, particle)
+        vel[1] = self._get_variable(self._v_last, self._v_next, time, particle)
+        if self._has_w:
+            vel[2] = self._get_variable(self._w_last, self._w_next, time, particle)
+        else:
+            vel[2] = 0.0
+
+        return
 
     cdef DTYPE_FLOAT_t get_environmental_variable(self, var_name,
             DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR:
@@ -1082,17 +1089,15 @@ cdef class ArakawaADataReader(DataReader):
         #    if self._wet_cells_last[host] == 0 or self._wet_cells_next[host] == 0:
         #        return 0
         #return 1
-        
-    cdef _get_variable(self, DTYPE_FLOAT_t[:, :] var_last, DTYPE_FLOAT_t[:, :] var_next,
-            DTYPE_FLOAT_t time, Particle* particle):
+
+    cdef DTYPE_FLOAT_t _get_variable(self, DTYPE_FLOAT_t[:, :] var_last, DTYPE_FLOAT_t[:, :] var_next,
+            DTYPE_FLOAT_t time, Particle* particle) except FLOAT_ERR:
         """ Returns the value of the variable through linear interpolation
 
-        Private method for interpolating fields specified at element nodes on sigma layers.
-        This is the case for both viscofh and active and passive tracers. Above and below the
-        top and bottom sigma layers respectively values are extrapolated, taking
-        a value equal to that at the layer centre. Linear interpolation in the vertical
-        is used for z positions lying between the top and bottom sigma layers.
-        
+        Private method for interpolating fields specified at element nodes on depth levels.
+        For particle at depths above h and above a lower level with masked nodes, extrapolation
+        is used.
+
         Parameters:
         -----------
         var_last : 2D MemoryView
@@ -1112,72 +1117,71 @@ cdef class ArakawaADataReader(DataReader):
         var : float
             The interpolated value of the variable at the specified point in time and space.
         """
-        pass
-#        # No. of vertices and a temporary object used for determining variable
-#        # values at the host element's nodes
-#        cdef int i # Loop counters
-#        cdef int vertex # Vertex identifier
-#
-#        # Variables used in interpolation in time
-#        cdef DTYPE_FLOAT_t time_fraction
-#
-#        # Intermediate arrays - var
-#        cdef DTYPE_FLOAT_t var_tri_t_last_layer_1[N_VERTICES]
-#        cdef DTYPE_FLOAT_t var_tri_t_next_layer_1[N_VERTICES]
-#        cdef DTYPE_FLOAT_t var_tri_t_last_layer_2[N_VERTICES]
-#        cdef DTYPE_FLOAT_t var_tri_t_next_layer_2[N_VERTICES]
-#        cdef DTYPE_FLOAT_t var_tri_layer_1[N_VERTICES]
-#        cdef DTYPE_FLOAT_t var_tri_layer_2[N_VERTICES]
-#
-#        # Interpolated values on lower and upper bounding sigma layers
-#        cdef DTYPE_FLOAT_t var_layer_1
-#        cdef DTYPE_FLOAT_t var_layer_2
-#
-#        # Time fraction
-#        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
-#
-#        # No vertical interpolation for particles near to the surface or bottom,
-#        # i.e. above or below the top or bottom sigma layer depths respectively.
-#        if particle.in_vertical_boundary_layer is True:
-#            # Extract values near to the boundary
-#            for i in xrange(N_VERTICES):
-#                vertex = self._nv[i,particle.host_horizontal_elem]
-#                var_tri_t_last_layer_1[i] = var_last[particle.k_layer, vertex]
-#                var_tri_t_next_layer_1[i] = var_next[particle.k_layer, vertex]
-#
-#            # Interpolate in time
-#            for i in xrange(N_VERTICES):
-#                var_tri_layer_1[i] = interp.linear_interp(time_fraction,
-#                                            var_tri_t_last_layer_1[i],
-#                                            var_tri_t_next_layer_1[i])
-#
-#            # Interpolate var within the host element
-#            return interp.interpolate_within_element(var_tri_layer_1, particle.phi)
-#
-#        else:
-#            # Extract var on the lower and upper bounding sigma layers
-#            for i in xrange(N_VERTICES):
-#                vertex = self._nv[i,particle.host_horizontal_elem]
-#                var_tri_t_last_layer_1[i] = var_last[particle.k_lower_layer, vertex]
-#                var_tri_t_next_layer_1[i] = var_next[particle.k_lower_layer, vertex]
-#                var_tri_t_last_layer_2[i] = var_last[particle.k_upper_layer, vertex]
-#                var_tri_t_next_layer_2[i] = var_next[particle.k_upper_layer, vertex]
-#
-#            # Interpolate in time
-#            for i in xrange(N_VERTICES):
-#                var_tri_layer_1[i] = interp.linear_interp(time_fraction,
-#                                            var_tri_t_last_layer_1[i],
-#                                            var_tri_t_next_layer_1[i])
-#                var_tri_layer_2[i] = interp.linear_interp(time_fraction,
-#                                            var_tri_t_last_layer_2[i],
-#                                            var_tri_t_next_layer_2[i])
-#
-#            # Interpolate var within the host element on the upper and lower
-#            # bounding sigma layers
-#            var_layer_1 = interp.interpolate_within_element(var_tri_layer_1, particle.phi)
-#            var_layer_2 = interp.interpolate_within_element(var_tri_layer_2, particle.phi)
-#
-#            return interp.linear_interp(particle.omega_layers, var_layer_1, var_layer_2)
+        # No. of vertices and a temporary object used for determining variable
+        # values at the host element's nodes
+        cdef int i # Loop counters
+        cdef int vertex # Vertex identifier
+
+        # Variables used in interpolation in time      
+        cdef DTYPE_FLOAT_t time_fraction
+        
+        # Intermediate arrays - var
+        cdef DTYPE_FLOAT_t var_tri_t_last_level_1[N_VERTICES]
+        cdef DTYPE_FLOAT_t var_tri_t_next_level_1[N_VERTICES]
+        cdef DTYPE_FLOAT_t var_tri_t_last_level_2[N_VERTICES]
+        cdef DTYPE_FLOAT_t var_tri_t_next_level_2[N_VERTICES]
+        cdef DTYPE_FLOAT_t var_tri_level_1[N_VERTICES]
+        cdef DTYPE_FLOAT_t var_tri_level_2[N_VERTICES]
+        
+        # Interpolated values on lower and upper bounding depth layers
+        cdef DTYPE_FLOAT_t var_level_1
+        cdef DTYPE_FLOAT_t var_level_2
+
+        # Time fraction
+        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
+
+        # No vertical interpolation for particles near to the surface or bottom, 
+        # i.e. above or below the top or bottom depth layer depths respectively.
+        if particle.in_vertical_boundary_layer is True:
+            # Extract values near to the boundary
+            for i in xrange(N_VERTICES):
+                vertex = self._nv[i,particle.host_horizontal_elem]
+                var_tri_t_last_level_1[i] = var_last[particle.k_layer, vertex]
+                var_tri_t_next_level_1[i] = var_next[particle.k_layer, vertex]
+
+            # Interpolate in time
+            for i in xrange(N_VERTICES):
+                var_tri_level_1[i] = interp.linear_interp(time_fraction,
+                                            var_tri_t_last_level_1[i],
+                                            var_tri_t_next_level_1[i])
+
+            # Interpolate var within the host element
+            return interp.interpolate_within_element(var_tri_level_1, particle.phi)
+
+        else:
+            # Extract var on the lower and upper bounding depth layers
+            for i in xrange(N_VERTICES):
+                vertex = self._nv[i,particle.host_horizontal_elem]
+                var_tri_t_last_level_1[i] = var_last[particle.k_layer+1, vertex]
+                var_tri_t_next_level_1[i] = var_next[particle.k_layer+1, vertex]
+                var_tri_t_last_level_2[i] = var_last[particle.k_layer, vertex]
+                var_tri_t_next_level_2[i] = var_next[particle.k_layer, vertex]
+
+            # Interpolate in time
+            for i in xrange(N_VERTICES):
+                var_tri_level_1[i] = interp.linear_interp(time_fraction,
+                                            var_tri_t_last_level_1[i],
+                                            var_tri_t_next_level_1[i])
+                var_tri_level_2[i] = interp.linear_interp(time_fraction,
+                                            var_tri_t_last_level_2[i],
+                                            var_tri_t_next_level_2[i])
+
+            # Interpolate var within the host element on the upper and lower
+            # bounding depth layers
+            var_level_1 = interp.interpolate_within_element(var_tri_level_1, particle.phi)
+            var_level_2 = interp.interpolate_within_element(var_tri_level_2, particle.phi)
+
+            return interp.linear_interp(particle.omega_layers, var_level_1, var_level_2)
 
     cdef DTYPE_FLOAT_t _get_vertical_eddy_diffusivity_on_level(self,
             DTYPE_FLOAT_t time, Particle* particle,
