@@ -34,10 +34,10 @@ class MockArakawaAMediator(Mediator):
     these, with accompanying unit tests put in place to ensure this is so.
     """
     def __init__(self):
-        # Basic grid (3 x 3 x 3)
+        # Basic grid (3 x 3 x 4).
         latitude = np.array([11., 12., 13.], dtype=float)
         longitude = np.array([1., 2., 3.], dtype=float)
-        depth = np.array([0., 10., 20.], dtype=float)
+        depth = np.array([0., 10., 20., 30.], dtype=float)
 
         # Save original grid dimensions
         n_latitude = latitude.shape[0]
@@ -45,14 +45,15 @@ class MockArakawaAMediator(Mediator):
         n_depth = depth.shape[0]
 
         # Bathymetry [lat, lon]
-        h = np.array([[25., 25., 25.], [10., 10., 10.], [0., 0., 0.]])
+        h = np.array([[25., 25., 25.], [10., 10., 10.], [999., 999., 999.]])
         h = np.moveaxis(h, 1, 0)  # Move to [lon, lat]
         h = h.reshape(np.prod(h.shape), order='C')
 
-        # Mask [depth, lat, lon]. 1 is sea, 0 land.
+        # Mask [depth, lat, lon]. 1 is sea, 0 land. Note the last depth level is masked everywhere.
         mask = np.array([[[1, 1, 1], [1, 1, 1], [0, 0, 0]],
                          [[1, 1, 1], [1, 1, 1], [0, 0, 0]],
-                         [[1, 1, 1], [0, 0, 0], [0, 0, 0]]], dtype=int)
+                         [[1, 1, 1], [0, 0, 0], [0, 0, 0]],
+                         [[0, 0, 0], [0, 0, 0], [0, 0, 0]]], dtype=int)
 
         # Separately save the surface mask at nodes, This is taken as the land sea mask.
         land_sea_mask = mask[0, :, :]
@@ -60,13 +61,15 @@ class MockArakawaAMediator(Mediator):
         land_sea_mask_nodes = land_sea_mask_nodes.reshape(np.prod(land_sea_mask_nodes.shape), order='C')
 
         # Zeta (time = 0) [lat, lon]
-        zeta_t0 = np.ma.masked_array([[1., 1., 1.], [0., 0., 0.], [0., 0., 0.]], mask=land_sea_mask, dtype=float)
+        zeta_t0 = np.ma.masked_array([[1., 1., 1.], [0., 0., 0.], [999., 999., 999.]], mask=land_sea_mask, dtype=float)
         zeta_t1 = np.ma.copy(zeta_t0)
 
         # u/v/w (time = 0) [depth, lat, lon]
-        uvw_t0 = np.ma.masked_array([[[2., 2., 2.], [1., 1., 1.], [0., 0., 0.]],
-                                     [[2., 2., 2.], [1., 1., 1.], [0., 0., 0.]],
-                                     [[2., 2., 2.], [1., 1., 1.], [0., 0., 0.]]], mask=mask, dtype=float)
+        uvw_t0 = np.ma.masked_array([[[2., 2., 2.], [1., 1., 1.], [999., 999., 999.]],
+                                     [[2., 2., 2.], [1., 1., 1.], [999., 999., 999.]],
+                                     [[2., 2., 2.], [999., 999., 999.], [999., 999., 999.]],
+                                     [[999., 999., 999.], [999., 999., 999.], [999., 999., 999.]]],
+                                    mask=mask, dtype=float)
         uvw_t1 = np.ma.copy(uvw_t0)
 
         # Form the unstructured grid
@@ -180,6 +183,7 @@ class MockArakawaAMediator(Mediator):
 
         raise RuntimeError('Variable {} is not a masked array.'.format(var_name))
 
+
 class ArawawaADataReader_test(TestCase):
 
     def setUp(self):
@@ -279,117 +283,82 @@ class ArawawaADataReader_test(TestCase):
         test.assert_equal(particle.in_vertical_boundary_layer, False)
         test.assert_almost_equal(particle.omega_interfaces, 1.0)
 
-    # def test_set_vertical_grid_vars_for_a_particle_on_the_sea_floor(self):
-    #     time = 0.0
-    #     x1 = 1.3333333333-self.xmin
-    #     x2 = 1.6666666667-self.ymin
-    #     x3 = -11.0
-    #     host = 0
-    #
-    #     particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
-    #     self.data_reader.set_local_coordinates_wrapper(particle)
-    #     flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
-    #
-    #     test.assert_equal(flag, 0)
-    #     test.assert_equal(particle.k_layer, 2)
-    #     test.assert_equal(particle.in_vertical_boundary_layer, True)
-    #     test.assert_almost_equal(particle.omega_interfaces, 0.0)
-    #
-    # def test_set_vertical_grid_vars_for_a_particle_in_the_surface_boundary_layer(self):
-    #     time = 0.0
-    #     x1 = 1.3333333333-self.xmin
-    #     x2 = 1.6666666667-self.ymin
-    #     x3 = 0.4 # this is 25% of the way between the top and bottom sigma levels
-    #     host = 0
-    #
-    #     particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
-    #     self.data_reader.set_local_coordinates_wrapper(particle)
-    #     flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
-    #
-    #     test.assert_equal(flag, 0)
-    #     test.assert_equal(particle.k_layer, 0)
-    #     test.assert_equal(particle.in_vertical_boundary_layer, True)
-    #     test.assert_almost_equal(particle.omega_interfaces, 0.75)
-    #
-    # def test_set_vertical_grid_vars_for_a_particle_in_the_bottom_boundary_layer(self):
-    #     time = 0.0
-    #     x1 = 1.3333333333-self.xmin
-    #     x2 = 1.6666666667-self.ymin
-    #     x3 = -10.4
-    #     host = 0
-    #
-    #     particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
-    #     self.data_reader.set_local_coordinates_wrapper(particle)
-    #     flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
-    #
-    #     test.assert_equal(flag, 0)
-    #     test.assert_equal(particle.k_layer, 2)
-    #     test.assert_equal(particle.in_vertical_boundary_layer, True)
-    #     test.assert_almost_equal(particle.omega_interfaces, 0.25)
-    #
-    # def test_set_vertical_grid_vars_for_a_particle_in_the_middle_of_the_water_column(self):
-    #     time = 0.0
-    #     x1 = 1.3333333333-self.xmin
-    #     x2 = 1.6666666667-self.ymin
-    #     x3 = -2.6
-    #     host = 0
-    #
-    #     particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
-    #     self.data_reader.set_local_coordinates_wrapper(particle)
-    #     flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
-    #
-    #     test.assert_equal(flag, 0)
-    #     test.assert_equal(particle.k_layer, 1)
-    #     test.assert_equal(particle.in_vertical_boundary_layer, False)
-    #     test.assert_equal(particle.k_upper_layer, 0)
-    #     test.assert_equal(particle.k_lower_layer, 1)
-    #     test.assert_almost_equal(particle.omega_interfaces, 0.83333333333)
-    #     test.assert_almost_equal(particle.omega_layers, 0.5)
-    #
-    # def test_get_velocity_in_surface_layer(self):
-    #     x1 = 1.3333333333-self.xmin
-    #     x2 = 1.6666666667-self.ymin
-    #     host = 0
-    #
-    #     # Test #1
-    #     x3 = 1.0
-    #     time = 0.0
-    #
-    #     particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
-    #     self.data_reader.set_local_coordinates_wrapper(particle)
-    #     flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
-    #
-    #     vel = np.empty(3, dtype=DTYPE_FLOAT)
-    #     self.data_reader.get_velocity_wrapper(time, particle, vel)
-    #
-    #     test.assert_equal(flag, 0)
-    #     test.assert_array_almost_equal(vel, [2.0, 2.0, 2.0])
-    #
-    #     # Test #2
-    #     x3 = 1.5
-    #     time = 1800.0
-    #     particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
-    #     self.data_reader.set_local_coordinates_wrapper(particle)
-    #     flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
-    #
-    #     vel = np.empty(3, dtype=DTYPE_FLOAT)
-    #     self.data_reader.get_velocity_wrapper(time, particle, vel)
-    #     test.assert_equal(flag, 0)
-    #     test.assert_array_almost_equal(vel, [3.0, 3.0, 3.0])
-    #
-    #     # Test #3
-    #     x3 = -0.2
-    #     time = 0.0
-    #     particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
-    #     self.data_reader.set_local_coordinates_wrapper(particle)
-    #     flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
-    #
-    #     vel = np.empty(3, dtype=DTYPE_FLOAT)
-    #     self.data_reader.get_velocity_wrapper(time, particle, vel)
-    #     test.assert_equal(flag, 0)
-    #     test.assert_array_almost_equal(vel, [2.0, 2.0, 2.0])
-    #
-    # def test_get_velocity_in_middle_layer(self):
+    def test_set_vertical_grid_vars_for_a_particle_on_the_sea_floor(self):
+        time = 0.0
+        x1 = 2.3333333333-self.xmin
+        x2 = 11.6666666667-self.ymin
+        x3 = -15.
+        host = 2
+
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+
+        test.assert_equal(flag, 0)
+        test.assert_equal(particle.k_layer, 1)
+        test.assert_equal(particle.in_vertical_boundary_layer, True)
+        test.assert_almost_equal(particle.omega_interfaces, 0.466666667)
+
+    def test_set_vertical_grid_vars_for_a_particle_in_the_surface_layer(self):
+        time = 0.0
+        x1 = 2.3333333333-self.xmin
+        x2 = 11.6666666667-self.ymin
+        x3 = -0.666666667  # 1 m below the moving free surface
+        host = 2
+
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+
+        test.assert_equal(flag, 0)
+        test.assert_equal(particle.k_layer, 0)
+        test.assert_equal(particle.in_vertical_boundary_layer, False)
+        test.assert_almost_equal(particle.omega_interfaces, 0.9)
+
+    def test_get_velocity_in_surface_layer(self):
+        x1 = 1.3333333333-self.xmin
+        x2 = 1.6666666667-self.ymin
+        host = 0
+
+        # Test #1
+        x3 = 1.0
+        time = 0.0
+
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+
+        vel = np.empty(3, dtype=DTYPE_FLOAT)
+        self.data_reader.get_velocity_wrapper(time, particle, vel)
+
+        test.assert_equal(flag, 0)
+        test.assert_array_almost_equal(vel, [2.0, 2.0, 2.0])
+
+        # Test #2
+        x3 = 1.5
+        time = 1800.0
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+
+        vel = np.empty(3, dtype=DTYPE_FLOAT)
+        self.data_reader.get_velocity_wrapper(time, particle, vel)
+        test.assert_equal(flag, 0)
+        test.assert_array_almost_equal(vel, [3.0, 3.0, 3.0])
+
+        # Test #3
+        x3 = -0.2
+        time = 0.0
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+
+        vel = np.empty(3, dtype=DTYPE_FLOAT)
+        self.data_reader.get_velocity_wrapper(time, particle, vel)
+        test.assert_equal(flag, 0)
+        test.assert_array_almost_equal(vel, [2.0, 2.0, 2.0])
+
+    def test_get_velocity_in_middle_layer(self):
     #     x1 = 1.3333333333-self.xmin
     #     x2 = 1.6666666667-self.ymin
     #     host = 0
