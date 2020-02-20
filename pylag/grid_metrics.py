@@ -330,6 +330,9 @@ def create_arakawa_a_grid_metrics_file(file_name, grid_metrics_file_name='./grid
     if len(land_sea_mask_nodes.shape) < 2 or len(land_sea_mask_nodes.shape) > 3:
         raise ValueError('Unsupported land sea mask with shape {}'.format(land_sea_mask_nodes.shape))
 
+    # Flip meaning yielding: 1 - masked land point, and 0 sea point.
+    land_sea_mask_nodes = 1 - land_sea_mask_nodes
+
     # Use surface mask only if shape is 3D
     if len(land_sea_mask_nodes.shape) == 3:
         land_sea_mask_nodes = land_sea_mask_nodes[0, :, :]
@@ -340,14 +343,14 @@ def create_arakawa_a_grid_metrics_file(file_name, grid_metrics_file_name='./grid
     land_sea_mask_elements = np.empty(n_elems, dtype=int)
     for i in range(n_elems):
         element_nodes = nv[:, i]
-        land_sea_mask_elements[i] = 0 if np.any(land_sea_mask_nodes[(element_nodes)] == 0) else 1
+        land_sea_mask_elements[i] = 1 if np.any(land_sea_mask_nodes[(element_nodes)] == 1) else 0
 
     # Flag open boundaries with -2 flag
     nbe[np.where(nbe == -1)] = -2
 
     # Flag land boundaries with -1 flag
     for i, mask in enumerate(land_sea_mask_elements):
-        if mask == 0:
+        if mask == 1:
             nbe[np.where(nbe == i)] = -1
 
     # Create grid metrics file
@@ -394,6 +397,7 @@ def create_arakawa_a_grid_metrics_file(file_name, grid_metrics_file_name='./grid
                                     attrs={'long_name': 'elements surrounding each element'})
 
     # Add land sea mask
+    mask_attrs['long_name'] = "Land-sea mask: sea = 1 ; land = 0"  # Update to reflect flipping of land sea mask
     gm_file_creator.create_variable('mask', land_sea_mask_elements, ('element',), int, attrs=mask_attrs)
 
     # Close input dataset

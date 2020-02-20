@@ -55,6 +55,9 @@ class MockArakawaAMediator(Mediator):
                          [[1, 1, 1], [0, 0, 0], [0, 0, 0]],
                          [[0, 0, 0], [0, 0, 0], [0, 0, 0]]], dtype=int)
 
+        # Switch the mask convention to that which PyLag anticipates. i.e. 1 is a masked point, 0 a non-masked point.
+        mask = 1 - mask
+
         # Separately save the surface mask at nodes, This is taken as the land sea mask.
         land_sea_mask = mask[0, :, :]
         land_sea_mask_nodes = np.moveaxis(land_sea_mask, 0, 1)  # Move to [lon, lat]
@@ -64,10 +67,10 @@ class MockArakawaAMediator(Mediator):
         zeta_t0 = np.ma.masked_array([[1., 1., 1.], [0., 0., 0.], [999., 999., 999.]], mask=land_sea_mask, dtype=float)
         zeta_t1 = np.ma.copy(zeta_t0)
 
-        # u/v/w (time = 0) [depth, lat, lon]
+        # u/v/w (time = 0) [depth, lat, lon]. Include mask.
         uvw_t0 = np.ma.masked_array([[[2., 2., 2.], [1., 1., 1.], [999., 999., 999.]],
-                                     [[2., 2., 2.], [1., 1., 1.], [999., 999., 999.]],
-                                     [[2., 2., 2.], [999., 999., 999.], [999., 999., 999.]],
+                                     [[1., 1., 1.], [0., 0., 0.], [999., 999., 999.]],
+                                     [[0., 0., 0.], [999., 999., 999.], [999., 999., 999.]],
                                      [[999., 999., 999.], [999., 999., 999.], [999., 999., 999.]]],
                                     mask=mask, dtype=float)
         uvw_t1 = np.ma.copy(uvw_t0)
@@ -107,14 +110,14 @@ class MockArakawaAMediator(Mediator):
         land_sea_mask_elements = np.empty(n_elements, dtype=int)
         for i in range(n_elements):
             element_nodes = nv[:, i]
-            land_sea_mask_elements[i] = 0 if np.any(land_sea_mask_nodes[(element_nodes)] == 0) else 1
+            land_sea_mask_elements[i] = 1 if np.any(land_sea_mask_nodes[(element_nodes)] == 1) else 0
 
         # Flag open boundaries with -2 flag
         nbe[np.where(nbe == -1)] = -2
 
         # Flag land boundaries with -1 flag
         for i, msk in enumerate(land_sea_mask_elements):
-            if msk == 0:
+            if msk == 1:
                 nbe[np.where(nbe == i)] = -1
 
         # Add to grid dimensions and variables
@@ -327,15 +330,14 @@ class ArawawaADataReader_test(TestCase):
         particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        test.assert_equal(flag, 0)
 
         vel = np.empty(3, dtype=DTYPE_FLOAT)
         self.data_reader.get_velocity_wrapper(time, particle, vel)
-
-        test.assert_equal(flag, 0)
         test.assert_array_almost_equal(vel, [1.333333333, 1.333333333, 1.333333333])
 
         # Test #2
-        x3 = 0.0
+        x3 = -4.6666666667 # Half way down the middle layer
         time = 1800.0
         particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
         self.data_reader.set_local_coordinates_wrapper(particle)
@@ -344,7 +346,7 @@ class ArawawaADataReader_test(TestCase):
         vel = np.empty(3, dtype=DTYPE_FLOAT)
         self.data_reader.get_velocity_wrapper(time, particle, vel)
         test.assert_equal(flag, 0)
-        test.assert_array_almost_equal(vel, [1.333333333, 1.333333333, 1.333333333])
+        test.assert_array_almost_equal(vel, [0.8333333333, 0.8333333333, 0.8333333333])
 
     def test_get_velocity_in_middle_layer(self):
         x1 = 2.3333333333-self.xmin
@@ -352,7 +354,7 @@ class ArawawaADataReader_test(TestCase):
         host = 2
 
         # Test #1
-        x3 = -0.333333333
+        x3 = -14.666666667  # Half way down middle layer and 0.333 m above the sea floor
         time = 0.0
         particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
         self.data_reader.set_local_coordinates_wrapper(particle)
@@ -361,24 +363,7 @@ class ArawawaADataReader_test(TestCase):
         vel = np.empty(3, dtype=DTYPE_FLOAT)
         self.data_reader.get_velocity_wrapper(time, particle, vel)
         test.assert_equal(flag, 0)
-        test.assert_array_almost_equal(vel, [1.333333333, 1.333333333, 1.333333333])
-
-    def test_get_velocity_in_bottom_layer(self):
-        x1 = 2.3333333333-self.xmin
-        x2 = 11.6666666667-self.ymin
-        host = 2
-
-        # Test #1
-        x3 = -15.
-        time = 0.0
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
-        self.data_reader.set_local_coordinates_wrapper(particle)
-        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
-
-        vel = np.empty(3, dtype=DTYPE_FLOAT)
-        self.data_reader.get_velocity_wrapper(time, particle, vel)
-        test.assert_equal(flag, 0)
-        test.assert_array_almost_equal(vel, [1.333333333, 1.333333333, 1.333333333])
+        test.assert_array_almost_equal(vel, [0.333333333, 0.333333333, 0.333333333])
     #
     # def test_get_thetao(self):
     #     x1 = 1.3333333333-self.xmin

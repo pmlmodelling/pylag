@@ -794,11 +794,11 @@ cdef class ArakawaADataReader(DataReader):
                 mask_lower_level = self._interp_mask_status_on_level(particle.phi, particle.host_horizontal_elem, k+1)
 
                 # If the overlying layer is masked, something has gone wrong
-                if mask_upper_level == 0:
+                if mask_upper_level == 1:
                     return BDY_ERROR
 
                 # If the bottom layer is masked, flag the particle as being in the bottom boundary layer
-                if mask_lower_level == 0:
+                if mask_lower_level == 1:
                     particle.in_vertical_boundary_layer = True
 
                 return IN_DOMAIN
@@ -1140,8 +1140,7 @@ cdef class ArakawaADataReader(DataReader):
         # Time fraction
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
-        # No vertical interpolation for particles near to the surface or bottom, 
-        # i.e. above or below the top or bottom depth layer depths respectively.
+        # No vertical interpolation for particles near to the bottom
         if particle.in_vertical_boundary_layer is True:
             # Extract values near to the boundary
             for i in xrange(N_VERTICES):
@@ -1181,7 +1180,7 @@ cdef class ArakawaADataReader(DataReader):
             var_level_1 = interp.interpolate_within_element(var_tri_level_1, particle.phi)
             var_level_2 = interp.interpolate_within_element(var_tri_level_2, particle.phi)
 
-            return interp.linear_interp(particle.omega_layers, var_level_1, var_level_2)
+            return interp.linear_interp(particle.omega_interfaces, var_level_1, var_level_2)
 
     cdef DTYPE_FLOAT_t _get_vertical_eddy_diffusivity_on_level(self,
             DTYPE_FLOAT_t time, Particle* particle,
@@ -1597,21 +1596,21 @@ cdef class ArakawaADataReader(DataReader):
         Returns:
         --------
         mask : int
-            Masked status (True is masked, False is not masked).
+            Masked status (1 is masked, 0 not masked).
         """
         cdef int vertex # Vertex identifier
         cdef DTYPE_INT_t mask_status_last, mask_status_next
         cdef DTYPE_INT_t mask
         cdef DTYPE_INT_t i
 
-        mask = 1
+        mask = 0
         for i in xrange(N_VERTICES):
             vertex = self._nv[i,host]
             mask_status_last = self._depth_mask_last[kidx, vertex]
             mask_status_next = self._depth_mask_next[kidx, vertex]
 
-            if mask_status_last == 0 or mask_status_next == 0:
-                mask = 0
+            if mask_status_last == 1 or mask_status_next == 1:
+                mask = 1
                 break
 
         return mask
