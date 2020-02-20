@@ -973,7 +973,11 @@ cdef class ArakawaADataReader(DataReader):
         viscofh : float
             The interpolated value of the horizontal eddy viscosity at the specified point in time and space.
         """
-        pass
+        cdef DTYPE_FLOAT_t var  # ah at (t, x1, x2, x3)
+
+        var = self._get_variable(self._ah_last, self._ah_next, time, particle)
+
+        return var
 
     cdef get_horizontal_eddy_viscosity_derivative(self, DTYPE_FLOAT_t time,
             Particle* particle, DTYPE_FLOAT_t Ah_prime[2]):
@@ -1017,8 +1021,11 @@ cdef class ArakawaADataReader(DataReader):
             The vertical eddy diffusivity.        
         
         """
-        pass
+        cdef DTYPE_FLOAT_t var  # kh at (t, x1, x2, x3)
 
+        var = self._get_variable(self._kh_last, self._kh_next, time, particle)
+
+        return var
 
     cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity_derivative(self,
             DTYPE_FLOAT_t time, Particle* particle) except FLOAT_ERR:
