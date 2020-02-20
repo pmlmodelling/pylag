@@ -105,6 +105,9 @@ _variable_data_types['rsdo'] = DTYPE_FLOAT
 _variable_units['rsdo'] = 'W m-2'
 _variable_long_names['rsdo'] = 'Downwelling Shortwave Radiation in Sea Water '
 
+# Standard name mappings
+standard_variable_names = {'thetao': 'thetao', 'so': 'so'}
+
 # FVCOM name mappings
 fvcom_variable_names = {'thetao': 'temp', 'so': 'salinity'}
 

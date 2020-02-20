@@ -945,17 +945,16 @@ cdef class ArakawaADataReader(DataReader):
         var : float
             The interpolated value of the variable at the specified point in time and space.
         """
-        pass
-#        cdef DTYPE_FLOAT_t var # Environmental variable at (t, x1, x2, x3)
-#
-#        if var_name in self.env_var_names:
-#            if var_name == 'thetao':
-#                var = self._get_variable(self._thetao_last, self._thetao_next, time, particle)
-#            elif var_name == 'so':
-#                var = self._get_variable(self._so_last, self._so_next, time, particle)
-#            return var
-#        else:
-#            raise ValueError("Invalid variable name `{}'".format(var_name))
+        cdef DTYPE_FLOAT_t var # Environmental variable at (t, x1, x2, x3)
+
+        if var_name in self.env_var_names:
+            if var_name == 'thetao':
+                var = self._get_variable(self._thetao_last, self._thetao_next, time, particle)
+            elif var_name == 'so':
+                var = self._get_variable(self._so_last, self._so_next, time, particle)
+            return var
+        else:
+            raise ValueError("Invalid variable name `{}'".format(var_name))
 
     cdef get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
             Particle* particle):
@@ -1386,17 +1385,23 @@ cdef class ArakawaADataReader(DataReader):
 #            self._wet_cells_last = self.mediator.get_time_dependent_variable_at_last_time_index('wet_cells', (self._n_elems), DTYPE_INT)
 #            self._wet_cells_next = self.mediator.get_time_dependent_variable_at_next_time_index('wet_cells', (self._n_elems), DTYPE_INT)
 #
-#        # Read in data as requested
-#        if 'thetao' in self.env_var_names:
-#            fvcom_var_name = variable_library.fvcom_variable_names['thetao']
-#            self._thetao_last = self.mediator.get_time_dependent_variable_at_last_time_index(fvcom_var_name, (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
-#            self._thetao_next = self.mediator.get_time_dependent_variable_at_next_time_index(fvcom_var_name, (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
-#
-#        if 'so' in self.env_var_names:
-#            fvcom_var_name = variable_library.fvcom_variable_names['so']
-#            self._so_last = self.mediator.get_time_dependent_variable_at_last_time_index(fvcom_var_name, (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
-#            self._so_next = self.mediator.get_time_dependent_variable_at_next_time_index(fvcom_var_name, (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
-#
+        # Read in data as requested
+        if 'thetao' in self.env_var_names:
+            var_name = variable_library.standard_variable_names['thetao']
+            thetao_next = self.mediator.get_time_dependent_variable_at_next_time_index(var_name, (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+            self._thetao_next = self._reshape_var(thetao_next, ('depth', 'latitude', 'longitude'))
+
+            thetao_last = self.mediator.get_time_dependent_variable_at_last_time_index(var_name, (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+            self._thetao_last = self._reshape_var(thetao_last, ('depth', 'latitude', 'longitude'))
+
+        if 'so' in self.env_var_names:
+            var_name = variable_library.standard_variable_names['so']
+            so_next = self.mediator.get_time_dependent_variable_at_next_time_index(var_name, (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+            self._so_next = self._reshape_var(so_next, ('depth', 'latitude', 'longitude'))
+
+            so_last = self.mediator.get_time_dependent_variable_at_last_time_index(var_name, (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+            self._so_last = self._reshape_var(so_last, ('depth', 'latitude', 'longitude'))
+
         return
 
     def _reshape_var(self, var, dimensions):

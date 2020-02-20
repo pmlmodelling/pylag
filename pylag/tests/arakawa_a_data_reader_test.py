@@ -75,6 +75,14 @@ class MockArakawaAMediator(Mediator):
                                     mask=mask, dtype=float)
         uvw_t1 = np.ma.copy(uvw_t0)
 
+        # t/s (time = 0) [depth, lat, lon]. Include mask.
+        ts_t0 = np.ma.masked_array([[[2., 2., 2.], [1., 1., 1.], [999., 999., 999.]],
+                                     [[1., 1., 1.], [0., 0., 0.], [999., 999., 999.]],
+                                     [[0., 0., 0.], [999., 999., 999.], [999., 999., 999.]],
+                                     [[999., 999., 999.], [999., 999., 999.], [999., 999., 999.]]],
+                                    mask=mask, dtype=float)
+        ts_t1 = np.ma.copy(ts_t0)
+
         # Form the unstructured grid
         lon2d, lat2d = np.meshgrid(longitude[:], latitude[:], indexing='ij')
         points = np.array([lon2d.flatten(order='C'), lat2d.flatten(order='C')]).T
@@ -128,9 +136,11 @@ class MockArakawaAMediator(Mediator):
                            'mask': land_sea_mask_elements}
 
         # Store in dictionaries
-        self._time_dep_vars_last = {'zeta': zeta_t0, 'uo': uvw_t0, 'vo': uvw_t0, 'wo': uvw_t0}
+        self._time_dep_vars_last = {'zeta': zeta_t0, 'uo': uvw_t0, 'vo': uvw_t0, 'wo': uvw_t0, 'thetao': ts_t0,
+                                    'so': ts_t0}
 
-        self._time_dep_vars_next = {'zeta': zeta_t1, 'uo': uvw_t1, 'vo': uvw_t1, 'wo': uvw_t1}
+        self._time_dep_vars_next = {'zeta': zeta_t1, 'uo': uvw_t1, 'vo': uvw_t1, 'wo': uvw_t1, 'thetao': ts_t0,
+                                    'so': ts_t1}
 
         # Time in seconds. ie two time pts, 1 hour apart
         self._t_last = 0.0
@@ -202,6 +212,8 @@ class ArawawaADataReader_test(TestCase):
         config.set('OCEAN_CIRCULATION_MODEL', 'has_Ah', 'False')
         config.set('OCEAN_CIRCULATION_MODEL', 'has_is_wet', 'False')
         config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'spherical')
+        config.add_section("OUTPUT")
+        config.set('OUTPUT', 'environmental_variables', 'thetao, so')
 
         # Create mediator
         mediator = MockArakawaAMediator()
@@ -364,35 +376,35 @@ class ArawawaADataReader_test(TestCase):
         self.data_reader.get_velocity_wrapper(time, particle, vel)
         test.assert_equal(flag, 0)
         test.assert_array_almost_equal(vel, [0.333333333, 0.333333333, 0.333333333])
-    #
-    # def test_get_thetao(self):
-    #     x1 = 1.3333333333-self.xmin
-    #     x2 = 1.6666666667-self.ymin
-    #     host = 0
-    #
-    #     x3 = -0.1
-    #     time = 0.0
-    #     particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
-    #     self.data_reader.set_local_coordinates_wrapper(particle)
-    #     flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
-    #     thetao = self.data_reader.get_environmental_variable_wrapper('thetao', time, particle)
-    #     test.assert_equal(flag, 0)
-    #     test.assert_almost_equal(thetao,  0.01)
-    #
-    # def test_get_so(self):
-    #     x1 = 1.3333333333-self.xmin
-    #     x2 = 1.6666666667-self.ymin
-    #     host = 0
-    #
-    #     x3 = -0.1
-    #     time = 0.0
-    #     particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
-    #     self.data_reader.set_local_coordinates_wrapper(particle)
-    #     flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
-    #     so = self.data_reader.get_environmental_variable_wrapper('so', time, particle)
-    #     test.assert_equal(flag, 0)
-    #     test.assert_almost_equal(so,  0.01)
-    #
+
+    def test_get_thetao(self):
+        x1 = 2.3333333333-self.xmin
+        x2 = 11.6666666667-self.ymin
+        host = 2
+
+        x3 = 0.333333333
+        time = 0.0
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        thetao = self.data_reader.get_environmental_variable_wrapper('thetao', time, particle)
+        test.assert_equal(flag, 0)
+        test.assert_almost_equal(thetao,  1.333333333)
+
+    def test_get_so(self):
+        x1 = 2.3333333333-self.xmin
+        x2 = 11.6666666667-self.ymin
+        host = 2
+
+        x3 = 0.333333333
+        time = 0.0
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        so = self.data_reader.get_environmental_variable_wrapper('so', time, particle)
+        test.assert_equal(flag, 0)
+        test.assert_almost_equal(so,  1.333333333)
+
     # def test_get_vertical_eddy_diffusivity(self):
     #     x1 = 1.3333333333-self.xmin
     #     x2 = 1.6666666667-self.ymin
