@@ -1083,11 +1083,10 @@ cdef class ArakawaADataReader(DataReader):
         host : int
             Integer that identifies the host element in question
         """
-        pass
-        #if self._has_is_wet:
-        #    if self._wet_cells_last[host] == 0 or self._wet_cells_next[host] == 0:
-        #        return 0
-        #return 1
+        if self._has_is_wet:
+            if self._wet_cells_last[host] == 0 or self._wet_cells_next[host] == 0:
+                return 0
+        return 1
 
     cdef DTYPE_FLOAT_t _get_variable(self, DTYPE_FLOAT_t[:, :] var_last, DTYPE_FLOAT_t[:, :] var_next,
             DTYPE_FLOAT_t time, Particle* particle) except FLOAT_ERR:
@@ -1304,6 +1303,10 @@ cdef class ArakawaADataReader(DataReader):
         self._depth_levels_last = np.empty((self._n_depth, self._n_nodes), dtype=DTYPE_FLOAT)
         self._depth_levels_next = np.empty((self._n_depth, self._n_nodes), dtype=DTYPE_FLOAT)
 
+        # Initialise is wet arrays (but don't fill for now)
+        self._wet_cells_last = np.empty((self._n_elems), dtype=DTYPE_INT)
+        self._wet_cells_next = np.empty((self._n_elems), dtype=DTYPE_INT)
+
     cdef _read_time_dependent_vars(self):
         """ Update time variables and memory views for FVCOM data fields.
         
@@ -1322,7 +1325,9 @@ cdef class ArakawaADataReader(DataReader):
         --------
         N/A
         """
-        cdef DTYPE_INT_t i, k
+        cdef DTYPE_INT_t i, j, k
+        cdef DTYPE_INT_t node
+        cdef DTYPE_INT_t is_wet_last, is_wet_next
 
         # Update time references
         self._time_last = self.mediator.get_time_at_last_time_index()
@@ -1380,11 +1385,22 @@ cdef class ArakawaADataReader(DataReader):
 #            self._viscofh_last = self.mediator.get_time_dependent_variable_at_last_time_index('viscofh', (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
 #            self._viscofh_next = self.mediator.get_time_dependent_variable_at_next_time_index('viscofh', (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
 #
-#        # Update memory views for wet cells
-#        if self._has_is_wet:
-#            self._wet_cells_last = self.mediator.get_time_dependent_variable_at_last_time_index('wet_cells', (self._n_elems), DTYPE_INT)
-#            self._wet_cells_next = self.mediator.get_time_dependent_variable_at_next_time_index('wet_cells', (self._n_elems), DTYPE_INT)
-#
+        # Set is wet status
+        # NB the status of cells is inferred from the depth mask and the land-sea element mask. If a surface cell is
+        # masked but it is not a land cell, then it is assumed to be dry.
+        for i in xrange(self._n_elems):
+            if self._land_sea_mask[i] == 0:
+                is_wet_last = 1
+                is_wet_next = 1
+                for j in xrange(3):
+                    node = self._nv[j, i]
+                    if self._depth_mask_last[0, node] == 1:
+                        is_wet_last = 0
+                    if self._depth_mask_next[0, node] == 1:
+                        is_wet_next = 0
+                self._wet_cells_last[i] = is_wet_last
+                self._wet_cells_next[i] = is_wet_next
+
         # Read in data as requested
         if 'thetao' in self.env_var_names:
             var_name = variable_library.standard_variable_names['thetao']

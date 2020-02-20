@@ -58,7 +58,7 @@ class MockArakawaAMediator(Mediator):
         # Switch the mask convention to that which PyLag anticipates. i.e. 1 is a masked point, 0 a non-masked point.
         mask = 1 - mask
 
-        # Separately save the surface mask at nodes, This is taken as the land sea mask.
+        # Separately save the surface mask at nodes. This is taken as the land sea mask.
         land_sea_mask = mask[0, :, :]
         land_sea_mask_nodes = np.moveaxis(land_sea_mask, 0, 1)  # Move to [lon, lat]
         land_sea_mask_nodes = land_sea_mask_nodes.reshape(np.prod(land_sea_mask_nodes.shape), order='C')
@@ -66,6 +66,9 @@ class MockArakawaAMediator(Mediator):
         # Zeta (time = 0) [lat, lon]
         zeta_t0 = np.ma.masked_array([[1., 1., 1.], [0., 0., 0.], [999., 999., 999.]], mask=land_sea_mask, dtype=float)
         zeta_t1 = np.ma.copy(zeta_t0)
+
+        # Mask one extra point (node 1) to help with testing wet dry status calls
+        mask[:, 1, 0] = 1
 
         # u/v/w (time = 0) [depth, lat, lon]. Include mask.
         uvw_t0 = np.ma.masked_array([[[2., 2., 2.], [1., 1., 1.], [999., 999., 999.]],
@@ -210,7 +213,7 @@ class ArawawaADataReader_test(TestCase):
         config.set('OCEAN_CIRCULATION_MODEL', 'has_w', 'True')
         config.set('OCEAN_CIRCULATION_MODEL', 'has_Kh', 'False')
         config.set('OCEAN_CIRCULATION_MODEL', 'has_Ah', 'False')
-        config.set('OCEAN_CIRCULATION_MODEL', 'has_is_wet', 'False')
+        config.set('OCEAN_CIRCULATION_MODEL', 'has_is_wet', 'True')
         config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'spherical')
         config.add_section("OUTPUT")
         config.set('OUTPUT', 'environmental_variables', 'thetao, so')
@@ -463,10 +466,18 @@ class ArawawaADataReader_test(TestCase):
     #     test.assert_equal(flag, 0)
     #     test.assert_array_almost_equal(Ah_prime, [0.0, 0.0])
     #
-    # def test_element_is_wet(self):
-    #     host = 0
-    #     time = 0.0
-    #
-    #     status = self.data_reader.is_wet(time, host)
-    #     test.assert_equal(status, 1)
+    def test_element_is_wet(self):
+        host = 2
+        time = 0.0
+
+        status = self.data_reader.is_wet(time, host)
+        test.assert_equal(status, 1)
+
+    def test_element_is_dry(self):
+        host = 0
+        time = 0.0
+
+        status = self.data_reader.is_wet(time, host)
+        test.assert_equal(status, 0)
+
 
