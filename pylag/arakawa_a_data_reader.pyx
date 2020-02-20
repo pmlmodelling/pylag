@@ -1000,7 +1000,87 @@ cdef class ArakawaADataReader(DataReader):
         applications. Cambridge: Cambridge University Press.
         doi.org/10.1017/CBO9781107449336
         """
-        pass
+        cdef int i # Loop counters
+        cdef int vertex # Vertex identifier
+
+        # Variables used in interpolation in time
+        cdef DTYPE_FLOAT_t time_fraction
+
+        # Gradients in phi
+        cdef DTYPE_FLOAT_t dphi_dx[N_VERTICES]
+        cdef DTYPE_FLOAT_t dphi_dy[N_VERTICES]
+
+        # Intermediate arrays - ah
+        cdef DTYPE_FLOAT_t ah_tri_t_last_level_1[N_VERTICES]
+        cdef DTYPE_FLOAT_t ah_tri_t_next_level_1[N_VERTICES]
+        cdef DTYPE_FLOAT_t ah_tri_t_last_level_2[N_VERTICES]
+        cdef DTYPE_FLOAT_t ah_tri_t_next_level_2[N_VERTICES]
+        cdef DTYPE_FLOAT_t ah_tri_level_1[N_VERTICES]
+        cdef DTYPE_FLOAT_t ah_tri_level_2[N_VERTICES]
+
+        # Gradients on lower and upper bounding sigma layers
+        cdef DTYPE_FLOAT_t dah_dx_level_1
+        cdef DTYPE_FLOAT_t dah_dy_level_1
+        cdef DTYPE_FLOAT_t dah_dx_level_2
+        cdef DTYPE_FLOAT_t dah_dy_level_2
+
+        # Gradient
+        cdef DTYPE_FLOAT_t dah_dx
+        cdef DTYPE_FLOAT_t dah_dy
+
+        # Time fraction
+        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
+
+        # Get gradient in phi
+        self._get_grad_phi(particle.host_horizontal_elem, dphi_dx, dphi_dy)
+
+        # No vertical interpolation for particles near to the bottom,
+        if particle.in_vertical_boundary_layer is True:
+            # Extract ah near to the boundary
+            for i in xrange(N_VERTICES):
+                vertex = self._nv[i, particle.host_horizontal_elem]
+                ah_tri_t_last_level_1[i] = self._ah_last[particle.k_layer, vertex]
+                ah_tri_t_next_level_1[i] = self._ah_next[particle.k_layer, vertex]
+
+            # Interpolate in time
+            for i in xrange(N_VERTICES):
+                ah_tri_level_1[i] = interp.linear_interp(time_fraction,
+                                            ah_tri_t_last_level_1[i],
+                                            ah_tri_t_next_level_1[i])
+
+            # Interpolate d{}/dx and d{}/dy within the host element
+            Ah_prime[0] = interp.interpolate_within_element(ah_tri_level_1, dphi_dx)
+            Ah_prime[1] = interp.interpolate_within_element(ah_tri_level_1, dphi_dy)
+            return
+        else:
+            # Extract ah on the lower and upper bounding depth levels
+            for i in xrange(N_VERTICES):
+                vertex = self._nv[i,particle.host_horizontal_elem]
+                ah_tri_t_last_level_1[i] = self._ah_last[particle.k_layer+1, vertex]
+                ah_tri_t_next_level_1[i] = self._ah_next[particle.k_layer+1, vertex]
+                ah_tri_t_last_level_2[i] = self._ah_last[particle.k_layer, vertex]
+                ah_tri_t_next_level_2[i] = self._ah_next[particle.k_layer, vertex]
+
+            # Interpolate in time
+            for i in xrange(N_VERTICES):
+                ah_tri_level_1[i] = interp.linear_interp(time_fraction,
+                                            ah_tri_t_last_level_1[i],
+                                            ah_tri_t_next_level_1[i])
+                ah_tri_level_2[i] = interp.linear_interp(time_fraction,
+                                            ah_tri_t_last_level_2[i],
+                                            ah_tri_t_next_level_2[i])
+
+            # Interpolate d{}/dx and d{}/dy within the host element on the upper
+            # and lower bounding depth levels
+            dah_dx_level_1 = interp.interpolate_within_element(ah_tri_level_1, dphi_dx)
+            dah_dy_level_1 = interp.interpolate_within_element(ah_tri_level_1, dphi_dy)
+            dah_dx_level_2 = interp.interpolate_within_element(ah_tri_level_2, dphi_dx)
+            dah_dy_level_2 = interp.interpolate_within_element(ah_tri_level_2, dphi_dy)
+
+            # Interpolate d{}/dx and d{}/dy between bounding depth levels and
+            # save in the array Ah_prime
+            Ah_prime[0] = interp.linear_interp(particle.omega_interfaces, dah_dx_level_1, dah_dx_level_2)
+            Ah_prime[1] = interp.linear_interp(particle.omega_interfaces, dah_dy_level_1, dah_dy_level_2)
 
 
     cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time,
@@ -1138,7 +1218,7 @@ cdef class ArakawaADataReader(DataReader):
         cdef DTYPE_FLOAT_t var_tri_level_1[N_VERTICES]
         cdef DTYPE_FLOAT_t var_tri_level_2[N_VERTICES]
         
-        # Interpolated values on lower and upper bounding depth layers
+        # Interpolated values on lower and upper bounding depth levels
         cdef DTYPE_FLOAT_t var_level_1
         cdef DTYPE_FLOAT_t var_level_2
 
