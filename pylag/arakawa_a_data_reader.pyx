@@ -1375,16 +1375,22 @@ cdef class ArakawaADataReader(DataReader):
                 self._depth_levels_last[k, i] = self._reference_depth_levels[k] + self._zeta_last[i]
                 self._depth_levels_next[k, i] = self._reference_depth_levels[k] + self._zeta_next[i]
 
-#        # Update memory views for kh
-#        if self._has_Kh:
-#            self._kh_last = self.mediator.get_time_dependent_variable_at_last_time_index('kh', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)
-#            self._kh_next = self.mediator.get_time_dependent_variable_at_next_time_index('kh', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)
-#
-#        # Update memory views for viscofh
-#        if self._has_Ah:
-#            self._viscofh_last = self.mediator.get_time_dependent_variable_at_last_time_index('viscofh', (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
-#            self._viscofh_next = self.mediator.get_time_dependent_variable_at_next_time_index('viscofh', (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
-#
+        # Update memory views for kh
+        if self._has_Kh:
+            kh_last = self.mediator.get_time_dependent_variable_at_last_time_index('kh', (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+            self._kh_last = self._reshape_var(kh_last, ('depth', 'latitude', 'longitude'))
+
+            kh_next = self.mediator.get_time_dependent_variable_at_next_time_index('kh', (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+            self._kh_next = self._reshape_var(kh_next, ('depth', 'latitude', 'longitude'))
+
+        # Update memory views for viscofh
+        if self._has_Ah:
+            ah_last = self.mediator.get_time_dependent_variable_at_last_time_index('ah', (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+            self._ah_last = self._reshape_var(ah_last, ('depth', 'latitude', 'longitude'))
+
+            ah_next = self.mediator.get_time_dependent_variable_at_next_time_index('ah', (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+            self._ah_next = self._reshape_var(ah_next, ('depth', 'latitude', 'longitude'))
+
         # Set is wet status
         # NB the status of cells is inferred from the depth mask and the land-sea element mask. If a surface cell is
         # masked but it is not a land cell, then it is assumed to be dry.
