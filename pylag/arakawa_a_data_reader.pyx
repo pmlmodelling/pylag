@@ -68,14 +68,6 @@ cdef class ArakawaADataReader(DataReader):
     # Element adjacency
     cdef DTYPE_INT_t[:,:] _nbe
     
-    # Nodal coordinates
-    cdef DTYPE_FLOAT_t[:] _x
-    cdef DTYPE_FLOAT_t[:] _y
-
-    # Element centre coordinates
-    cdef DTYPE_FLOAT_t[:] _xc
-    cdef DTYPE_FLOAT_t[:] _yc
-
     # Minimum nodal x/y values
     cdef DTYPE_FLOAT_t _xmin
     cdef DTYPE_FLOAT_t _ymin
