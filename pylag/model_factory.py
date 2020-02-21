@@ -6,14 +6,20 @@ TODO
 """
 
 from pylag.model import OPTModel
+from pylag.arakawa_a_data_reader import ArakawaADataReader
 from pylag.fvcom_data_reader import FVCOMDataReader
 from pylag.gotm_data_reader import GOTMDataReader
 
 # Serial imports
 from pylag.mediator import SerialMediator
 
+
 def get_model(config, datetime_start, datetime_end):
-    if config.get("OCEAN_CIRCULATION_MODEL", "name") == "FVCOM":
+    if config.get("OCEAN_CIRCULATION_MODEL", "name") == "ArakawaA":
+        mediator = SerialMediator(config, datetime_start, datetime_end)
+        data_reader = ArakawaADataReader(config, mediator)
+        return OPTModel(config, data_reader)
+    elif config.get("OCEAN_CIRCULATION_MODEL", "name") == "FVCOM":
         mediator = SerialMediator(config, datetime_start, datetime_end)
         data_reader = FVCOMDataReader(config, mediator)
         return OPTModel(config, data_reader)
@@ -23,3 +29,4 @@ def get_model(config, datetime_start, datetime_end):
         return OPTModel(config, data_reader)
     else:
         raise ValueError('Unsupported ocean circulation model.')
+
