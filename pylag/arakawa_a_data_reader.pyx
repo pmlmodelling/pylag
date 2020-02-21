@@ -18,8 +18,9 @@ from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 from libcpp.vector cimport vector
 
 # PyLag cython imports
-from particle cimport Particle, to_string
+from pylag.particle cimport Particle, to_string
 from pylag.data_reader cimport DataReader
+from pylag.unstructured cimport UnstructuredGrid
 cimport pylag.interpolation as interp
 from pylag.math cimport int_min, float_min, get_intersection_point
 from pylag.math cimport Intersection
@@ -54,6 +55,9 @@ cdef class ArakawaADataReader(DataReader):
 
     # List of environmental variables to read and save
     cdef object env_var_names
+
+    # Unstructured grid object for performing grid searching etc
+    cdef UnstructuredGrid _unstructured_grid
 
     # Grid dimensions
     cdef DTYPE_INT_t _n_longitude, _n_latitude, _n_depth, _n_elems, _n_nodes
@@ -257,14 +261,14 @@ cdef class ArakawaADataReader(DataReader):
         """
         cdef DTYPE_INT_t flag, host
         
-        flag = self.find_host_using_local_search(particle_new,
-                                                 particle_old.host_horizontal_elem)
+        flag = self._unstructured_grid.find_host_using_local_search(particle_new,
+                                                                    particle_old.host_horizontal_elem)
         
         if flag != IN_DOMAIN:
             # Local search failed to find the particle. Perform check to see if
             # the particle has indeed left the model domain
-            flag = self.find_host_using_particle_tracing(particle_old,
-                                                         particle_new)
+            flag = self._unstructured_grid.find_host_using_particle_tracing(particle_old,
+                                                                            particle_new)
 
         return flag
 
@@ -308,238 +312,7 @@ cdef class ArakawaADataReader(DataReader):
         flag : int
             Integer flag that indicates whether or not the seach was successful.
         """
-        # Intermediate arrays/variables
-        cdef DTYPE_FLOAT_t phi[N_VERTICES]
-        cdef DTYPE_FLOAT_t phi_test
-
-        cdef bint host_found
-
-        cdef DTYPE_INT_t n_host_land_boundaries
-        
-        cdef DTYPE_INT_t flag, guess, last_guess, second_to_last_guess
-
-        # Check for non-sensical start points.
-        guess = first_guess
-        if guess < 0:
-            raise ValueError('Invalid start point for local host element '\
-                    'search. Start point = {}'.format(guess))
-
-        host_found = False
-        last_guess = -1
-        second_to_last_guess = -1
-        
-        while True:
-            # Barycentric coordinates
-            self._get_phi(particle.x1, particle.x2, guess, phi)
-
-            # Check to see if the particle is in the current element
-            phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
-            if phi_test >= 0.0:
-                host_found = True
-
-            # If the particle has walked into an element with two land
-            # boundaries flag this as an error.
-            if host_found is True:
-                n_host_land_boundaries = 0
-                for i in xrange(3):
-                    if self._nbe[i,guess] == -1:
-                        n_host_land_boundaries += 1
-
-                if n_host_land_boundaries < 2:
-                    # Normal element
-                    particle.host_horizontal_elem = guess
-
-                    # Set the particle's local coordiantes
-                    for i in xrange(3):
-                        particle.phi[i] = phi[i]
-
-                    return IN_DOMAIN
-                else:
-                    # Element has two land boundaries
-                    return BDY_ERROR
-
-            # If not, use phi to select the next element to be searched
-            second_to_last_guess = last_guess
-            last_guess = guess
-            if phi[0] == phi_test:
-                guess = self._nbe[0,last_guess]
-            elif phi[1] == phi_test:
-                guess = self._nbe[1,last_guess]
-            else:
-                guess = self._nbe[2,last_guess]
-
-            # Check for boundary crossings
-            if guess == -1 or guess == -2:
-                return BDY_ERROR
-            
-            # Check that we are not alternately checking the same two elements
-            if guess == second_to_last_guess:
-                return BDY_ERROR
-
-    cdef DTYPE_INT_t find_host_using_particle_tracing(self, Particle *particle_old,
-                                                      Particle *particle_new) except INT_ERR:
-        """ Try to find the new host element using the particle's pathline
-        
-        The algorithm navigates between elements by finding the exit point
-        of the pathline from each element. If the pathline terminates within
-        a valid host element, the index of the new host element is set and a
-        flag indicating that a valid host element was successfully found is
-        returned. If the pathline crosses a model boundary, the last element the
-        host horizontal element of the new particle is set to the last element the
-        particle passed through before exiting the domain and a flag indicating
-        the type of boundary crossed is returned. Flag conventions are the same
-        as those applied in local host element searching.
-
-        Conventions
-        -----------
-        flag = IN_DOMAIN:
-            This indicates that the particle was found successfully. Host is the
-            index of the new host element.
-        
-        flag = LAND_BDY_CROSSED:
-            This indicates that the particle exited the domain across a land
-            boundary. Host is set to the last element the particle passed
-            through before exiting the domain.
-
-        flag = OPEN_BDY_CROSSED:
-            This indicates that the particle exited the domain across an open
-            boundary. Host is set to the last element the particle passed
-            through before exiting the domain.
-
-        Parameters:
-        -----------
-        particle_old: *Particle
-            The particle at its old position.
-
-        particle_new: *Particle
-            The particle at its new position. The host element will be updated.
-        
-        Returns:
-        --------
-        flag : int
-            Integer flag that indicates whether or not the seach was successful.
-        """
-        cdef int i # Loop counter
-        cdef int vertex # Vertex identifier
-        cdef DTYPE_INT_t elem, last_elem, current_elem # Element identifies
-        cdef DTYPE_INT_t flag, host
-
-        # Intermediate arrays/variables
-        cdef DTYPE_FLOAT_t x_tri[N_VERTICES]
-        cdef DTYPE_FLOAT_t y_tri[N_VERTICES]
-
-        # 2D position vectors for the end points of the element's side
-        cdef DTYPE_FLOAT_t x1[2]
-        cdef DTYPE_FLOAT_t x2[2]
-        
-        # 2D position vectors for the particle's previous and new position
-        cdef DTYPE_FLOAT_t x3[2]
-        cdef DTYPE_FLOAT_t x4[2]
-        
-        # 2D position vector for the intersection point
-        cdef DTYPE_FLOAT_t xi[2]
-
-        # Intermediate arrays
-        cdef DTYPE_INT_t x1_indices[3]
-        cdef DTYPE_INT_t x2_indices[3]
-        cdef DTYPE_INT_t nbe_indices[3]
-        
-        x1_indices = [0,1,2]
-        x2_indices = [1,2,0]
-        nbe_indices = [2,0,1]
-
-        # Array indices
-        cdef int x1_idx
-        cdef int x2_idx
-        cdef int nbe_idx
-
-        # Construct arrays to hold the coordinates of the particle's previous
-        # position vector and its new position vector
-        x3[0] = particle_old.x1; x3[1] = particle_old.x2
-        x4[0] = particle_new.x1; x4[1] = particle_new.x2
-
-        # Start the search using the host known to contain (x1_old, x2_old)
-        elem = particle_old.host_horizontal_elem
-
-        # Set last_elem equal to elem in the first instance
-        last_elem = elem
-
-        while True:
-            # Extract nodal coordinates
-            for i in xrange(3):
-                vertex = self._nv[i,elem]
-                x_tri[i] = self._x[vertex]
-                y_tri[i] = self._y[vertex]
-
-            # This keeps track of the element currently being checked
-            current_elem = elem
-
-            # Loop over all sides of the element to find the land boundary the element crossed
-            for i in xrange(3):
-                x1_idx = x1_indices[i]
-                x2_idx = x2_indices[i]
-                nbe_idx = nbe_indices[i]
-
-                # Test to avoid checking the side the pathline just crossed
-                if last_elem == self._nbe[nbe_idx, elem]:
-                    continue
-            
-                # End coordinates for the side
-                x1[0] = x_tri[x1_idx]; x1[1] = y_tri[x1_idx]
-                x2[0] = x_tri[x2_idx]; x2[1] = y_tri[x2_idx]
-                
-                try:
-                    get_intersection_point(x1, x2, x3, x4, xi)
-                except ValueError:
-                    # Lines do not intersect - check the next one
-                    continue
-
-                # Intersection found - keep a record of the last element checked
-                last_elem = elem
-
-                # Index for the neighbour element
-                elem = self._nbe[nbe_idx, elem]
-
-                # Check to see if the pathline has exited the domain
-                if elem >= 0:
-                    # Treat elements with two boundaries as land (i.e. set
-                    # `flag' equal to -1) and return the last element checked
-                    n_host_boundaries = 0
-                    for i in xrange(3):
-                        if self._nbe[i,elem] == -1:
-                            n_host_boundaries += 1
-                    if n_host_boundaries == 2:
-                        flag = LAND_BDY_CROSSED
-
-                        # Set host to the last element the particle passed through
-                        particle_new.host_horizontal_elem = last_elem
-                        return flag
-                    else:
-                        # Intersection found but the pathline has not exited the
-                        # domain
-                        break
-                else:
-                    # Particle has crossed a boundary
-                    if elem == -1:
-                        # Land boundary crossed
-                        flag = LAND_BDY_CROSSED
-                    elif elem == -2:
-                        # Open ocean boundary crossed
-                        flag = OPEN_BDY_CROSSED
-
-                    # Set host to the last element the particle passed through
-                    particle_new.host_horizontal_elem = last_elem
-
-                    return flag
-
-            if current_elem == elem:
-                # Particle has not exited the current element meaning it must
-                # still reside in the domain
-                flag = IN_DOMAIN
-                particle_new.host_horizontal_elem = current_elem
-                self.set_local_coordinates(particle_new)
-
-                return flag
+        return self._unstructured_grid.find_host_using_local_search(particle, first_guess)
 
     cdef DTYPE_INT_t find_host_using_global_search(self, Particle *particle) except INT_ERR:
         """ Returns the host horizontal element through global searching.
@@ -557,53 +330,7 @@ cdef class ArakawaADataReader(DataReader):
         flag : int
             Integer flag that indicates whether or not the seach was successful.
         """
-        # Intermediate arrays/variables
-        cdef DTYPE_FLOAT_t phi[N_VERTICES]
-        cdef DTYPE_FLOAT_t phi_test
-
-        cdef bint host_found
-
-        cdef DTYPE_INT_t n_host_land_boundaries
-
-        cdef DTYPE_INT_t i, guess
-
-        host_found = False
-        
-        for guess in xrange(self._n_elems):
-            # Barycentric coordinates
-            self._get_phi(particle.x1, particle.x2, guess, phi)
-
-            # Check to see if the particle is in the current element
-            phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
-            if phi_test >= 0.0:
-                host_found = True
-
-            if host_found is True:
-                # If the element has two land boundaries, flag the particle as
-                # being outside of the domain
-                n_host_land_boundaries = 0
-                for i in xrange(3):
-                    if self._nbe[i,guess] == -1:
-                        n_host_land_boundaries += 1
-
-                if n_host_land_boundaries < 2:
-                    particle.host_horizontal_elem = guess
-
-                    # Set the particle's local coordiantes
-                    for i in xrange(3):
-                        particle.phi[i] = phi[i]
-
-                    return IN_DOMAIN
-                else:
-                    # Element has two land boundaries
-                    if self.config.get('GENERAL', 'log_level') == 'DEBUG':
-                        logger = logging.getLogger(__name__)
-                        logger.warning('Global host element search '
-                            'determined that the particle lies within an '
-                            'element with two land boundaries. Such elements '
-                            'are flagged as lying outside of the model domain.')
-                    return BDY_ERROR
-        return BDY_ERROR
+        return self._unstructured_grid.find_host_using_global_search(particle)
 
     cdef Intersection get_boundary_intersection(self, Particle *particle_old, Particle *particle_new):
         """ Find the boundary intersection point
@@ -626,103 +353,15 @@ cdef class ArakawaADataReader(DataReader):
         intersection: Intersection
             Object describing the boundary intersection.
         """
-        cdef int i # Loop counter
-        cdef int vertex # Vertex identifier
-
-        # Intermediate arrays/variables
-        cdef DTYPE_FLOAT_t x_tri[3]
-        cdef DTYPE_FLOAT_t y_tri[3]
-
-        # 2D position vectors for the end points of the element's side
-        cdef DTYPE_FLOAT_t x1[2]
-        cdef DTYPE_FLOAT_t x2[2]
-        
-        # 2D position vectors for the particle's previous and new position
-        cdef DTYPE_FLOAT_t x3[2]
-        cdef DTYPE_FLOAT_t x4[2]
-        
-        # 2D position vector for the intersection point
-        cdef DTYPE_FLOAT_t xi[2]
-
-        # Intermediate arrays
-        cdef DTYPE_INT_t x1_indices[3]
-        cdef DTYPE_INT_t x2_indices[3]
-        cdef DTYPE_INT_t nbe_indices[3]
-
-        # Array indices
-        cdef int x1_idx
-        cdef int x2_idx
-        cdef int nbe_idx
-
-        # Variables for computing the number of land boundaries
-        cdef DTYPE_INT_t n_land_boundaries
-        cdef DTYPE_INT_t nbe
-
-        # The intersection
-        cdef Intersection intersection
-
-        intersection = Intersection()
-
-        x1_indices = [0,1,2]
-        x2_indices = [1,2,0]
-        nbe_indices = [2,0,1]
-        
-        # Construct arrays to hold the coordinates of the particle's previous
-        # position vector and its new position vector
-        x3[0] = particle_old.x1; x3[1] = particle_old.x2
-        x4[0] = particle_new.x1; x4[1] = particle_new.x2
-
-        # Extract nodal coordinates
-        for i in xrange(3):
-            vertex = self._nv[i, particle_new.host_horizontal_elem]
-            x_tri[i] = self._x[vertex]
-            y_tri[i] = self._y[vertex]
-
-        # Loop over all sides of the element to find the land boundary the element crossed
-        for i in xrange(3):
-            x1_idx = x1_indices[i]
-            x2_idx = x2_indices[i]
-            nbe_idx = nbe_indices[i]
-
-            nbe = self._nbe[nbe_idx, particle_new.host_horizontal_elem]
-
-            if nbe != -1:
-                # Compute the number of land boundaries the neighbour has - elements with two
-                # land boundaries are themselves treated as land
-                n_land_boundaries = 0
-                for i in xrange(3):
-                    if self._nbe[i, nbe] == -1:
-                        n_land_boundaries += 1
-
-                if n_land_boundaries < 2:
-                    continue
-
-            # End coordinates for the side
-            x1[0] = x_tri[x1_idx]; x1[1] = y_tri[x1_idx]
-            x2[0] = x_tri[x2_idx]; x2[1] = y_tri[x2_idx]
-
-            try:
-                get_intersection_point(x1, x2, x3, x4, xi)
-                intersection.x1 = x1[0]
-                intersection.y1 = x1[1]
-                intersection.x2 = x2[0]
-                intersection.y2 = x2[1]
-                intersection.xi = xi[0]
-                intersection.yi = xi[1]
-                return intersection
-            except ValueError:
-                continue
-
-        raise RuntimeError('Failed to calculate boundary intersection.')
+        return self._unstructured_grid.get_boundary_intersection(particle_old, particle_new)
 
     cdef set_default_location(self, Particle *particle):
         """ Set default location
 
         Move the particle to its host element's centroid.
         """
-        particle.x1 = self._xc[particle.host_horizontal_elem]
-        particle.x2 = self._yc[particle.host_horizontal_elem]
-        self.set_local_coordinates(particle)
+        self._unstructured_grid.set_default_location(particle)
+
         return
 
     cdef set_local_coordinates(self, Particle *particle):
@@ -737,29 +376,9 @@ cdef class ArakawaADataReader(DataReader):
         particle: *Particle
             Pointer to a Particle struct
         """
-        cdef DTYPE_FLOAT_t phi[3]
-        
-        cdef DTYPE_INT_t i
-        
-        self._get_phi(particle.x1, particle.x2, 
-                particle.host_horizontal_elem, phi)
-                
-        # Check for negative values.
-        for i in xrange(3):
-            if phi[i] >= 0.0:
-                particle.phi[i] = phi[i]
-            elif phi[i] >= -EPSILON:
-                particle.phi[i] = 0.0
-            else:
-                print phi[i]
-                s = to_string(particle)
-                msg = "One or more local coordinates are invalid (phi = {}) \n\n"\
-                      "The following information may be used to study the \n"\
-                      "failure in more detail. \n\n"\
-                      "{}".format(phi[i], s)
-                print msg
-                
-                raise ValueError('One or more local coordinates are negative')
+        self._unstructured_grid.set_local_coordinates(particle)
+
+        return
 
     cdef DTYPE_INT_t set_vertical_grid_vars(self, DTYPE_FLOAT_t time,
                                             Particle *particle) except INT_ERR:
@@ -1062,7 +681,7 @@ cdef class ArakawaADataReader(DataReader):
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
         # Get gradient in phi
-        self._get_grad_phi(particle.host_horizontal_elem, dphi_dx, dphi_dy)
+        self._unstructured_grid.get_grad_phi(particle.host_horizontal_elem, dphi_dx, dphi_dy)
 
         # No vertical interpolation for particles near to the bottom,
         if particle.in_vertical_boundary_layer is True:
@@ -1403,10 +1022,13 @@ cdef class ArakawaADataReader(DataReader):
             raise ValueError("Unsupported model coordinate system `{}'".format(coordinate_system))
 
         # Apply offsets
-        self._x = x - self._xmin
-        self._y = y - self._ymin
-        self._xc = xc - self._xmin
-        self._yc = yc - self._ymin
+        x = x - self._xmin
+        y = y - self._ymin
+        xc = xc - self._xmin
+        yc = yc - self._ymin
+
+        # Initialise unstructured grid
+        self._unstructured_grid = UnstructuredGrid(self.config, self._n_nodes, self._n_elems, self._nv, self._nbe, x, y, xc, yc)
 
         # Depth levels at nodal coordinates. Assumes and requires that depth is positive down. The -1 multiplier
         # flips this so that depth is positive up from the zero geoid.
@@ -1619,74 +1241,6 @@ cdef class ArakawaADataReader(DataReader):
         else:
             raise ValueError('Unsupported number of dimensions {}.'.format(n_dimensions))
 
-    cdef void _get_phi(self, DTYPE_FLOAT_t x1, DTYPE_FLOAT_t x2,
-            DTYPE_INT_t host, DTYPE_FLOAT_t phi[N_VERTICES]) except *:
-        """ Get barycentric coordinates.
-        
-        Parameters:
-        -----------
-        x1 : float
-            x-position in cartesian coordinates.
-        
-        x2 : float
-            y-position in cartesian coordinates.
-        
-        host : int
-            Host element.
-        
-        Returns:
-        --------
-        phi : C array, float
-            Barycentric coordinates.
-        """
-        
-        cdef int i # Loop counters
-        cdef int vertex # Vertex identifier
-
-        # Intermediate arrays
-        cdef DTYPE_FLOAT_t x_tri[N_VERTICES]
-        cdef DTYPE_FLOAT_t y_tri[N_VERTICES]
-
-        for i in xrange(N_VERTICES):
-            vertex = self._nv[i,host]
-            x_tri[i] = self._x[vertex]
-            y_tri[i] = self._y[vertex]
-
-        # Calculate barycentric coordinates
-        interp.get_barycentric_coords(x1, x2, x_tri, y_tri, phi)
-
-    cdef void _get_grad_phi(self, DTYPE_INT_t host,
-            DTYPE_FLOAT_t dphi_dx[N_VERTICES],
-            DTYPE_FLOAT_t dphi_dy[N_VERTICES]) except *:
-        """ Get gradient in phi with respect to x and y
-        
-        Parameters:
-        -----------
-        host : int
-            Host element
-
-        dphi_dx : C array, float
-            Gradient with respect to x
-
-        dphi_dy : C array, float
-            Gradient with respect to y
-        """
-        
-        cdef int i # Loop counters
-        cdef int vertex # Vertex identifier
-
-        # Intermediate arrays
-        cdef DTYPE_FLOAT_t x_tri[N_VERTICES]
-        cdef DTYPE_FLOAT_t y_tri[N_VERTICES]
-
-        for i in xrange(N_VERTICES):
-            vertex = self._nv[i,host]
-            x_tri[i] = self._x[vertex]
-            y_tri[i] = self._y[vertex]
-
-        # Calculate gradient in barycentric coordinates
-        interp.get_barycentric_gradients(x_tri, y_tri, dphi_dx, dphi_dy)
-
     cdef DTYPE_INT_t _interp_mask_status_on_level(self,
             DTYPE_FLOAT_t phi[N_VERTICES], DTYPE_INT_t host,
             DTYPE_INT_t kidx) except INT_ERR:
@@ -1725,4 +1279,3 @@ cdef class ArakawaADataReader(DataReader):
                 break
 
         return mask
-
