@@ -795,7 +795,14 @@ cdef class ArakawaADataReader(DataReader):
 
                 # If the overlying layer is masked, something has gone wrong
                 if mask_upper_level == 1:
-                    return BDY_ERROR
+                    s = to_string(particle)
+                    msg = "The particle's overlying vertical layer is masked. This should not happen. \n\n"\
+                          "The following information may be used to study the \n"\
+                          "failure in more detail. \n\n"\
+                          "{}".format(s)
+                    print msg
+
+                    raise ValueError('Overlying vertical layer is masked')
 
                 # If the bottom layer is masked, flag the particle as being in the bottom boundary layer
                 if mask_lower_level == 1:
@@ -803,9 +810,7 @@ cdef class ArakawaADataReader(DataReader):
 
                 return IN_DOMAIN
 
-        if particle.x3 < h or particle.x3 > zeta:
-            return BDY_ERROR
-
+        # Particle is outside the vertical grid
         return BDY_ERROR
 
     cpdef DTYPE_FLOAT_t get_xmin(self) except FLOAT_ERR:
