@@ -1689,7 +1689,7 @@ cdef class ArakawaADataReader(DataReader):
             if depth_last == depth_next:
                 depth_nodes[i] = depth_last
             else:
-                depth_nodes[i] = interp.get_linear_fraction(time_fraction, depth_last, depth_next)
+                depth_nodes[i] = interp.linear_interp(time_fraction, depth_last, depth_next)
 
         depth = interp.interpolate_within_element(depth_nodes, phi)
 
