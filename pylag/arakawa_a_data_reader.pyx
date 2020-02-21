@@ -804,8 +804,10 @@ cdef class ArakawaADataReader(DataReader):
 
                     raise ValueError('Overlying vertical layer is masked')
 
-                # If the bottom layer is masked, flag the particle as being in the bottom boundary layer
-                if mask_lower_level == 1:
+                # If the bottom layer is masked, flag the particle as being in the bottom boundary layer.
+                if mask_lower_level == 0:
+                    particle.in_vertical_boundary_layer = False
+                else:
                     particle.in_vertical_boundary_layer = True
 
                 return IN_DOMAIN
