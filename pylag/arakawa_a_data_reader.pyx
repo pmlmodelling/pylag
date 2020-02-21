@@ -778,7 +778,7 @@ cdef class ArakawaADataReader(DataReader):
         zeta = self.get_zmax(time, particle)
 
         # Loop over all levels to find the host z layer
-        for k in xrange(self._n_depth):
+        for k in xrange(self._n_depth - 1):
             depth_upper_level = self._interp_depth_on_level(time, particle.phi, particle.host_horizontal_elem, k)
             depth_lower_level = self._interp_depth_on_level(time, particle.phi, particle.host_horizontal_elem, k+1)
 
