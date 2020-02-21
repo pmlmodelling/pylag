@@ -810,6 +810,21 @@ cdef class ArakawaADataReader(DataReader):
 
                 return IN_DOMAIN
 
+        # Allow for the situation in which the particle is above h but below the lowest depth level.
+        # If this has happened, flag the particle as being in the vertical boundary layer, meaning all
+        # variables will be extrapolated from the above overlying depth level.
+        k = self._n_depth - 1
+        depth_upper_level = self._interp_depth_on_level(time, particle.phi, particle.host_horizontal_elem, k)
+        if particle.x3 > h and particle.x3 < depth_upper_level:
+            mask_upper_level = self._interp_mask_status_on_level(particle.phi, particle.host_horizontal_elem, k)
+            if mask_upper_level == 0:
+                particle.k_layer = k
+                particle.in_vertical_boundary_layer = True
+
+                return IN_DOMAIN
+            else:
+                raise RuntimeError('The particle sits above h but below the bottom level, which is masked. Why should it be masked?')
+
         # Particle is outside the vertical grid
         return BDY_ERROR
 
