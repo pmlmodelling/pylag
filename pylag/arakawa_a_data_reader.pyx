@@ -1421,10 +1421,10 @@ cdef class ArakawaADataReader(DataReader):
         self._time_next = self.mediator.get_time_at_next_time_index()
 
         # Update memory views for zeta
-        zeta_last = self.mediator.get_time_dependent_variable_at_last_time_index('zeta', (self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+        zeta_last = self.mediator.get_time_dependent_variable_at_last_time_index('zos', (self._n_latitude, self._n_longitude), DTYPE_FLOAT)
         self._zeta_last = self._reshape_var(zeta_last, ('latitude', 'longitude'))
 
-        zeta_next = self.mediator.get_time_dependent_variable_at_next_time_index('zeta', (self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+        zeta_next = self.mediator.get_time_dependent_variable_at_next_time_index('zos', (self._n_latitude, self._n_longitude), DTYPE_FLOAT)
         self._zeta_next = self._reshape_var(zeta_next, ('latitude', 'longitude'))
 
         # Update memory views for u

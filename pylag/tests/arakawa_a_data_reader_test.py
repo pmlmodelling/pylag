@@ -139,10 +139,10 @@ class MockArakawaAMediator(Mediator):
                            'mask': land_sea_mask_elements}
 
         # Store in dictionaries
-        self._time_dep_vars_last = {'zeta': zeta_t0, 'uo': uvw_t0, 'vo': uvw_t0, 'wo': uvw_t0, 'thetao': ts_t0,
+        self._time_dep_vars_last = {'zos': zeta_t0, 'uo': uvw_t0, 'vo': uvw_t0, 'wo': uvw_t0, 'thetao': ts_t0,
                                     'so': ts_t0}
 
-        self._time_dep_vars_next = {'zeta': zeta_t1, 'uo': uvw_t1, 'vo': uvw_t1, 'wo': uvw_t1, 'thetao': ts_t0,
+        self._time_dep_vars_next = {'zos': zeta_t1, 'uo': uvw_t1, 'vo': uvw_t1, 'wo': uvw_t1, 'thetao': ts_t0,
                                     'so': ts_t1}
 
         # Time in seconds. ie two time pts, 1 hour apart
