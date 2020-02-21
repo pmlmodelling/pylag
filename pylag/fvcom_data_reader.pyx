@@ -1310,7 +1310,7 @@ cdef class FVCOMDataReader(DataReader):
         """
         # Read in the grid's dimensions
         self._n_nodes = self.mediator.get_dimension_variable('node')
-        self._n_elems = self.mediator.get_dimension_variable('nele')
+        self._n_elems = self.mediator.get_dimension_variable('element')
         self._n_siglev = self.mediator.get_dimension_variable('siglev')
         self._n_siglay = self.mediator.get_dimension_variable('siglay')
         
@@ -1331,10 +1331,10 @@ cdef class FVCOMDataReader(DataReader):
             self._ymin = np.min(y)
 
         elif coordinate_system == "spherical":
-            x = self.mediator.get_grid_variable('lon', (self._n_nodes), DTYPE_FLOAT)
-            y = self.mediator.get_grid_variable('lat', (self._n_nodes), DTYPE_FLOAT)
-            xc = self.mediator.get_grid_variable('lonc', (self._n_elems), DTYPE_FLOAT)
-            yc = self.mediator.get_grid_variable('latc', (self._n_elems), DTYPE_FLOAT)
+            x = self.mediator.get_grid_variable('longitude', (self._n_nodes), DTYPE_FLOAT)
+            y = self.mediator.get_grid_variable('latitude', (self._n_nodes), DTYPE_FLOAT)
+            xc = self.mediator.get_grid_variable('longitude_c', (self._n_elems), DTYPE_FLOAT)
+            yc = self.mediator.get_grid_variable('latitude_c', (self._n_elems), DTYPE_FLOAT)
 
             # Don't apply offsets in spherical case - set them to 0.0!
             self._xmin = 0.0

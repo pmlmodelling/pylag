@@ -29,7 +29,7 @@ class MockFVCOMMediator(Mediator):
         n_nodes = 7
         n_siglev = 4
         n_siglay = 3
-        self._dim_vars = {'nele': n_elems, 'node': n_nodes,
+        self._dim_vars = {'element': n_elems, 'node': n_nodes,
                           'siglev': n_siglev, 'siglay': n_siglay}
                           
         # Grid variables

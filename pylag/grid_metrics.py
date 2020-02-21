@@ -183,14 +183,15 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_
 
     # Add dimension variables
     gm_file_creator.create_dimension('node', n_nodes)
-    gm_file_creator.create_dimension('nele', n_elems)
+    gm_file_creator.create_dimension('element', n_elems)
     gm_file_creator.create_dimension('siglev', n_siglev)
     gm_file_creator.create_dimension('siglay', n_siglay)
 
     # Add grid coordinate variables
     # -----------------------------
-    for var_name in ['x', 'y', 'xc', 'yc', 'lat', 'lon', 'latc', 'lonc', 'siglev', 'siglay', 'h']:
-        nc_var = fvcom_dataset.variables[var_name]
+    for fvcom_var_name, var_name in zip(['x', 'y', 'xc', 'yc', 'lat', 'lon', 'latc', 'lonc', 'siglev', 'siglay', 'h'],
+                                        ['x', 'y', 'xc', 'yc', 'latitude', 'longitude', 'latitude_c', 'longitude_c', 'siglev', 'siglay', 'h']):
+        nc_var = fvcom_dataset.variables[fvcom_var_name]
 
         var_data = nc_var[:]
 
