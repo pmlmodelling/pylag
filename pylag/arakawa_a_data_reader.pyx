@@ -1021,6 +1021,10 @@ cdef class ArakawaADataReader(DataReader):
         Ah_prime : C array, float
             dAh_dx and dH_dy components stored in a C array of length two.  
 
+        TODO:
+        -----
+        1) Test this.
+
         References:
         -----------
         Lynch, D. R. et al (2014). Particles in the coastal ocean: theory and
@@ -1140,17 +1144,24 @@ cdef class ArakawaADataReader(DataReader):
         
         Return a numerical approximation of the gradient in the vertical eddy 
         diffusivity at (t,x,y,z) using central differencing. First, the
-        diffusivity is computed on the sigma levels bounding the particle.
+        diffusivity is computed on the depth levels bounding the particle.
         Central differencing is then used to compute the gradient in the
         diffusivity on these levels. Finally, the gradient in the diffusivity
         is interpolated to the particle's exact position. This algorithm
         mirrors that used in GOTMDataReader, which is why it has been implemented
         here. However, in contrast to GOTMDataReader, which calculates the
         gradient in the diffusivity at all levels once each simulation time step,
-        resulting in significant time savings, this function is exectued once
+        resulting in significant time savings, this function is executed once
         for each particle. It is thus quite costly! To make things worse, the 
         code, as implemented here, is highly repetitive, and no doubt efficiency
         savings could be found. 
+
+        TODO:
+        -----
+        1) Can this be done using a specialised interpolating object? Would need to
+        compute depths and kh at all levels, then interpolate between then. Would
+        need to give some thought to how to do this efficiently.
+        2) Test this.
 
         Parameters:
         -----------
@@ -1165,7 +1176,64 @@ cdef class ArakawaADataReader(DataReader):
         k_prime : float
             Gradient in the vertical eddy diffusivity field.
         """
-        pass
+        cdef DTYPE_FLOAT_t kh_0, kh_1, kh_2, kh_3
+        cdef DTYPE_FLOAT_t z_0, z_1, z_2, z_3
+        cdef DTYPE_FLOAT_t dkh_lower_level, dkh_upper_level
+
+        if particle.in_vertical_boundary_layer == True:
+            kh_0 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer-1)
+            z_0 = self._interp_depth_on_level(time, particle.phi, particle.host_horizontal_elem, particle.k_layer-1)
+
+            kh_1 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer)
+            z_1 = self._interp_depth_on_level(time, particle.phi, particle.host_horizontal_elem, particle.k_layer)
+
+            dkh_upper_level = (kh_0 - kh_1) / (z_0 - z_1)
+
+            return dkh_upper_level
+
+        if particle.k_layer == 0:
+            kh_0 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer)
+            z_0 = self._interp_depth_on_level(time, particle.phi, particle.host_horizontal_elem, particle.k_layer)
+
+            kh_1 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer+1)
+            z_1 = self._interp_depth_on_level(time, particle.phi, particle.host_horizontal_elem, particle.k_layer+1)
+
+            kh_2 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer+2)
+            z_2 = self._interp_depth_on_level(time, particle.phi, particle.host_horizontal_elem, particle.k_layer+2)
+
+            dkh_lower_level = (kh_0 - kh_2) / (z_0 - z_2)
+            dkh_upper_level = (kh_0 - kh_1) / (z_0 - z_1)
+
+        elif particle.k_layer == self._n_depth - 2:
+            kh_0 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer-1)
+            z_0 = self._interp_depth_on_level(time, particle.phi, particle.host_horizontal_elem, particle.k_layer-1)
+
+            kh_1 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer)
+            z_1 = self._interp_depth_on_level(time, particle.phi, particle.host_horizontal_elem, particle.k_layer)
+
+            kh_2 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer+1)
+            z_2 = self._interp_depth_on_level(time, particle.phi, particle.host_horizontal_elem, particle.k_layer+1)
+
+            dkh_lower_level = (kh_1 - kh_2) / (z_1 - z_2)
+            dkh_upper_level = (kh_0 - kh_2) / (z_0 - z_2)
+
+        else:
+            kh_0 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer-1)
+            z_0 = self._interp_depth_on_level(time, particle.phi, particle.host_horizontal_elem, particle.k_layer-1)
+
+            kh_1 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer)
+            z_1 = self._interp_depth_on_level(time, particle.phi, particle.host_horizontal_elem, particle.k_layer)
+
+            kh_2 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer+1)
+            z_2 = self._interp_depth_on_level(time, particle.phi, particle.host_horizontal_elem, particle.k_layer+1)
+
+            kh_3 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer+2)
+            z_3 = self._interp_depth_on_level(time, particle.phi, particle.host_horizontal_elem, particle.k_layer+2)
+
+            dkh_lower_level = (kh_1 - kh_3) / (z_1 - z_3)
+            dkh_upper_level = (kh_0 - kh_2) / (z_0 - z_2)
+
+        return interp.linear_interp(particle.omega_interfaces, dkh_lower_level, dkh_upper_level)
 
     cpdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, DTYPE_INT_t host) except INT_ERR:
         """ Return an integer indicating whether `host' is wet or dry
@@ -1323,39 +1391,26 @@ cdef class ArakawaADataReader(DataReader):
             specified level.
         
         """
-        pass
-#        # Loop counter
-#        cdef int i
-#
-#        # Vertex identifier
-#        cdef int vertex
-#
-#        # Time fraction used for interpolation in time
-#        cdef DTYPE_FLOAT_t time_fraction
-#
-#        # Intermediate arrays - kh
-#        cdef DTYPE_FLOAT_t kh_tri_t_last[N_VERTICES]
-#        cdef DTYPE_FLOAT_t kh_tri_t_next[N_VERTICES]
-#        cdef DTYPE_FLOAT_t kh_tri[N_VERTICES]
-#
-#        # Interpolated diffusivities on the specified level
-#        cdef DTYPE_FLOAT_t kh
-#
-#        # Extract kh on the lower and upper bounding sigma levels, h and zeta
-#        for i in xrange(N_VERTICES):
-#            vertex = self._nv[i,particle.host_horizontal_elem]
-#            kh_tri_t_last[i] = self._kh_last[k_level, vertex]
-#            kh_tri_t_next[i] = self._kh_next[k_level, vertex]
-#
-#        # Interpolate kh and zeta in time
-#        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
-#        for i in xrange(N_VERTICES):
-#            kh_tri[i] = interp.linear_interp(time_fraction, kh_tri_t_last[i], kh_tri_t_next[i])
-#
-#        # Interpolate kh, zeta and h within the host
-#        kh = interp.interpolate_within_element(kh_tri, particle.phi)
-#
-#        return kh
+        cdef int vertex # Vertex identifier
+        cdef DTYPE_FLOAT_t time_fraction
+        cdef DTYPE_FLOAT_t kh_last, kh_next
+        cdef DTYPE_FLOAT_t kh_nodes[N_VERTICES]
+        cdef DTYPE_FLOAT_t kh
+        cdef DTYPE_INT_t i
+
+        # Time fraction
+        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
+
+        for i in xrange(N_VERTICES):
+            vertex = self._nv[i, particle.host_horizontal_elem]
+            kh_last = self._kh_levels_last[k_level, vertex]
+            kh_next = self._kh_levels_next[k_level, vertex]
+
+            kh_nodes[i] = interp.linear_interp(time_fraction, kh_last, kh_next)
+
+        kh = interp.interpolate_within_element(kh_nodes, particle.phi)
+
+        return kh
 
     def _read_grid(self):
         """ Set grid and coordinate variables.
