@@ -214,6 +214,8 @@ class ArawawaADataReader_test(TestCase):
         config.set('OCEAN_CIRCULATION_MODEL', 'has_Kh', 'False')
         config.set('OCEAN_CIRCULATION_MODEL', 'has_Ah', 'False')
         config.set('OCEAN_CIRCULATION_MODEL', 'has_is_wet', 'True')
+        config.set('OCEAN_CIRCULATION_MODEL', 'has_h', 'True')
+        config.set('OCEAN_CIRCULATION_MODEL', 'has_zeta', 'True')
         config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'spherical')
         config.add_section("OUTPUT")
         config.set('OUTPUT', 'environmental_variables', 'thetao, so')
