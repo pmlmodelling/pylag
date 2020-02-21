@@ -276,29 +276,8 @@ cdef class ArakawaADataReader(DataReader):
                                                   DTYPE_INT_t first_guess) except INT_ERR:
         """ Returns the host horizontal element through local searching.
         
-        Use a local search for the host horizontal element in which the next
-        element to be search is determined by the barycentric coordinates of
-        the last element to be searched.
-        
-        The function returns a flag that indicates whether or not the particle
-        has been found within the domain. If it has, its host element will 
-        have been set appropriately. If not, a search error is returned. The
-        algorithm cannot reliably detect boundary crossings, so no attempt
-        is made to try and flag if a boundary crossing occurred.
-        
-        We also keep track of the second to last element to be searched in order
-        to guard against instances when the model gets stuck alternately testing
-        two separate neighbouring elements.
-        
-        Conventions
-        -----------
-        flag = IN_DOMAIN:
-            This indicates that the particle was found successfully. Host is
-            is the index of the new host element.
-        
-        flag = BDY_ERROR:
-            The host element was not found.
-        
+        This function is a wrapper for the same function implemented in UnstructuredGrid.
+
         Parameters:
         -----------
         particle: *Particle
@@ -317,9 +296,8 @@ cdef class ArakawaADataReader(DataReader):
     cdef DTYPE_INT_t find_host_using_global_search(self, Particle *particle) except INT_ERR:
         """ Returns the host horizontal element through global searching.
         
-        Sequentially search all elements for the given location. Set the particle
-        host element if found.
-        
+        This function is a wrapper for the same function implemented in UnstructuredGrid.
+
         Parameters:
         -----------
         particle_old: *Particle
@@ -335,11 +313,8 @@ cdef class ArakawaADataReader(DataReader):
     cdef Intersection get_boundary_intersection(self, Particle *particle_old, Particle *particle_new):
         """ Find the boundary intersection point
 
-        This function is primarily intended to assist in the application of 
-        horizontal boundary conditions where it is often necessary to establish
-        the point on a side of an element at which particle crossed before
-        exiting the model domain.
-        
+        This function is a wrapper for the same function implemented in UnstructuredGrid.
+
         Parameters:
         -----------
         particle_old: *Particle
@@ -366,11 +341,9 @@ cdef class ArakawaADataReader(DataReader):
 
     cdef set_local_coordinates(self, Particle *particle):
         """ Set local coordinates
-        
-        Each particle has associated with it a set of global coordinates
-        and a set of local coordinates. Here, the global coordinates and the 
-        host horizontal element are used to set the local coordinates.
-        
+
+        This function is a wrapper for the same function implemented in UnstructuredGrid.
+
         Parameters:
         -----------
         particle: *Particle

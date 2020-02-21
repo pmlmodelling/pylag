@@ -24,13 +24,11 @@ from pylag.math cimport Intersection
 
 
 cdef class UnstructuredGrid:
-    """ DataReader for inputs defined on a Arakawa-a grid
+    """ Unstructured grid
 
-    Objects of type ArakawaADataReader are intended to manage all access to
-    data objects defined on a Arakawa-a grid, including data describing the
-    model grid itself as well as model output variables. Provided are methods
-    for searching the model grid for host horizontal elements and for
-    interpolating gridded field data to a given point in space and time.
+    Objects of type Unstructured can perform grid searches, compute local
+    coordinates to assist with interpolation and help identify grid
+    boundary crossings.
 
     Parameters:
     -----------
@@ -613,3 +611,4 @@ cdef class UnstructuredGrid:
 
         # Calculate gradient in barycentric coordinates
         interp.get_barycentric_gradients(x_tri, y_tri, dphi_dx, dphi_dy)
+
