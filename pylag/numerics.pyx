@@ -157,7 +157,7 @@ cdef class StdNumMethod(NumMethod):
 
         # Check for beached particles
         if _particle_copy.is_beached == 1:
-            if data_reader.is_wet(time, _particle_copy.host_horizontal_element) == 0:
+            if data_reader.is_wet(time, &_particle_copy) == 0:
                 # If the cell is still dry, pass over
                 return IN_DOMAIN
             else:
@@ -223,7 +223,7 @@ cdef class StdNumMethod(NumMethod):
                 return flag
 
         # Check to see if the particle has beached
-        if data_reader.is_wet(time+self._time_step, _particle_copy.host_horizontal_element) == 0:
+        if data_reader.is_wet(time+self._time_step, &_particle_copy) == 0:
              _particle_copy.is_beached = 1
 
         # Copy back particle properties
@@ -360,7 +360,7 @@ cdef class OS0NumMethod(NumMethod):
 
         # Check for beached particles
         if _particle_copy_a.is_beached == 1:
-            if data_reader.is_wet(time, _particle_copy_a.host_horizontal_element) == 0:
+            if data_reader.is_wet(time, &_particle_copy_a) == 0:
                 # If the cell is still dry, pass over
                 return IN_DOMAIN
             else:
@@ -464,7 +464,7 @@ cdef class OS0NumMethod(NumMethod):
                 return flag
 
         # Check to see if the particle has beached
-        if data_reader.is_wet(time+self._adv_time_step, _particle_copy_b.host_horizontal_element) == 0:
+        if data_reader.is_wet(time+self._adv_time_step, &_particle_copy_b) == 0:
             _particle_copy_b.is_beached = 1
 
         particle[0] = _particle_copy_b
@@ -583,7 +583,7 @@ cdef class OS1NumMethod(NumMethod):
 
         # Check for beached particles
         if _particle_copy_a.is_beached == 1:
-            if data_reader.is_wet(time, _particle_copy_a.host_horizontal_element) == 0:
+            if data_reader.is_wet(time, &_particle_copy_a) == 0:
                 # If the cell is still dry, pass over
                 return IN_DOMAIN
             else:
@@ -730,7 +730,7 @@ cdef class OS1NumMethod(NumMethod):
                 return flag
 
         # Check to see if the particle has beached
-        if data_reader.is_wet(t, _particle_copy_b.host_horizontal_element) == 0:
+        if data_reader.is_wet(t, &_particle_copy_b) == 0:
             _particle_copy_b.is_beached = 1
 
         # Copy back particle properties

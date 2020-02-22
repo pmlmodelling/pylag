@@ -523,7 +523,7 @@ cdef class GOTMDataReader(DataReader):
         else:
             raise ValueError("Received unsupported environmental variable `{}'".format(var_name))
 
-    cpdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, DTYPE_INT_t host) except INT_ERR:
+    cdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, Particle *particle) except INT_ERR:
         """ Return an integer indicating whether `host' is wet or dry
         
         The function returns 1 if `host' is wet at time `time' and 

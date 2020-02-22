@@ -184,10 +184,10 @@ cdef class OPTModel:
                         particle_ptr.x3 = particle_ptr.x3 + zmin
 
                 # Determine if the host element is presently dry
-                if self.data_reader.is_wet(time, particle_ptr.host_horizontal_elem) == 1:
+                if self.data_reader.is_wet(time, particle_ptr) == 1:
                     particle_ptr.is_beached = 0
 
-                    # Second ceck that the given depth is valid
+                    # Second check that the given depth is valid
                     if particle_ptr.x3 < zmin:
                         raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(particle_ptr.x3, zmin))
                     elif particle_ptr.x3 > zmax:

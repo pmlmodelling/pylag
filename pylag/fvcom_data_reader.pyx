@@ -839,7 +839,7 @@ cdef class FVCOMDataReader(DataReader):
             
         return interp.linear_interp(particle.omega_interfaces, dkh_lower_level, dkh_upper_level)
 
-    cpdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, DTYPE_INT_t host) except INT_ERR:
+    cdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, Particle *particle) except INT_ERR:
         """ Return an integer indicating whether `host' is wet or dry
         
         The function returns 1 if `host' is wet at time `time' and 
@@ -870,7 +870,7 @@ cdef class FVCOMDataReader(DataReader):
             Integer that identifies the host element in question
         """
         if self._has_is_wet:
-            if self._wet_cells_last[host] == 0 or self._wet_cells_next[host] == 0:
+            if self._wet_cells_last[particle.host_horizontal_elem] == 0 or self._wet_cells_next[particle.host_horizontal_elem] == 0:
                 return 0
         return 1
         
