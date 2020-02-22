@@ -155,6 +155,25 @@ cdef class StdNumMethod(NumMethod):
         # Create a clone of the current particle to work on
         _particle_copy = particle[0]
 
+        # Check for beached particles
+        if _particle_copy.is_beached == 1:
+            if data_reader.is_wet(time, _particle_copy.host_horizontal_element) == 0:
+                # If the cell is still dry, pass over
+                return IN_DOMAIN
+            else:
+                # Set vertical grid vars, which may have changed while the particle was beached
+                flag = data_reader.set_vertical_grid_vars(time, &_particle_copy)
+
+                # Apply surface/bottom boundary conditions if required
+                if flag != IN_DOMAIN:
+                    flag = self._vert_bc_calculator.apply(data_reader, time, &_particle_copy)
+
+                    # Return if failure recorded
+                    if flag == BDY_ERROR:
+                        return flag
+
+                _particle_copy.is_beached = 0
+
         reset(&_delta_X)
 
         # Compute Delta
@@ -202,6 +221,10 @@ cdef class StdNumMethod(NumMethod):
             # Return if failure recorded
             if flag == BDY_ERROR:
                 return flag
+
+        # Check to see if the particle has beached
+        if data_reader.is_wet(time+self._time_step, _particle_copy.host_horizontal_element) == 0:
+             _particle_copy.is_beached = 1
 
         # Copy back particle properties
         particle[0] = _particle_copy
@@ -335,6 +358,25 @@ cdef class OS0NumMethod(NumMethod):
         # Create a clone of the current particle to work on
         _particle_copy_a = particle[0]
 
+        # Check for beached particles
+        if _particle_copy_a.is_beached == 1:
+            if data_reader.is_wet(time, _particle_copy_a.host_horizontal_element) == 0:
+                # If the cell is still dry, pass over
+                return IN_DOMAIN
+            else:
+                # Set vertical grid vars, which may have changed while the particle was beached
+                flag = data_reader.set_vertical_grid_vars(time, &_particle_copy_a)
+
+                # Apply surface/bottom boundary conditions if required
+                if flag != IN_DOMAIN:
+                    flag = self._vert_bc_calculator.apply(data_reader, time, &_particle_copy_a)
+
+                    # Return if failure recorded
+                    if flag == BDY_ERROR:
+                        return flag
+
+                _particle_copy_a.is_beached = 0
+
         # Set delta to zero
         reset(&_delta_X)
 
@@ -420,6 +462,10 @@ cdef class OS0NumMethod(NumMethod):
             # Return if failure recorded
             if flag != IN_DOMAIN:
                 return flag
+
+        # Check to see if the particle has beached
+        if data_reader.is_wet(time+self._adv_time_step, _particle_copy_b.host_horizontal_element) == 0:
+            _particle_copy_b.is_beached = 1
 
         particle[0] = _particle_copy_b
 
@@ -534,6 +580,25 @@ cdef class OS1NumMethod(NumMethod):
 
         # Create a clone of the current particle to work on
         _particle_copy_a = particle[0]
+
+        # Check for beached particles
+        if _particle_copy_a.is_beached == 1:
+            if data_reader.is_wet(time, _particle_copy_a.host_horizontal_element) == 0:
+                # If the cell is still dry, pass over
+                return IN_DOMAIN
+            else:
+                # Set vertical grid vars, which may have changed while the particle was beached
+                flag = data_reader.set_vertical_grid_vars(time, &_particle_copy_a)
+
+                # Apply surface/bottom boundary conditions if required
+                if flag != IN_DOMAIN:
+                    flag = self._vert_bc_calculator.apply(data_reader, time, &_particle_copy_a)
+
+                    # Return if failure recorded
+                    if flag == BDY_ERROR:
+                        return flag
+
+                _particle_copy_a.is_beached = 0
 
         # Compute Delta
         reset(&_delta_X)
@@ -663,7 +728,11 @@ cdef class OS1NumMethod(NumMethod):
             # Return if failure recorded
             if flag == BDY_ERROR:
                 return flag
-        
+
+        # Check to see if the particle has beached
+        if data_reader.is_wet(t, _particle_copy_b.host_horizontal_element) == 0:
+            _particle_copy_b.is_beached = 1
+
         # Copy back particle properties
         particle[0] = _particle_copy_b
 

@@ -375,22 +375,11 @@ cdef class ArakawaADataReader(DataReader):
                 mask_upper_level = self._interp_mask_status_on_level(particle.phi, particle.host_horizontal_elem, k)
                 mask_lower_level = self._interp_mask_status_on_level(particle.phi, particle.host_horizontal_elem, k+1)
 
-                # If the overlying layer is masked, something has gone wrong
-                if mask_upper_level == 1:
-                    s = to_string(particle)
-                    msg = "The particle's overlying vertical layer is masked. This should not happen. \n\n"\
-                          "The following information may be used to study the \n"\
-                          "failure in more detail. \n\n"\
-                          "{}".format(s)
-                    print msg
-
-                    raise ValueError('Overlying vertical layer is masked')
-
                 # If the bottom layer is masked, flag the particle as being in the bottom boundary layer.
-                if mask_lower_level == 0:
-                    particle.in_vertical_boundary_layer = False
-                else:
+                if mask_upper_level == 0 and mask_lower_level == 1:
                     particle.in_vertical_boundary_layer = True
+                else:
+                    particle.in_vertical_boundary_layer = False
 
                 return IN_DOMAIN
 

@@ -285,33 +285,27 @@ cdef class OPTModel:
 
         for particle_ptr in self.particle_ptrs:
             if particle_ptr.in_domain:
-                if particle_ptr.is_beached == 0:
-                    flag = self.num_method.step(self.data_reader, time, particle_ptr)
+                flag = self.num_method.step(self.data_reader, time, particle_ptr)
 
-                    if flag == OPEN_BDY_CROSSED: 
-                        particle_ptr.in_domain = False
-                        continue
-                    elif flag == BDY_ERROR:
-                        s = to_string(particle_ptr)
-                        msg = "WARNING BDY_ERROR encountered at time {} \n\n"\
-                              "PyLag failed to successfully update the position of a particle \n"\
-                              "resulting in a BDY_ERROR flag being returned. This can occur \n"\
-                              "when a particle has crossed a land boundary and the model \n"\
-                              "fails to apply the specified land boundary condition. The \n"\
-                              "particle will be flagged as having entered an error state \n"\
-                              "and its position will no longer be updated. The following \n"\
-                              "information may be used to study the failure in more detail. \n\n"\
-                              "{}".format(time, s)
-                        print msg
-                    
-                        particle_ptr.in_domain = False
-                        particle_ptr.status = 1
-                        continue
-                
-                if self.data_reader.is_wet(time, particle_ptr.host_horizontal_elem) == 1:
-                    particle_ptr.is_beached = 0
-                else:
-                    particle_ptr.is_beached = 1
+                if flag == OPEN_BDY_CROSSED:
+                    particle_ptr.in_domain = False
+                    continue
+                elif flag == BDY_ERROR:
+                    s = to_string(particle_ptr)
+                    msg = "WARNING BDY_ERROR encountered at time {} \n\n"\
+                          "PyLag failed to successfully update the position of a particle \n"\
+                          "resulting in a BDY_ERROR flag being returned. This can occur \n"\
+                          "when a particle has crossed a land boundary and the model \n"\
+                          "fails to apply the specified land boundary condition. The \n"\
+                          "particle will be flagged as having entered an error state \n"\
+                          "and its position will no longer be updated. The following \n"\
+                          "information may be used to study the failure in more detail. \n\n"\
+                          "{}".format(time, s)
+                    print msg
+
+                    particle_ptr.in_domain = False
+                    particle_ptr.status = 1
+                    continue
                 
     def get_diagnostics(self, time):
         """ Get particle diagnostics
