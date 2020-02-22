@@ -358,7 +358,6 @@ cdef class ArakawaADataReader(DataReader):
 
         cdef DTYPE_INT_t k
 
-
         # Loop over all levels to find the host z layer
         for k in xrange(self._n_depth - 1):
             depth_upper_level = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k)
