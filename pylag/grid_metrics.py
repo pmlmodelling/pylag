@@ -322,6 +322,7 @@ def create_arakawa_a_grid_metrics_file(file_name, has_mask=True, has_bathymetry=
     if has_bathymetry:
         bathy_var, bathy_attrs = _get_variable(input_dataset, ['h'])
         bathy = sort_axes(bathy_var).squeeze()
+        bathy[np.where(bathy < 0.0)] = 0.1 # Fix up erroneous depths
         if len(bathy.shape) == 2:
             bathy = bathy.reshape(np.prod(bathy.shape), order='C')
         else:
