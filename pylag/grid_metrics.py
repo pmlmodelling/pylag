@@ -245,7 +245,8 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_
     return
 
 
-def create_arakawa_a_grid_metrics_file(file_name, grid_metrics_file_name='./grid_metrics.nc'):
+def create_arakawa_a_grid_metrics_file(file_name, has_mask=True, has_bathymetry=True,
+                                       grid_metrics_file_name='./grid_metrics.nc'):
     """Create a Arakawa A-grid metrics file
 
     This function creates a grid metrics file for data defined on an Arakawa
@@ -264,6 +265,20 @@ def create_arakawa_a_grid_metrics_file(file_name, grid_metrics_file_name='./grid
     file_name : str
         The path to an file that can be read in a processed
 
+    has_mask : bool
+        Flag identifying whether the input file contains a variable mask, which will
+        be used to generate the land sea mask. If it doesn't, the land sea mask is
+        inferred from the surface mask of one of the variables. If the output files
+        contain a time varying mask due to changes in sea surface elevation, a
+        land sea mask should be provided. Optional, default True.
+
+    has_bathymetry : bool
+        Flag identifying whether the input file contains a variable h corresponding to the
+        grid bathymetry. If it doesn't, the bathymetry is inferred from the depth mask
+        of one of the variables. If the output files contain a time varying mask due to
+        changes in sea surface elevation, the bathymetry should be provided. Optional, default
+        True.
+
     grid_metrics_file_name : str, optional
         The name of the grid metrics file that will be created
     """
@@ -277,8 +292,6 @@ def create_arakawa_a_grid_metrics_file(file_name, grid_metrics_file_name='./grid
     lon_var, lon_attrs = _get_variable(input_dataset, ['lon', 'longitude'])
     lat_var, lat_attrs = _get_variable(input_dataset, ['lat', 'latitude'])
     depth_var, depth_attrs = _get_variable(input_dataset, ['depth'])
-    bathy_var, bathy_attrs = _get_variable(input_dataset, ['h'])
-    mask_var, mask_attrs = _get_variable(input_dataset, ['mask'])
 
     # Create points array
     lon2d, lat2d = np.meshgrid(lon_var[:], lat_var[:], indexing='ij')
@@ -298,11 +311,71 @@ def create_arakawa_a_grid_metrics_file(file_name, grid_metrics_file_name='./grid
     n_levels = depth_var.shape[0]
 
     # Save bathymetry
-    bathy = sort_axes(bathy_var)
-    if len(bathy.shape) == 2:
-        bathy = bathy.reshape(np.prod(bathy.shape), order='C')
+    if has_bathymetry:
+        bathy_var, bathy_attrs = _get_variable(input_dataset, ['h'])
+        bathy = sort_axes(bathy_var).squeeze()
+        if len(bathy.shape) == 2:
+            bathy = bathy.reshape(np.prod(bathy.shape), order='C')
+        else:
+            raise RuntimeError('Bathymetry array is not 2D.')
     else:
-        raise RuntimeError('Bathymetry array is not 2D.')
+        # Try to infer bathy from the depth mask for uo
+        uo_var, _ = _get_variable(input_dataset, ['uo'])
+        uo = sort_axes(uo_var)
+        if not np.ma.isMaskedArray(uo):
+            raise RuntimeError('Unable to generate bathymetry. Can you provide h?')
+
+        # Read the depth mask and reshape giving (n_levels, n_nodes)
+        uo_mask = uo.mask[0, :, :, :]  # Expect a 4D array. Take first time point.
+        uo_mask = uo_mask.reshape(n_levels, np.prod(uo_mask.shape[1:]), order='C')
+
+        bathy = np.empty((uo_mask.shape[1]), dtype=float)
+        for i in range(bathy.shape[0]):
+            index = np.ma.flatnotmasked_edges(uo_mask[:, i])[1]
+            bathy[i] = depth[index]
+
+        # Add some standard attributes
+        bathy_attrs = {'standard_name': 'depth',
+                       'units': 'm',
+                       'long_name': 'depth, measured down from the free surface',
+                       'axis': 'Z',
+                       'positive': 'down'}
+
+    # Save mask
+    if has_mask:
+        mask_var, mask_attrs = _get_variable(input_dataset, ['mask'])
+
+        # Generate land-sea mask at nodes
+        land_sea_mask_nodes = sort_axes(mask_var).squeeze()
+        if len(land_sea_mask_nodes.shape) < 2 or len(land_sea_mask_nodes.shape) > 3:
+            raise ValueError('Unsupported land sea mask with shape {}'.format(land_sea_mask_nodes.shape))
+
+        # Flip meaning yielding: 1 - masked land point, and 0 sea point.
+        land_sea_mask_nodes = 1 - land_sea_mask_nodes
+
+        # Use surface mask only if shape is 3D
+        if len(land_sea_mask_nodes.shape) == 3:
+            land_sea_mask_nodes = land_sea_mask_nodes[0, :, :]
+
+        # Fix up long name to reflect flipping of mask
+        mask_attrs['long_name'] = "Land-sea mask: sea = 0 ; land = 1"
+
+    else:
+        # Try to use the surface mask for uo
+        uo_var, _ = _get_variable(input_dataset, ['uo'])
+        uo = sort_axes(uo_var)
+        if not np.ma.isMaskedArray(uo):
+            raise RuntimeError('Unable to generate bathymetry. Can you provide h?')
+
+        # Expect a 4D array. Take first time point and top depth level
+        land_sea_mask_nodes = uo.mask[0, 0, :, :]
+
+        # Add some standard attributes
+        mask_attrs = {'standard_name': 'sea_binary_mask',
+                      'units': '1',
+                      'long_name': 'Land-sea mask: sea = 0, land = 1'}
+
+    land_sea_mask_nodes = land_sea_mask_nodes.reshape(np.prod(land_sea_mask_nodes.shape), order='C')
 
     # Create the Triangulation
     tri = Delaunay(points)
@@ -325,20 +398,6 @@ def create_arakawa_a_grid_metrics_file(file_name, grid_metrics_file_name='./grid
     #   - Sort to ensure match with nv
     nbe = tri.neighbors.T
     nbe = sort_adjacency_array(nv, nbe)
-
-    # Generate land-sea mask at nodes
-    land_sea_mask_nodes = sort_axes(mask_var)
-    if len(land_sea_mask_nodes.shape) < 2 or len(land_sea_mask_nodes.shape) > 3:
-        raise ValueError('Unsupported land sea mask with shape {}'.format(land_sea_mask_nodes.shape))
-
-    # Flip meaning yielding: 1 - masked land point, and 0 sea point.
-    land_sea_mask_nodes = 1 - land_sea_mask_nodes
-
-    # Use surface mask only if shape is 3D
-    if len(land_sea_mask_nodes.shape) == 3:
-        land_sea_mask_nodes = land_sea_mask_nodes[0, :, :]
-
-    land_sea_mask_nodes = land_sea_mask_nodes.reshape(np.prod(land_sea_mask_nodes.shape), order='C')
 
     # Generate the land-sea mask at elements
     land_sea_mask_elements = np.empty(n_elems, dtype=int)
@@ -398,7 +457,6 @@ def create_arakawa_a_grid_metrics_file(file_name, grid_metrics_file_name='./grid
                                     attrs={'long_name': 'elements surrounding each element'})
 
     # Add land sea mask
-    mask_attrs['long_name'] = "Land-sea mask: sea = 1 ; land = 0"  # Update to reflect flipping of land sea mask
     gm_file_creator.create_variable('mask', land_sea_mask_elements, ('element',), int, attrs=mask_attrs)
 
     # Close input dataset

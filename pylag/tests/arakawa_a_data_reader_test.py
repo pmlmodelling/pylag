@@ -16,7 +16,6 @@ from pylag.arakawa_a_data_reader import ArakawaADataReader
 #from pylag.boundary_conditions import RefHorizBoundaryConditionCalculator
 #from pylag.boundary_conditions import RefVertBoundaryConditionCalculator
 from pylag.particle import ParticleSmartPtr
-from pylag import cwrappers
 
 from pylag.mediator import Mediator
 from pylag.grid_metrics import sort_adjacency_array
@@ -214,7 +213,6 @@ class ArawawaADataReader_test(TestCase):
         config.set('OCEAN_CIRCULATION_MODEL', 'has_Kh', 'False')
         config.set('OCEAN_CIRCULATION_MODEL', 'has_Ah', 'False')
         config.set('OCEAN_CIRCULATION_MODEL', 'has_is_wet', 'True')
-        config.set('OCEAN_CIRCULATION_MODEL', 'has_h', 'True')
         config.set('OCEAN_CIRCULATION_MODEL', 'has_zeta', 'True')
         config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'spherical')
         config.add_section("OUTPUT")

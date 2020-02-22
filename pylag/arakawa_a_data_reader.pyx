@@ -129,7 +129,7 @@ cdef class ArakawaADataReader(DataReader):
     cdef DTYPE_FLOAT_t _time_next
 
     # Flags that identify whether a given variable should be read in
-    cdef bint _has_w, _has_Kh, _has_Ah, _has_is_wet, _has_h, _has_zeta
+    cdef bint _has_w, _has_Kh, _has_Ah, _has_is_wet,  _has_zeta
 
     def __init__(self, config, mediator):
         self.config = config
@@ -143,7 +143,6 @@ cdef class ArakawaADataReader(DataReader):
         self._has_Kh = self.config.getboolean("OCEAN_CIRCULATION_MODEL", "has_Kh")
         self._has_Ah = self.config.getboolean("OCEAN_CIRCULATION_MODEL", "has_Ah")
         self._has_is_wet = self.config.getboolean("OCEAN_CIRCULATION_MODEL", "has_is_wet")
-        self._has_h = self.config.getboolean("OCEAN_CIRCULATION_MODEL", "has_h")
         self._has_zeta = self.config.getboolean("OCEAN_CIRCULATION_MODEL", "has_zeta")
 
         # Check to see if any environmental variables are being saved.
@@ -1000,19 +999,7 @@ cdef class ArakawaADataReader(DataReader):
         self._reference_depth_levels = -1.0 * self.mediator.get_grid_variable('depth', (self._n_depth), DTYPE_FLOAT)
 
         # Bathymetry
-        if self._has_h:
-            self._h = self.mediator.get_grid_variable('h', (self._n_nodes), DTYPE_FLOAT)
-        else:
-            # If h hasn't been given, try to infer it from the depth mask.
-            # NB if the depth mask is time varying (e.g. due to wetting and drying), this may not work as intended. In
-            # these cases, an attempt should be made to provide h.
-            depth_mask = self.mediator.get_mask_at_last_time_index('uo', (self._n_depth, self._n_latitude, self._n_longitude))
-            depth_mask = self._reshape_var(depth_mask, ('depth', 'latitude', 'longitude'))
-
-            self._h = np.empty((self._n_nodes), dtype=DTYPE_FLOAT)
-            for i in xrange(self._n_nodes):
-                index = np.ma.flatnotmasked_edges(depth_mask[:, i])[1]
-                self._h[i] = self._reference_depth_levels[index]
+        self._h = self.mediator.get_grid_variable('h', (self._n_nodes), DTYPE_FLOAT)
 
         # Land sea mask
         self._land_sea_mask = self.mediator.get_grid_variable('mask', (self._n_elems), DTYPE_INT)
