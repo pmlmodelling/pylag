@@ -804,7 +804,7 @@ cdef class ArakawaADataReader(DataReader):
 
         return interp.linear_interp(particle.omega_interfaces, dkh_lower_level, dkh_upper_level)
 
-    cpdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, DTYPE_INT_t host) except INT_ERR:
+    cdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, Particle *particle) except INT_ERR:
         """ Return an integer indicating whether `host' is wet or dry
         
         The function returns 1 if `host' is wet at time `time' and 
@@ -834,9 +834,20 @@ cdef class ArakawaADataReader(DataReader):
         host : int
             Integer that identifies the host element in question
         """
-        if self._has_is_wet:
-            if self._wet_cells_last[host] == 0 or self._wet_cells_next[host] == 0:
-                return 0
+        cdef DTYPE_FLOAT_t zmin_last, zmax_last
+        cdef DTYPE_FLOAT_t zmin_mext, zmax_next
+
+        zmin_last = self.get_zmin(self._time_last, particle)
+        zmax_last = self.get_zmax(self._time_last, particle)
+        zmin_next = self.get_zmin(self._time_next, particle)
+        zmax_next = self.get_zmax(self._time_next, particle)
+
+        if self._wet_cells_last[particle.host_horizontal_elem] == 0 or self._wet_cells_next[particle.host_horizontal_elem] == 0:
+            return 0
+
+        if zmax_last < zmin_last or zmax_next < zmin_next:
+            return 0
+
         return 1
 
     cdef DTYPE_FLOAT_t _get_variable(self, DTYPE_FLOAT_t[:, :] var_last, DTYPE_FLOAT_t[:, :] var_next,
