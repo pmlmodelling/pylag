@@ -198,6 +198,10 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_
         dtype = nc_var.dtype.name
 
         dimensions = nc_var.dimensions
+        if 'nele' in dimensions:
+            dimensions = list(dimensions)
+            dimensions[dimensions.index('nele')] = 'element'
+            dimensions = tuple(dimensions)
 
         # Form dictionary of attributes
         attrs = {}
@@ -211,7 +215,9 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_
     nv_var = fvcom_dataset.variables['nv']
     nv_data = nv_var[:] - 1
     dtype = nv_var.dtype.name
-    dimensions = nv_var.dimensions
+    dimensions = list(nv_var.dimensions)
+    dimensions[dimensions.index('nele')] = 'element'
+    dimensions = tuple(dimensions)
     attrs = {}
     for attr_name in nv_var.ncattrs():
         attrs[attr_name] = nv_var.getncattr(attr_name)
@@ -229,7 +235,9 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_
 
     # Add variable
     dtype = nbe_var.dtype.name
-    dimensions = nbe_var.dimensions
+    dimensions = list(nv_var.dimensions)
+    dimensions[dimensions.index('nele')] = 'element'
+    dimensions = tuple(dimensions)
     attrs = {}
     for attr_name in nbe_var.ncattrs():
         attrs[attr_name] = nbe_var.getncattr(attr_name)
