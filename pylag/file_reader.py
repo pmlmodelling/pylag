@@ -379,8 +379,7 @@ class FileReader(object):
         var = self._first_data_file.variables[var_name][self._tidx_first, :]
 
         if np.ma.isMaskedArray(var):
-            var.filled(0.0)
-            return var.data
+            return var.filled(0.0)
 
         return var
 
@@ -388,8 +387,7 @@ class FileReader(object):
         var = self._second_data_file.variables[var_name][self._tidx_second, :]
 
         if np.ma.isMaskedArray(var):
-            var.filled(0.0)
-            return var.data
+            return var.filled(0.0)
 
         return var
 
