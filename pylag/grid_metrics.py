@@ -335,12 +335,12 @@ def create_arakawa_a_grid_metrics_file(file_name, has_mask=True, has_bathymetry=
             raise RuntimeError('Unable to generate bathymetry. Can you provide h?')
 
         # Read the depth mask and reshape giving (n_levels, n_nodes)
-        uo_mask = uo.mask[0, :, :, :]  # Expect a 4D array. Take first time point.
-        uo_mask = uo_mask.reshape(n_levels, np.prod(uo_mask.shape[1:]), order='C')
+        uo = uo[0, :, :, :]  # Expect a 4D array. Take first time point.
+        uo = uo.reshape(n_levels, np.prod(uo.shape[1:]), order='C')
 
-        bathy = np.empty((uo_mask.shape[1]), dtype=float)
+        bathy = np.empty((uo.shape[1]), dtype=float)
         for i in range(bathy.shape[0]):
-            index = np.ma.flatnotmasked_edges(uo_mask[:, i])[1]
+            index = np.ma.flatnotmasked_edges(uo[:, i])[1]
             bathy[i] = depth[index]
 
         # Add some standard attributes
