@@ -340,8 +340,12 @@ def create_arakawa_a_grid_metrics_file(file_name, has_mask=True, has_bathymetry=
 
         bathy = np.empty((uo.shape[1]), dtype=float)
         for i in range(bathy.shape[0]):
-            index = np.ma.flatnotmasked_edges(uo[:, i])[1]
-            bathy[i] = depth[index]
+            uo_tmp = uo[:, i]
+            if np.ma.count(uo_tmp) != 0:
+                index = np.ma.flatnotmasked_edges(uo_tmp)[1]
+                bathy[i] = depth[index]
+            else:
+                bathy[i] = 0.0
 
         # Add some standard attributes
         bathy_attrs = {'standard_name': 'depth',
