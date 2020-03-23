@@ -348,7 +348,12 @@ cdef class ArakawaADataReader(DataReader):
                                             Particle *particle) except INT_ERR:
         """ Find the host depth layer
         
-        Find the depth layer containing x3.
+        Find the depth layer containing x3. The function allows for situations is
+        which the particle position lies outside of the specified grid but below
+        zeta or above h. In which case, values are generally extrapolated. However,
+        while this situation is allowed, it is not prioritised, and when this occurs
+        the code run more slowly, as the model will first search the defined grid to
+        try and find the particle.
         """
         cdef DTYPE_FLOAT_t depth_upper_level, depth_lower_level
 
@@ -382,14 +387,31 @@ cdef class ArakawaADataReader(DataReader):
 
                 return IN_DOMAIN
 
-        # Allow for the situation in which the particle is above h but below the lowest depth level.
+        # Allow for the following situations:
+        # a) the particle is below zeta but above the highest depth level
+        # b) the particle is above h but below the lowest depth level.
         # If this has happened, flag the particle as being in the vertical boundary layer, meaning all
-        # variables will be extrapolated from the above overlying depth level.
-        k = self._n_depth - 1
-        depth_upper_level = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k)
+        # variables will be extrapolated from the below/above depth level.
         h = self.get_zmin(time, particle)
         zeta = self.get_zmax(time, particle)
-        if particle.x3 > h and particle.x3 < depth_upper_level:
+
+        # Particle is below zeta but above the top depth level
+        k = 0
+        depth_upper_level = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k)
+        if particle.x3 <= zeta and particle.x3 >= depth_lower_level:
+            mask_upper_level = self._interp_mask_status_on_level(particle.phi, particle.host_horizontal_elem, k)
+            if mask_upper_level == 0:
+                particle.k_layer = k
+                particle.in_vertical_boundary_layer = True
+
+                return IN_DOMAIN
+            else:
+                raise RuntimeError('The particle sits below zeta and above the top level, which is masked. Why should it be masked?')
+
+        # Particle is above h but below the lowest depth level
+        k = self._n_depth - 1
+        depth_upper_level = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k)
+        if particle.x3 >= h and particle.x3 <= depth_upper_level:
             mask_upper_level = self._interp_mask_status_on_level(particle.phi, particle.host_horizontal_elem, k)
             if mask_upper_level == 0:
                 particle.k_layer = k
