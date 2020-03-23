@@ -590,10 +590,14 @@ class FVCOMDataReader_test(TestCase):
         test.assert_array_almost_equal(Ah_prime, [0.0, 0.0])
 
     def test_element_is_wet(self):
+        x1 = 1.3333333333-self.xmin
+        x2 = 1.6666666667-self.ymin
         host = 0
         time = 0.0
 
-        status = self.data_reader.is_wet(time, host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, host=host)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        status = self.data_reader.is_wet_wrapper(time, particle)
         test.assert_equal(status, 1)
 
 

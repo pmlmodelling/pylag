@@ -170,6 +170,9 @@ cdef class DataReader:
             DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR:
         raise NotImplementedError
     
+    def is_wet_wrapper(self, DTYPE_FLOAT_t time, ParticleSmartPtr particle):
+        return self.is_wet(time, particle.get_ptr())
+
     cdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, Particle *particle) except INT_ERR:
         raise NotImplementedError
 
