@@ -155,7 +155,7 @@ cdef class ArakawaADataReader(DataReader):
         for env_var_name in env_var_names:
             env_var_name = env_var_name.strip()
             if env_var_name is not None:
-                if env_var_name in variable_library.fvcom_variable_names.keys():
+                if env_var_name in variable_library.standard_variable_names.keys():
                     self.env_var_names.append(env_var_name)
                 else:
                     raise ValueError('Received unsupported variable {}'.format(env_var_name))
@@ -1034,11 +1034,11 @@ cdef class ArakawaADataReader(DataReader):
         self._wet_cells_next = np.empty((self._n_elems), dtype=DTYPE_INT)
 
     cdef _read_time_dependent_vars(self):
-        """ Update time variables and memory views for FVCOM data fields.
+        """ Update time variables and memory views for data fields.
         
-        For each FVCOM time-dependent variable needed by PyLag two references
+        For each time-dependent variable needed by PyLag two references
         are stored. These correspond to the last and next time points at which
-        FVCOM data was saved. Together these bound PyLag's current time point.
+        data was saved. Together these bound PyLag's current time point.
         
         All communications go via the mediator in order to guarantee support for
         both serial and parallel simulations.
