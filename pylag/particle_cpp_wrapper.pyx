@@ -1,3 +1,5 @@
+from cython.operator cimport dereference as deref
+
 # Data types
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
@@ -13,35 +15,44 @@ cdef class ParticleSmartPtr:
             DTYPE_FLOAT_t x2=-999., DTYPE_FLOAT_t x3=-999.,
             DTYPE_FLOAT_t phi1=-999.,  DTYPE_FLOAT_t phi2=-999.,
             DTYPE_FLOAT_t phi3=-999., DTYPE_FLOAT_t omega_interfaces=-999.,
-            DTYPE_FLOAT_t omega_layers=-999., DTYPE_INT_t in_domain=False,
+            DTYPE_FLOAT_t omega_layers=-999., bint in_domain=False,
             DTYPE_INT_t is_beached=0, DTYPE_INT_t host=-999, 
-            DTYPE_INT_t k_layer=-999, DTYPE_INT_t in_vertical_boundary_layer=False,
+            DTYPE_INT_t k_layer=-999, bint in_vertical_boundary_layer=False,
             DTYPE_INT_t k_lower_layer=-999, DTYPE_INT_t k_upper_layer=-999,
-            DTYPE_INT_t id=-999, DTYPE_INT_t status=0):
+            DTYPE_INT_t id=-999, DTYPE_INT_t status=0, ParticleSmartPtr particle_smart_ptr=None):
 
-        self._particle = new Particle()
+        cdef ParticleSmartPtr _particle_smart_ptr
+
+        # Call copy ctor if particle_smart_ptr is given. Else, use default ctor
+        if particle_smart_ptr and type(particle_smart_ptr) is ParticleSmartPtr:
+            _particle_smart_ptr = <ParticleSmartPtr> particle_smart_ptr
+            self._particle = new Particle(deref(_particle_smart_ptr._particle))
+
+        else:
+            self._particle = new Particle()
+
+            # Overwrite with supplied optional arguments
+            self._particle.group_id = group_id
+            self._particle.x1 = x1
+            self._particle.x2 = x2
+            self._particle.x3 = x3
+            self._particle.phi[0] = phi1
+            self._particle.phi[1] = phi2
+            self._particle.phi[2] = phi3
+            self._particle.omega_interfaces = omega_interfaces
+            self._particle.omega_layers = omega_layers
+            self._particle.in_domain = in_domain
+            self._particle.is_beached = is_beached
+            self._particle.host_horizontal_elem = host
+            self._particle.k_layer = k_layer
+            self._particle.in_vertical_boundary_layer = in_vertical_boundary_layer
+            self._particle.k_lower_layer = k_lower_layer
+            self._particle.k_upper_layer = k_upper_layer
+            self._particle.id = id
+            self._particle.status = status
 
         if not self._particle:
             raise MemoryError()
-
-        self._particle.group_id = group_id
-        self._particle.x1 = x1
-        self._particle.x2 = x2
-        self._particle.x3 = x3
-        self._particle.phi[0] = phi1
-        self._particle.phi[1] = phi2
-        self._particle.phi[2] = phi3
-        self._particle.omega_interfaces = omega_interfaces
-        self._particle.omega_layers = omega_layers
-        self._particle.in_domain = in_domain
-        self._particle.is_beached = is_beached
-        self._particle.host_horizontal_elem = host
-        self._particle.k_layer = k_layer
-        self._particle.in_vertical_boundary_layer = in_vertical_boundary_layer
-        self._particle.k_lower_layer = k_lower_layer
-        self._particle.k_upper_layer = k_upper_layer
-        self._particle.id = id
-        self._particle.status = status
 
     def __dealloc__(self):
         del self._particle
@@ -142,28 +153,9 @@ cdef ParticleSmartPtr copy(ParticleSmartPtr particle_smart_ptr):
     particle_smart_ptr : ParticleSmartPtr
         An exact copy of the ParticleSmartPtr object passed in.
     """
-    cdef Particle* particle_ptr
-    
-    particle_ptr = particle_smart_ptr.get_ptr()
 
-    return ParticleSmartPtr(particle_ptr.group_id,
-                            particle_ptr.x1,
-                            particle_ptr.x2,
-                            particle_ptr.x3,
-                            particle_ptr.phi[0],
-                            particle_ptr.phi[1],
-                            particle_ptr.phi[2],
-                            particle_ptr.omega_interfaces,
-                            particle_ptr.omega_layers,
-                            particle_ptr.in_domain,
-                            particle_ptr.is_beached,
-                            particle_ptr.host_horizontal_elem,
-                            particle_ptr.k_layer,
-                            particle_ptr.in_vertical_boundary_layer,
-                            particle_ptr.k_lower_layer,
-                            particle_ptr.k_upper_layer,
-                            particle_ptr.id,
-                            particle_ptr.status)
+    return ParticleSmartPtr(particle_smart_ptr=particle_smart_ptr)
+
 
 cdef to_string(Particle* particle):
     """ Return a string object that describes a particle
