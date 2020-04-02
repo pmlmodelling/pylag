@@ -119,11 +119,11 @@ def makeExtension(ext_name, file_type):
     ext_path = ext_name.replace(".", os.path.sep)+file_type
 
     cpp_path = None
-    substring = '_cpp_wrapper'
-    if substring in ext_path:
-        i = ext_path.find(substring)
-        stem = ext_path[:i]
-        cpp_path = stem + '.cpp'
+    #substring = '_cpp_wrapper'
+    #if substring in ext_path:
+    #    i = ext_path.find(substring)
+    #    stem = ext_path[:i]
+    #    cpp_path = stem + '.cpp'
 
     ext_path_list = [ext_path] if cpp_path is None else [ext_path, cpp_path]
 
