@@ -15,7 +15,7 @@ np.import_array()
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
-from particle cimport Particle
+from pylag.particle cimport Particle
 
 from pylag.data_reader cimport DataReader
 

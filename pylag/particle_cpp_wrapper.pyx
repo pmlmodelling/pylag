@@ -1,7 +1,6 @@
-from cpython.mem cimport PyMem_Malloc, PyMem_Free
-
 # Data types
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
+
 
 cdef class ParticleSmartPtr:
     """ Python object for managing the memory associated with Particle objects
@@ -20,7 +19,7 @@ cdef class ParticleSmartPtr:
             DTYPE_INT_t k_lower_layer=-999, DTYPE_INT_t k_upper_layer=-999,
             DTYPE_INT_t id=-999, DTYPE_INT_t status=0):
 
-        self._particle = <Particle *>PyMem_Malloc(sizeof(Particle))
+        self._particle = new Particle()
 
         if not self._particle:
             raise MemoryError()
@@ -45,7 +44,7 @@ cdef class ParticleSmartPtr:
         self._particle.status = status
 
     def __dealloc__(self):
-        PyMem_Free(self._particle)
+        del self._particle
 
     cdef Particle* get_ptr(self):
         return self._particle

@@ -4,7 +4,7 @@ include "constants.pxi"
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 # PyLag cimports
-from particle cimport Particle
+from pylag.particle cimport Particle
 from math cimport Intersection
 
 cdef class DataReader:

@@ -12,14 +12,15 @@ from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 from pylag.numerics import get_num_method
-from pylag.particle import ParticleSmartPtr
 
 from libcpp.vector cimport vector
 
 from pylag.data_reader cimport DataReader
 from pylag.math cimport sigma_to_cartesian_coords, cartesian_to_sigma_coords
 from pylag.numerics cimport NumMethod
-from pylag.particle cimport Particle, ParticleSmartPtr, copy, to_string
+from pylag.particle cimport Particle
+from pylag.particle_cpp_wrapper cimport ParticleSmartPtr, copy, to_string
+
 
 cdef class OPTModel:
     """ Offline Particle Tracking Model

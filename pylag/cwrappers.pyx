@@ -20,7 +20,7 @@ from libcpp.vector cimport vector
 cimport pylag.math as math
 cimport pylag.interpolation as interp
 from pylag.data_reader cimport DataReader
-from pylag.particle cimport ParticleSmartPtr
+from pylag.particle_cpp_wrapper cimport ParticleSmartPtr
 
 def det_wrapper(a, b):
     cdef DTYPE_FLOAT_t a_c[2]

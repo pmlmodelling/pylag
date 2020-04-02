@@ -16,7 +16,8 @@ from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 # PyLag cython imports
-from particle cimport Particle, to_string
+from particle cimport Particle
+from particle_cpp_wrapper cimport to_string
 from pylag.data_reader cimport DataReader
 cimport pylag.interpolation as interp
 from pylag.math cimport int_min, float_min, get_intersection_point

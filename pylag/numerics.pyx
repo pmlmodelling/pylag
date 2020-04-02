@@ -14,7 +14,7 @@ from pylag.boundary_conditions import get_vert_boundary_condition_calculator
 from pylag.position_modifier import get_position_modifier
 
 # PyLag cimports
-from pylag.particle cimport ParticleSmartPtr
+from pylag.particle_cpp_wrapper cimport ParticleSmartPtr
 from pylag.boundary_conditions cimport HorizBoundaryConditionCalculator
 from pylag.boundary_conditions cimport VertBoundaryConditionCalculator
 from pylag.position_modifier cimport PositionModifier

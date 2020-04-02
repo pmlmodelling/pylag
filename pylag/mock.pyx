@@ -14,7 +14,8 @@ from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 from pylag.numerics import get_num_method, get_adv_iterative_method, get_diff_iterative_method
 from pylag.boundary_conditions import get_vert_boundary_condition_calculator
 
-from particle cimport Particle, ParticleSmartPtr
+from particle cimport Particle
+from particle_cpp_wrapper cimport ParticleSmartPtr
 from data_reader cimport DataReader
 from pylag.delta cimport Delta, reset
 from pylag.numerics cimport NumMethod, ItMethod

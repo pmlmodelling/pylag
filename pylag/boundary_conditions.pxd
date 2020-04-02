@@ -3,8 +3,8 @@ include "constants.pxi"
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 # PyLag cimports
-from data_reader cimport DataReader
-from particle cimport Particle
+from pylag.data_reader cimport DataReader
+from pylag.particle cimport Particle
 
 cdef class HorizBoundaryConditionCalculator:
 

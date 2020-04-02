@@ -1,6 +1,6 @@
 include "constants.pxi"
 
-from pylag.particle cimport ParticleSmartPtr
+from pylag.particle_cpp_wrapper cimport ParticleSmartPtr
 
 cdef class DataReader:
     cpdef setup_data_access(self, start_datetime, end_datetime):

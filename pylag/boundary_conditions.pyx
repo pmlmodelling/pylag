@@ -8,7 +8,7 @@ except ImportError:
     import ConfigParser as configparser
 
 # PyLag cimports
-from pylag.particle cimport ParticleSmartPtr
+from pylag.particle_cpp_wrapper cimport ParticleSmartPtr
 from pylag.math cimport inner_product
 from pylag.math cimport Intersection
 

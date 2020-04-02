@@ -15,7 +15,7 @@ from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from pylag.arakawa_a_data_reader import ArakawaADataReader
 #from pylag.boundary_conditions import RefHorizBoundaryConditionCalculator
 #from pylag.boundary_conditions import RefVertBoundaryConditionCalculator
-from pylag.particle import ParticleSmartPtr
+from pylag.particle_cpp_wrapper import ParticleSmartPtr
 
 from pylag.mediator import Mediator
 from pylag.grid_metrics import sort_adjacency_array
