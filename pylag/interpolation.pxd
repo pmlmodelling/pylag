@@ -49,8 +49,8 @@ cdef get_barycentric_gradients(const vector[DTYPE_FLOAT_t] &x_tri, const vector[
         vector[DTYPE_FLOAT_t] &dphi_dx, vector[DTYPE_FLOAT_t] &dphi_dy)
 
 cdef DTYPE_FLOAT_t shepard_interpolation(DTYPE_FLOAT_t x,
-        DTYPE_FLOAT_t y, vector[DTYPE_FLOAT_t] xpts, vector[DTYPE_FLOAT_t] ypts,
-        vector[DTYPE_FLOAT_t] vals) except FLOAT_ERR
+        DTYPE_FLOAT_t y, const vector[DTYPE_FLOAT_t] &xpts, const vector[DTYPE_FLOAT_t] &ypts,
+        const vector[DTYPE_FLOAT_t] &vals) except FLOAT_ERR
 
 cdef DTYPE_FLOAT_t get_linear_fraction_safe(DTYPE_FLOAT_t var, 
         DTYPE_FLOAT_t var1, DTYPE_FLOAT_t var2) except FLOAT_ERR
