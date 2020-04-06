@@ -1,6 +1,8 @@
 #ifndef PARTICLE_H
 #define PARTICLE_H
 
+#include <vector>
+
 namespace particles {
 
     class Particle {
@@ -50,7 +52,7 @@ namespace particles {
             // -----------------
 
             // Barycentric coordinates within the host element
-            double phi [3];
+            std::vector<double> phi;
 
             // Vertical interpolation coefficient for variables defined at the interfaces
             // between k-levels

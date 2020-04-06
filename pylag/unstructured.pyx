@@ -1,5 +1,7 @@
 include "constants.pxi"
 
+from libcpp.vector cimport vector
+
 import logging
 
 try:
@@ -93,7 +95,7 @@ cdef class UnstructuredGrid:
             Integer flag that indicates whether or not the seach was successful.
         """
         # Intermediate arrays/variables
-        cdef DTYPE_FLOAT_t phi[N_VERTICES]
+        cdef vector[DTYPE_FLOAT_t] phi = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
         cdef DTYPE_FLOAT_t phi_test
 
         cdef bint host_found
@@ -342,7 +344,7 @@ cdef class UnstructuredGrid:
             Integer flag that indicates whether or not the seach was successful.
         """
         # Intermediate arrays/variables
-        cdef DTYPE_FLOAT_t phi[N_VERTICES]
+        cdef vector[DTYPE_FLOAT_t] phi = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
         cdef DTYPE_FLOAT_t phi_test
 
         cdef bint host_found
@@ -521,7 +523,7 @@ cdef class UnstructuredGrid:
         particle: *Particle
             Pointer to a Particle struct
         """
-        cdef DTYPE_FLOAT_t phi[3]
+        cdef vector[DTYPE_FLOAT_t] phi = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
 
         cdef DTYPE_INT_t i
 
@@ -546,7 +548,7 @@ cdef class UnstructuredGrid:
                 raise ValueError('One or more local coordinates are negative')
 
     cdef void get_phi(self, DTYPE_FLOAT_t x1, DTYPE_FLOAT_t x2,
-            DTYPE_INT_t host, DTYPE_FLOAT_t phi[N_VERTICES]) except *:
+            DTYPE_INT_t host, vector[DTYPE_FLOAT_t] &phi) except *:
         """ Get barycentric coordinates.
 
         Parameters:
@@ -570,8 +572,8 @@ cdef class UnstructuredGrid:
         cdef int vertex # Vertex identifier
 
         # Intermediate arrays
-        cdef DTYPE_FLOAT_t x_tri[N_VERTICES]
-        cdef DTYPE_FLOAT_t y_tri[N_VERTICES]
+        cdef vector[DTYPE_FLOAT_t] x_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef vector[DTYPE_FLOAT_t] y_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
 
         for i in xrange(N_VERTICES):
             vertex = self.nv[i,host]
@@ -582,8 +584,8 @@ cdef class UnstructuredGrid:
         interp.get_barycentric_coords(x1, x2, x_tri, y_tri, phi)
 
     cdef void get_grad_phi(self, DTYPE_INT_t host,
-            DTYPE_FLOAT_t dphi_dx[N_VERTICES],
-            DTYPE_FLOAT_t dphi_dy[N_VERTICES]) except *:
+            vector[DTYPE_FLOAT_t] &dphi_dx,
+            vector[DTYPE_FLOAT_t] &dphi_dy) except *:
         """ Get gradient in phi with respect to x and y
 
         Parameters:
@@ -591,10 +593,10 @@ cdef class UnstructuredGrid:
         host : int
             Host element
 
-        dphi_dx : C array, float
+        dphi_dx : vector, float
             Gradient with respect to x
 
-        dphi_dy : C array, float
+        dphi_dy : vector, float
             Gradient with respect to y
         """
 
@@ -602,8 +604,8 @@ cdef class UnstructuredGrid:
         cdef int vertex # Vertex identifier
 
         # Intermediate arrays
-        cdef DTYPE_FLOAT_t x_tri[N_VERTICES]
-        cdef DTYPE_FLOAT_t y_tri[N_VERTICES]
+        cdef vector[DTYPE_FLOAT_t] x_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef vector[DTYPE_FLOAT_t] y_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
 
         for i in xrange(N_VERTICES):
             vertex = self.nv[i,host]

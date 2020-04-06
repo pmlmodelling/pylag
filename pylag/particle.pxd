@@ -1,4 +1,7 @@
-from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
+from libcpp.vector cimport vector
+
+from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
+
 
 cdef extern from "particle.cpp":
     pass
@@ -14,7 +17,7 @@ cdef extern from "particle.h" namespace "particles":
         DTYPE_FLOAT_t x1
         DTYPE_FLOAT_t x2
         DTYPE_FLOAT_t x3
-        DTYPE_FLOAT_t phi[3]
+        vector[DTYPE_FLOAT_t] phi
         DTYPE_FLOAT_t omega_interfaces
         DTYPE_FLOAT_t omega_layers
         bint in_domain

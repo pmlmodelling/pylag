@@ -37,9 +37,9 @@ def inner_product_wrapper(a, b):
     return math.inner_product(a_c, b_c)
 
 cpdef get_barycentric_coords(x, y, x_tri, y_tri):
-    cdef DTYPE_FLOAT_t x_tri_c[N_VERTICES]
-    cdef DTYPE_FLOAT_t y_tri_c[N_VERTICES]
-    cdef DTYPE_FLOAT_t phi_c[N_VERTICES]
+    cdef vector[DTYPE_FLOAT_t] x_tri_c = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+    cdef vector[DTYPE_FLOAT_t] y_tri_c = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+    cdef vector[DTYPE_FLOAT_t] phi_c = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
     cdef DTYPE_INT_t i
 
     if x_tri.shape[0] != N_VERTICES or y_tri.shape[0] != N_VERTICES:
@@ -58,10 +58,10 @@ cpdef get_barycentric_coords(x, y, x_tri, y_tri):
     return phi_out
 
 cpdef get_barycentric_gradients(x_tri, y_tri):
-    cdef DTYPE_FLOAT_t x_tri_c[N_VERTICES]
-    cdef DTYPE_FLOAT_t y_tri_c[N_VERTICES]
-    cdef DTYPE_FLOAT_t dphi_dx_c[N_VERTICES]
-    cdef DTYPE_FLOAT_t dphi_dy_c[N_VERTICES]
+    cdef vector[DTYPE_FLOAT_t] x_tri_c = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+    cdef vector[DTYPE_FLOAT_t] y_tri_c = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+    cdef vector[DTYPE_FLOAT_t] dphi_dx_c = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+    cdef vector[DTYPE_FLOAT_t] dphi_dy_c = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
     cdef DTYPE_INT_t i
 
     if x_tri.shape[0] != N_VERTICES or y_tri.shape[0] != N_VERTICES:
@@ -95,8 +95,8 @@ cpdef shepard_interpolation(x, y, xpts, ypts, vals):
     return interp.shepard_interpolation(x, y, xpts_c, ypts_c, vals_c)
 
 cpdef interpolate_within_element(var, phi):
-    cdef DTYPE_FLOAT_t var_c[N_VERTICES]
-    cdef DTYPE_FLOAT_t phi_c[N_VERTICES]
+    cdef vector[DTYPE_FLOAT_t] var_c = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+    cdef vector[DTYPE_FLOAT_t] phi_c = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
     cdef DTYPE_INT_t i
     
     if var.shape[0] != N_VERTICES or phi.shape[0] != N_VERTICES:

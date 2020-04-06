@@ -132,8 +132,8 @@ cdef class ParticleSmartPtr:
     @property
     def phi(self):
         phi = []
-        for i in xrange(3):
-            phi.append(self._particle.phi[i])
+        for phi_i in self._particle.phi:
+            phi.append(phi_i)
         return phi
 
 cdef ParticleSmartPtr copy(ParticleSmartPtr particle_smart_ptr):

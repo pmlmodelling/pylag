@@ -196,11 +196,11 @@ def get_interpolator(config, n_elems):
         raise ValueError('Unsupported vertical interpolation scheme.')
 
 cdef get_barycentric_coords(DTYPE_FLOAT_t x, DTYPE_FLOAT_t y,
-        DTYPE_FLOAT_t x_tri[3], DTYPE_FLOAT_t y_tri[3], DTYPE_FLOAT_t phi[3]):
+        const vector[DTYPE_FLOAT_t] &x_tri, const vector[DTYPE_FLOAT_t] &y_tri, vector[DTYPE_FLOAT_t] &phi):
     """ Get barycentric coordinates.
     
     Compute and return barycentric coordinates for the point (x,y) within the
-    triangle defined by x/y coordinates stored in the arrays x_tri and y_tri.
+    triangle defined by x/y coordinates stored in the vectors x_tri and y_tri.
      
     Parameters:
     -----------
@@ -210,13 +210,13 @@ cdef get_barycentric_coords(DTYPE_FLOAT_t x, DTYPE_FLOAT_t y,
     y : float
         y-position.
     
-    x_tri : C array, float
+    x_tri : vector, float
         Triangle x coordinates.
         
-    y_tri : C array, float
+    y_tri : vector, float
         Triangle y coordinates.
     
-    phi : C array, float
+    phi : vector, float
         Barycentric coordinates.
     """
 
@@ -235,8 +235,8 @@ cdef get_barycentric_coords(DTYPE_FLOAT_t x, DTYPE_FLOAT_t y,
     phi[1] = (a2*(x - x_tri[2]) - a4*(y - y_tri[2]))/det
     phi[0] = 1.0 - phi[1] - phi[2]
 
-cdef get_barycentric_gradients(DTYPE_FLOAT_t x_tri[3], DTYPE_FLOAT_t y_tri[3],
-        DTYPE_FLOAT_t dphi_dx[3], DTYPE_FLOAT_t dphi_dy[3]):
+cdef get_barycentric_gradients(const vector[DTYPE_FLOAT_t] &x_tri, const vector[DTYPE_FLOAT_t] &y_tri,
+        vector[DTYPE_FLOAT_t] &dphi_dx, vector[DTYPE_FLOAT_t] &dphi_dy):
     """ Compute barycentric coordinate gradients with respect to x and y
 
     Compute and return dphi_i/dx and dphi_i/dy - the gradient in the element's
@@ -245,16 +245,16 @@ cdef get_barycentric_gradients(DTYPE_FLOAT_t x_tri[3], DTYPE_FLOAT_t y_tri[3],
 
     Parameters:
     -----------
-    x_tri : C array, float
+    x_tri : vector, float
         Triangle x coordinates.
 
-    y_tri : C array, float
+    y_tri : vector, float
         Triangle y coordinates.
 
-    dphi_dx : C array, float
+    dphi_dx : vector, float
         The gradient in phi_i with respect to x.
 
-    dphi_dy : C array, float
+    dphi_dy : vector, float
         The gradient in phi_i with respect to y.
     """
 
@@ -332,3 +332,4 @@ cdef DTYPE_FLOAT_t get_linear_fraction_safe(DTYPE_FLOAT_t var, DTYPE_FLOAT_t var
         return frac
     else:
         raise ValueError('{} does not lie between {} and {}.'.format(var, var1, var2))
+

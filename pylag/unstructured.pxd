@@ -1,5 +1,7 @@
 include "constants.pxi"
 
+from libcpp.vector cimport vector
+
 # Data types used for constructing C data structures
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
@@ -47,8 +49,8 @@ cdef class UnstructuredGrid:
     cdef set_local_coordinates(self, Particle *particle)
 
     cdef void get_phi(self, DTYPE_FLOAT_t x1, DTYPE_FLOAT_t x2,
-                      DTYPE_INT_t host, DTYPE_FLOAT_t phi[N_VERTICES]) except *
+                      DTYPE_INT_t host, vector[DTYPE_FLOAT_t] &phi) except *
 
     cdef void get_grad_phi(self, DTYPE_INT_t host,
-                           DTYPE_FLOAT_t dphi_dx[N_VERTICES],
-                           DTYPE_FLOAT_t dphi_dy[N_VERTICES]) except *
+                           vector[DTYPE_FLOAT_t] &dphi_dx,
+                           vector[DTYPE_FLOAT_t] &dphi_dy) except *

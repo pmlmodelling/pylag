@@ -1,3 +1,5 @@
+#include <vector>
+
 #include "particle.h"
 
 namespace particles {
@@ -9,7 +11,7 @@ namespace particles {
           x1(-999.),
           x2(-999.),
           x3(-999.),
-          phi{-999., -999., -999.},
+          phi(3, -999.),
           omega_interfaces(-999.),
           omega_layers(-999.),
           in_domain(false),
@@ -29,7 +31,7 @@ namespace particles {
           x1(rhs.x1),
           x2(rhs.x2),
           x3(rhs.x3),
-          phi{-999., -999., -999.},
+          phi(rhs.phi),
           omega_interfaces(rhs.omega_interfaces),
           omega_layers(rhs.omega_layers),
           in_domain(rhs.in_domain),
@@ -39,12 +41,7 @@ namespace particles {
           in_vertical_boundary_layer(rhs.in_vertical_boundary_layer),
           k_lower_layer(rhs.k_lower_layer),
           k_upper_layer(rhs.k_upper_layer) {
-
-        // Temporary fix - overwrite phi
-        for(int i=0; i<3; i++) {
-            phi[i] = rhs.phi[i];
         }
-    }
 
     // Copy assignment operator
     Particle& Particle::operator=(const Particle&  rhs) {
@@ -55,6 +52,7 @@ namespace particles {
         x1 = rhs.x1;
         x2 = rhs.x2;
         x3 = rhs.x3;
+        phi = rhs.phi;
         omega_interfaces = rhs.omega_interfaces;
         omega_layers = rhs.omega_layers;
         in_domain = rhs.in_domain;
@@ -64,10 +62,6 @@ namespace particles {
         in_vertical_boundary_layer = rhs.in_vertical_boundary_layer;
         k_lower_layer = rhs.k_lower_layer;
         k_upper_layer = rhs.k_upper_layer;
-
-        for(int i=0; i<3; i++) {
-            phi[i] = rhs.phi[i];
-        }
 
         return *this;
     }
