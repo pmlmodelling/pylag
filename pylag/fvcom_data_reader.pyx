@@ -469,6 +469,7 @@ cdef class FVCOMDataReader(DataReader):
         """
         cdef int i # Loop counters
         cdef int vertex # Vertex identifier
+        cdef DTYPE_FLOAT_t time_fraction # Time interpolation
         cdef DTYPE_FLOAT_t zeta # Sea surface elevation at (t, x1, x2)
 
         # Intermediate arrays
