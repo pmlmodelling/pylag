@@ -27,9 +27,17 @@ namespace particles {
             // Getters and setters
             // -------------------
 
-            // Phi
             void set_phi(const std::vector<double>& rhs);
             std::vector<double> get_phi() const;
+
+            void set_in_vertical_boundary_layer(const bool& rhs);
+            bool get_in_vertical_boundary_layer() const;
+
+            void set_k_lower_layer(const int& rhs);
+            int get_k_lower_layer() const;
+
+            void set_k_upper_layer(const int& rhs);
+            int get_k_upper_layer() const;
 
             // Particle properties
             // --------------------
@@ -81,6 +89,10 @@ namespace particles {
             // The host k layer
             int k_layer;
 
+        private:
+            // Barycentric coordinates within the host element
+            std::vector<double> phi;
+
             // Flag for whether the particle is in the top or bottom boundary layers
             bool in_vertical_boundary_layer;
 
@@ -93,9 +105,6 @@ namespace particles {
             // position. Only set if the particle is not in the top or bottom boundary
             // layers
             int k_upper_layer;
-        private:
-            // Barycentric coordinates within the host element
-            std::vector<double> phi;
     };
 
 }

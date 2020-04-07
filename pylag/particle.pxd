@@ -11,8 +11,19 @@ cdef extern from "particle.h" namespace "particles":
         Particle() except +
         Particle(const Particle&) except +
         Particle& operator=(const Particle&) except +
+
         void set_phi(const vector[DTYPE_FLOAT_t]&) except +
         vector[DTYPE_FLOAT_t] get_phi() except +
+
+        void set_in_vertical_boundary_layer(const bint&) except +
+        bint get_in_vertical_boundary_layer() except +
+
+        void set_k_lower_layer(const DTYPE_INT_t&) except +
+        DTYPE_INT_t get_k_lower_layer() except +
+
+        void set_k_upper_layer(const DTYPE_INT_t&) except +
+        DTYPE_INT_t get_k_upper_layer() except +
+
         DTYPE_INT_t group_id
         DTYPE_INT_t id
         DTYPE_INT_t status

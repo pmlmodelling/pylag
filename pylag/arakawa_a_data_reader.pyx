@@ -382,9 +382,9 @@ cdef class ArakawaADataReader(DataReader):
 
                 # If the bottom layer is masked, flag the particle as being in the bottom boundary layer.
                 if mask_upper_level == 0 and mask_lower_level == 1:
-                    particle.in_vertical_boundary_layer = True
+                    particle.set_in_vertical_boundary_layer(True)
                 else:
-                    particle.in_vertical_boundary_layer = False
+                    particle.set_in_vertical_boundary_layer(False)
 
                 return IN_DOMAIN
 
@@ -403,7 +403,7 @@ cdef class ArakawaADataReader(DataReader):
             mask_upper_level = self._interp_mask_status_on_level(particle.host_horizontal_elem, k)
             if mask_upper_level == 0:
                 particle.k_layer = k
-                particle.in_vertical_boundary_layer = True
+                particle.set_in_vertical_boundary_layer(True)
 
                 return IN_DOMAIN
             else:
@@ -416,7 +416,7 @@ cdef class ArakawaADataReader(DataReader):
             mask_upper_level = self._interp_mask_status_on_level(particle.host_horizontal_elem, k)
             if mask_upper_level == 0:
                 particle.k_layer = k
-                particle.in_vertical_boundary_layer = True
+                particle.set_in_vertical_boundary_layer(True)
 
                 return IN_DOMAIN
             else:
@@ -659,7 +659,7 @@ cdef class ArakawaADataReader(DataReader):
         self._unstructured_grid.get_grad_phi(particle.host_horizontal_elem, dphi_dx, dphi_dy)
 
         # No vertical interpolation for particles near to the bottom,
-        if particle.in_vertical_boundary_layer is True:
+        if particle.get_in_vertical_boundary_layer() is True:
             # Extract ah near to the boundary
             for i in xrange(N_VERTICES):
                 vertex = self._nv[i, particle.host_horizontal_elem]
@@ -772,7 +772,7 @@ cdef class ArakawaADataReader(DataReader):
         cdef DTYPE_FLOAT_t z_0, z_1, z_2, z_3
         cdef DTYPE_FLOAT_t dkh_lower_level, dkh_upper_level
 
-        if particle.in_vertical_boundary_layer == True:
+        if particle.get_in_vertical_boundary_layer() == True:
             kh_0 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, particle.k_layer-1)
             z_0 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, particle.k_layer-1)
 
@@ -905,7 +905,7 @@ cdef class ArakawaADataReader(DataReader):
         cdef DTYPE_FLOAT_t var_level_2
 
         # No vertical interpolation for particles near to the bottom
-        if particle.in_vertical_boundary_layer is True:
+        if particle.get_in_vertical_boundary_layer() is True:
             return self._get_variable_on_level(var_last, var_next, time, particle, particle.k_layer)
         else:
             var_level_1 = self._get_variable_on_level(var_last, var_next, time, particle, particle.k_layer+1)

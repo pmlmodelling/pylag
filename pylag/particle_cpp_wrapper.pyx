@@ -39,19 +39,18 @@ cdef class ParticleSmartPtr:
             self._particle.x1 = x1
             self._particle.x2 = x2
             self._particle.x3 = x3
-            self._particle.set_phi([phi1, phi2, phi3])
             self._particle.omega_interfaces = omega_interfaces
             self._particle.omega_layers = omega_layers
             self._particle.in_domain = in_domain
             self._particle.is_beached = is_beached
             self._particle.host_horizontal_elem = host
             self._particle.k_layer = k_layer
-            self._particle.in_vertical_boundary_layer = in_vertical_boundary_layer
-            self._particle.k_lower_layer = k_lower_layer
-            self._particle.k_upper_layer = k_upper_layer
             self._particle.id = id
             self._particle.status = status
-
+            self._particle.set_phi([phi1, phi2, phi3])
+            self._particle.set_in_vertical_boundary_layer(in_vertical_boundary_layer)
+            self._particle.set_k_lower_layer(k_lower_layer)
+            self._particle.set_k_upper_layer(k_upper_layer)
 
         if not self._particle:
             raise MemoryError()
@@ -121,15 +120,15 @@ cdef class ParticleSmartPtr:
 
     @property
     def k_lower_layer(self):
-        return self._particle.k_lower_layer
+        return self._particle.get_k_lower_layer()
 
     @property
     def k_upper_layer(self):
-        return self._particle.k_upper_layer
+        return self._particle.get_k_upper_layer()
 
     @property
     def in_vertical_boundary_layer(self):
-        return self._particle.in_vertical_boundary_layer
+        return self._particle.get_in_vertical_boundary_layer()
 
     @property
     def phi(self):
@@ -201,11 +200,11 @@ cdef to_string(Particle* particle):
                                              particle.omega_interfaces,
                                              particle.omega_layers,
                                              particle.host_horizontal_elem,
-                                             particle.in_vertical_boundary_layer,
+                                             particle.get_in_vertical_boundary_layer(),
                                              particle.k_layer,
-                                             particle.k_lower_layer,
-                                             particle.k_upper_layer,
+                                             particle.get_k_lower_layer(),
+                                             particle.get_k_upper_layer(),
                                              particle.in_domain,
                                              particle.is_beached)
-                                             
+
     return s
