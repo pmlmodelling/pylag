@@ -364,6 +364,8 @@ cdef class FVCOMDataReader(DataReader):
 
         cdef DTYPE_INT_t k
 
+        cdef vector[DTYPE_FLOAT_t] phi = particle.get_phi()
+
         # Compute sigma
         h = self.get_zmin(time, particle)
         zeta = self.get_zmax(time, particle)
@@ -371,8 +373,8 @@ cdef class FVCOMDataReader(DataReader):
 
         # Loop over all levels to find the host z layer
         for k in xrange(self._n_siglay):
-            sigma_upper_level = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, k)
-            sigma_lower_level = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, k+1)
+            sigma_upper_level = self._interp_on_sigma_level(phi, particle.host_horizontal_elem, k)
+            sigma_lower_level = self._interp_on_sigma_level(phi, particle.host_horizontal_elem, k+1)
 
             if sigma <= sigma_upper_level and sigma >= sigma_lower_level:
                 # Host layer found
@@ -384,7 +386,7 @@ cdef class FVCOMDataReader(DataReader):
                 # Set variables describing which half of the sigma layer the
                 # particle sits in and whether or not it resides in a boundary
                 # layer
-                sigma_test = self._interp_on_sigma_layer(particle.phi, particle.host_horizontal_elem, k)
+                sigma_test = self._interp_on_sigma_layer(phi, particle.host_horizontal_elem, k)
 
                 # Is x3 in the top or bottom boundary layer?
                 if (k == 0 and sigma >= sigma_test) or (k == self._n_siglay - 1 and sigma <= sigma_test):
@@ -401,8 +403,8 @@ cdef class FVCOMDataReader(DataReader):
                     particle.k_lower_layer = k + 1
 
                 # Set the sigma layer interpolation coefficient
-                sigma_lower_layer = self._interp_on_sigma_layer(particle.phi, particle.host_horizontal_elem, particle.k_lower_layer)
-                sigma_upper_layer = self._interp_on_sigma_layer(particle.phi, particle.host_horizontal_elem, particle.k_upper_layer)
+                sigma_lower_layer = self._interp_on_sigma_layer(phi, particle.host_horizontal_elem, particle.k_lower_layer)
+                sigma_upper_layer = self._interp_on_sigma_layer(phi, particle.host_horizontal_elem, particle.k_upper_layer)
                 particle.omega_layers = interp.get_linear_fraction(sigma, sigma_lower_layer, sigma_upper_layer)
 
                 return IN_DOMAIN
@@ -444,7 +446,7 @@ cdef class FVCOMDataReader(DataReader):
             vertex = self._nv[i,particle.host_horizontal_elem]
             h_tri[i] = self._h[vertex]
 
-        h = interp.interpolate_within_element(h_tri, particle.phi)
+        h = interp.interpolate_within_element(h_tri, particle.get_phi())
 
         return -h
 
@@ -488,7 +490,7 @@ cdef class FVCOMDataReader(DataReader):
             zeta_tri[i] = interp.linear_interp(time_fraction, zeta_tri_t_last[i], zeta_tri_t_next[i])
 
         # Interpolate in space
-        zeta = interp.interpolate_within_element(zeta_tri, particle.phi)
+        zeta = interp.interpolate_within_element(zeta_tri, particle.get_phi())
 
         return zeta
 
@@ -778,18 +780,20 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_FLOAT_t dkh_lower_level, dkh_upper_level
         cdef DTYPE_FLOAT_t h, zeta
 
+        cdef vector[DTYPE_FLOAT_t] phi = particle.get_phi()
+
         h = self.get_zmin(time, particle)
         zeta = self.get_zmax(time, particle)
 
         if particle.k_layer == 0:
             kh_0 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer)
-            sigma_0 = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, particle.k_layer)
+            sigma_0 = self._interp_on_sigma_level(phi, particle.host_horizontal_elem, particle.k_layer)
 
             kh_1 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer+1)
-            sigma_1 = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, particle.k_layer+1)
+            sigma_1 = self._interp_on_sigma_level(phi, particle.host_horizontal_elem, particle.k_layer+1)
 
             kh_2 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer+2)
-            sigma_2 = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, particle.k_layer+2)
+            sigma_2 = self._interp_on_sigma_level(phi, particle.host_horizontal_elem, particle.k_layer+2)
 
             # Convert to cartesian coordinates
             z_0 = sigma_to_cartesian_coords(sigma_0, h, zeta)
@@ -801,13 +805,13 @@ cdef class FVCOMDataReader(DataReader):
             
         elif particle.k_layer == self._n_siglay - 1:
             kh_0 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer-1)
-            sigma_0 = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, particle.k_layer-1)
+            sigma_0 = self._interp_on_sigma_level(phi, particle.host_horizontal_elem, particle.k_layer-1)
 
             kh_1 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer)
-            sigma_1 = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, particle.k_layer)
+            sigma_1 = self._interp_on_sigma_level(phi, particle.host_horizontal_elem, particle.k_layer)
 
             kh_2 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer+1)
-            sigma_2 = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, particle.k_layer+1)
+            sigma_2 = self._interp_on_sigma_level(phi, particle.host_horizontal_elem, particle.k_layer+1)
 
             # Convert to cartesian coordinates
             z_0 = sigma_to_cartesian_coords(sigma_0, h, zeta)
@@ -819,16 +823,16 @@ cdef class FVCOMDataReader(DataReader):
             
         else:
             kh_0 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer-1)
-            sigma_0 = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, particle.k_layer-1)
+            sigma_0 = self._interp_on_sigma_level(phi, particle.host_horizontal_elem, particle.k_layer-1)
 
             kh_1 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer)
-            sigma_1 = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, particle.k_layer)
+            sigma_1 = self._interp_on_sigma_level(phi, particle.host_horizontal_elem, particle.k_layer)
 
             kh_2 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer+1)
-            sigma_2 = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, particle.k_layer+1)
+            sigma_2 = self._interp_on_sigma_level(phi, particle.host_horizontal_elem, particle.k_layer+1)
 
             kh_3 = self._get_vertical_eddy_diffusivity_on_level(time, particle, particle.k_layer+2)
-            sigma_3 = self._interp_on_sigma_level(particle.phi, particle.host_horizontal_elem, particle.k_layer+2)
+            sigma_3 = self._interp_on_sigma_level(phi, particle.host_horizontal_elem, particle.k_layer+2)
 
             # Convert to cartesian coordinates
             z_0 = sigma_to_cartesian_coords(sigma_0, h, zeta)
@@ -925,6 +929,9 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_FLOAT_t var_layer_1
         cdef DTYPE_FLOAT_t var_layer_2
 
+        # Local coordinates
+        cdef vector[DTYPE_FLOAT_t] phi = particle.get_phi()
+
         # Time fraction
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
@@ -944,7 +951,7 @@ cdef class FVCOMDataReader(DataReader):
                                             var_tri_t_next_layer_1[i])
 
             # Interpolate var within the host element
-            return interp.interpolate_within_element(var_tri_layer_1, particle.phi)
+            return interp.interpolate_within_element(var_tri_layer_1, phi)
 
         else:
             # Extract var on the lower and upper bounding sigma layers
@@ -966,8 +973,8 @@ cdef class FVCOMDataReader(DataReader):
 
             # Interpolate var within the host element on the upper and lower
             # bounding sigma layers
-            var_layer_1 = interp.interpolate_within_element(var_tri_layer_1, particle.phi)
-            var_layer_2 = interp.interpolate_within_element(var_tri_layer_2, particle.phi)
+            var_layer_1 = interp.interpolate_within_element(var_tri_layer_1, phi)
+            var_layer_2 = interp.interpolate_within_element(var_tri_layer_2, phi)
 
             return interp.linear_interp(particle.omega_layers, var_layer_1, var_layer_2)
 
@@ -1029,7 +1036,7 @@ cdef class FVCOMDataReader(DataReader):
             kh_tri[i] = interp.linear_interp(time_fraction, kh_tri_t_last[i], kh_tri_t_next[i])
 
         # Interpolate kh, zeta and h within the host
-        kh = interp.interpolate_within_element(kh_tri, particle.phi)
+        kh = interp.interpolate_within_element(kh_tri, particle.get_phi())
 
         return kh
 

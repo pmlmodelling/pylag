@@ -24,6 +24,13 @@ namespace particles {
             // Copy assignment operator
             Particle& operator=(const Particle& rhs);
 
+            // Getters and setters
+            // -------------------
+
+            // Phi
+            void set_phi(const std::vector<double>& rhs);
+            std::vector<double> get_phi() const;
+
             // Particle properties
             // --------------------
 
@@ -50,9 +57,6 @@ namespace particles {
 
             // Local coordinates
             // -----------------
-
-            // Barycentric coordinates within the host element
-            std::vector<double> phi;
 
             // Vertical interpolation coefficient for variables defined at the interfaces
             // between k-levels
@@ -89,6 +93,9 @@ namespace particles {
             // position. Only set if the particle is not in the top or bottom boundary
             // layers
             int k_upper_layer;
+        private:
+            // Barycentric coordinates within the host element
+            std::vector<double> phi;
     };
 
 }

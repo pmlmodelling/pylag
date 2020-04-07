@@ -11,7 +11,6 @@ namespace particles {
           x1(-999.),
           x2(-999.),
           x3(-999.),
-          phi(3, -999.),
           omega_interfaces(-999.),
           omega_layers(-999.),
           in_domain(false),
@@ -20,7 +19,8 @@ namespace particles {
           k_layer(-999),
           in_vertical_boundary_layer(false),
           k_lower_layer(-999),
-          k_upper_layer(-999) {
+          k_upper_layer(-999),
+          phi(3, -999.) {
     }
 
     // Copy constructor
@@ -31,7 +31,6 @@ namespace particles {
           x1(rhs.x1),
           x2(rhs.x2),
           x3(rhs.x3),
-          phi(rhs.phi),
           omega_interfaces(rhs.omega_interfaces),
           omega_layers(rhs.omega_layers),
           in_domain(rhs.in_domain),
@@ -40,7 +39,8 @@ namespace particles {
           k_layer(rhs.k_layer),
           in_vertical_boundary_layer(rhs.in_vertical_boundary_layer),
           k_lower_layer(rhs.k_lower_layer),
-          k_upper_layer(rhs.k_upper_layer) {
+          k_upper_layer(rhs.k_upper_layer),
+          phi(rhs.phi) {
         }
 
     // Copy assignment operator
@@ -52,7 +52,6 @@ namespace particles {
         x1 = rhs.x1;
         x2 = rhs.x2;
         x3 = rhs.x3;
-        phi = rhs.phi;
         omega_interfaces = rhs.omega_interfaces;
         omega_layers = rhs.omega_layers;
         in_domain = rhs.in_domain;
@@ -62,7 +61,19 @@ namespace particles {
         in_vertical_boundary_layer = rhs.in_vertical_boundary_layer;
         k_lower_layer = rhs.k_lower_layer;
         k_upper_layer = rhs.k_upper_layer;
+        phi = rhs.phi;
 
         return *this;
+    }
+
+    // Getters and setters
+    // -------------------
+
+    void Particle::set_phi(const std::vector<double>& rhs) {
+        phi = rhs;
+    }
+
+    std::vector<double> Particle::get_phi() const {
+        return phi;
     }
 }

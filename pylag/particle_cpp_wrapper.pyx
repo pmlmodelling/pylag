@@ -1,5 +1,7 @@
 from cython.operator cimport dereference as deref
 
+from libcpp.vector cimport vector
+
 # Data types
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
@@ -22,6 +24,7 @@ cdef class ParticleSmartPtr:
             DTYPE_INT_t id=-999, DTYPE_INT_t status=0, ParticleSmartPtr particle_smart_ptr=None):
 
         cdef ParticleSmartPtr _particle_smart_ptr
+        cdef vector[DTYPE_FLOAT_t] _phi
 
         # Call copy ctor if particle_smart_ptr is given. Else, use default ctor
         if particle_smart_ptr and type(particle_smart_ptr) is ParticleSmartPtr:
@@ -36,9 +39,7 @@ cdef class ParticleSmartPtr:
             self._particle.x1 = x1
             self._particle.x2 = x2
             self._particle.x3 = x3
-            self._particle.phi[0] = phi1
-            self._particle.phi[1] = phi2
-            self._particle.phi[2] = phi3
+            self._particle.set_phi([phi1, phi2, phi3])
             self._particle.omega_interfaces = omega_interfaces
             self._particle.omega_layers = omega_layers
             self._particle.in_domain = in_domain
@@ -50,6 +51,7 @@ cdef class ParticleSmartPtr:
             self._particle.k_upper_layer = k_upper_layer
             self._particle.id = id
             self._particle.status = status
+
 
         if not self._particle:
             raise MemoryError()
@@ -132,8 +134,8 @@ cdef class ParticleSmartPtr:
     @property
     def phi(self):
         phi = []
-        for phi_i in self._particle.phi:
-            phi.append(phi_i)
+        for x in self._particle.get_phi():
+            phi.append(x)
         return phi
 
 cdef ParticleSmartPtr copy(ParticleSmartPtr particle_smart_ptr):
@@ -170,6 +172,8 @@ cdef to_string(Particle* particle):
     s : str
         String describing the particle
     """
+    cdef vector[DTYPE_FLOAT_t] phi = particle.get_phi()
+
     s = "Particle properties \n"\
         "------------------- \n"\
         "Particle id = {} \n"\
@@ -191,9 +195,9 @@ cdef to_string(Particle* particle):
                                              particle.x1,
                                              particle.x2,
                                              particle.x3,
-                                             particle.phi[0],
-                                             particle.phi[1],
-                                             particle.phi[2],
+                                             phi[0],
+                                             phi[1],
+                                             phi[2],
                                              particle.omega_interfaces,
                                              particle.omega_layers,
                                              particle.host_horizontal_elem,

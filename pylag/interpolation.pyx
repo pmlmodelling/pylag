@@ -12,6 +12,7 @@ from libcpp.vector cimport vector
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
+
 cdef class Interpolator:
     """ An abstract base class for interpolation schemes
     

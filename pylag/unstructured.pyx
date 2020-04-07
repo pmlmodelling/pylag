@@ -135,9 +135,7 @@ cdef class UnstructuredGrid:
                     # Normal element
                     particle.host_horizontal_elem = guess
 
-                    # Set the particle's local coordiantes
-                    for i in xrange(3):
-                        particle.phi[i] = phi[i]
+                    particle.set_phi(phi)
 
                     return IN_DOMAIN
                 else:
@@ -375,9 +373,7 @@ cdef class UnstructuredGrid:
                 if n_host_land_boundaries < 2:
                     particle.host_horizontal_elem = guess
 
-                    # Set the particle's local coordiantes
-                    for i in xrange(3):
-                        particle.phi[i] = phi[i]
+                    particle.set_phi(phi)
 
                     return IN_DOMAIN
                 else:
@@ -533,9 +529,9 @@ cdef class UnstructuredGrid:
         # Check for negative values.
         for i in xrange(3):
             if phi[i] >= 0.0:
-                particle.phi[i] = phi[i]
+                continue
             elif phi[i] >= -EPSILON:
-                particle.phi[i] = 0.0
+                phi[i] = 0.0
             else:
                 print phi[i]
                 s = to_string(particle)
@@ -546,6 +542,9 @@ cdef class UnstructuredGrid:
                 print msg
 
                 raise ValueError('One or more local coordinates are negative')
+
+        # Set phi
+        particle.set_phi(phi)
 
     cdef void get_phi(self, DTYPE_FLOAT_t x1, DTYPE_FLOAT_t x2,
             DTYPE_INT_t host, vector[DTYPE_FLOAT_t] &phi) except *:
