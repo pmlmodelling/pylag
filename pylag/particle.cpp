@@ -14,8 +14,8 @@ namespace particles {
           omega_interfaces(-999.),
           omega_layers(-999.),
           in_domain(false),
-          is_beached(0),
           phi(3, -999.),
+          is_beached(0),
           host_horizontal_elem(-999),
           k_layer(-999),
           in_vertical_boundary_layer(false),
@@ -34,8 +34,8 @@ namespace particles {
           omega_interfaces(rhs.omega_interfaces),
           omega_layers(rhs.omega_layers),
           in_domain(rhs.in_domain),
-          is_beached(rhs.is_beached),
           phi(rhs.phi),
+          is_beached(rhs.is_beached),
           host_horizontal_elem(rhs.host_horizontal_elem),
           k_layer(rhs.k_layer),
           in_vertical_boundary_layer(rhs.in_vertical_boundary_layer),
@@ -55,8 +55,8 @@ namespace particles {
         omega_interfaces = rhs.omega_interfaces;
         omega_layers = rhs.omega_layers;
         in_domain = rhs.in_domain;
-        is_beached = rhs.is_beached;
         phi = rhs.phi;
+        is_beached = rhs.is_beached;
         host_horizontal_elem = rhs.host_horizontal_elem;
         k_layer = rhs.k_layer;
         in_vertical_boundary_layer = rhs.in_vertical_boundary_layer;
@@ -74,6 +74,14 @@ namespace particles {
 
     std::vector<double> Particle::get_phi() const {
         return phi;
+    }
+
+    void Particle::set_is_beached(const int& rhs) {
+        is_beached = rhs;
+    }
+
+    int Particle::get_is_beached() const {
+        return is_beached;
     }
 
     void Particle::set_host_horizontal_elem(const int& rhs) {

@@ -156,7 +156,7 @@ cdef class StdNumMethod(NumMethod):
         _particle_copy = particle[0]
 
         # Check for beached particles
-        if _particle_copy.is_beached == 1:
+        if _particle_copy.get_is_beached() == 1:
             if data_reader.is_wet(time, &_particle_copy) == 0:
                 # If the cell is still dry, pass over
                 return IN_DOMAIN
@@ -172,7 +172,7 @@ cdef class StdNumMethod(NumMethod):
                     if flag == BDY_ERROR:
                         return flag
 
-                _particle_copy.is_beached = 0
+                _particle_copy.set_is_beached(0)
 
         reset(&_delta_X)
 
@@ -224,7 +224,7 @@ cdef class StdNumMethod(NumMethod):
 
         # Check to see if the particle has beached
         if data_reader.is_wet(time+self._time_step, &_particle_copy) == 0:
-             _particle_copy.is_beached = 1
+             _particle_copy.set_is_beached(1)
 
         # Copy back particle properties
         particle[0] = _particle_copy
@@ -359,7 +359,7 @@ cdef class OS0NumMethod(NumMethod):
         _particle_copy_a = particle[0]
 
         # Check for beached particles
-        if _particle_copy_a.is_beached == 1:
+        if _particle_copy_a.get_is_beached() == 1:
             if data_reader.is_wet(time, &_particle_copy_a) == 0:
                 # If the cell is still dry, pass over
                 return IN_DOMAIN
@@ -375,7 +375,7 @@ cdef class OS0NumMethod(NumMethod):
                     if flag == BDY_ERROR:
                         return flag
 
-                _particle_copy_a.is_beached = 0
+                _particle_copy_a.set_is_beached(0)
 
         # Set delta to zero
         reset(&_delta_X)
@@ -465,7 +465,7 @@ cdef class OS0NumMethod(NumMethod):
 
         # Check to see if the particle has beached
         if data_reader.is_wet(time+self._adv_time_step, &_particle_copy_b) == 0:
-            _particle_copy_b.is_beached = 1
+            _particle_copy_b.set_is_beached(1)
 
         particle[0] = _particle_copy_b
 
@@ -582,7 +582,7 @@ cdef class OS1NumMethod(NumMethod):
         _particle_copy_a = particle[0]
 
         # Check for beached particles
-        if _particle_copy_a.is_beached == 1:
+        if _particle_copy_a.get_is_beached() == 1:
             if data_reader.is_wet(time, &_particle_copy_a) == 0:
                 # If the cell is still dry, pass over
                 return IN_DOMAIN
@@ -598,7 +598,7 @@ cdef class OS1NumMethod(NumMethod):
                     if flag == BDY_ERROR:
                         return flag
 
-                _particle_copy_a.is_beached = 0
+                _particle_copy_a.set_is_beached(0)
 
         # Compute Delta
         reset(&_delta_X)
@@ -731,7 +731,7 @@ cdef class OS1NumMethod(NumMethod):
 
         # Check to see if the particle has beached
         if data_reader.is_wet(t, &_particle_copy_b) == 0:
-            _particle_copy_b.is_beached = 1
+            _particle_copy_b.set_is_beached(1)
 
         # Copy back particle properties
         particle[0] = _particle_copy_b

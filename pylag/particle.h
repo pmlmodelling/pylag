@@ -30,6 +30,9 @@ namespace particles {
             void set_phi(const std::vector<double>& rhs);
             std::vector<double> get_phi() const;
 
+            void set_is_beached(const int& rhs);
+            int get_is_beached() const;
+
             void set_host_horizontal_elem(const int& rhs);
             int get_host_horizontal_elem() const;
 
@@ -86,12 +89,12 @@ namespace particles {
             // Flag identifying whether or not the particle resides within the model domain.
             bool in_domain;
 
-            // Flag identifying whether or not a particle is beached
-            int is_beached;
-
         private:
             // Barycentric coordinates within the host element
             std::vector<double> phi;
+
+            // Flag identifying whether or not a particle is beached
+            int is_beached;
 
             // The host horizontal element
             int host_horizontal_elem;

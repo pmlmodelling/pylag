@@ -186,7 +186,7 @@ cdef class OPTModel:
 
                 # Determine if the host element is presently dry
                 if self.data_reader.is_wet(time, particle_ptr) == 1:
-                    particle_ptr.is_beached = 0
+                    particle_ptr.set_is_beached(0)
 
                     # Second check that the given depth is valid
                     if particle_ptr.x3 < zmin:
@@ -202,7 +202,7 @@ cdef class OPTModel:
 
                 else:
                     # Don't set vertical grid vars as this will fail if zeta < h. They will be set later.
-                    particle_ptr.is_beached = 1
+                    particle_ptr.set_is_beached(1)
 
             self.particle_smart_ptrs.append(particle_smart_ptr)
             self.particle_ptrs.push_back(particle_ptr)
@@ -356,7 +356,7 @@ cdef class OPTModel:
             diags['host_horizontal_elem'].append(particle_ptr.get_host_horizontal_elem())
 
             # Particle state data
-            diags['is_beached'].append(particle_ptr.is_beached)
+            diags['is_beached'].append(particle_ptr.get_is_beached())
             diags['in_domain'].append(particle_ptr.in_domain)
             diags['status'].append(particle_ptr.status)
             

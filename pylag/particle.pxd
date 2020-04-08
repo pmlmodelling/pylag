@@ -15,6 +15,9 @@ cdef extern from "particle.h" namespace "particles":
         void set_phi(const vector[DTYPE_FLOAT_t]&) except +
         vector[DTYPE_FLOAT_t] get_phi() except +
 
+        void set_is_beached(const DTYPE_INT_t&) except +
+        DTYPE_INT_t get_is_beached() except +
+
         void set_host_horizontal_elem(const DTYPE_INT_t&) except +
         DTYPE_INT_t get_host_horizontal_elem() except +
 
@@ -39,5 +42,4 @@ cdef extern from "particle.h" namespace "particles":
         DTYPE_FLOAT_t omega_interfaces
         DTYPE_FLOAT_t omega_layers
         bint in_domain
-        DTYPE_INT_t is_beached
 
