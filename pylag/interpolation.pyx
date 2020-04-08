@@ -92,8 +92,8 @@ cdef class Linear1DInterpolator:
             C Pointer to a Particle struct
         """
         return linear_interp(particle.omega_interfaces,
-                self._fp[particle.k_layer],
-                self._fp[particle.k_layer+1])
+                self._fp[particle.get_k_layer()],
+                self._fp[particle.get_k_layer()+1])
 
     cdef DTYPE_FLOAT_t get_first_derivative(self, Particle* particle) except FLOAT_ERR:
         """ Evaluate the derivative of the interpolating function
@@ -104,8 +104,8 @@ cdef class Linear1DInterpolator:
             C Pointer to a Particle struct
         """
         return linear_interp(particle.omega_interfaces,
-                self._fp_prime[particle.k_layer],
-                self._fp_prime[particle.k_layer+1])
+                self._fp_prime[particle.get_k_layer()],
+                self._fp_prime[particle.get_k_layer()+1])
 
 cdef class CubicSpline1DInterpolator:
     """ Cubic spline 1D Interpolator

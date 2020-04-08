@@ -39,6 +39,9 @@ namespace particles {
             void set_k_upper_layer(const int& rhs);
             int get_k_upper_layer() const;
 
+            void set_k_layer(const int& rhs);
+            int get_k_layer() const;
+
             // Particle properties
             // --------------------
 
@@ -86,12 +89,12 @@ namespace particles {
             // The host horizontal element
             int host_horizontal_elem;
 
-            // The host k layer
-            int k_layer;
-
         private:
             // Barycentric coordinates within the host element
             std::vector<double> phi;
+
+            // The host k layer
+            int k_layer;
 
             // Flag for whether the particle is in the top or bottom boundary layers
             bool in_vertical_boundary_layer;

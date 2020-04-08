@@ -371,7 +371,7 @@ cdef class ArakawaADataReader(DataReader):
 
             if particle.x3 <= depth_upper_level and particle.x3 >= depth_lower_level:
                 # Host layer found
-                particle.k_layer = k
+                particle.set_k_layer(k)
 
                 # Set the sigma level interpolation coefficient
                 particle.omega_interfaces = interp.get_linear_fraction(particle.x3, depth_lower_level, depth_upper_level)
@@ -402,7 +402,7 @@ cdef class ArakawaADataReader(DataReader):
         if particle.x3 <= zeta and particle.x3 >= depth_lower_level:
             mask_upper_level = self._interp_mask_status_on_level(particle.host_horizontal_elem, k)
             if mask_upper_level == 0:
-                particle.k_layer = k
+                particle.set_k_layer(k)
                 particle.set_in_vertical_boundary_layer(True)
 
                 return IN_DOMAIN
@@ -415,7 +415,7 @@ cdef class ArakawaADataReader(DataReader):
         if particle.x3 >= h and particle.x3 <= depth_upper_level:
             mask_upper_level = self._interp_mask_status_on_level(particle.host_horizontal_elem, k)
             if mask_upper_level == 0:
-                particle.k_layer = k
+                particle.set_k_layer(k)
                 particle.set_in_vertical_boundary_layer(True)
 
                 return IN_DOMAIN
@@ -630,6 +630,9 @@ cdef class ArakawaADataReader(DataReader):
         # Variables used in interpolation in time
         cdef DTYPE_FLOAT_t time_fraction
 
+        # Particle k_layer
+        cdef DTYPE_INT_t k_layer = particle.get_k_layer()
+
         # Gradients in phi
         cdef vector[DTYPE_FLOAT_t] dphi_dx = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
         cdef vector[DTYPE_FLOAT_t] dphi_dy = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
@@ -663,8 +666,8 @@ cdef class ArakawaADataReader(DataReader):
             # Extract ah near to the boundary
             for i in xrange(N_VERTICES):
                 vertex = self._nv[i, particle.host_horizontal_elem]
-                ah_tri_t_last_level_1[i] = self._ah_last[particle.k_layer, vertex]
-                ah_tri_t_next_level_1[i] = self._ah_next[particle.k_layer, vertex]
+                ah_tri_t_last_level_1[i] = self._ah_last[k_layer, vertex]
+                ah_tri_t_next_level_1[i] = self._ah_next[k_layer, vertex]
 
             # Interpolate in time
             for i in xrange(N_VERTICES):
@@ -680,10 +683,10 @@ cdef class ArakawaADataReader(DataReader):
             # Extract ah on the lower and upper bounding depth levels
             for i in xrange(N_VERTICES):
                 vertex = self._nv[i,particle.host_horizontal_elem]
-                ah_tri_t_last_level_1[i] = self._ah_last[particle.k_layer+1, vertex]
-                ah_tri_t_next_level_1[i] = self._ah_next[particle.k_layer+1, vertex]
-                ah_tri_t_last_level_2[i] = self._ah_last[particle.k_layer, vertex]
-                ah_tri_t_next_level_2[i] = self._ah_next[particle.k_layer, vertex]
+                ah_tri_t_last_level_1[i] = self._ah_last[k_layer+1, vertex]
+                ah_tri_t_next_level_1[i] = self._ah_next[k_layer+1, vertex]
+                ah_tri_t_last_level_2[i] = self._ah_last[k_layer, vertex]
+                ah_tri_t_next_level_2[i] = self._ah_next[k_layer, vertex]
 
             # Interpolate in time
             for i in xrange(N_VERTICES):
@@ -772,55 +775,58 @@ cdef class ArakawaADataReader(DataReader):
         cdef DTYPE_FLOAT_t z_0, z_1, z_2, z_3
         cdef DTYPE_FLOAT_t dkh_lower_level, dkh_upper_level
 
-        if particle.get_in_vertical_boundary_layer() == True:
-            kh_0 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, particle.k_layer-1)
-            z_0 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, particle.k_layer-1)
+        # Particle k_layer
+        cdef DTYPE_INT_t k_layer = particle.get_k_layer()
 
-            kh_1 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, particle.k_layer)
-            z_1 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, particle.k_layer)
+        if particle.get_in_vertical_boundary_layer() == True:
+            kh_0 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, k_layer-1)
+            z_0 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k_layer-1)
+
+            kh_1 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, k_layer)
+            z_1 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k_layer)
 
             dkh_upper_level = (kh_0 - kh_1) / (z_0 - z_1)
 
             return dkh_upper_level
 
-        if particle.k_layer == 0:
-            kh_0 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, particle.k_layer)
-            z_0 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, particle.k_layer)
+        if k_layer == 0:
+            kh_0 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, k_layer)
+            z_0 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k_layer)
 
-            kh_1 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, particle.k_layer+1)
-            z_1 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, particle.k_layer+1)
+            kh_1 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, k_layer+1)
+            z_1 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k_layer+1)
 
-            kh_2 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, particle.k_layer+2)
-            z_2 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, particle.k_layer+2)
+            kh_2 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, k_layer+2)
+            z_2 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k_layer+2)
 
             dkh_lower_level = (kh_0 - kh_2) / (z_0 - z_2)
             dkh_upper_level = (kh_0 - kh_1) / (z_0 - z_1)
 
-        elif particle.k_layer == self._n_depth - 2:
-            kh_0 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, particle.k_layer-1)
-            z_0 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, particle.k_layer-1)
+        elif k_layer == self._n_depth - 2:
+            kh_0 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, k_layer-1)
+            z_0 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k_layer-1)
 
-            kh_1 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, particle.k_layer)
-            z_1 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, particle.k_layer)
+            kh_1 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, k_layer)
+            z_1 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k_layer)
 
-            kh_2 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, particle.k_layer+1)
-            z_2 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, particle.k_layer+1)
+            kh_2 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, k_layer+1)
+            z_2 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k_layer+1)
 
             dkh_lower_level = (kh_1 - kh_2) / (z_1 - z_2)
             dkh_upper_level = (kh_0 - kh_2) / (z_0 - z_2)
 
         else:
-            kh_0 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, particle.k_layer-1)
-            z_0 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, particle.k_layer-1)
+            kh_0 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, k_layer-1)
+            z_0 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k_layer-1)
 
-            kh_1 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, particle.k_layer)
-            z_1 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, particle.k_layer)
+            kh_1 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, k_layer)
+            z_1 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k_layer)
 
-            kh_2 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, particle.k_layer+1)
-            z_2 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, particle.k_layer+1)
+            kh_2 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, k_layer+1)
+            z_2 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k_layer+1)
 
-            kh_3 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, particle.k_layer+2)
-            z_3 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, particle.k_layer+2)
+            kh_3 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, k_layer+2)
+            z_3 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k_layer+2)
 
             dkh_lower_level = (kh_1 - kh_3) / (z_1 - z_3)
             dkh_upper_level = (kh_0 - kh_2) / (z_0 - z_2)
@@ -904,12 +910,15 @@ cdef class ArakawaADataReader(DataReader):
         cdef DTYPE_FLOAT_t var_level_1
         cdef DTYPE_FLOAT_t var_level_2
 
+        # Particle k_layer
+        cdef DTYPE_INT_t k_layer = particle.get_k_layer()
+
         # No vertical interpolation for particles near to the bottom
         if particle.get_in_vertical_boundary_layer() is True:
-            return self._get_variable_on_level(var_last, var_next, time, particle, particle.k_layer)
+            return self._get_variable_on_level(var_last, var_next, time, particle, k_layer)
         else:
-            var_level_1 = self._get_variable_on_level(var_last, var_next, time, particle, particle.k_layer+1)
-            var_level_2 = self._get_variable_on_level(var_last, var_next, time, particle, particle.k_layer)
+            var_level_1 = self._get_variable_on_level(var_last, var_next, time, particle, k_layer+1)
+            var_level_2 = self._get_variable_on_level(var_last, var_next, time, particle, k_layer)
 
             return interp.linear_interp(particle.omega_interfaces, var_level_1, var_level_2)
 

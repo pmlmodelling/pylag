@@ -44,7 +44,7 @@ cdef class ParticleSmartPtr:
             self._particle.in_domain = in_domain
             self._particle.is_beached = is_beached
             self._particle.host_horizontal_elem = host
-            self._particle.k_layer = k_layer
+            self._particle.set_k_layer(k_layer)
             self._particle.id = id
             self._particle.status = status
             self._particle.set_phi([phi1, phi2, phi3])
@@ -116,7 +116,7 @@ cdef class ParticleSmartPtr:
 
     @property
     def k_layer(self):
-        return self._particle.k_layer
+        return self._particle.get_k_layer()
 
     @property
     def k_lower_layer(self):
@@ -201,7 +201,7 @@ cdef to_string(Particle* particle):
                                              particle.omega_layers,
                                              particle.host_horizontal_elem,
                                              particle.get_in_vertical_boundary_layer(),
-                                             particle.k_layer,
+                                             particle.get_k_layer(),
                                              particle.get_k_lower_layer(),
                                              particle.get_k_upper_layer(),
                                              particle.in_domain,

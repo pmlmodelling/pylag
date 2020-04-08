@@ -16,8 +16,8 @@ namespace particles {
           in_domain(false),
           is_beached(0),
           host_horizontal_elem(-999),
-          k_layer(-999),
           phi(3, -999.),
+          k_layer(-999),
           in_vertical_boundary_layer(false),
           k_lower_layer(-999),
           k_upper_layer(-999) {
@@ -36,8 +36,8 @@ namespace particles {
           in_domain(rhs.in_domain),
           is_beached(rhs.is_beached),
           host_horizontal_elem(rhs.host_horizontal_elem),
-          k_layer(rhs.k_layer),
           phi(rhs.phi),
+          k_layer(rhs.k_layer),
           in_vertical_boundary_layer(rhs.in_vertical_boundary_layer),
           k_lower_layer(rhs.k_lower_layer),
           k_upper_layer(rhs.k_upper_layer) {
@@ -57,8 +57,8 @@ namespace particles {
         in_domain = rhs.in_domain;
         is_beached = rhs.is_beached;
         host_horizontal_elem = rhs.host_horizontal_elem;
-        k_layer = rhs.k_layer;
         phi = rhs.phi;
+        k_layer = rhs.k_layer;
         in_vertical_boundary_layer = rhs.in_vertical_boundary_layer;
         k_lower_layer = rhs.k_lower_layer;
         k_upper_layer = rhs.k_upper_layer;
@@ -74,6 +74,14 @@ namespace particles {
 
     std::vector<double> Particle::get_phi() const {
         return phi;
+    }
+
+    void Particle::set_k_layer(const int& rhs) {
+        k_layer = rhs;
+    }
+
+    int Particle::get_k_layer() const {
+        return k_layer;
     }
 
     void Particle::set_in_vertical_boundary_layer(const bool& rhs) {
