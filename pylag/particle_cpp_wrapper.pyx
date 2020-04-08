@@ -43,11 +43,11 @@ cdef class ParticleSmartPtr:
             self._particle.omega_layers = omega_layers
             self._particle.in_domain = in_domain
             self._particle.is_beached = is_beached
-            self._particle.host_horizontal_elem = host
-            self._particle.set_k_layer(k_layer)
             self._particle.id = id
             self._particle.status = status
             self._particle.set_phi([phi1, phi2, phi3])
+            self._particle.set_host_horizontal_elem(host)
+            self._particle.set_k_layer(k_layer)
             self._particle.set_in_vertical_boundary_layer(in_vertical_boundary_layer)
             self._particle.set_k_lower_layer(k_lower_layer)
             self._particle.set_k_upper_layer(k_upper_layer)
@@ -95,10 +95,6 @@ cdef class ParticleSmartPtr:
         return self._particle.x3
 
     @property
-    def host_horizontal_elem(self):
-        return self._particle.host_horizontal_elem
-
-    @property
     def omega_interfaces(self):
         return self._particle.omega_interfaces
 
@@ -113,6 +109,10 @@ cdef class ParticleSmartPtr:
     @property
     def is_beached(self):
         return self._particle.is_beached
+
+    @property
+    def host_horizontal_elem(self):
+        return self._particle.get_host_horizontal_elem()
 
     @property
     def k_layer(self):
@@ -199,7 +199,7 @@ cdef to_string(Particle* particle):
                                              phi[2],
                                              particle.omega_interfaces,
                                              particle.omega_layers,
-                                             particle.host_horizontal_elem,
+                                             particle.get_host_horizontal_elem(),
                                              particle.get_in_vertical_boundary_layer(),
                                              particle.get_k_layer(),
                                              particle.get_k_lower_layer(),

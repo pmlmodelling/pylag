@@ -30,6 +30,9 @@ namespace particles {
             void set_phi(const std::vector<double>& rhs);
             std::vector<double> get_phi() const;
 
+            void set_host_horizontal_elem(const int& rhs);
+            int get_host_horizontal_elem() const;
+
             void set_in_vertical_boundary_layer(const bool& rhs);
             bool get_in_vertical_boundary_layer() const;
 
@@ -86,12 +89,12 @@ namespace particles {
             // Flag identifying whether or not a particle is beached
             int is_beached;
 
-            // The host horizontal element
-            int host_horizontal_elem;
-
         private:
             // Barycentric coordinates within the host element
             std::vector<double> phi;
+
+            // The host horizontal element
+            int host_horizontal_elem;
 
             // The host k layer
             int k_layer;

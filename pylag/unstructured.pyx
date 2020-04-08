@@ -133,7 +133,7 @@ cdef class UnstructuredGrid:
 
                 if n_host_land_boundaries < 2:
                     # Normal element
-                    particle.host_horizontal_elem = guess
+                    particle.set_host_horizontal_elem(guess)
 
                     particle.set_phi(phi)
 
@@ -243,7 +243,7 @@ cdef class UnstructuredGrid:
         x4[0] = particle_new.x1; x4[1] = particle_new.x2
 
         # Start the search using the host known to contain (x1_old, x2_old)
-        elem = particle_old.host_horizontal_elem
+        elem = particle_old.get_host_horizontal_elem()
 
         # Set last_elem equal to elem in the first instance
         last_elem = elem
@@ -296,7 +296,7 @@ cdef class UnstructuredGrid:
                         flag = LAND_BDY_CROSSED
 
                         # Set host to the last element the particle passed through
-                        particle_new.host_horizontal_elem = last_elem
+                        particle_new.set_host_horizontal_elem(last_elem)
                         return flag
                     else:
                         # Intersection found but the pathline has not exited the
@@ -312,7 +312,7 @@ cdef class UnstructuredGrid:
                         flag = OPEN_BDY_CROSSED
 
                     # Set host to the last element the particle passed through
-                    particle_new.host_horizontal_elem = last_elem
+                    particle_new.set_host_horizontal_elem(last_elem)
 
                     return flag
 
@@ -320,7 +320,7 @@ cdef class UnstructuredGrid:
                 # Particle has not exited the current element meaning it must
                 # still reside in the domain
                 flag = IN_DOMAIN
-                particle_new.host_horizontal_elem = current_elem
+                particle_new.set_host_horizontal_elem(current_elem)
                 self.set_local_coordinates(particle_new)
 
                 return flag
@@ -371,7 +371,7 @@ cdef class UnstructuredGrid:
                         n_host_land_boundaries += 1
 
                 if n_host_land_boundaries < 2:
-                    particle.host_horizontal_elem = guess
+                    particle.set_host_horizontal_elem(guess)
 
                     particle.set_phi(phi)
 
@@ -456,7 +456,7 @@ cdef class UnstructuredGrid:
 
         # Extract nodal coordinates
         for i in xrange(3):
-            vertex = self.nv[i, particle_new.host_horizontal_elem]
+            vertex = self.nv[i, particle_new.get_host_horizontal_elem()]
             x_tri[i] = self.x[vertex]
             y_tri[i] = self.y[vertex]
 
@@ -466,7 +466,7 @@ cdef class UnstructuredGrid:
             x2_idx = x2_indices[i]
             nbe_idx = nbe_indices[i]
 
-            nbe = self.nbe[nbe_idx, particle_new.host_horizontal_elem]
+            nbe = self.nbe[nbe_idx, particle_new.get_host_horizontal_elem()]
 
             if nbe != -1:
                 # Compute the number of land boundaries the neighbour has - elements with two
@@ -502,8 +502,10 @@ cdef class UnstructuredGrid:
 
         Move the particle to its host element's centroid.
         """
-        particle.x1 = self.xc[particle.host_horizontal_elem]
-        particle.x2 = self.yc[particle.host_horizontal_elem]
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem()
+
+        particle.x1 = self.xc[host_element]
+        particle.x2 = self.yc[host_element]
         self.set_local_coordinates(particle)
         return
 
@@ -521,10 +523,11 @@ cdef class UnstructuredGrid:
         """
         cdef vector[DTYPE_FLOAT_t] phi = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
 
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem()
+
         cdef DTYPE_INT_t i
 
-        self.get_phi(particle.x1, particle.x2,
-                particle.host_horizontal_elem, phi)
+        self.get_phi(particle.x1, particle.x2, host_element, phi)
 
         # Check for negative values.
         for i in xrange(3):

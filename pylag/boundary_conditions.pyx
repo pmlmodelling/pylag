@@ -119,7 +119,7 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
             particle_copy_b.x1 = x4_prime[0]
             particle_copy_b.x2 = x4_prime[1]
             flag = data_reader.find_host_using_local_search(&particle_copy_b,
-                                                            particle_copy_b.host_horizontal_elem)
+                                                            particle_copy_b.get_host_horizontal_elem())
 
             if flag == IN_DOMAIN:
                 particle_new[0] = particle_copy_b

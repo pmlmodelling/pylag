@@ -353,7 +353,7 @@ cdef class OPTModel:
             diags['x1'].append(particle_ptr.x1 + xmin)
             diags['x2'].append(particle_ptr.x2 + ymin)
             diags['x3'].append(particle_ptr.x3)
-            diags['host_horizontal_elem'].append(particle_ptr.host_horizontal_elem)
+            diags['host_horizontal_elem'].append(particle_ptr.get_host_horizontal_elem())
 
             # Particle state data
             diags['is_beached'].append(particle_ptr.is_beached)

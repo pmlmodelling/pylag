@@ -254,7 +254,7 @@ cdef class ArakawaADataReader(DataReader):
         cdef DTYPE_INT_t flag, host
         
         flag = self._unstructured_grid.find_host_using_local_search(particle_new,
-                                                                    particle_old.host_horizontal_elem)
+                                                                    particle_old.get_host_horizontal_elem())
         
         if flag != IN_DOMAIN:
             # Local search failed to find the particle. Perform check to see if
@@ -362,6 +362,9 @@ cdef class ArakawaADataReader(DataReader):
 
         cdef DTYPE_FLOAT_t h, zeta
 
+        # Host element
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem()
+
         cdef DTYPE_INT_t k
 
         # Loop over all levels to find the host z layer
@@ -377,8 +380,8 @@ cdef class ArakawaADataReader(DataReader):
                 particle.omega_interfaces = interp.get_linear_fraction(particle.x3, depth_lower_level, depth_upper_level)
 
                 # Check to see if any of the nodes on each level are masked
-                mask_upper_level = self._interp_mask_status_on_level(particle.host_horizontal_elem, k)
-                mask_lower_level = self._interp_mask_status_on_level(particle.host_horizontal_elem, k+1)
+                mask_upper_level = self._interp_mask_status_on_level(host_element, k)
+                mask_lower_level = self._interp_mask_status_on_level(host_element, k+1)
 
                 # If the bottom layer is masked, flag the particle as being in the bottom boundary layer.
                 if mask_upper_level == 0 and mask_lower_level == 1:
@@ -400,7 +403,7 @@ cdef class ArakawaADataReader(DataReader):
         k = 0
         depth_upper_level = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k)
         if particle.x3 <= zeta and particle.x3 >= depth_lower_level:
-            mask_upper_level = self._interp_mask_status_on_level(particle.host_horizontal_elem, k)
+            mask_upper_level = self._interp_mask_status_on_level(host_element, k)
             if mask_upper_level == 0:
                 particle.set_k_layer(k)
                 particle.set_in_vertical_boundary_layer(True)
@@ -413,7 +416,7 @@ cdef class ArakawaADataReader(DataReader):
         k = self._n_depth - 1
         depth_upper_level = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k)
         if particle.x3 >= h and particle.x3 <= depth_upper_level:
-            mask_upper_level = self._interp_mask_status_on_level(particle.host_horizontal_elem, k)
+            mask_upper_level = self._interp_mask_status_on_level(host_element, k)
             if mask_upper_level == 0:
                 particle.set_k_layer(k)
                 particle.set_in_vertical_boundary_layer(True)
@@ -456,8 +459,11 @@ cdef class ArakawaADataReader(DataReader):
         cdef vector[DTYPE_FLOAT_t] h_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.) # Bathymetry at nodes
         cdef DTYPE_FLOAT_t h # Bathymetry at (x1, x2)
 
+        # Host element
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem()
+
         for i in xrange(N_VERTICES):
-            vertex = self._nv[i,particle.host_horizontal_elem]
+            vertex = self._nv[i,host_element]
             h_tri[i] = self._h[vertex]
 
         h = interp.interpolate_within_element(h_tri, particle.get_phi())
@@ -488,6 +494,9 @@ cdef class ArakawaADataReader(DataReader):
         cdef int vertex # Vertex identifier
         cdef DTYPE_FLOAT_t zeta # Sea surface elevation at (t, x1, x2)
 
+        # Host element
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem()
+
         # Intermediate arrays
         cdef DTYPE_FLOAT_t zeta_last
         cdef DTYPE_FLOAT_t zeta_next
@@ -496,7 +505,7 @@ cdef class ArakawaADataReader(DataReader):
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
         for i in xrange(N_VERTICES):
-            vertex = self._nv[i, particle.host_horizontal_elem]
+            vertex = self._nv[i, host_element]
             zeta_last = self._zeta_last[vertex]
             zeta_next = self._zeta_next[vertex]
 
@@ -633,6 +642,9 @@ cdef class ArakawaADataReader(DataReader):
         # Particle k_layer
         cdef DTYPE_INT_t k_layer = particle.get_k_layer()
 
+        # Host element
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem()
+
         # Gradients in phi
         cdef vector[DTYPE_FLOAT_t] dphi_dx = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
         cdef vector[DTYPE_FLOAT_t] dphi_dy = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
@@ -659,13 +671,13 @@ cdef class ArakawaADataReader(DataReader):
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
         # Get gradient in phi
-        self._unstructured_grid.get_grad_phi(particle.host_horizontal_elem, dphi_dx, dphi_dy)
+        self._unstructured_grid.get_grad_phi(host_element, dphi_dx, dphi_dy)
 
         # No vertical interpolation for particles near to the bottom,
         if particle.get_in_vertical_boundary_layer() is True:
             # Extract ah near to the boundary
             for i in xrange(N_VERTICES):
-                vertex = self._nv[i, particle.host_horizontal_elem]
+                vertex = self._nv[i, host_element]
                 ah_tri_t_last_level_1[i] = self._ah_last[k_layer, vertex]
                 ah_tri_t_next_level_1[i] = self._ah_next[k_layer, vertex]
 
@@ -682,7 +694,7 @@ cdef class ArakawaADataReader(DataReader):
         else:
             # Extract ah on the lower and upper bounding depth levels
             for i in xrange(N_VERTICES):
-                vertex = self._nv[i,particle.host_horizontal_elem]
+                vertex = self._nv[i,host_element]
                 ah_tri_t_last_level_1[i] = self._ah_last[k_layer+1, vertex]
                 ah_tri_t_next_level_1[i] = self._ah_next[k_layer+1, vertex]
                 ah_tri_t_last_level_2[i] = self._ah_last[k_layer, vertex]
@@ -865,13 +877,14 @@ cdef class ArakawaADataReader(DataReader):
         """
         cdef DTYPE_FLOAT_t zmin_last, zmax_last
         cdef DTYPE_FLOAT_t zmin_mext, zmax_next
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem()
 
         zmin_last = self.get_zmin(self._time_last, particle)
         zmax_last = self.get_zmax(self._time_last, particle)
         zmin_next = self.get_zmin(self._time_next, particle)
         zmax_next = self.get_zmax(self._time_next, particle)
 
-        if self._wet_cells_last[particle.host_horizontal_elem] == 0 or self._wet_cells_next[particle.host_horizontal_elem] == 0:
+        if self._wet_cells_last[host_element] == 0 or self._wet_cells_next[host_element] == 0:
             return 0
 
         if zmax_last < zmin_last or zmax_next < zmin_next:
@@ -956,6 +969,10 @@ cdef class ArakawaADataReader(DataReader):
         cdef DTYPE_FLOAT_t time_fraction
         cdef DTYPE_FLOAT_t var_last, var_next
         cdef vector[DTYPE_FLOAT_t] var_nodes = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+
+        # Host element
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem()
+
         cdef DTYPE_FLOAT_t var
         cdef DTYPE_INT_t i
 
@@ -963,7 +980,7 @@ cdef class ArakawaADataReader(DataReader):
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
         for i in xrange(N_VERTICES):
-            vertex = self._nv[i, particle.host_horizontal_elem]
+            vertex = self._nv[i, host_element]
             var_last = var_last_arr[k_level, vertex]
             var_next = var_next_arr[k_level, vertex]
 
