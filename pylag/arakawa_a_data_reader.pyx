@@ -377,7 +377,7 @@ cdef class ArakawaADataReader(DataReader):
                 particle.set_k_layer(k)
 
                 # Set the sigma level interpolation coefficient
-                particle.omega_interfaces = interp.get_linear_fraction(particle.x3, depth_lower_level, depth_upper_level)
+                particle.set_omega_interfaces(interp.get_linear_fraction(particle.x3, depth_lower_level, depth_upper_level))
 
                 # Check to see if any of the nodes on each level are masked
                 mask_upper_level = self._interp_mask_status_on_level(host_element, k)
@@ -718,8 +718,8 @@ cdef class ArakawaADataReader(DataReader):
 
             # Interpolate d{}/dx and d{}/dy between bounding depth levels and
             # save in the array Ah_prime
-            Ah_prime[0] = interp.linear_interp(particle.omega_interfaces, dah_dx_level_1, dah_dx_level_2)
-            Ah_prime[1] = interp.linear_interp(particle.omega_interfaces, dah_dy_level_1, dah_dy_level_2)
+            Ah_prime[0] = interp.linear_interp(particle.get_omega_interfaces(), dah_dx_level_1, dah_dx_level_2)
+            Ah_prime[1] = interp.linear_interp(particle.get_omega_interfaces(), dah_dy_level_1, dah_dy_level_2)
 
     cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time,
             Particle* particle) except FLOAT_ERR:
@@ -843,7 +843,7 @@ cdef class ArakawaADataReader(DataReader):
             dkh_lower_level = (kh_1 - kh_3) / (z_1 - z_3)
             dkh_upper_level = (kh_0 - kh_2) / (z_0 - z_2)
 
-        return interp.linear_interp(particle.omega_interfaces, dkh_lower_level, dkh_upper_level)
+        return interp.linear_interp(particle.get_omega_interfaces(), dkh_lower_level, dkh_upper_level)
 
     cdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, Particle *particle) except INT_ERR:
         """ Return an integer indicating whether `host' is wet or dry
@@ -933,7 +933,7 @@ cdef class ArakawaADataReader(DataReader):
             var_level_1 = self._get_variable_on_level(var_last, var_next, time, particle, k_layer+1)
             var_level_2 = self._get_variable_on_level(var_last, var_next, time, particle, k_layer)
 
-            return interp.linear_interp(particle.omega_interfaces, var_level_1, var_level_2)
+            return interp.linear_interp(particle.get_omega_interfaces(), var_level_1, var_level_2)
 
     cdef DTYPE_FLOAT_t _get_variable_on_level(self, DTYPE_FLOAT_t[:, :] var_last_arr, DTYPE_FLOAT_t[:, :] var_next_arr,
             DTYPE_FLOAT_t time, Particle* particle, DTYPE_INT_t k_level) except FLOAT_ERR:

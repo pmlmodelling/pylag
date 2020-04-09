@@ -30,6 +30,12 @@ namespace particles {
             void set_phi(const std::vector<double>& rhs);
             std::vector<double> get_phi() const;
 
+            void set_omega_interfaces(const double& rhs);
+            double get_omega_interfaces() const;
+
+            void set_omega_layers(const double& rhs);
+            double get_omega_layers() const;
+
             void set_in_domain(const bool& rhs);
             bool get_in_domain() const;
 
@@ -75,8 +81,12 @@ namespace particles {
             // Particle x3-position
             double x3;
 
+        private:
             // Local coordinates
             // -----------------
+
+            // Barycentric coordinates within the host element
+            std::vector<double> phi;
 
             // Vertical interpolation coefficient for variables defined at the interfaces
             // between k-levels
@@ -85,10 +95,6 @@ namespace particles {
             // Vertical interpolation coefficient for variables defined at the mid-point
             // of k-layers
             double omega_layers;
-
-        private:
-            // Barycentric coordinates within the host element
-            std::vector<double> phi;
 
             // Indices describing the particle's position within a given grid
             // --------------------------------------------------------------

@@ -91,7 +91,7 @@ cdef class Linear1DInterpolator:
         *particle: C pointer
             C Pointer to a Particle struct
         """
-        return linear_interp(particle.omega_interfaces,
+        return linear_interp(particle.get_omega_interfaces(),
                 self._fp[particle.get_k_layer()],
                 self._fp[particle.get_k_layer()+1])
 
@@ -103,7 +103,7 @@ cdef class Linear1DInterpolator:
         *particle: C pointer
             C Pointer to a Particle struct
         """
-        return linear_interp(particle.omega_interfaces,
+        return linear_interp(particle.get_omega_interfaces(),
                 self._fp_prime[particle.get_k_layer()],
                 self._fp_prime[particle.get_k_layer()+1])
 

@@ -383,7 +383,7 @@ cdef class FVCOMDataReader(DataReader):
                 particle.set_k_layer(k)
 
                 # Set the sigma level interpolation coefficient
-                particle.omega_interfaces = interp.get_linear_fraction(sigma, sigma_lower_level, sigma_upper_level)
+                particle.set_omega_interfaces(interp.get_linear_fraction(sigma, sigma_lower_level, sigma_upper_level))
 
                 # Set variables describing which half of the sigma layer the
                 # particle sits in and whether or not it resides in a boundary
@@ -407,7 +407,7 @@ cdef class FVCOMDataReader(DataReader):
                 # Set the sigma layer interpolation coefficient
                 sigma_lower_layer = self._interp_on_sigma_layer(phi, host_element, particle.get_k_lower_layer())
                 sigma_upper_layer = self._interp_on_sigma_layer(phi, host_element, particle.get_k_upper_layer())
-                particle.omega_layers = interp.get_linear_fraction(sigma, sigma_lower_layer, sigma_upper_layer)
+                particle.set_omega_layers(interp.get_linear_fraction(sigma, sigma_lower_layer, sigma_upper_layer))
 
                 return IN_DOMAIN
 
@@ -716,8 +716,8 @@ cdef class FVCOMDataReader(DataReader):
 
             # Interpolate d{}/dx and d{}/dy between bounding sigma layers and
             # save in the array Ah_prime
-            Ah_prime[0] = interp.linear_interp(particle.omega_layers, dviscofh_dx_layer_1, dviscofh_dx_layer_2)
-            Ah_prime[1] = interp.linear_interp(particle.omega_layers, dviscofh_dy_layer_1, dviscofh_dy_layer_2)
+            Ah_prime[0] = interp.linear_interp(particle.get_omega_layers(), dviscofh_dx_layer_1, dviscofh_dx_layer_2)
+            Ah_prime[1] = interp.linear_interp(particle.get_omega_layers(), dviscofh_dy_layer_1, dviscofh_dy_layer_2)
 
     cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time,
             Particle* particle) except FLOAT_ERR:
@@ -753,7 +753,7 @@ cdef class FVCOMDataReader(DataReader):
         kh_lower_level = self._get_vertical_eddy_diffusivity_on_level(time, particle, k_layer+1)
         kh_upper_level = self._get_vertical_eddy_diffusivity_on_level(time, particle, k_layer)
 
-        return interp.linear_interp(particle.omega_interfaces, kh_lower_level, kh_upper_level)
+        return interp.linear_interp(particle.get_omega_interfaces(), kh_lower_level, kh_upper_level)
 
 
     cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity_derivative(self,
@@ -860,7 +860,7 @@ cdef class FVCOMDataReader(DataReader):
             dkh_lower_level = (kh_1 - kh_3) / (z_1 - z_3)
             dkh_upper_level = (kh_0 - kh_2) / (z_0 - z_2)
             
-        return interp.linear_interp(particle.omega_interfaces, dkh_lower_level, dkh_upper_level)
+        return interp.linear_interp(particle.get_omega_interfaces(), dkh_lower_level, dkh_upper_level)
 
     cdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, Particle *particle) except INT_ERR:
         """ Return an integer indicating whether `host' is wet or dry
@@ -1001,7 +1001,7 @@ cdef class FVCOMDataReader(DataReader):
             var_layer_1 = interp.interpolate_within_element(var_tri_layer_1, phi)
             var_layer_2 = interp.interpolate_within_element(var_tri_layer_2, phi)
 
-            return interp.linear_interp(particle.omega_layers, var_layer_1, var_layer_2)
+            return interp.linear_interp(particle.get_omega_layers(), var_layer_1, var_layer_2)
 
     cdef DTYPE_FLOAT_t _get_vertical_eddy_diffusivity_on_level(self,
             DTYPE_FLOAT_t time, Particle* particle,
@@ -1187,9 +1187,9 @@ cdef class FVCOMDataReader(DataReader):
         wp2 = interp.shepard_interpolation(particle.x1, particle.x2, xc, yc, wc2)
 
         # Vertical interpolation
-        vel[0] = interp.linear_interp(particle.omega_layers, up1, up2)
-        vel[1] = interp.linear_interp(particle.omega_layers, vp1, vp2)
-        vel[2] = interp.linear_interp(particle.omega_layers, wp1, wp2)
+        vel[0] = interp.linear_interp(particle.get_omega_layers(), up1, up2)
+        vel[1] = interp.linear_interp(particle.get_omega_layers(), vp1, vp2)
+        vel[2] = interp.linear_interp(particle.get_omega_layers(), wp1, wp2)
         return
 
 #    cdef _get_velocity_using_linear_least_squares_interpolation(self,

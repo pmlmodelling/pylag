@@ -36,15 +36,15 @@ cdef class ParticleSmartPtr:
 
             # Overwrite with supplied optional arguments
             self._particle.group_id = group_id
+            self._particle.id = id
+            self._particle.status = status
             self._particle.x1 = x1
             self._particle.x2 = x2
             self._particle.x3 = x3
-            self._particle.omega_interfaces = omega_interfaces
-            self._particle.omega_layers = omega_layers
-            self._particle.set_in_domain(in_domain)
-            self._particle.id = id
-            self._particle.status = status
             self._particle.set_phi([phi1, phi2, phi3])
+            self._particle.set_omega_interfaces(omega_interfaces)
+            self._particle.set_omega_layers(omega_layers)
+            self._particle.set_in_domain(in_domain)
             self._particle.set_is_beached(is_beached)
             self._particle.set_host_horizontal_elem(host)
             self._particle.set_k_layer(k_layer)
@@ -96,11 +96,11 @@ cdef class ParticleSmartPtr:
 
     @property
     def omega_interfaces(self):
-        return self._particle.omega_interfaces
+        return self._particle.get_omega_interfaces()
 
     @property
     def omega_layers(self):
-        return self._particle.omega_layers
+        return self._particle.get_omega_layers()
 
     @property
     def in_domain(self):
@@ -197,8 +197,8 @@ cdef to_string(Particle* particle):
                                              phi[0],
                                              phi[1],
                                              phi[2],
-                                             particle.omega_interfaces,
-                                             particle.omega_layers,
+                                             particle.get_omega_interfaces(),
+                                             particle.get_omega_layers(),
                                              particle.get_host_horizontal_elem(),
                                              particle.get_in_vertical_boundary_layer(),
                                              particle.get_k_layer(),
