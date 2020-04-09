@@ -264,7 +264,7 @@ cdef class OPTModel:
                 particles_in_domain += 1
 
                 # Use the location of the last particle to guide the search for the
-                # next. This should be fast if particle initial positions are colocated.
+                # next. This should be fast if particle initial positions are collocated.
                 guess = particle_smart_ptr.host_horizontal_elem
             else:
                 particle_smart_ptr.get_ptr().set_in_domain(False)
