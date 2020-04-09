@@ -41,7 +41,7 @@ cdef class ParticleSmartPtr:
             self._particle.x3 = x3
             self._particle.omega_interfaces = omega_interfaces
             self._particle.omega_layers = omega_layers
-            self._particle.in_domain = in_domain
+            self._particle.set_in_domain(in_domain)
             self._particle.id = id
             self._particle.status = status
             self._particle.set_phi([phi1, phi2, phi3])
@@ -104,7 +104,7 @@ cdef class ParticleSmartPtr:
 
     @property
     def in_domain(self):
-        return self._particle.in_domain
+        return self._particle.get_in_domain()
 
     @property
     def is_beached(self):
@@ -204,7 +204,7 @@ cdef to_string(Particle* particle):
                                              particle.get_k_layer(),
                                              particle.get_k_lower_layer(),
                                              particle.get_k_upper_layer(),
-                                             particle.in_domain,
+                                             particle.get_in_domain(),
                                              particle.get_is_beached())
 
     return s

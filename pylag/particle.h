@@ -30,6 +30,9 @@ namespace particles {
             void set_phi(const std::vector<double>& rhs);
             std::vector<double> get_phi() const;
 
+            void set_in_domain(const bool& rhs);
+            bool get_in_domain() const;
+
             void set_is_beached(const int& rhs);
             int get_is_beached() const;
 
@@ -83,15 +86,15 @@ namespace particles {
             // of k-layers
             double omega_layers;
 
+        private:
+            // Barycentric coordinates within the host element
+            std::vector<double> phi;
+
             // Indices describing the particle's position within a given grid
             // --------------------------------------------------------------
 
             // Flag identifying whether or not the particle resides within the model domain.
             bool in_domain;
-
-        private:
-            // Barycentric coordinates within the host element
-            std::vector<double> phi;
 
             // Flag identifying whether or not a particle is beached
             int is_beached;

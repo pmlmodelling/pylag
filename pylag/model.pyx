@@ -159,7 +159,7 @@ cdef class OPTModel:
             particle_ptr = particle_smart_ptr.get_ptr()
             
             # Set vertical grid vars for particles that lie inside the domain
-            if particle_ptr.in_domain == True:
+            if particle_ptr.get_in_domain() == True:
 
                 # Grid limits for error checking
                 zmin = self.data_reader.get_zmin(time, particle_ptr)
@@ -256,7 +256,7 @@ cdef class OPTModel:
                 flag = self.data_reader.find_host_using_global_search(particle_smart_ptr.get_ptr())
 
             if flag == IN_DOMAIN:
-                particle_smart_ptr.get_ptr().in_domain = True
+                particle_smart_ptr.get_ptr().set_in_domain(True)
 
                 # Add particle to the particle set
                 self.particle_seed_smart_ptrs.append(particle_smart_ptr)
@@ -267,7 +267,7 @@ cdef class OPTModel:
                 # next. This should be fast if particle initial positions are colocated.
                 guess = particle_smart_ptr.host_horizontal_elem
             else:
-                particle_smart_ptr.get_ptr().in_domain = False
+                particle_smart_ptr.get_ptr().set_in_domain(False)
                 self.particle_seed_smart_ptrs.append(particle_smart_ptr)
 
         if particles_in_domain == 0:
@@ -293,11 +293,11 @@ cdef class OPTModel:
         cdef DTYPE_INT_t flag
 
         for particle_ptr in self.particle_ptrs:
-            if particle_ptr.in_domain:
+            if particle_ptr.get_in_domain():
                 flag = self.num_method.step(self.data_reader, time, particle_ptr)
 
                 if flag == OPEN_BDY_CROSSED:
-                    particle_ptr.in_domain = False
+                    particle_ptr.set_in_domain(False)
                     continue
                 elif flag == BDY_ERROR:
                     s = to_string(particle_ptr)
@@ -312,7 +312,7 @@ cdef class OPTModel:
                           "{}".format(time, s)
                     print msg
 
-                    particle_ptr.in_domain = False
+                    particle_ptr.set_in_domain(False)
                     particle_ptr.status = 1
                     continue
                 
@@ -357,11 +357,11 @@ cdef class OPTModel:
 
             # Particle state data
             diags['is_beached'].append(particle_ptr.get_is_beached())
-            diags['in_domain'].append(particle_ptr.in_domain)
+            diags['in_domain'].append(particle_ptr.get_in_domain())
             diags['status'].append(particle_ptr.status)
             
             # Grid variables
-            if particle_ptr.in_domain:
+            if particle_ptr.get_in_domain():
                 h = self.data_reader.get_zmin(time, particle_ptr)
                 zeta = self.data_reader.get_zmax(time, particle_ptr)
             else:
@@ -372,7 +372,7 @@ cdef class OPTModel:
 
             # Environmental variables
             for var_name in self.environmental_variables:
-                if particle_ptr.in_domain:
+                if particle_ptr.get_in_domain():
                     var = self.data_reader.get_environmental_variable(var_name, time, particle_ptr)
                     diags[var_name].append(var)
                 else:
