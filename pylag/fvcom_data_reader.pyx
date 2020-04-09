@@ -374,8 +374,9 @@ cdef class FVCOMDataReader(DataReader):
         sigma = cartesian_to_sigma_coords(particle.get_x3(), h, zeta)
 
         # Loop over all levels to find the host z layer
+        sigma_lower_level = self._interp_on_sigma_level(phi, host_element, 0)
         for k in xrange(self._n_siglay):
-            sigma_upper_level = self._interp_on_sigma_level(phi, host_element, k)
+            sigma_upper_level = sigma_lower_level
             sigma_lower_level = self._interp_on_sigma_level(phi, host_element, k+1)
 
             if sigma <= sigma_upper_level and sigma >= sigma_lower_level:
