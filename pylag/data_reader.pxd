@@ -19,8 +19,7 @@ cdef class DataReader:
                                                    Particle *particle) except INT_ERR
 
     cdef DTYPE_INT_t find_host_using_local_search(self,
-                                                  Particle *particle,
-                                                  DTYPE_INT_t first_guess) except INT_ERR
+                                                  Particle *particle) except INT_ERR
 
     cdef Intersection get_boundary_intersection(self, Particle *particle_old,
                                                 Particle *particle_new)

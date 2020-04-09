@@ -26,14 +26,11 @@ cdef class DataReader:
         raise NotImplementedError
 
     def find_host_using_local_search_wrapper(self,
-                                             ParticleSmartPtr particle,
-                                             DTYPE_INT_t first_guess):
-        return self.find_host_using_local_search(particle.get_ptr(),
-                                                 first_guess)
+                                             ParticleSmartPtr particle):
+        return self.find_host_using_local_search(particle.get_ptr())
 
     cdef DTYPE_INT_t find_host_using_local_search(self,
-                                                  Particle *particle,
-                                                  DTYPE_INT_t first_guess) except INT_ERR:
+                                                  Particle *particle) except INT_ERR:
         raise NotImplementedError
 
     def get_boundary_intersection_wrapper(self, ParticleSmartPtr particle_old,

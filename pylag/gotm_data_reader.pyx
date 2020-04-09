@@ -301,8 +301,7 @@ cdef class GOTMDataReader(DataReader):
         return IN_DOMAIN
 
     cdef DTYPE_INT_t find_host_using_local_search(self,
-                                                  Particle *particle_old,
-                                                  DTYPE_INT_t first_guess) except INT_ERR:
+                                                  Particle *particle_old) except INT_ERR:
         return IN_DOMAIN
 
     cdef set_local_coordinates(self, Particle *particle):

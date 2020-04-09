@@ -246,8 +246,9 @@ cdef class OPTModel:
 
             # Find particle host element
             if guess is not None:
-                # Try a local search first
-                flag = self.data_reader.find_host_using_local_search(particle_smart_ptr.get_ptr(), guess)
+                # Try a local search first using guess as a starting point
+                particle_smart_ptr.get_ptr().set_host_horizontal_elem(guess)
+                flag = self.data_reader.find_host_using_local_search(particle_smart_ptr.get_ptr())
                 if flag != IN_DOMAIN:
                     # Local search failed - try a global search
                     flag = self.data_reader.find_host_using_global_search(particle_smart_ptr.get_ptr())
@@ -267,6 +268,7 @@ cdef class OPTModel:
                 # next. This should be fast if particle initial positions are collocated.
                 guess = particle_smart_ptr.host_horizontal_elem
             else:
+                particle_smart_ptr.get_ptr().set_host_horizontal_elem(-999)
                 particle_smart_ptr.get_ptr().set_in_domain(False)
                 self.particle_seed_smart_ptrs.append(particle_smart_ptr)
 

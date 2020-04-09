@@ -55,8 +55,7 @@ cdef class UnstructuredGrid:
         self.xc = xc[:]
         self.yc = yc[:]
 
-    cdef DTYPE_INT_t find_host_using_local_search(self, Particle *particle,
-                                                  DTYPE_INT_t first_guess) except INT_ERR:
+    cdef DTYPE_INT_t find_host_using_local_search(self, Particle *particle) except INT_ERR:
         """ Returns the host horizontal element through local searching.
 
         Use a local search for the host horizontal element in which the next
@@ -87,9 +86,6 @@ cdef class UnstructuredGrid:
         particle: *Particle
             The particle.
 
-        DTYPE_INT_t: first_guess
-            The first element to start searching.
-
         Returns:
         --------
         flag : int
@@ -106,7 +102,7 @@ cdef class UnstructuredGrid:
         cdef DTYPE_INT_t flag, guess, last_guess, second_to_last_guess
 
         # Check for non-sensical start points.
-        guess = first_guess
+        guess = particle.get_host_horizontal_elem()
         if guess < 0:
             raise ValueError('Invalid start point for local host element '\
                     'search. Start point = {}'.format(guess))

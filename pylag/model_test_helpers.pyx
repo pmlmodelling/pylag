@@ -47,8 +47,7 @@ cdef class TestOPTModelDataReader(DataReader):
             return IN_DOMAIN
 
     cdef DTYPE_INT_t find_host_using_local_search(self,
-                                                  Particle *particle_old,
-                                                  DTYPE_INT_t first_guess) except INT_ERR:
+                                                  Particle *particle_old) except INT_ERR:
         if particle_old.get_x1() < self._xmin or particle_old.get_x1() > self._xmax:
             return BDY_ERROR
         elif particle_old.get_x2() < self._ymin or particle_old.get_x2() > self._ymax:

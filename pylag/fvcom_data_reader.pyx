@@ -259,20 +259,25 @@ cdef class FVCOMDataReader(DataReader):
             Integer flag that indicates whether or not the seach was successful.
         """
         cdef DTYPE_INT_t flag, host
-        
-        flag = self._unstructured_grid.find_host_using_local_search(particle_new,
-                                                                    particle_old.get_host_horizontal_elem())
 
-        if flag != IN_DOMAIN:
-            # Local search failed to find the particle. Perform check to see if
-            # the particle has indeed left the model domain
-            flag = self._unstructured_grid.find_host_using_particle_tracing(particle_old,
-                                                                            particle_new)
+        # Save a copy of the current host, then use the old host to start a local search
+        host = particle_new.get_host_horizontal_elem()
+        particle_new.set_host_horizontal_elem(particle_old.get_host_horizontal_elem())
+        flag = self._unstructured_grid.find_host_using_local_search(particle_new)
+
+        if flag == IN_DOMAIN:
+            return flag
+
+        # Local search failed to find the particle. Perform check to see if
+        # the particle has indeed left the model domain. Reset the host first
+        # in order to preserve the original state of particle_new.
+        particle_new.set_host_horizontal_elem(host)
+        flag = self._unstructured_grid.find_host_using_particle_tracing(particle_old,
+                                                                        particle_new)
 
         return flag
 
-    cdef DTYPE_INT_t find_host_using_local_search(self, Particle *particle,
-                                                  DTYPE_INT_t first_guess) except INT_ERR:
+    cdef DTYPE_INT_t find_host_using_local_search(self, Particle *particle) except INT_ERR:
         """ Returns the host horizontal element through local searching.
 
         This function is a wrapper for the same function implemented in UnstructuredGrid.
@@ -282,15 +287,12 @@ cdef class FVCOMDataReader(DataReader):
         particle: *Particle
             The particle.
 
-        DTYPE_INT_t: first_guess
-            The first element to start searching.
-
         Returns:
         --------
         flag : int
             Integer flag that indicates whether or not the seach was successful.
         """
-        return self._unstructured_grid.find_host_using_local_search(particle, first_guess)
+        return self._unstructured_grid.find_host_using_local_search(particle)
 
     cdef DTYPE_INT_t find_host_using_global_search(self, Particle *particle) except INT_ERR:
         """ Returns the host horizontal element through global searching.
