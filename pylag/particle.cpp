@@ -68,6 +68,30 @@ namespace particles {
 
     // Getters and setters
     // -------------------
+    void Particle::set_group_id(const int& rhs) {
+        group_id = rhs;
+    }
+
+    int Particle::get_group_id() const {
+        return group_id;
+    }
+
+    void Particle::set_id(const int& rhs) {
+        id = rhs;
+    }
+
+    int Particle::get_id() const {
+        return id;
+    }
+
+    void Particle::set_status(const int& rhs) {
+        status = rhs;
+    }
+
+    int Particle::get_status() const {
+        return status;
+    }
+
     void Particle::set_x1(const double& rhs) {
         x1 = rhs;
     }

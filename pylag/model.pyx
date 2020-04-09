@@ -313,7 +313,7 @@ cdef class OPTModel:
                     print msg
 
                     particle_ptr.set_in_domain(False)
-                    particle_ptr.status = 1
+                    particle_ptr.set_status(1)
                     continue
                 
     def get_diagnostics(self, time):
@@ -358,7 +358,7 @@ cdef class OPTModel:
             # Particle state data
             diags['is_beached'].append(particle_ptr.get_is_beached())
             diags['in_domain'].append(particle_ptr.get_in_domain())
-            diags['status'].append(particle_ptr.status)
+            diags['status'].append(particle_ptr.get_status())
             
             # Grid variables
             if particle_ptr.get_in_domain():

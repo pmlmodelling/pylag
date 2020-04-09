@@ -12,6 +12,15 @@ cdef extern from "particle.h" namespace "particles":
         Particle(const Particle&) except +
         Particle& operator=(const Particle&) except +
 
+        void set_group_id(const DTYPE_INT_t&) except +
+        DTYPE_INT_t get_group_id() except +
+
+        void set_id(const DTYPE_INT_t&) except +
+        DTYPE_INT_t get_id() except +
+
+        void set_status(const DTYPE_INT_t&) except +
+        DTYPE_INT_t get_status() except +
+
         void set_x1(const DTYPE_FLOAT_t&) except +
         DTYPE_FLOAT_t get_x1() except +
 
@@ -50,8 +59,4 @@ cdef extern from "particle.h" namespace "particles":
 
         void set_k_upper_layer(const DTYPE_INT_t&) except +
         DTYPE_INT_t get_k_upper_layer() except +
-
-        DTYPE_INT_t group_id
-        DTYPE_INT_t id
-        DTYPE_INT_t status
 

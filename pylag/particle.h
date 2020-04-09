@@ -27,6 +27,15 @@ namespace particles {
             // Getters and setters
             // -------------------
 
+            void set_group_id(const int& rhs);
+            int get_group_id() const;
+
+            void set_id(const int& rhs);
+            int get_id() const;
+
+            void set_status(const int& rhs);
+            int get_status() const;
+
             void set_x1(const double& rhs);
             double get_x1() const;
 
@@ -66,6 +75,9 @@ namespace particles {
             void set_k_layer(const int& rhs);
             int get_k_layer() const;
 
+
+        private:
+
             // Particle properties
             // --------------------
 
@@ -77,8 +89,6 @@ namespace particles {
 
             // Status flag (0 - okay; 1 - error)
             int status;
-
-        private:
 
             // Global coordinates
             // ------------------

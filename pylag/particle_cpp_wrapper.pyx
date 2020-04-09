@@ -35,9 +35,9 @@ cdef class ParticleSmartPtr:
             self._particle = new Particle()
 
             # Overwrite with supplied optional arguments
-            self._particle.group_id = group_id
-            self._particle.id = id
-            self._particle.status = status
+            self._particle.set_group_id(group_id)
+            self._particle.set_id(id)
+            self._particle.set_status(status)
             self._particle.set_x1(x1)
             self._particle.set_x2(x2)
             self._particle.set_x3(x3)
@@ -75,7 +75,7 @@ cdef class ParticleSmartPtr:
             Dictionary containing data that describes the particle's basic state.
         """
 
-        data = {'group_id': self._particle.group_id,
+        data = {'group_id': self._particle.get_group_id(),
                 'x1': self._particle.get_x1(),
                 'x2': self._particle.get_x2(),
                 'x3': self._particle.get_x3()}
@@ -190,7 +190,7 @@ cdef to_string(Particle* particle):
         "Partilce k lower layer = {} \n"\
         "Partilce k upper layer = {} \n"\
         "Particle in domain = {} \n"\
-        "Particle is beached = {} \n".format(particle.id, 
+        "Particle is beached = {} \n".format(particle.get_id(),
                                              particle.get_x1(),
                                              particle.get_x2(),
                                              particle.get_x3(),
