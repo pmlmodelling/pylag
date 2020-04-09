@@ -42,9 +42,10 @@ cdef class UnstructuredGrid:
         Mediator object for managing access to data read from file.
     """
 
-    def __init__(self, config, n_nodes, n_elems, nv, nbe, x, y, xc, yc):
+    def __init__(self, config, name, n_nodes, n_elems, nv, nbe, x, y, xc, yc):
         self.config = config
 
+        self.name = name
         self.n_nodes = n_nodes
         self.n_elems = n_elems
         self.nv = nv[:]

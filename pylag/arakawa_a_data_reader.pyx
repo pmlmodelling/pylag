@@ -15,6 +15,7 @@ from cpython cimport bool
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
+from libcpp.string cimport string
 from libcpp.vector cimport vector
 
 # PyLag cython imports
@@ -59,6 +60,9 @@ cdef class ArakawaADataReader(DataReader):
 
     # Unstructured grid object for performing grid searching etc
     cdef UnstructuredGrid _unstructured_grid
+
+    # The name of the grid
+    cdef string _name
 
     # Grid dimensions
     cdef DTYPE_INT_t _n_longitude, _n_latitude, _n_depth, _n_elems, _n_nodes
@@ -135,6 +139,8 @@ cdef class ArakawaADataReader(DataReader):
     def __init__(self, config, mediator):
         self.config = config
         self.mediator = mediator
+
+        self._name = b'arakawa_a'
 
         # Time direction
         self._time_direction = <int>get_time_direction(config)
@@ -1040,7 +1046,7 @@ cdef class ArakawaADataReader(DataReader):
         yc = yc - self._ymin
 
         # Initialise unstructured grid
-        self._unstructured_grid = UnstructuredGrid(self.config, self._n_nodes, self._n_elems, self._nv, self._nbe, x, y, xc, yc)
+        self._unstructured_grid = UnstructuredGrid(self.config, self._name, self._n_nodes, self._n_elems, self._nv, self._nbe, x, y, xc, yc)
 
         # Depth levels at nodal coordinates. Assumes and requires that depth is positive down. The -1 multiplier
         # flips this so that depth is positive up from the zero geoid.

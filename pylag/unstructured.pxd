@@ -1,5 +1,6 @@
 include "constants.pxi"
 
+from libcpp.string cimport string
 from libcpp.vector cimport vector
 
 # Data types used for constructing C data structures
@@ -13,6 +14,9 @@ cdef class UnstructuredGrid:
 
     # Configurtion object
     cdef object config
+
+    # The grid name
+    cdef string name
 
     # Grid dimensions
     cdef DTYPE_INT_t n_elems, n_nodes

@@ -15,6 +15,7 @@ from cpython cimport bool
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
+from libcpp.string cimport string
 from libcpp.vector cimport vector
 
 # PyLag cython imports
@@ -60,6 +61,9 @@ cdef class FVCOMDataReader(DataReader):
 
     # List of environmental variables to read and save
     cdef object env_var_names
+
+    # The name of the grid
+    cdef string _name
 
     # Grid dimensions
     cdef DTYPE_INT_t _n_elems, _n_nodes, _n_siglay, _n_siglev
@@ -138,6 +142,8 @@ cdef class FVCOMDataReader(DataReader):
     def __init__(self, config, mediator):
         self.config = config
         self.mediator = mediator
+
+        self._name = b'fvcom'
 
         # Time direction
         self._time_direction = <int>get_time_direction(config)
@@ -1248,7 +1254,7 @@ cdef class FVCOMDataReader(DataReader):
         self._yc = yc - self._ymin
 
         # Initialise unstructured grid
-        self._unstructured_grid = UnstructuredGrid(self.config, self._n_nodes, self._n_elems, self._nv,
+        self._unstructured_grid = UnstructuredGrid(self.config, self._name, self._n_nodes, self._n_elems, self._nv,
                                                    self._nbe, self._x, self._y, self._xc, self._yc)
 
         # Sigma levels at nodal coordinates
