@@ -334,16 +334,16 @@ cdef class GOTMDataReader(DataReader):
             if k < 0 or k >= self._n_zlay:
                 continue
 
-            if particle.x3 <= self._zlev[k+1] and particle.x3 >= self._zlev[k]:
+            if particle.get_x3() <= self._zlev[k+1] and particle.get_x3() >= self._zlev[k]:
                 particle.set_k_layer(k)
-                particle.set_omega_interfaces(interp.get_linear_fraction_safe(particle.x3, self._zlev[k], self._zlev[k+1]))
+                particle.set_omega_interfaces(interp.get_linear_fraction_safe(particle.get_x3(), self._zlev[k], self._zlev[k+1]))
                 return IN_DOMAIN
 
         # Search the full vertical grid
         for k in xrange(self._n_zlay): 
-            if particle.x3 <= self._zlev[k+1] and particle.x3 >= self._zlev[k]:
+            if particle.get_x3() <= self._zlev[k+1] and particle.get_x3() >= self._zlev[k]:
                 particle.set_k_layer(k)
-                particle.set_omega_interfaces(interp.get_linear_fraction_safe(particle.x3, self._zlev[k], self._zlev[k+1]))
+                particle.set_omega_interfaces(interp.get_linear_fraction_safe(particle.get_x3(), self._zlev[k], self._zlev[k+1]))
                 return IN_DOMAIN
     
         # Return error flag if particle not found

@@ -197,7 +197,7 @@ cdef class StdNumMethod(NumMethod):
         # Restore to a fixed depth?
         if self._depth_restoring is True:
             zmax = data_reader.get_zmax(time+self._time_step, &_particle_copy)
-            _particle_copy.x3 = self._fixed_depth_below_surface + zmax
+            _particle_copy.set_x3(self._fixed_depth_below_surface + zmax)
             
             # Determine the new host zlayer
             flag = data_reader.set_vertical_grid_vars(time+self._time_step, &_particle_copy)
@@ -454,7 +454,7 @@ cdef class OS0NumMethod(NumMethod):
         # Restore to a fixed depth?
         if self._depth_restoring is True:
             zmax = data_reader.get_zmax(time+self._adv_time_step, &_particle_copy_b)
-            _particle_copy_b.x3 = self._fixed_depth_below_surface + zmax
+            _particle_copy_b.set_x3(self._fixed_depth_below_surface + zmax)
             
             # Determine the new host zlayer
             flag = data_reader.set_vertical_grid_vars(time+self._adv_time_step, &_particle_copy_b)
@@ -705,7 +705,7 @@ cdef class OS1NumMethod(NumMethod):
         # Restore to a fixed depth?
         if self._depth_restoring is True:
             zmax = data_reader.get_zmax(t, &_particle_copy_b)
-            _particle_copy_b.x3 = self._fixed_depth_below_surface + zmax
+            _particle_copy_b.set_x3(self._fixed_depth_below_surface + zmax)
             
             # Determine the new host zlayer
             flag = data_reader.set_vertical_grid_vars(t, &_particle_copy_b)
@@ -904,8 +904,8 @@ cdef class AdvRK42DItMethod(ItMethod):
         data_reader.get_horizontal_velocity(t, &_particle, vel) 
         for i in xrange(ndim):
             k2[i] = self._time_step * vel[i]
-        _particle.x1 = particle.x1
-        _particle.x2 = particle.x2
+        _particle.set_x1(particle.get_x1())
+        _particle.set_x2(particle.get_x2())
         _delta_X.x1 = 0.5 * k2[0]
         _delta_X.x2 = 0.5 * k2[1]
 
@@ -929,8 +929,8 @@ cdef class AdvRK42DItMethod(ItMethod):
         data_reader.get_horizontal_velocity(t, &_particle, vel)
         for i in xrange(ndim):
             k3[i] = self._time_step * vel[i]
-        _particle.x1 = particle.x1
-        _particle.x2 = particle.x2
+        _particle.set_x1(particle.get_x1())
+        _particle.set_x2(particle.get_x2())
         _delta_X.x1 = k3[0]
         _delta_X.x2 = k3[1]
 
@@ -1095,9 +1095,9 @@ cdef class AdvRK43DItMethod(ItMethod):
         for i in xrange(ndim):
             k2[i] = self._time_step * vel[i]
 
-        _particle.x1 = particle.x1
-        _particle.x2 = particle.x2
-        _particle.x3 = particle.x3
+        _particle.set_x1(particle.get_x1())
+        _particle.set_x2(particle.get_x2())
+        _particle.set_x3(particle.get_x3())
         _delta_X.x1 = 0.5 * k2[0]
         _delta_X.x2 = 0.5 * k2[1]
         _delta_X.x3 = 0.5 * k2[2]
@@ -1130,9 +1130,9 @@ cdef class AdvRK43DItMethod(ItMethod):
         for i in xrange(ndim):
             k3[i] = self._time_step * vel[i]
 
-        _particle.x1 = particle.x1
-        _particle.x2 = particle.x2
-        _particle.x3 = particle.x3
+        _particle.set_x1(particle.get_x1())
+        _particle.set_x2(particle.get_x2())
+        _particle.set_x3(particle.get_x3())
         _delta_X.x1 = k3[0]
         _delta_X.x2 = k3[1]
         _delta_X.x3 = k3[2]
@@ -1346,11 +1346,11 @@ cdef class DiffVisser1DItMethod(ItMethod):
 
         data_reader.get_velocity(time, particle, vel)
         
-        x3_offset = particle.x3 + 0.5 * (vel[2] + Kh_prime) * self._time_step
+        x3_offset = particle.get_x3() + 0.5 * (vel[2] + Kh_prime) * self._time_step
 
         # Create a copy of the particle and move it to the offset position
         _particle = particle[0]
-        _particle.x3 = x3_offset
+        _particle.set_x3(x3_offset)
 
         # Set vertical grid vars.
         flag = data_reader.set_vertical_grid_vars(time, &_particle)

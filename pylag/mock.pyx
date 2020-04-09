@@ -66,23 +66,23 @@ cdef class MockVelocityDataReader(DataReader):
         """ Return velocity field array for the given space/time coordinates.
         
         """  
-        vel[0] = self._get_u_component(particle.x1)
-        vel[1] = self._get_v_component(particle.x2)
-        vel[2] = self._get_w_component(particle.x3)
+        vel[0] = self._get_u_component(particle.get_x1())
+        vel[1] = self._get_v_component(particle.get_x2())
+        vel[2] = self._get_w_component(particle.get_x3())
 
     cdef get_horizontal_velocity(self, DTYPE_FLOAT_t time, Particle* particle,
             DTYPE_FLOAT_t vel[2]):
         """ Return horizontal velocity for the given space/time coordinates.
         
         """  
-        vel[0] = self._get_u_component(particle.x1)
-        vel[1] = self._get_v_component(particle.x2)
+        vel[0] = self._get_u_component(particle.get_x1())
+        vel[1] = self._get_v_component(particle.get_x2())
 
     cdef get_vertical_velocity(self, DTYPE_FLOAT_t time, Particle* particle):
         """ Return vertical velocity field for the given space/time coordinates.
         
         """ 
-        return self._get_w_component(particle.x3)
+        return self._get_w_component(particle.get_x3())
 
     cdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, Particle *particle) except INT_ERR:
         """ Return is_wet status
@@ -196,7 +196,7 @@ cdef class MockVerticalDiffusivityDataReader(DataReader):
         """ Returns the vertical eddy diffusivity at x3.
         
         """  
-        return self._get_vertical_eddy_diffusivity(particle.x3)
+        return self._get_vertical_eddy_diffusivity(particle.get_x3())
 
     def _get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t x3):
         cdef DTYPE_FLOAT_t k
@@ -211,7 +211,7 @@ cdef class MockVerticalDiffusivityDataReader(DataReader):
         This is approximated numerically, as in PyLag, as opposed to being
         computed directly using the derivative of k.
         """
-        return self._get_vertical_eddy_diffusivity_derivative(particle.x3)
+        return self._get_vertical_eddy_diffusivity_derivative(particle.get_x3())
     
     def _get_vertical_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t x3):
         cdef DTYPE_FLOAT_t x3_increment, x3_incremented
@@ -308,7 +308,7 @@ cdef class MockHorizontalEddyViscosityDataReader(DataReader):
         Ah : float
             The horizontal eddy viscosity. 
         """
-        return particle.x1**2 + particle.x2**2 + self._C
+        return particle.get_x1()**2 + particle.get_x2()**2 + self._C
 
     cdef get_horizontal_eddy_viscosity_derivative(self, DTYPE_FLOAT_t time,
             Particle* particle, DTYPE_FLOAT_t Ah_prime[2]):
@@ -327,8 +327,8 @@ cdef class MockHorizontalEddyViscosityDataReader(DataReader):
         Ah_prime : C array, float
             dAh_dx and dH_dy components stored in a C array of length two.
         """
-        Ah_prime[0] = 2.0 * particle.x1
-        Ah_prime[1] = 2.0 * particle.x2
+        Ah_prime[0] = 2.0 * particle.get_x1()
+        Ah_prime[1] = 2.0 * particle.get_x2()
 
         return
 
@@ -471,13 +471,13 @@ cdef class MockOneDNumMethod:
         for i in xrange(n_x3):
             # Set x3, local coordinates and variables that define the location
             # of the particle within the vertical grid
-            particle.get_ptr().x3 = x3_arr[i]
+            particle.get_ptr().set_x3(x3_arr[i])
             data_reader.set_local_coordinates(particle.get_ptr())
             if data_reader.set_vertical_grid_vars(time, particle.get_ptr()) != IN_DOMAIN:
                 raise RuntimeError('Test particle is not in the domain.')
 
             if self._num_method.step(data_reader, time, particle.get_ptr()) == IN_DOMAIN:
-                x3_new_arr[i] = particle.get_ptr().x3
+                x3_new_arr[i] = particle.get_ptr().get_x3()
             else:
                 raise RuntimeError('Test particle left the domain.')
 
@@ -512,16 +512,16 @@ cdef class MockTwoDNumMethod:
         x2_new_arr = np.empty(n_particles, dtype=DTYPE_FLOAT)
         
         for i in xrange(n_particles):
-            particle.get_ptr().x1 = x1_arr[i]
-            particle.get_ptr().x2 = x2_arr[i]
+            particle.get_ptr().set_x1(x1_arr[i])
+            particle.get_ptr().set_x2(x2_arr[i])
 
             data_reader.set_local_coordinates(particle.get_ptr())
             if data_reader.set_vertical_grid_vars(time, particle.get_ptr()) != IN_DOMAIN:
                 raise RuntimeError('Test particle is not in the domain.')
 
             if self._num_method.step(data_reader, time, particle.get_ptr()) == IN_DOMAIN:
-                x1_new_arr[i] = particle.get_ptr().x1
-                x2_new_arr[i] = particle.get_ptr().x2
+                x1_new_arr[i] = particle.get_ptr().get_x1()
+                x2_new_arr[i] = particle.get_ptr().get_x2()
             else:
                 raise RuntimeError('Test particle left the domain.')
 
@@ -556,9 +556,9 @@ cdef class MockThreeDNumMethod:
         x3_new_arr = np.empty(n_particles, dtype=DTYPE_FLOAT)
         
         for i in xrange(n_particles):
-            particle.get_ptr().x1 = x1_arr[i]
-            particle.get_ptr().x2 = x2_arr[i]
-            particle.get_ptr().x3 = x3_arr[i]
+            particle.get_ptr().set_x1(x1_arr[i])
+            particle.get_ptr().set_x2(x2_arr[i])
+            particle.get_ptr().set_x3(x3_arr[i])
 
             data_reader.set_local_coordinates(particle.get_ptr())
             if data_reader.set_vertical_grid_vars(time, particle.get_ptr()) != IN_DOMAIN:
@@ -566,9 +566,9 @@ cdef class MockThreeDNumMethod:
 
             if self._num_method.step(data_reader, time, particle.get_ptr()) == IN_DOMAIN:
                 # Save new position
-                x1_new_arr[i] = particle.get_ptr().x1
-                x2_new_arr[i] = particle.get_ptr().x2
-                x3_new_arr[i] = particle.get_ptr().x3
+                x1_new_arr[i] = particle.get_ptr().get_x1()
+                x2_new_arr[i] = particle.get_ptr().get_x2()
+                x3_new_arr[i] = particle.get_ptr().get_x3()
             else:
                 raise RuntimeError('Test particle left the domain.')
 

@@ -30,18 +30,18 @@ cdef class TestOPTModelDataReader(DataReader):
 
     cdef DTYPE_INT_t find_host(self, Particle *particle_old,
                                Particle *particle_new) except INT_ERR:
-        if particle_new.x1 < self._xmin or particle_new.x1 > self._xmax:
+        if particle_new.get_x1() < self._xmin or particle_new.get_x1() > self._xmax:
             return BDY_ERROR
-        elif particle_new.x2 < self._ymin or particle_new.x2 > self._ymax:
+        elif particle_new.get_x2() < self._ymin or particle_new.get_x2() > self._ymax:
             return  BDY_ERROR
         else:
             return IN_DOMAIN
 
     cdef DTYPE_INT_t find_host_using_global_search(self,
                                                    Particle *particle) except INT_ERR:
-        if particle.x1 < self._xmin or particle.x1 > self._xmax:
+        if particle.get_x1() < self._xmin or particle.get_x1() > self._xmax:
             return BDY_ERROR
-        elif particle.x2 < self._ymin or particle.x2 > self._ymax:
+        elif particle.get_x2() < self._ymin or particle.get_x2() > self._ymax:
             return  BDY_ERROR
         else:
             return IN_DOMAIN
@@ -49,9 +49,9 @@ cdef class TestOPTModelDataReader(DataReader):
     cdef DTYPE_INT_t find_host_using_local_search(self,
                                                   Particle *particle_old,
                                                   DTYPE_INT_t first_guess) except INT_ERR:
-        if particle_old.x1 < self._xmin or particle_old.x1 > self._xmax:
+        if particle_old.get_x1() < self._xmin or particle_old.get_x1() > self._xmax:
             return BDY_ERROR
-        elif particle_old.x2 < self._ymin or particle_old.x2 > self._ymax:
+        elif particle_old.get_x2() < self._ymin or particle_old.get_x2() > self._ymax:
             return  BDY_ERROR
         else:
             return IN_DOMAIN

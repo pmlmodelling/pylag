@@ -38,9 +38,9 @@ cdef class ParticleSmartPtr:
             self._particle.group_id = group_id
             self._particle.id = id
             self._particle.status = status
-            self._particle.x1 = x1
-            self._particle.x2 = x2
-            self._particle.x3 = x3
+            self._particle.set_x1(x1)
+            self._particle.set_x2(x2)
+            self._particle.set_x3(x3)
             self._particle.set_phi([phi1, phi2, phi3])
             self._particle.set_omega_interfaces(omega_interfaces)
             self._particle.set_omega_layers(omega_layers)
@@ -76,23 +76,23 @@ cdef class ParticleSmartPtr:
         """
 
         data = {'group_id': self._particle.group_id,
-                'x1': self._particle.x1,
-                'x2': self._particle.x2,
-                'x3': self._particle.x3}
+                'x1': self._particle.get_x1(),
+                'x2': self._particle.get_x2(),
+                'x3': self._particle.get_x3()}
 
         return data
 
     @property
     def x1(self):
-        return self._particle.x1
+        return self._particle.get_x1()
 
     @property
     def x2(self):
-        return self._particle.x2
+        return self._particle.get_x2()
 
     @property
     def x3(self):
-        return self._particle.x3
+        return self._particle.get_x3()
 
     @property
     def omega_interfaces(self):
@@ -191,9 +191,9 @@ cdef to_string(Particle* particle):
         "Partilce k upper layer = {} \n"\
         "Particle in domain = {} \n"\
         "Particle is beached = {} \n".format(particle.id, 
-                                             particle.x1,
-                                             particle.x2,
-                                             particle.x3,
+                                             particle.get_x1(),
+                                             particle.get_x2(),
+                                             particle.get_x3(),
                                              phi[0],
                                              phi[1],
                                              phi[2],

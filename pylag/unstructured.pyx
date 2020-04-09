@@ -116,7 +116,7 @@ cdef class UnstructuredGrid:
 
         while True:
             # Barycentric coordinates
-            self.get_phi(particle.x1, particle.x2, guess, phi)
+            self.get_phi(particle.get_x1(), particle.get_x2(), guess, phi)
 
             # Check to see if the particle is in the current element
             phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
@@ -239,8 +239,8 @@ cdef class UnstructuredGrid:
 
         # Construct arrays to hold the coordinates of the particle's previous
         # position vector and its new position vector
-        x3[0] = particle_old.x1; x3[1] = particle_old.x2
-        x4[0] = particle_new.x1; x4[1] = particle_new.x2
+        x3[0] = particle_old.get_x1(); x3[1] = particle_old.get_x2()
+        x4[0] = particle_new.get_x1(); x4[1] = particle_new.get_x2()
 
         # Start the search using the host known to contain (x1_old, x2_old)
         elem = particle_old.get_host_horizontal_elem()
@@ -355,7 +355,7 @@ cdef class UnstructuredGrid:
 
         for guess in xrange(self.n_elems):
             # Barycentric coordinates
-            self.get_phi(particle.x1, particle.x2, guess, phi)
+            self.get_phi(particle.get_x1(), particle.get_x2(), guess, phi)
 
             # Check to see if the particle is in the current element
             phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
@@ -451,8 +451,8 @@ cdef class UnstructuredGrid:
 
         # Construct arrays to hold the coordinates of the particle's previous
         # position vector and its new position vector
-        x3[0] = particle_old.x1; x3[1] = particle_old.x2
-        x4[0] = particle_new.x1; x4[1] = particle_new.x2
+        x3[0] = particle_old.get_x1(); x3[1] = particle_old.get_x2()
+        x4[0] = particle_new.get_x1(); x4[1] = particle_new.get_x2()
 
         # Extract nodal coordinates
         for i in xrange(3):
@@ -504,8 +504,8 @@ cdef class UnstructuredGrid:
         """
         cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem()
 
-        particle.x1 = self.xc[host_element]
-        particle.x2 = self.yc[host_element]
+        particle.set_x1(self.xc[host_element])
+        particle.set_x2(self.yc[host_element])
         self.set_local_coordinates(particle)
         return
 
@@ -527,7 +527,7 @@ cdef class UnstructuredGrid:
 
         cdef DTYPE_INT_t i
 
-        self.get_phi(particle.x1, particle.x2, host_element, phi)
+        self.get_phi(particle.get_x1(), particle.get_x2(), host_element, phi)
 
         # Check for negative values.
         for i in xrange(3):

@@ -170,35 +170,35 @@ cdef class OPTModel:
 
                     if self.config.get("SIMULATION", "depth_coordinates") == "depth_below_surface":
                         # Use zero geoid to check for semi-sensible starting depths
-                        if particle_ptr.x3 < zmin:
-                            raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(particle_ptr.x3, zmin))
+                        if particle_ptr.get_x3() < zmin:
+                            raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(particle_ptr.get_x3(), zmin))
 
                         # x3 is given as the depth below the moving free surface. Use this and zeta (zmax) to compute z
-                        particle_ptr.x3 = particle_ptr.x3 + zmax
+                        particle_ptr.set_x3(particle_ptr.get_x3() + zmax)
 
                     elif self.config.get("SIMULATION", "depth_coordinates") == "height_above_bottom":
                         # Use zero geoid to check for semi-sensible starting depths
-                        if particle_ptr.x3 + zmin > 0.0:
-                            raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(particle_ptr.x3, zmax))
+                        if particle_ptr.get_x3() + zmin > 0.0:
+                            raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(particle_ptr.get_x3(), zmax))
 
                         # x3 is given as the height above the sea floor. Use this and h (zmin) to compute z
-                        particle_ptr.x3 = particle_ptr.x3 + zmin
+                        particle_ptr.set_x3(particle_ptr.get_x3() + zmin)
 
                 # Determine if the host element is presently dry
                 if self.data_reader.is_wet(time, particle_ptr) == 1:
                     particle_ptr.set_is_beached(0)
 
                     # Second check that the given depth is valid
-                    if particle_ptr.x3 < zmin:
-                        raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(particle_ptr.x3, zmin))
-                    elif particle_ptr.x3 > zmax:
-                        raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(particle_ptr.x3, zmax))
+                    if particle_ptr.get_x3() < zmin:
+                        raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(particle_ptr.get_x3(), zmin))
+                    elif particle_ptr.get_x3() > zmax:
+                        raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(particle_ptr.get_x3(), zmax))
 
                     # Find the host z layer
                     flag = self.data_reader.set_vertical_grid_vars(time, particle_ptr)
 
                     if flag != IN_DOMAIN:
-                        raise ValueError("Supplied depth z (= {}) is not within the grid (h = {}, zeta={}).".format(particle_ptr.x3, zmin, zmax))
+                        raise ValueError("Supplied depth z (= {}) is not within the grid (h = {}, zeta={}).".format(particle_ptr.get_x3(), zmin, zmax))
 
                 else:
                     # Don't set vertical grid vars as this will fail if zeta < h. They will be set later.
@@ -350,9 +350,9 @@ cdef class OPTModel:
 
         for particle_ptr in self.particle_ptrs:
             # Particle location data
-            diags['x1'].append(particle_ptr.x1 + xmin)
-            diags['x2'].append(particle_ptr.x2 + ymin)
-            diags['x3'].append(particle_ptr.x3)
+            diags['x1'].append(particle_ptr.get_x1() + xmin)
+            diags['x2'].append(particle_ptr.get_x2() + ymin)
+            diags['x3'].append(particle_ptr.get_x3())
             diags['host_horizontal_elem'].append(particle_ptr.get_host_horizontal_elem())
 
             # Particle state data

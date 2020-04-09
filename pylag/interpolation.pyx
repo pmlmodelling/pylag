@@ -162,7 +162,7 @@ cdef class CubicSpline1DInterpolator:
         *particle: C pointer
             C Pointer to a Particle struct
         """
-        return self._spline.call(particle.x3)
+        return self._spline.call(particle.get_x3())
 
     cdef DTYPE_FLOAT_t get_first_derivative(self, Particle* particle) except FLOAT_ERR:
         """ Evaluate the derivative of the interpolating function
@@ -175,7 +175,7 @@ cdef class CubicSpline1DInterpolator:
         *particle: C pointer
             C Pointer to a Particle struct
         """
-        return self._spline.deriv(self._first_order, particle.x3)
+        return self._spline.deriv(self._first_order, particle.get_x3())
 
 def get_interpolator(config, n_elems):
     """ Interpolator factory method

@@ -34,9 +34,15 @@ cdef class CartesianPositionModifier(PositionModifier):
         delta_X : C pointer
             C pointer to a Delta struct
         """
-        particle.x1 += delta_X.x1
-        particle.x2 += delta_X.x2
-        particle.x3 += delta_X.x3
+        cdef DTYPE_FLOAT_t x1, x2, x3
+
+        x1 = particle.get_x1() + delta_X.x1
+        x2 = particle.get_x2() + delta_X.x2
+        x3 = particle.get_x3() + delta_X.x3
+
+        particle.set_x1(x1)
+        particle.set_x2(x2)
+        particle.set_x3(x3)
 
 
 cdef class SphericalPositionModifier(PositionModifier):
@@ -61,9 +67,15 @@ cdef class SphericalPositionModifier(PositionModifier):
         delta_X : C pointer
             C pointer to a Delta struct
         """
-        particle.x1 = particle.x1 + delta_X.x1 / (self.multiplier * cos(self.deg_to_rad * particle.x2))
-        particle.x2 = particle.x2 + delta_X.x2 / self.multiplier
-        particle.x3 = particle.x3 + delta_X.x3
+        cdef DTYPE_FLOAT_t x1, x2, x3
+
+        x1 = particle.get_x1() + delta_X.x1 / (self.multiplier * cos(self.deg_to_rad * particle.get_x2()))
+        x2 = particle.get_x2() + delta_X.x2 / self.multiplier
+        x3 = particle.get_x3() + delta_X.x3
+
+        particle.set_x1(x1)
+        particle.set_x2(x2)
+        particle.set_x3(x3)
 
 
 def get_position_modifier(config):

@@ -27,6 +27,15 @@ namespace particles {
             // Getters and setters
             // -------------------
 
+            void set_x1(const double& rhs);
+            double get_x1() const;
+
+            void set_x2(const double& rhs);
+            double get_x2() const;
+
+            void set_x3(const double& rhs);
+            double get_x3() const;
+
             void set_phi(const std::vector<double>& rhs);
             std::vector<double> get_phi() const;
 
@@ -69,6 +78,8 @@ namespace particles {
             // Status flag (0 - okay; 1 - error)
             int status;
 
+        private:
+
             // Global coordinates
             // ------------------
 
@@ -81,7 +92,6 @@ namespace particles {
             // Particle x3-position
             double x3;
 
-        private:
             // Local coordinates
             // -----------------
 

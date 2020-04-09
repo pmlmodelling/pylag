@@ -68,6 +68,30 @@ namespace particles {
 
     // Getters and setters
     // -------------------
+    void Particle::set_x1(const double& rhs) {
+        x1 = rhs;
+    }
+
+    double Particle::get_x1() const {
+        return x1;
+    }
+
+    void Particle::set_x2(const double& rhs) {
+        x2 = rhs;
+    }
+
+    double Particle::get_x2() const {
+        return x2;
+    }
+
+    void Particle::set_x3(const double& rhs) {
+        x3 = rhs;
+    }
+
+    double Particle::get_x3() const {
+        return x3;
+    }
+
     void Particle::set_phi(const std::vector<double>& rhs) {
         phi = rhs;
     }

@@ -372,12 +372,12 @@ cdef class ArakawaADataReader(DataReader):
             depth_upper_level = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k)
             depth_lower_level = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k+1)
 
-            if particle.x3 <= depth_upper_level and particle.x3 >= depth_lower_level:
+            if particle.get_x3() <= depth_upper_level and particle.get_x3() >= depth_lower_level:
                 # Host layer found
                 particle.set_k_layer(k)
 
                 # Set the sigma level interpolation coefficient
-                particle.set_omega_interfaces(interp.get_linear_fraction(particle.x3, depth_lower_level, depth_upper_level))
+                particle.set_omega_interfaces(interp.get_linear_fraction(particle.get_x3(), depth_lower_level, depth_upper_level))
 
                 # Check to see if any of the nodes on each level are masked
                 mask_upper_level = self._interp_mask_status_on_level(host_element, k)
@@ -402,7 +402,7 @@ cdef class ArakawaADataReader(DataReader):
         # Particle is below zeta but above the top depth level
         k = 0
         depth_upper_level = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k)
-        if particle.x3 <= zeta and particle.x3 >= depth_lower_level:
+        if particle.get_x3() <= zeta and particle.get_x3() >= depth_lower_level:
             mask_upper_level = self._interp_mask_status_on_level(host_element, k)
             if mask_upper_level == 0:
                 particle.set_k_layer(k)
@@ -415,7 +415,7 @@ cdef class ArakawaADataReader(DataReader):
         # Particle is above h but below the lowest depth level
         k = self._n_depth - 1
         depth_upper_level = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k)
-        if particle.x3 >= h and particle.x3 <= depth_upper_level:
+        if particle.get_x3() >= h and particle.get_x3() <= depth_upper_level:
             mask_upper_level = self._interp_mask_status_on_level(host_element, k)
             if mask_upper_level == 0:
                 particle.set_k_layer(k)

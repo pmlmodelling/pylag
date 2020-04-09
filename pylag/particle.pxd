@@ -12,6 +12,15 @@ cdef extern from "particle.h" namespace "particles":
         Particle(const Particle&) except +
         Particle& operator=(const Particle&) except +
 
+        void set_x1(const DTYPE_FLOAT_t&) except +
+        DTYPE_FLOAT_t get_x1() except +
+
+        void set_x2(const DTYPE_FLOAT_t&) except +
+        DTYPE_FLOAT_t get_x2() except +
+
+        void set_x3(const DTYPE_FLOAT_t&) except +
+        DTYPE_FLOAT_t get_x3() except +
+
         void set_phi(const vector[DTYPE_FLOAT_t]&) except +
         vector[DTYPE_FLOAT_t] get_phi() except +
 
@@ -45,7 +54,4 @@ cdef extern from "particle.h" namespace "particles":
         DTYPE_INT_t group_id
         DTYPE_INT_t id
         DTYPE_INT_t status
-        DTYPE_FLOAT_t x1
-        DTYPE_FLOAT_t x2
-        DTYPE_FLOAT_t x3
 
