@@ -11,7 +11,7 @@ namespace particles {
           x1(-999.),
           x2(-999.),
           x3(-999.),
-          phi(3, -999.),
+          phis{},
           omega_interfaces(-999.),
           omega_layers(-999.),
           in_domain(false),
@@ -31,7 +31,7 @@ namespace particles {
           x1(rhs.x1),
           x2(rhs.x2),
           x3(rhs.x3),
-          phi(rhs.phi),
+          phis(rhs.phis),
           omega_interfaces(rhs.omega_interfaces),
           omega_layers(rhs.omega_layers),
           in_domain(rhs.in_domain),
@@ -52,7 +52,7 @@ namespace particles {
         x1 = rhs.x1;
         x2 = rhs.x2;
         x3 = rhs.x3;
-        phi = rhs.phi;
+        phis = rhs.phis;
         omega_interfaces = rhs.omega_interfaces;
         omega_layers = rhs.omega_layers;
         in_domain = rhs.in_domain;
@@ -64,6 +64,10 @@ namespace particles {
         k_upper_layer = rhs.k_upper_layer;
 
         return *this;
+    }
+
+    void Particle::clear_phis() {
+        phis.clear();
     }
 
     void Particle::clear_host_horizontal_elems() {
@@ -120,12 +124,12 @@ namespace particles {
         return x3;
     }
 
-    void Particle::set_phi(const std::vector<double>& rhs) {
-        phi = rhs;
+    void Particle::set_phi(const std::string& grid, const std::vector<double>& rhs) {
+        phis[grid] = rhs;
     }
 
-    std::vector<double> Particle::get_phi() const {
-        return phi;
+    std::vector<double> Particle::get_phi(const std::string& grid) const {
+        return phis.at(grid);
     }
 
     void Particle::set_omega_interfaces(const double& rhs) {

@@ -379,7 +379,7 @@ cdef class FVCOMDataReader(DataReader):
 
         cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
 
-        cdef vector[DTYPE_FLOAT_t] phi = particle.get_phi()
+        cdef vector[DTYPE_FLOAT_t] phi = particle.get_phi(self._name)
 
         # Compute sigma
         h = self.get_zmin(time, particle)
@@ -463,7 +463,7 @@ cdef class FVCOMDataReader(DataReader):
             vertex = self._nv[i,host_element]
             h_tri[i] = self._h[vertex]
 
-        h = interp.interpolate_within_element(h_tri, particle.get_phi())
+        h = interp.interpolate_within_element(h_tri, particle.get_phi(self._name))
 
         return -h
 
@@ -508,7 +508,7 @@ cdef class FVCOMDataReader(DataReader):
             zeta_tri[i] = interp.linear_interp(time_fraction, zeta_tri_t_last[i], zeta_tri_t_next[i])
 
         # Interpolate in space
-        zeta = interp.interpolate_within_element(zeta_tri, particle.get_phi())
+        zeta = interp.interpolate_within_element(zeta_tri, particle.get_phi(self._name))
 
         return zeta
 
@@ -811,7 +811,7 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_INT_t k_layer = particle.get_k_layer()
         cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
 
-        cdef vector[DTYPE_FLOAT_t] phi = particle.get_phi()
+        cdef vector[DTYPE_FLOAT_t] phi = particle.get_phi(self._name)
 
         h = self.get_zmin(time, particle)
         zeta = self.get_zmax(time, particle)
@@ -969,7 +969,7 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
 
         # Local coordinates
-        cdef vector[DTYPE_FLOAT_t] phi = particle.get_phi()
+        cdef vector[DTYPE_FLOAT_t] phi = particle.get_phi(self._name)
 
         # Time fraction
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
@@ -1078,7 +1078,7 @@ cdef class FVCOMDataReader(DataReader):
             kh_tri[i] = interp.linear_interp(time_fraction, kh_tri_t_last[i], kh_tri_t_next[i])
 
         # Interpolate kh, zeta and h within the host
-        kh = interp.interpolate_within_element(kh_tri, particle.get_phi())
+        kh = interp.interpolate_within_element(kh_tri, particle.get_phi(self._name))
 
         return kh
 

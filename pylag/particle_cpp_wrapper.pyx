@@ -15,17 +15,15 @@ cdef class ParticleSmartPtr:
     """
     
     def __cinit__(self, DTYPE_INT_t group_id=-999, DTYPE_FLOAT_t x1=-999., 
-            DTYPE_FLOAT_t x2=-999., DTYPE_FLOAT_t x3=-999.,
-            DTYPE_FLOAT_t phi1=-999.,  DTYPE_FLOAT_t phi2=-999.,
-            DTYPE_FLOAT_t phi3=-999., DTYPE_FLOAT_t omega_interfaces=-999.,
-            DTYPE_FLOAT_t omega_layers=-999., bint in_domain=False,
-            DTYPE_INT_t is_beached=0, host_elements={},
-            DTYPE_INT_t k_layer=-999, bint in_vertical_boundary_layer=False,
-            DTYPE_INT_t k_lower_layer=-999, DTYPE_INT_t k_upper_layer=-999,
-            DTYPE_INT_t id=-999, DTYPE_INT_t status=0, ParticleSmartPtr particle_smart_ptr=None):
+                  DTYPE_FLOAT_t x2=-999., DTYPE_FLOAT_t x3=-999., phis={},
+                  DTYPE_FLOAT_t omega_interfaces=-999.,
+                  DTYPE_FLOAT_t omega_layers=-999., bint in_domain=False,
+                  DTYPE_INT_t is_beached=0, host_elements={},
+                  DTYPE_INT_t k_layer=-999, bint in_vertical_boundary_layer=False,
+                  DTYPE_INT_t k_lower_layer=-999, DTYPE_INT_t k_upper_layer=-999,
+                  DTYPE_INT_t id=-999, DTYPE_INT_t status=0, ParticleSmartPtr particle_smart_ptr=None):
 
         cdef ParticleSmartPtr _particle_smart_ptr
-        cdef vector[DTYPE_FLOAT_t] _phi
 
         # Call copy ctor if particle_smart_ptr is given. Else, use default ctor
         if particle_smart_ptr and type(particle_smart_ptr) is ParticleSmartPtr:
@@ -42,7 +40,6 @@ cdef class ParticleSmartPtr:
             self._particle.set_x1(x1)
             self._particle.set_x2(x2)
             self._particle.set_x3(x3)
-            self._particle.set_phi([phi1, phi2, phi3])
             self._particle.set_omega_interfaces(omega_interfaces)
             self._particle.set_omega_layers(omega_layers)
             self._particle.set_in_domain(in_domain)
@@ -51,6 +48,9 @@ cdef class ParticleSmartPtr:
             self._particle.set_in_vertical_boundary_layer(in_vertical_boundary_layer)
             self._particle.set_k_lower_layer(k_lower_layer)
             self._particle.set_k_upper_layer(k_upper_layer)
+
+            # Set local coordinates on all grids
+            self.set_all_phis(phis)
 
             # Add hosts
             self.set_all_host_horizontal_elems(host_elements)
@@ -85,15 +85,33 @@ cdef class ParticleSmartPtr:
 
         return data
 
+    def set_phi(self, grid, phi):
+        grid_name = grid.encode() if type(grid) == str else grid
+        self._particle.set_phi(grid_name, phi)
+
+    def get_phi(self, grid):
+        grid_name = grid.encode() if type(grid) == str else grid
+
+        phi = []
+        for x in self._particle.get_phi(grid_name):
+            phi.append(x)
+        return phi
+
+    def set_all_phis(self, phis):
+        self._particle.clear_phis()
+        for grid, phi in phis.items():
+            self.set_phi(grid, phi)
+
     def set_host_horizontal_elem(self, grid, host):
         grid_name = grid.encode() if type(grid) == str else grid
-        return self._particle.set_host_horizontal_elem(grid_name, host)
+        self._particle.set_host_horizontal_elem(grid_name, host)
 
     def get_host_horizontal_elem(self, grid):
         grid_name = grid.encode() if type(grid) == str else grid
         return self._particle.get_host_horizontal_elem(grid_name)
 
     def set_all_host_horizontal_elems(self, host_elements):
+        self._particle.clear_host_horizontal_elems()
         for grid, host in host_elements.items():
             self.set_host_horizontal_elem(grid, host)
 
@@ -156,12 +174,6 @@ cdef class ParticleSmartPtr:
     def in_vertical_boundary_layer(self):
         return self._particle.get_in_vertical_boundary_layer()
 
-    @property
-    def phi(self):
-        phi = []
-        for x in self._particle.get_phi():
-            phi.append(x)
-        return phi
 
 cdef ParticleSmartPtr copy(ParticleSmartPtr particle_smart_ptr):
     """ Create a copy of a ParticleSmartPtr object
@@ -190,6 +202,7 @@ cdef to_string(Particle* particle):
     TODO:
     -----
     1) Add back in host elements
+    2) Add back in phis
 
     Parameters:
     -----------
@@ -201,7 +214,6 @@ cdef to_string(Particle* particle):
     s : str
         String describing the particle
     """
-    cdef vector[DTYPE_FLOAT_t] phi = particle.get_phi()
 
     s = "Particle properties \n"\
         "------------------- \n"\
@@ -209,9 +221,6 @@ cdef to_string(Particle* particle):
         "Particle x1 = {} \n"\
         "Particle x2 = {} \n"\
         "Particle x3 = {} \n"\
-        "Particle phi[0] = {} \n"\
-        "Particle phi[1] = {} \n"\
-        "Particle phi[2] = {} \n"\
         "Particle omega interfaces = {} \n"\
         "Particle omega layers = {} \n"\
         "Partilce in vertical boundary layer = {} \n"\
@@ -223,9 +232,6 @@ cdef to_string(Particle* particle):
                                              particle.get_x1(),
                                              particle.get_x2(),
                                              particle.get_x3(),
-                                             phi[0],
-                                             phi[1],
-                                             phi[2],
                                              particle.get_omega_interfaces(),
                                              particle.get_omega_layers(),
                                              particle.get_in_vertical_boundary_layer(),

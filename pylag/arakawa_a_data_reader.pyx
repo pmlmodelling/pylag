@@ -479,7 +479,7 @@ cdef class ArakawaADataReader(DataReader):
             vertex = self._nv[i,host_element]
             h_tri[i] = self._h[vertex]
 
-        h = interp.interpolate_within_element(h_tri, particle.get_phi())
+        h = interp.interpolate_within_element(h_tri, particle.get_phi(self._name))
 
         return -h
 
@@ -529,7 +529,7 @@ cdef class ArakawaADataReader(DataReader):
                 zeta_tri[i] = interp.linear_interp(time_fraction, zeta_last, zeta_next)
 
         # Interpolate in space
-        zeta = interp.interpolate_within_element(zeta_tri, particle.get_phi())
+        zeta = interp.interpolate_within_element(zeta_tri, particle.get_phi(self._name))
 
         return zeta
 
@@ -1002,7 +1002,7 @@ cdef class ArakawaADataReader(DataReader):
             else:
                 var_nodes[i] = var_last
 
-        var = interp.interpolate_within_element(var_nodes, particle.get_phi())
+        var = interp.interpolate_within_element(var_nodes, particle.get_phi(self._name))
 
         return var
 

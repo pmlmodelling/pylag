@@ -269,13 +269,13 @@ class FVCOMDataReader_test(TestCase):
         self.data_reader.set_default_location_wrapper(particle)
         test.assert_almost_equal(particle.x1 + self.xmin, 1.66666666667)
         test.assert_almost_equal(particle.x2 + self.ymin, 1.33333333333)
-        test.assert_array_almost_equal(particle.phi, [0.3333333333, 0.3333333333, 0.3333333333])
+        test.assert_array_almost_equal(particle.get_phi('fvcom'), [0.3333333333, 0.3333333333, 0.3333333333])
 
 
     def test_set_local_coordinates_when_a_particle_is_on_an_external_elements_side(self):
         particle = ParticleSmartPtr(x1=1.5-self.xmin, x2=1.0-self.ymin, host_elements={'fvcom': 1})
         self.data_reader.set_local_coordinates_wrapper(particle)
-        phi_min = np.min(np.array(particle.phi, dtype=float))
+        phi_min = np.min(np.array(particle.get_phi('fvcom'), dtype=float))
         test.assert_equal(np.abs(phi_min), 0.0)
 
     def test_get_zmin(self):

@@ -14,6 +14,8 @@ cdef extern from "particle.h" namespace "particles":
         Particle(const Particle&) except +
         Particle& operator=(const Particle&) except +
 
+        void clear_phis() except +
+
         void clear_host_horizontal_elems() except +
 
         void set_group_id(const DTYPE_INT_t&) except +
@@ -34,8 +36,8 @@ cdef extern from "particle.h" namespace "particles":
         void set_x3(const DTYPE_FLOAT_t&) except +
         DTYPE_FLOAT_t get_x3() except +
 
-        void set_phi(const vector[DTYPE_FLOAT_t]&) except +
-        vector[DTYPE_FLOAT_t] get_phi() except +
+        void set_phi(const string&, const vector[DTYPE_FLOAT_t]&) except +
+        vector[DTYPE_FLOAT_t] get_phi(const string&) except +
 
         void set_omega_interfaces(const DTYPE_FLOAT_t&) except +
         DTYPE_FLOAT_t get_omega_interfaces() except +

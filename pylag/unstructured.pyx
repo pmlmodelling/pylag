@@ -132,7 +132,7 @@ cdef class UnstructuredGrid:
                     # Normal element
                     particle.set_host_horizontal_elem(self.name, guess)
 
-                    particle.set_phi(phi)
+                    particle.set_phi(self.name, phi)
 
                     return IN_DOMAIN
                 else:
@@ -370,7 +370,7 @@ cdef class UnstructuredGrid:
                 if n_host_land_boundaries < 2:
                     particle.set_host_horizontal_elem(self.name, guess)
 
-                    particle.set_phi(phi)
+                    particle.set_phi(self.name, phi)
 
                     return IN_DOMAIN
                 else:
@@ -544,7 +544,7 @@ cdef class UnstructuredGrid:
                 raise ValueError('One or more local coordinates are negative')
 
         # Set phi
-        particle.set_phi(phi)
+        particle.set_phi(self.name, phi)
 
     cdef void get_phi(self, DTYPE_FLOAT_t x1, DTYPE_FLOAT_t x2,
             DTYPE_INT_t host, vector[DTYPE_FLOAT_t] &phi) except *:

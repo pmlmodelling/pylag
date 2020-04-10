@@ -26,6 +26,8 @@ namespace particles {
             // Copy assignment operator
             Particle& operator=(const Particle& rhs);
 
+            void clear_phis();
+
             void clear_host_horizontal_elems();
 
             // Getters and setters
@@ -49,8 +51,8 @@ namespace particles {
             void set_x3(const double& rhs);
             double get_x3() const;
 
-            void set_phi(const std::vector<double>& rhs);
-            std::vector<double> get_phi() const;
+            void set_phi(const std::string& grid, const std::vector<double>& rhs);
+            std::vector<double> get_phi(const std::string& grid) const;
 
             void set_omega_interfaces(const double& rhs);
             double get_omega_interfaces() const;
@@ -112,8 +114,8 @@ namespace particles {
             // Local coordinates
             // -----------------
 
-            // Barycentric coordinates within the host element
-            std::vector<double> phi;
+            // Barycentric coordinates within host elements. Format is: <grid_name, host>
+            std::unordered_map<std::string, std::vector<double>> phis;
 
             // Vertical interpolation coefficient for variables defined at the interfaces
             // between k-levels
