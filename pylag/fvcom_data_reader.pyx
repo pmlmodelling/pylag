@@ -172,6 +172,11 @@ cdef class FVCOMDataReader(DataReader):
 
         self._read_time_dependent_vars()
 
+    cpdef get_grid_names(self):
+        """ Return a list of grid names
+        """
+        return [self._name.decode()]
+
     cpdef setup_data_access(self, start_datetime, end_datetime):
         """ Set up access to time-dependent variables.
         
@@ -261,8 +266,8 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_INT_t flag, host
 
         # Save a copy of the current host, then use the old host to start a local search
-        host = particle_new.get_host_horizontal_elem()
-        particle_new.set_host_horizontal_elem(particle_old.get_host_horizontal_elem())
+        host = particle_new.get_host_horizontal_elem(self._name)
+        particle_new.set_host_horizontal_elem(self._name, particle_old.get_host_horizontal_elem(self._name))
         flag = self._unstructured_grid.find_host_using_local_search(particle_new)
 
         if flag == IN_DOMAIN:
@@ -271,7 +276,7 @@ cdef class FVCOMDataReader(DataReader):
         # Local search failed to find the particle. Perform check to see if
         # the particle has indeed left the model domain. Reset the host first
         # in order to preserve the original state of particle_new.
-        particle_new.set_host_horizontal_elem(host)
+        particle_new.set_host_horizontal_elem(self._name, host)
         flag = self._unstructured_grid.find_host_using_particle_tracing(particle_old,
                                                                         particle_new)
 
@@ -372,7 +377,7 @@ cdef class FVCOMDataReader(DataReader):
 
         cdef DTYPE_INT_t k
 
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem()
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
 
         cdef vector[DTYPE_FLOAT_t] phi = particle.get_phi()
 
@@ -450,7 +455,7 @@ cdef class FVCOMDataReader(DataReader):
         """
         cdef int i # Loop counters
         cdef int vertex # Vertex identifier  
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem()
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
         cdef vector[DTYPE_FLOAT_t] h_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.) # Bathymetry at nodes
         cdef DTYPE_FLOAT_t h # Bathymetry at (x1, x2)
 
@@ -485,7 +490,7 @@ cdef class FVCOMDataReader(DataReader):
         cdef int vertex # Vertex identifier
         cdef DTYPE_FLOAT_t time_fraction # Time interpolation
         cdef DTYPE_FLOAT_t zeta # Sea surface elevation at (t, x1, x2)
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem()
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
 
         # Intermediate arrays
         cdef vector[DTYPE_FLOAT_t] zeta_tri_t_last = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
@@ -661,7 +666,7 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_INT_t k_layer = particle.get_k_layer()
         cdef DTYPE_INT_t k_lower_layer = particle.get_k_lower_layer()
         cdef DTYPE_INT_t k_upper_layer = particle.get_k_upper_layer()
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem()
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
 
         # Gradients on lower and upper bounding sigma layers
         cdef DTYPE_FLOAT_t dviscofh_dx_layer_1
@@ -804,7 +809,7 @@ cdef class FVCOMDataReader(DataReader):
 
         # Particle k_layer
         cdef DTYPE_INT_t k_layer = particle.get_k_layer()
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem()
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
 
         cdef vector[DTYPE_FLOAT_t] phi = particle.get_phi()
 
@@ -901,7 +906,7 @@ cdef class FVCOMDataReader(DataReader):
         host : int
             Integer that identifies the host element in question
         """
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem()
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
 
         if self._has_is_wet:
             if self._wet_cells_last[host_element] == 0 or self._wet_cells_next[host_element] == 0:
@@ -961,7 +966,7 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_INT_t k_layer = particle.get_k_layer()
         cdef DTYPE_INT_t k_lower_layer = particle.get_k_lower_layer()
         cdef DTYPE_INT_t k_upper_layer = particle.get_k_upper_layer()
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem()
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
 
         # Local coordinates
         cdef vector[DTYPE_FLOAT_t] phi = particle.get_phi()
@@ -1048,7 +1053,7 @@ cdef class FVCOMDataReader(DataReader):
         cdef int vertex
 
         # Host element
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem()
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
 
         # Time fraction used for interpolation in time        
         cdef DTYPE_FLOAT_t time_fraction
@@ -1126,7 +1131,7 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_INT_t k_layer = particle.get_k_layer()
         cdef DTYPE_INT_t k_lower_layer = particle.get_k_lower_layer()
         cdef DTYPE_INT_t k_upper_layer = particle.get_k_upper_layer()
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem()
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
 
         # Vel at the given location in the overlying sigma layer
         cdef DTYPE_FLOAT_t up1, vp1, wp1

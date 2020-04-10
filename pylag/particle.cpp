@@ -16,7 +16,7 @@ namespace particles {
           omega_layers(-999.),
           in_domain(false),
           is_beached(0),
-          host_horizontal_elem(-999),
+          host_elements{},
           k_layer(-999),
           in_vertical_boundary_layer(false),
           k_lower_layer(-999),
@@ -36,7 +36,7 @@ namespace particles {
           omega_layers(rhs.omega_layers),
           in_domain(rhs.in_domain),
           is_beached(rhs.is_beached),
-          host_horizontal_elem(rhs.host_horizontal_elem),
+          host_elements(rhs.host_elements),
           k_layer(rhs.k_layer),
           in_vertical_boundary_layer(rhs.in_vertical_boundary_layer),
           k_lower_layer(rhs.k_lower_layer),
@@ -57,13 +57,17 @@ namespace particles {
         omega_layers = rhs.omega_layers;
         in_domain = rhs.in_domain;
         is_beached = rhs.is_beached;
-        host_horizontal_elem = rhs.host_horizontal_elem;
+        host_elements = rhs.host_elements;
         k_layer = rhs.k_layer;
         in_vertical_boundary_layer = rhs.in_vertical_boundary_layer;
         k_lower_layer = rhs.k_lower_layer;
         k_upper_layer = rhs.k_upper_layer;
 
         return *this;
+    }
+
+    void Particle::clear_host_horizontal_elems() {
+        host_elements.clear();
     }
 
     // Getters and setters
@@ -156,12 +160,29 @@ namespace particles {
         return is_beached;
     }
 
-    void Particle::set_host_horizontal_elem(const int& rhs) {
-        host_horizontal_elem = rhs;
+    void Particle::set_host_horizontal_elem(const std::string& grid, const int& host) {
+        host_elements[grid] = host;
     }
 
-    int Particle::get_host_horizontal_elem() const {
-        return host_horizontal_elem;
+    int Particle::get_host_horizontal_elem(const std::string& grid) const {
+        return host_elements.at(grid);
+    }
+
+    void Particle::set_all_host_horizontal_elems(const std::vector<std::string>& grids, const std::vector<int>& hosts) {
+        host_elements.clear();
+
+        auto igrid = grids.begin();
+        auto ihost = hosts.begin();
+        for (; igrid != grids.end() and ihost != hosts.end(); ++igrid, ++ihost) {
+            host_elements[*igrid] = *ihost;
+        }
+    }
+
+    void Particle::get_all_host_horizontal_elems(std::vector<std::string>& grids, std::vector<int>& hosts) const {
+        for (auto& x: host_elements) {
+            grids.push_back(x.first);
+            hosts.push_back(x.second);
+        }
     }
 
     void Particle::set_k_layer(const int& rhs) {

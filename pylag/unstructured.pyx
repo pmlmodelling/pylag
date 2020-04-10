@@ -102,7 +102,7 @@ cdef class UnstructuredGrid:
         cdef DTYPE_INT_t flag, guess, last_guess, second_to_last_guess
 
         # Check for non-sensical start points.
-        guess = particle.get_host_horizontal_elem()
+        guess = particle.get_host_horizontal_elem(self.name)
         if guess < 0:
             raise ValueError('Invalid start point for local host element '\
                     'search. Start point = {}'.format(guess))
@@ -130,7 +130,7 @@ cdef class UnstructuredGrid:
 
                 if n_host_land_boundaries < 2:
                     # Normal element
-                    particle.set_host_horizontal_elem(guess)
+                    particle.set_host_horizontal_elem(self.name, guess)
 
                     particle.set_phi(phi)
 
@@ -240,7 +240,7 @@ cdef class UnstructuredGrid:
         x4[0] = particle_new.get_x1(); x4[1] = particle_new.get_x2()
 
         # Start the search using the host known to contain (x1_old, x2_old)
-        elem = particle_old.get_host_horizontal_elem()
+        elem = particle_old.get_host_horizontal_elem(self.name)
 
         # Set last_elem equal to elem in the first instance
         last_elem = elem
@@ -293,7 +293,7 @@ cdef class UnstructuredGrid:
                         flag = LAND_BDY_CROSSED
 
                         # Set host to the last element the particle passed through
-                        particle_new.set_host_horizontal_elem(last_elem)
+                        particle_new.set_host_horizontal_elem(self.name, last_elem)
                         return flag
                     else:
                         # Intersection found but the pathline has not exited the
@@ -309,7 +309,7 @@ cdef class UnstructuredGrid:
                         flag = OPEN_BDY_CROSSED
 
                     # Set host to the last element the particle passed through
-                    particle_new.set_host_horizontal_elem(last_elem)
+                    particle_new.set_host_horizontal_elem(self.name, last_elem)
 
                     return flag
 
@@ -317,7 +317,7 @@ cdef class UnstructuredGrid:
                 # Particle has not exited the current element meaning it must
                 # still reside in the domain
                 flag = IN_DOMAIN
-                particle_new.set_host_horizontal_elem(current_elem)
+                particle_new.set_host_horizontal_elem(self.name, current_elem)
                 self.set_local_coordinates(particle_new)
 
                 return flag
@@ -368,7 +368,7 @@ cdef class UnstructuredGrid:
                         n_host_land_boundaries += 1
 
                 if n_host_land_boundaries < 2:
-                    particle.set_host_horizontal_elem(guess)
+                    particle.set_host_horizontal_elem(self.name, guess)
 
                     particle.set_phi(phi)
 
@@ -453,7 +453,7 @@ cdef class UnstructuredGrid:
 
         # Extract nodal coordinates
         for i in xrange(3):
-            vertex = self.nv[i, particle_new.get_host_horizontal_elem()]
+            vertex = self.nv[i, particle_new.get_host_horizontal_elem(self.name)]
             x_tri[i] = self.x[vertex]
             y_tri[i] = self.y[vertex]
 
@@ -463,7 +463,7 @@ cdef class UnstructuredGrid:
             x2_idx = x2_indices[i]
             nbe_idx = nbe_indices[i]
 
-            nbe = self.nbe[nbe_idx, particle_new.get_host_horizontal_elem()]
+            nbe = self.nbe[nbe_idx, particle_new.get_host_horizontal_elem(self.name)]
 
             if nbe != -1:
                 # Compute the number of land boundaries the neighbour has - elements with two
@@ -499,7 +499,7 @@ cdef class UnstructuredGrid:
 
         Move the particle to its host element's centroid.
         """
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem()
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self.name)
 
         particle.set_x1(self.xc[host_element])
         particle.set_x2(self.yc[host_element])
@@ -520,7 +520,7 @@ cdef class UnstructuredGrid:
         """
         cdef vector[DTYPE_FLOAT_t] phi = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
 
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem()
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self.name)
 
         cdef DTYPE_INT_t i
 

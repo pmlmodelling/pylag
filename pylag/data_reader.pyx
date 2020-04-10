@@ -9,6 +9,9 @@ cdef class DataReader:
     cpdef read_data(self, DTYPE_FLOAT_t time):
         raise NotImplementedError
 
+    cpdef get_grid_names(self):
+        return []
+
     def find_host_wrapper(self, ParticleSmartPtr particle_old,
                           ParticleSmartPtr particle_new):
         return self.find_host(particle_old.get_ptr(), particle_new.get_ptr())

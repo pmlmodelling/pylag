@@ -26,8 +26,11 @@ class NetCDFLogger(object):
     
     n_particles : int
         The number of particles.
+
+    grid_names : list[str]
+        List of grids on which input data is defined.
     """
-    def __init__(self, config, file_name, start_datetime, n_particles):
+    def __init__(self, config, file_name, start_datetime, n_particles, grid_names):
         
         logger = logging.getLogger(__name__)
 
@@ -67,6 +70,12 @@ class NetCDFLogger(object):
         except (configparser.NoSectionError, configparser.NoOptionError) as e:
             self.environmental_variables = []
             pass
+
+        # Grid names
+        self.grid_names = grid_names
+
+        # Host horizontal elements
+        self._host_vars = {}
 
         # Create coordinate variables etc.
         self._create_file_structure(n_particles)
@@ -114,9 +123,11 @@ class NetCDFLogger(object):
         self._x3.long_name = variable_library.get_long_name(x3_var_name)
 
         # Add host
-        self._host = self._ncfile.createVariable('host', DTYPE_INT, ('time', 'particles',), **self._ncopts)
-        self._host.units = 'None'
-        self._host.long_name = 'Host horizontal element'
+        for grid_name in self.grid_names:
+            self._host_vars[grid_name] = self._ncfile.createVariable('host_{}'.format(grid_name), DTYPE_INT,
+                                                                    ('time', 'particles',), **self._ncopts)
+            self._host_vars[grid_name].units = 'None'
+            self._host_vars[grid_name].long_name = 'Host horizontal element on grid {}'.format(grid_name)
         
         # Add status variables
         self._in_domain = self._ncfile.createVariable('in_domain', 'i4', ('time', 'particles',), **self._ncopts)
@@ -162,12 +173,15 @@ class NetCDFLogger(object):
         self._x1[tidx, :] = particle_data['x1']
         self._x2[tidx, :] = particle_data['x2']
         self._x3[tidx, :] = particle_data['x3']
-        self._host[tidx, :] = particle_data['host_horizontal_elem']
         self._h[tidx, :] = particle_data['h']
         self._zeta[tidx, :] = particle_data['zeta']
         self._is_beached[tidx, :] = particle_data['is_beached']
         self._in_domain[tidx, :] = particle_data['in_domain']
         self._status[tidx, :] = particle_data['status']
+
+        # Add host horizontal elements
+        for grid_name in self.grid_names:
+            self._host_vars[grid_name][tidx, :] = particle_data['host_{}'.format(grid_name)]
 
         # Add environmental variables
         for var_name in self.environmental_variables:

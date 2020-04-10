@@ -12,6 +12,8 @@ cdef class DataReader:
 
     cpdef read_data(self, DTYPE_FLOAT_t time) 
 
+    cpdef get_grid_names(self)
+
     cdef DTYPE_INT_t find_host(self, Particle *particle_old,
                                Particle *particle_new) except INT_ERR
 

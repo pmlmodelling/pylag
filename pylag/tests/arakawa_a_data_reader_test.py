@@ -239,31 +239,35 @@ class ArawawaADataReader_test(TestCase):
     def test_find_host_using_global_search(self):
         particle = ParticleSmartPtr(x1=1.666666667-self.xmin, x2=11.666666667-self.ymin)
         flag = self.data_reader.find_host_using_global_search_wrapper(particle)
-        test.assert_equal(particle.host_horizontal_elem, 0)
+        test.assert_equal(particle.get_host_horizontal_elem('arakawa_a'), 0)
         test.assert_equal(flag, 0)
 
     def test_find_host_when_particle_is_in_the_domain(self):
-        particle_old = ParticleSmartPtr(x1=2.666666667-self.xmin, x2=11.333333333-self.ymin, host=5)
-        particle_new = ParticleSmartPtr(x1=2.333333333-self.xmin, x2=11.6666666667-self.ymin)
+        particle_old = ParticleSmartPtr(x1=2.666666667-self.xmin, x2=11.333333333-self.ymin,
+                                        host_elements={'arakawa_a': 5})
+        particle_new = ParticleSmartPtr(x1=2.333333333-self.xmin, x2=11.6666666667-self.ymin,
+                                        host_elements={'arakawa_a': -999})
         flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
         test.assert_equal(flag, 0)
-        test.assert_equal(particle_new.host_horizontal_elem, 4)
+        test.assert_equal(particle_new.get_host_horizontal_elem('arakawa_a'), 4)
 
     def test_find_host_when_particle_has_crossed_a_land_boundary(self):
-        particle_old = ParticleSmartPtr(x1=2.333333333-self.xmin, x2=11.666666667-self.ymin, host=4)
-        particle_new = ParticleSmartPtr(x1=2.333333333-self.xmin, x2=12.1-self.ymin)
+        particle_old = ParticleSmartPtr(x1=2.333333333-self.xmin, x2=11.666666667-self.ymin,
+                                        host_elements={'arakawa_a': 4})
+        particle_new = ParticleSmartPtr(x1=2.333333333-self.xmin, x2=12.1-self.ymin,
+                                        host_elements={'arakawa_a': -999})
         flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
         test.assert_equal(flag, -1)
-        test.assert_equal(particle_new.host_horizontal_elem, 4)
+        test.assert_equal(particle_new.get_host_horizontal_elem('arakawa_a'), 4)
 
     def test_get_zmin(self):
         x1 = 2.333333333-self.xmin
         x2 = 11.66666667-self.ymin
-        host = 4
+        host_elements={'arakawa_a': 4}
 
         time = 0.0
 
-        particle = ParticleSmartPtr(x1=x1, x2=x2, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         bathy = self.data_reader.get_zmin_wrapper(time, particle)
         test.assert_almost_equal(bathy, -15.0)
@@ -271,16 +275,16 @@ class ArawawaADataReader_test(TestCase):
     def test_get_zmax(self):
         x1 = 2.3333333333-self.xmin
         x2 = 11.6666666667-self.ymin
-        host = 4
+        host_elements={'arakawa_a': 4}
 
         time = 0.0
-        particle = ParticleSmartPtr(x1=x1, x2=x2, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         zeta = self.data_reader.get_zmax_wrapper(time, particle)
         test.assert_almost_equal(zeta, 0.333333333)
 
         time = 1800.0
-        particle = ParticleSmartPtr(x1=x1, x2=x2, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         zeta = self.data_reader.get_zmax_wrapper(time, particle)
         test.assert_almost_equal(zeta, 0.333333333)
@@ -290,9 +294,9 @@ class ArawawaADataReader_test(TestCase):
         x1 = 2.3333333333-self.xmin
         x2 = 11.6666666667-self.ymin
         x3 = 0.333333333
-        host = 4
+        host_elements={'arakawa_a': 4}
 
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
 
@@ -306,9 +310,9 @@ class ArawawaADataReader_test(TestCase):
         x1 = 2.3333333333-self.xmin
         x2 = 11.6666666667-self.ymin
         x3 = -15.
-        host = 4
+        host_elements={'arakawa_a': 4}
 
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
 
@@ -322,9 +326,9 @@ class ArawawaADataReader_test(TestCase):
         x1 = 2.3333333333-self.xmin
         x2 = 11.6666666667-self.ymin
         x3 = -0.666666667  # 1 m below the moving free surface
-        host = 4
+        host_elements={'arakawa_a': 4}
 
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
 
@@ -336,13 +340,13 @@ class ArawawaADataReader_test(TestCase):
     def test_get_velocity_in_surface_layer(self):
         x1 = 2.3333333333-self.xmin
         x2 = 11.6666666667-self.ymin
-        host = 4
+        host_elements={'arakawa_a': 4}
 
         # Test #1
         x3 = 0.333333333
         time = 0.0
 
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
         test.assert_equal(flag, 0)
@@ -354,7 +358,7 @@ class ArawawaADataReader_test(TestCase):
         # Test #2
         x3 = -4.6666666667 # Half way down the middle layer
         time = 1800.0
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
 
@@ -366,12 +370,12 @@ class ArawawaADataReader_test(TestCase):
     def test_get_velocity_in_middle_layer(self):
         x1 = 2.3333333333-self.xmin
         x2 = 11.6666666667-self.ymin
-        host = 4
+        host_elements={'arakawa_a': 4}
 
         # Test #1
         x3 = -14.666666667  # Half way down middle layer and 0.333 m above the sea floor
         time = 0.0
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
 
@@ -383,11 +387,11 @@ class ArawawaADataReader_test(TestCase):
     def test_get_thetao(self):
         x1 = 2.3333333333-self.xmin
         x2 = 11.6666666667-self.ymin
-        host = 4
+        host_elements={'arakawa_a': 4}
 
         x3 = 0.333333333
         time = 0.0
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
         thetao = self.data_reader.get_environmental_variable_wrapper('thetao', time, particle)
@@ -397,11 +401,11 @@ class ArawawaADataReader_test(TestCase):
     def test_get_so(self):
         x1 = 2.3333333333-self.xmin
         x2 = 11.6666666667-self.ymin
-        host = 4
+        host_elements={'arakawa_a': 4}
 
         x3 = 0.333333333
         time = 0.0
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
         so = self.data_reader.get_environmental_variable_wrapper('so', time, particle)
@@ -469,11 +473,11 @@ class ArawawaADataReader_test(TestCase):
     def test_element_is_wet(self):
         x1 = 2.3333333333-self.xmin
         x2 = 11.6666666667-self.ymin
-        host = 4
+        host_elements={'arakawa_a': 4}
 
         time = 0.0
 
-        particle = ParticleSmartPtr(x1=x1, x2=x2, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         status = self.data_reader.is_wet_wrapper(time, particle)
         test.assert_equal(status, 1)
@@ -481,11 +485,11 @@ class ArawawaADataReader_test(TestCase):
     def test_element_is_dry(self):
         x1 = 1.6666666667-self.xmin
         x2 = 11.6666666667-self.ymin
-        host = 0
+        host_elements={'arakawa_a': 0}
 
         time = 0.0
 
-        particle = ParticleSmartPtr(x1=x1, x2=x2, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         status = self.data_reader.is_wet_wrapper(time, particle)
         test.assert_equal(status, 0)

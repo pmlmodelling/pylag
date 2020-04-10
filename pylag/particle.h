@@ -1,6 +1,8 @@
 #ifndef PARTICLE_H
 #define PARTICLE_H
 
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace particles {
@@ -23,6 +25,8 @@ namespace particles {
 
             // Copy assignment operator
             Particle& operator=(const Particle& rhs);
+
+            void clear_host_horizontal_elems();
 
             // Getters and setters
             // -------------------
@@ -60,8 +64,11 @@ namespace particles {
             void set_is_beached(const int& rhs);
             int get_is_beached() const;
 
-            void set_host_horizontal_elem(const int& rhs);
-            int get_host_horizontal_elem() const;
+            void set_host_horizontal_elem(const std::string& grid, const int& host);
+            int get_host_horizontal_elem(const std::string& grid) const;
+
+            void set_all_host_horizontal_elems(const std::vector<std::string>& grids, const std::vector<int>& hosts);
+            void get_all_host_horizontal_elems(std::vector<std::string>& grids, std::vector<int>& hosts) const;
 
             void set_in_vertical_boundary_layer(const bool& rhs);
             bool get_in_vertical_boundary_layer() const;
@@ -125,8 +132,8 @@ namespace particles {
             // Flag identifying whether or not a particle is beached
             int is_beached;
 
-            // The host horizontal element
-            int host_horizontal_elem;
+            // Host horizontal element. Format is: <grid_name, host>.
+            std::unordered_map<std::string, int> host_elements;
 
             // The host k layer
             int k_layer;

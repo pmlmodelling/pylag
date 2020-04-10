@@ -171,6 +171,11 @@ cdef class ArakawaADataReader(DataReader):
 
         self._read_time_dependent_vars()
 
+    cpdef get_grid_names(self):
+        """ Return a list of grid names
+        """
+        return [self._name.decode()]
+
     cpdef setup_data_access(self, start_datetime, end_datetime):
         """ Set up access to time-dependent variables.
         
@@ -260,8 +265,8 @@ cdef class ArakawaADataReader(DataReader):
         cdef DTYPE_INT_t flag, host
 
         # Save a copy of the current host, then use the old host to start a local search
-        host = particle_new.get_host_horizontal_elem()
-        particle_new.set_host_horizontal_elem(particle_old.get_host_horizontal_elem())
+        host = particle_new.get_host_horizontal_elem(self._name)
+        particle_new.set_host_horizontal_elem(self._name, particle_old.get_host_horizontal_elem(self._name))
         flag = self._unstructured_grid.find_host_using_local_search(particle_new)
 
         if flag == IN_DOMAIN:
@@ -270,7 +275,7 @@ cdef class ArakawaADataReader(DataReader):
         # Local search failed to find the particle. Perform check to see if
         # the particle has indeed left the model domain. Reset the host first
         # in order to preserve the original state of particle_new.
-        particle_new.set_host_horizontal_elem(host)
+        particle_new.set_host_horizontal_elem(self._name, host)
         flag = self._unstructured_grid.find_host_using_particle_tracing(particle_old,
                                                                         particle_new)
 
@@ -371,7 +376,7 @@ cdef class ArakawaADataReader(DataReader):
         cdef DTYPE_FLOAT_t h, zeta
 
         # Host element
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem()
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
 
         cdef DTYPE_INT_t k
 
@@ -468,7 +473,7 @@ cdef class ArakawaADataReader(DataReader):
         cdef DTYPE_FLOAT_t h # Bathymetry at (x1, x2)
 
         # Host element
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem()
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
 
         for i in xrange(N_VERTICES):
             vertex = self._nv[i,host_element]
@@ -503,7 +508,7 @@ cdef class ArakawaADataReader(DataReader):
         cdef DTYPE_FLOAT_t zeta # Sea surface elevation at (t, x1, x2)
 
         # Host element
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem()
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
 
         # Intermediate arrays
         cdef DTYPE_FLOAT_t zeta_last
@@ -651,7 +656,7 @@ cdef class ArakawaADataReader(DataReader):
         cdef DTYPE_INT_t k_layer = particle.get_k_layer()
 
         # Host element
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem()
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
 
         # Gradients in phi
         cdef vector[DTYPE_FLOAT_t] dphi_dx = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
@@ -885,7 +890,7 @@ cdef class ArakawaADataReader(DataReader):
         """
         cdef DTYPE_FLOAT_t zmin_last, zmax_last
         cdef DTYPE_FLOAT_t zmin_mext, zmax_next
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem()
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
 
         zmin_last = self.get_zmin(self._time_last, particle)
         zmax_last = self.get_zmax(self._time_last, particle)
@@ -979,7 +984,7 @@ cdef class ArakawaADataReader(DataReader):
         cdef vector[DTYPE_FLOAT_t] var_nodes = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
 
         # Host element
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem()
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
 
         cdef DTYPE_FLOAT_t var
         cdef DTYPE_INT_t i

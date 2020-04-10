@@ -1,3 +1,5 @@
+from libcpp.string cimport string
+from libcpp.unordered_map cimport unordered_map
 from libcpp.vector cimport vector
 
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
@@ -11,6 +13,8 @@ cdef extern from "particle.h" namespace "particles":
         Particle() except +
         Particle(const Particle&) except +
         Particle& operator=(const Particle&) except +
+
+        void clear_host_horizontal_elems() except +
 
         void set_group_id(const DTYPE_INT_t&) except +
         DTYPE_INT_t get_group_id() except +
@@ -45,8 +49,11 @@ cdef extern from "particle.h" namespace "particles":
         void set_is_beached(const DTYPE_INT_t&) except +
         DTYPE_INT_t get_is_beached() except +
 
-        void set_host_horizontal_elem(const DTYPE_INT_t&) except +
-        DTYPE_INT_t get_host_horizontal_elem() except +
+        void set_host_horizontal_elem(const string&, const DTYPE_INT_t&) except +
+        DTYPE_INT_t get_host_horizontal_elem(const string&) except +
+
+        void set_all_host_horizontal_elems(const vector[string]&, const vector[int]&) except +
+        void get_all_host_horizontal_elems(vector[string]&, vector[int]&) except +
 
         void set_k_layer(const DTYPE_INT_t&) except +
         DTYPE_INT_t get_k_layer() except +

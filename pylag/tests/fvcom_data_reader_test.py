@@ -153,87 +153,87 @@ class FVCOMDataReader_test(TestCase):
     def test_find_host_using_global_search(self):
         particle = ParticleSmartPtr(x1=1.3333333333-self.xmin, x2=1.6666666667-self.ymin)
         flag = self.data_reader.find_host_using_global_search_wrapper(particle)
-        test.assert_equal(particle.host_horizontal_elem, 0)
+        test.assert_equal(particle.get_host_horizontal_elem('fvcom'), 0)
         test.assert_equal(flag, 0)
 
     def test_find_host_using_global_search_when_a_particle_is_in_an_element_with_two_land_boundaries(self):
-        particle = ParticleSmartPtr(x1=0.6666666667-self.xmin, x2=1.3333333333-self.ymin, host=-1)
+        particle = ParticleSmartPtr(x1=0.6666666667-self.xmin, x2=1.3333333333-self.ymin, host_elements={'fvcom': -1})
         flag = self.data_reader.find_host_using_global_search_wrapper(particle)
-        test.assert_equal(particle.host_horizontal_elem, -1)
+        test.assert_equal(particle.get_host_horizontal_elem('fvcom'), -1)
 
     def test_find_host_when_particle_is_in_the_domain(self):
-        particle_old = ParticleSmartPtr(x1=1.5-self.xmin, x2=2.3333333333-self.ymin, host=3)
-        particle_new = ParticleSmartPtr(x1=1.3333333333-self.xmin, x2=1.6666666667-self.ymin)
+        particle_old = ParticleSmartPtr(x1=1.5-self.xmin, x2=2.3333333333-self.ymin, host_elements={'fvcom': 3})
+        particle_new = ParticleSmartPtr(x1=1.3333333333-self.xmin, x2=1.6666666667-self.ymin, host_elements={'fvcom': -999})
         flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
         test.assert_equal(flag, 0)
-        test.assert_equal(particle_new.host_horizontal_elem, 0)
+        test.assert_equal(particle_new.get_host_horizontal_elem('fvcom'), 0)
 
     def test_find_host_when_particle_has_crossed_a_land_boundary(self):
-        particle_old = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.3333333333-self.ymin, host=1)
-        particle_new = ParticleSmartPtr(x1=1.5-self.xmin, x2=0.0-self.ymin)
+        particle_old = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.3333333333-self.ymin, host_elements={'fvcom': 1})
+        particle_new = ParticleSmartPtr(x1=1.5-self.xmin, x2=0.0-self.ymin, host_elements={'fvcom': -999})
         flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
         test.assert_equal(flag, -1)
-        test.assert_equal(particle_new.host_horizontal_elem, 1)
+        test.assert_equal(particle_new.get_host_horizontal_elem('fvcom'), 1)
 
     def test_find_host_when_particle_has_crossed_into_an_element_with_two_land_boundaries(self):
-        particle_old = ParticleSmartPtr(x1=1.3333333333-self.xmin, x2=1.6666666667-self.ymin, host=0)
-        particle_new = ParticleSmartPtr(x1=0.6666666667-self.xmin, x2=1.3333333333-self.ymin)
+        particle_old = ParticleSmartPtr(x1=1.3333333333-self.xmin, x2=1.6666666667-self.ymin, host_elements={'fvcom': 0})
+        particle_new = ParticleSmartPtr(x1=0.6666666667-self.xmin, x2=1.3333333333-self.ymin, host_elements={'fvcom': -999})
         flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
         test.assert_equal(flag, -1)
-        test.assert_equal(particle_new.host_horizontal_elem, 0)
+        test.assert_equal(particle_new.get_host_horizontal_elem('fvcom'), 0)
 
     def test_find_host_when_particle_has_crossed_multiple_elements_to_an_element_with_two_land_boundaries(self):
-        particle_old = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.3333333333-self.ymin, host=1)
-        particle_new = ParticleSmartPtr(x1=0.6666666667-self.xmin, x2=1.3333333333-self.ymin)
+        particle_old = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.3333333333-self.ymin, host_elements={'fvcom': 1})
+        particle_new = ParticleSmartPtr(x1=0.6666666667-self.xmin, x2=1.3333333333-self.ymin, host_elements={'fvcom': -999})
         flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
         test.assert_equal(flag, -1)
-        test.assert_equal(particle_new.host_horizontal_elem, 0)
+        test.assert_equal(particle_new.get_host_horizontal_elem('fvcom'), 0)
 
     def test_find_host_when_particle_is_just_inside_an_internal_element(self):
-        particle_old = ParticleSmartPtr(x1=1.4-self.xmin, x2=1.5-self.ymin, host=0)
-        particle_new = ParticleSmartPtr(x1=1.5 - 1.e-15 - self.xmin, x2=1.5 - self.ymin)
+        particle_old = ParticleSmartPtr(x1=1.4-self.xmin, x2=1.5-self.ymin, host_elements={'fvcom': 0})
+        particle_new = ParticleSmartPtr(x1=1.5 - 1.e-15 - self.xmin, x2=1.5 - self.ymin, host_elements={'fvcom': -999})
         flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
         test.assert_equal(flag, 0)
-        test.assert_equal(particle_new.host_horizontal_elem, 0)
+        test.assert_equal(particle_new.get_host_horizontal_elem('fvcom'), 0)
 
     def test_find_host_when_particle_is_just_outside_an_internal_element(self):
-        particle_old = ParticleSmartPtr(x1=1.4-self.xmin, x2=1.5-self.ymin, host=0)
-        particle_new = ParticleSmartPtr(x1=1.5 + 1.e-15 - self.xmin, x2=1.5 - self.ymin)
+        particle_old = ParticleSmartPtr(x1=1.4-self.xmin, x2=1.5-self.ymin, host_elements={'fvcom': 0})
+        particle_new = ParticleSmartPtr(x1=1.5 + 1.e-15 - self.xmin, x2=1.5 - self.ymin, host_elements={'fvcom': -999})
         flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
         test.assert_equal(flag, 0)
-        test.assert_equal(particle_new.host_horizontal_elem, 1)
+        test.assert_equal(particle_new.get_host_horizontal_elem('fvcom'), 1)
 
     def test_find_host_when_particle_is_on_an_internal_elements_side(self):
-        particle_old = ParticleSmartPtr(x1=1.4 - self.xmin, x2=1.5 - self.ymin, host=0)
-        particle_new = ParticleSmartPtr(x1=1.5 - self.xmin, x2=1.5 - self.ymin)
+        particle_old = ParticleSmartPtr(x1=1.4 - self.xmin, x2=1.5 - self.ymin, host_elements={'fvcom': 0})
+        particle_new = ParticleSmartPtr(x1=1.5 - self.xmin, x2=1.5 - self.ymin, host_elements={'fvcom': -999})
         flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
         test.assert_equal(flag, 0)
-        test.assert_equal(particle_new.host_horizontal_elem, 0)
+        test.assert_equal(particle_new.get_host_horizontal_elem('fvcom'), 0)
 
     def test_find_host_when_particle_is_just_inside_an_external_element(self):
-        particle_old = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.3333333333-self.ymin, host=1)
-        particle_new = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.0 + 1.e-15 - self.ymin)
+        particle_old = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.3333333333-self.ymin, host_elements={'fvcom': 1})
+        particle_new = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.0 + 1.e-15 - self.ymin, host_elements={'fvcom': -999})
         flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
         test.assert_equal(flag, 0)
-        test.assert_equal(particle_new.host_horizontal_elem, 1)
+        test.assert_equal(particle_new.get_host_horizontal_elem('fvcom'), 1)
 
     def test_find_host_when_particle_is_just_outside_an_external_element(self):
-        particle_old = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.3333333333-self.ymin, host=1)
-        particle_new = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.0 - 1.e-15 - self.ymin)
+        particle_old = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.3333333333-self.ymin, host_elements={'fvcom': 1})
+        particle_new = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.0 - 1.e-15 - self.ymin, host_elements={'fvcom': -999})
         flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
         test.assert_equal(flag, -1)
-        test.assert_equal(particle_new.host_horizontal_elem, 1)
+        test.assert_equal(particle_new.get_host_horizontal_elem('fvcom'), 1)
 
     def test_find_host_when_particle_is_on_an_external_elements_side(self):
-        particle_old = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.3333333333-self.ymin, host=1)
-        particle_new = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.0-self.ymin)
+        particle_old = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.3333333333-self.ymin, host_elements={'fvcom': 1})
+        particle_new = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.0-self.ymin, host_elements={'fvcom': -999})
         flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
         test.assert_equal(flag, 0)
-        test.assert_equal(particle_new.host_horizontal_elem, 1)
+        test.assert_equal(particle_new.get_host_horizontal_elem('fvcom'), 1)
 
     def test_get_boundary_intersection(self):
-        particle_old = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.3333333333-self.ymin, host=1)
-        particle_new = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=0.9-self.ymin, host=1)
+        particle_old = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=1.3333333333-self.ymin, host_elements={'fvcom': 1})
+        particle_new = ParticleSmartPtr(x1=1.6666666667-self.xmin, x2=0.9-self.ymin, host_elements={'fvcom': 1})
         intersection = self.data_reader.get_boundary_intersection_wrapper(particle_old, particle_new)
         test.assert_almost_equal(intersection.x1_py+self.xmin, 2.0)
         test.assert_almost_equal(intersection.y1_py+self.ymin, 1.0)
@@ -243,8 +243,8 @@ class FVCOMDataReader_test(TestCase):
         test.assert_almost_equal(intersection.yi_py+self.ymin, 1.0)
 
     def test_get_boundary_intersection_when_a_particle_has_left_an_external_elements_edge(self):
-        particle_old = ParticleSmartPtr(x1=1.5-self.xmin, x2=1.0-self.ymin, host=1)
-        particle_new = ParticleSmartPtr(x1=1.5-self.xmin, x2=0.9-self.ymin, host=1)
+        particle_old = ParticleSmartPtr(x1=1.5-self.xmin, x2=1.0-self.ymin, host_elements={'fvcom': 1})
+        particle_new = ParticleSmartPtr(x1=1.5-self.xmin, x2=0.9-self.ymin, host_elements={'fvcom': 1})
         intersection = self.data_reader.get_boundary_intersection_wrapper(particle_old, particle_new)
         test.assert_almost_equal(intersection.x1_py+self.xmin, 2.0)
         test.assert_almost_equal(intersection.y1_py+self.ymin, 1.0)
@@ -254,8 +254,8 @@ class FVCOMDataReader_test(TestCase):
         test.assert_almost_equal(intersection.yi_py+self.ymin, 1.0)
 
     def test_get_boundary_intersection_when_a_particle_has_moved_to_an_external_elements_edge(self):
-        particle_old = ParticleSmartPtr(x1=1.5-self.xmin, x2=1.1-self.ymin, host=1)
-        particle_new = ParticleSmartPtr(x1=1.5-self.xmin, x2=1.0-self.ymin, host=1)
+        particle_old = ParticleSmartPtr(x1=1.5-self.xmin, x2=1.1-self.ymin, host_elements={'fvcom': 1})
+        particle_new = ParticleSmartPtr(x1=1.5-self.xmin, x2=1.0-self.ymin, host_elements={'fvcom': 1})
         intersection = self.data_reader.get_boundary_intersection_wrapper(particle_old, particle_new)
         test.assert_almost_equal(intersection.x1_py+self.xmin, 2.0)
         test.assert_almost_equal(intersection.y1_py+self.ymin, 1.0)
@@ -265,7 +265,7 @@ class FVCOMDataReader_test(TestCase):
         test.assert_almost_equal(intersection.yi_py+self.ymin, 1.0)
 
     def test_set_default_location(self):
-        particle = ParticleSmartPtr(x1=1.5-self.xmin, x2=1.0-self.ymin, host=1)
+        particle = ParticleSmartPtr(x1=1.5-self.xmin, x2=1.0-self.ymin, host_elements={'fvcom': 1})
         self.data_reader.set_default_location_wrapper(particle)
         test.assert_almost_equal(particle.x1 + self.xmin, 1.66666666667)
         test.assert_almost_equal(particle.x2 + self.ymin, 1.33333333333)
@@ -273,7 +273,7 @@ class FVCOMDataReader_test(TestCase):
 
 
     def test_set_local_coordinates_when_a_particle_is_on_an_external_elements_side(self):
-        particle = ParticleSmartPtr(x1=1.5-self.xmin, x2=1.0-self.ymin, host=1)
+        particle = ParticleSmartPtr(x1=1.5-self.xmin, x2=1.0-self.ymin, host_elements={'fvcom': 1})
         self.data_reader.set_local_coordinates_wrapper(particle)
         phi_min = np.min(np.array(particle.phi, dtype=float))
         test.assert_equal(np.abs(phi_min), 0.0)
@@ -281,11 +281,11 @@ class FVCOMDataReader_test(TestCase):
     def test_get_zmin(self):
         x1 = 1.3333333333-self.xmin
         x2 = 1.6666666667-self.ymin
-        host = 0
+        host_elements={'fvcom': 0}
 
         time = 0.0
         
-        particle = ParticleSmartPtr(x1=x1, x2=x2, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         bathy = self.data_reader.get_zmin_wrapper(time, particle)
         test.assert_almost_equal(bathy, -11.0)
@@ -293,16 +293,16 @@ class FVCOMDataReader_test(TestCase):
     def test_get_zmax(self):
         x1 = 1.3333333333-self.xmin
         x2 = 1.6666666667-self.ymin
-        host = 0
+        host_elements={'fvcom': 0}
         
         time = 0.0
-        particle = ParticleSmartPtr(x1=x1, x2=x2, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         zeta = self.data_reader.get_zmax_wrapper(time, particle)
         test.assert_almost_equal(zeta, 1.0)
         
         time = 1800.0
-        particle = ParticleSmartPtr(x1=x1, x2=x2, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         zeta = self.data_reader.get_zmax_wrapper(time, particle)
         test.assert_almost_equal(zeta, 1.5)
@@ -312,9 +312,9 @@ class FVCOMDataReader_test(TestCase):
         x1 = 1.3333333333-self.xmin
         x2 = 1.6666666667-self.ymin
         x3 = 1.0
-        host = 0
+        host_elements={'fvcom': 0}
 
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
         
@@ -328,9 +328,9 @@ class FVCOMDataReader_test(TestCase):
         x1 = 1.3333333333-self.xmin
         x2 = 1.6666666667-self.ymin
         x3 = -11.0
-        host = 0
+        host_elements={'fvcom': 0}
 
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
 
@@ -344,9 +344,9 @@ class FVCOMDataReader_test(TestCase):
         x1 = 1.3333333333-self.xmin
         x2 = 1.6666666667-self.ymin
         x3 = 0.4 # this is 25% of the way between the top and bottom sigma levels
-        host = 0
+        host_elements={'fvcom': 0}
 
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
 
@@ -360,9 +360,9 @@ class FVCOMDataReader_test(TestCase):
         x1 = 1.3333333333-self.xmin
         x2 = 1.6666666667-self.ymin
         x3 = -10.4
-        host = 0
+        host_elements={'fvcom': 0}
 
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
 
@@ -376,9 +376,9 @@ class FVCOMDataReader_test(TestCase):
         x1 = 1.3333333333-self.xmin
         x2 = 1.6666666667-self.ymin
         x3 = -2.6
-        host = 0
+        host_elements={'fvcom': 0}
 
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
 
@@ -393,13 +393,13 @@ class FVCOMDataReader_test(TestCase):
     def test_get_velocity_in_surface_layer(self):
         x1 = 1.3333333333-self.xmin
         x2 = 1.6666666667-self.ymin
-        host = 0
+        host_elements={'fvcom': 0}
 
         # Test #1
         x3 = 1.0
         time = 0.0
 
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
 
@@ -412,7 +412,7 @@ class FVCOMDataReader_test(TestCase):
         # Test #2
         x3 = 1.5
         time = 1800.0
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
 
@@ -424,7 +424,7 @@ class FVCOMDataReader_test(TestCase):
         # Test #3
         x3 = -0.2
         time = 0.0
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
 
@@ -436,12 +436,12 @@ class FVCOMDataReader_test(TestCase):
     def test_get_velocity_in_middle_layer(self):
         x1 = 1.3333333333-self.xmin
         x2 = 1.6666666667-self.ymin
-        host = 0
+        host_elements={'fvcom': 0}
 
         # Test #1
         x3 = -2.6
         time = 0.0
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
 
@@ -453,7 +453,7 @@ class FVCOMDataReader_test(TestCase):
         # Test #2
         x3 = -2.25
         time = 1800.0
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
 
@@ -465,12 +465,12 @@ class FVCOMDataReader_test(TestCase):
     def test_get_velocity_in_bottom_layer(self):
         x1 = 1.3333333333-self.xmin
         x2 = 1.6666666667-self.ymin
-        host = 0
+        host_elements={'fvcom': 0}
 
         # Test #1
         x3 = -10.999
         time = 0.0
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
 
@@ -482,7 +482,7 @@ class FVCOMDataReader_test(TestCase):
         # Test #2
         x3 = -10.999
         time = 1800.0
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
 
@@ -494,7 +494,7 @@ class FVCOMDataReader_test(TestCase):
         # Test #3
         x3 = -9.8
         time = 0.0
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
 
@@ -506,11 +506,11 @@ class FVCOMDataReader_test(TestCase):
     def test_get_thetao(self):
         x1 = 1.3333333333-self.xmin
         x2 = 1.6666666667-self.ymin
-        host = 0
+        host_elements={'fvcom': 0}
 
         x3 = -0.1
         time = 0.0
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
         thetao = self.data_reader.get_environmental_variable_wrapper('thetao', time, particle)
@@ -520,11 +520,11 @@ class FVCOMDataReader_test(TestCase):
     def test_get_so(self):
         x1 = 1.3333333333-self.xmin
         x2 = 1.6666666667-self.ymin
-        host = 0
+        host_elements={'fvcom': 0}
 
         x3 = -0.1
         time = 0.0
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
         so = self.data_reader.get_environmental_variable_wrapper('so', time, particle)
@@ -534,11 +534,11 @@ class FVCOMDataReader_test(TestCase):
     def test_get_vertical_eddy_diffusivity(self):
         x1 = 1.3333333333-self.xmin
         x2 = 1.6666666667-self.ymin
-        host = 0
+        host_elements={'fvcom': 0}
 
         x3 = -0.2
         time = 0.0
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
         diffusivity = self.data_reader.get_vertical_eddy_diffusivity_wrapper(time, particle)
@@ -548,11 +548,11 @@ class FVCOMDataReader_test(TestCase):
     def test_get_vertical_eddy_diffusivity_derivative(self):
         x1 = 1.3333333333-self.xmin
         x2 = 1.6666666667-self.ymin
-        host = 0
+        host_elements={'fvcom': 0}
 
         x3 = -0.2
         time = 0.0
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
         diffusivity_gradient = self.data_reader.get_vertical_eddy_diffusivity_derivative_wrapper(time, particle)
@@ -562,11 +562,11 @@ class FVCOMDataReader_test(TestCase):
     def test_get_horizontal_eddy_viscosity(self):
         x1 = 1.3333333333-self.xmin
         x2 = 1.6666666667-self.ymin
-        host = 0
+        host_elements={'fvcom': 0}
 
         x3 = -0.1
         time = 0.0
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
         viscosity = self.data_reader.get_horizontal_eddy_viscosity_wrapper(time, particle)
@@ -576,11 +576,11 @@ class FVCOMDataReader_test(TestCase):
     def test_get_horizontal_eddy_viscosity_derivative(self):
         x1 = 1.3333333333-self.xmin
         x2 = 1.6666666667-self.ymin
-        host = 0
+        host_elements={'fvcom': 0}
 
         x3 = -0.1
         time = 0.0
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
 
@@ -592,10 +592,10 @@ class FVCOMDataReader_test(TestCase):
     def test_element_is_wet(self):
         x1 = 1.3333333333-self.xmin
         x2 = 1.6666666667-self.ymin
-        host = 0
+        host_elements={'fvcom': 0}
         time = 0.0
 
-        particle = ParticleSmartPtr(x1=x1, x2=x2, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         status = self.data_reader.is_wet_wrapper(time, particle)
         test.assert_equal(status, 1)
@@ -638,40 +638,40 @@ class FVCOMReflectingHorizBoundaryCondition_test(TestCase):
         del(self.data_reader)
 
     def test_reflect_particle_on_a_normal_trajectory(self):
-        particle_old = ParticleSmartPtr(x1=1.6666666667 - self.xmin, x2=1.2 - self.ymin, host=1)
-        particle_new = ParticleSmartPtr(x1=1.6666666667 - self.xmin, x2=0.9 - self.ymin, host=1)
+        particle_old = ParticleSmartPtr(x1=1.6666666667 - self.xmin, x2=1.2 - self.ymin, host_elements={'fvcom': 1})
+        particle_new = ParticleSmartPtr(x1=1.6666666667 - self.xmin, x2=0.9 - self.ymin, host_elements={'fvcom': 1})
         flag = self.horiz_boundary_condition_calculator.apply_wrapper(self.data_reader, particle_old, particle_new)
         test.assert_equal(flag, 0)
         test.assert_equal(particle_new.x1 + self.xmin, 1.6666666667)
         test.assert_equal(particle_new.x2 + self.ymin, 1.1)
-        test.assert_equal(particle_new.host_horizontal_elem, 1)
+        test.assert_equal(particle_new.get_host_horizontal_elem('fvcom'), 1)
 
     def test_reflect_particle_on_an_angled_trajectory(self):
-        particle_old = ParticleSmartPtr(x1=1.4 - self.xmin, x2=1.1 - self.ymin, host=1)
-        particle_new = ParticleSmartPtr(x1=1.6 - self.xmin, x2=0.9 - self.ymin, host=1)
+        particle_old = ParticleSmartPtr(x1=1.4 - self.xmin, x2=1.1 - self.ymin, host_elements={'fvcom': 1})
+        particle_new = ParticleSmartPtr(x1=1.6 - self.xmin, x2=0.9 - self.ymin, host_elements={'fvcom': 1})
         flag = self.horiz_boundary_condition_calculator.apply_wrapper(self.data_reader, particle_old, particle_new)
         test.assert_equal(flag, 0)
         test.assert_equal(particle_new.x1 + self.xmin, 1.6)
         test.assert_equal(particle_new.x2 + self.ymin, 1.1)
-        test.assert_equal(particle_new.host_horizontal_elem, 1)
+        test.assert_equal(particle_new.get_host_horizontal_elem('fvcom'), 1)
 
     def test_reflect_particle_that_sits_on_the_boundary(self):
-        particle_old = ParticleSmartPtr(x1=1.5 - self.xmin, x2=1.0 - self.ymin, host=1)
-        particle_new = ParticleSmartPtr(x1=1.6 - self.xmin, x2=0.9 - self.ymin, host=1)
+        particle_old = ParticleSmartPtr(x1=1.5 - self.xmin, x2=1.0 - self.ymin, host_elements={'fvcom': 1})
+        particle_new = ParticleSmartPtr(x1=1.6 - self.xmin, x2=0.9 - self.ymin, host_elements={'fvcom': 1})
         flag = self.horiz_boundary_condition_calculator.apply_wrapper(self.data_reader, particle_old, particle_new)
         test.assert_equal(flag, 0)
         test.assert_equal(particle_new.x1 + self.xmin, 1.6)
         test.assert_equal(particle_new.x2 + self.ymin, 1.1)
-        test.assert_equal(particle_new.host_horizontal_elem, 1)
+        test.assert_equal(particle_new.get_host_horizontal_elem('fvcom'), 1)
 
     def test_reflect_particle_that_undergoes_a_double_reflection_while_on_a_southeast_trajectory(self):
-        particle_old = ParticleSmartPtr(x1=1.8 - self.xmin, x2=1.1 - self.ymin, host=1)
-        particle_new = ParticleSmartPtr(x1=2.1 - self.xmin, x2=0.8 - self.ymin, host=1)
+        particle_old = ParticleSmartPtr(x1=1.8 - self.xmin, x2=1.1 - self.ymin, host_elements={'fvcom': 1})
+        particle_new = ParticleSmartPtr(x1=2.1 - self.xmin, x2=0.8 - self.ymin, host_elements={'fvcom': 1})
         flag = self.horiz_boundary_condition_calculator.apply_wrapper(self.data_reader, particle_old, particle_new)
         test.assert_equal(flag, 0)
         test.assert_equal(particle_new.x1 + self.xmin, 1.9)
         test.assert_equal(particle_new.x2 + self.ymin, 1.2)
-        test.assert_equal(particle_new.host_horizontal_elem, 1)
+        test.assert_equal(particle_new.get_host_horizontal_elem('fvcom'), 1)
 
 
 class FVCOMReflectingVertBoundaryCondition_test(TestCase):
@@ -714,11 +714,11 @@ class FVCOMReflectingVertBoundaryCondition_test(TestCase):
         x1 = 1.3333333333-self.xmin
         x2 = 1.6666666667-self.ymin
         x3 = 1.0 + 0.1
-        host = 0
+        host_elements={'fvcom': 0}
 
         time = 0.0
         
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.vert_boundary_condition_calculator.apply_wrapper(self.data_reader, time, particle)
         test.assert_equal(flag, 0)
@@ -728,11 +728,11 @@ class FVCOMReflectingVertBoundaryCondition_test(TestCase):
         x1 = 1.3333333333-self.xmin
         x2 = 1.6666666667-self.ymin
         x3 = 1.0 + 1.e-14
-        host = 0
+        host_elements={'fvcom': 0}
 
         time = 0.0
         
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.vert_boundary_condition_calculator.apply_wrapper(self.data_reader, time, particle)
         test.assert_equal(flag, 0)
@@ -742,11 +742,11 @@ class FVCOMReflectingVertBoundaryCondition_test(TestCase):
         x1 = 1.3333333333-self.xmin
         x2 = 1.6666666667-self.ymin
         x3 = -11.0 - 0.1
-        host = 0
+        host_elements={'fvcom': 0}
 
         time = 0.0
         
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.vert_boundary_condition_calculator.apply_wrapper(self.data_reader, time, particle)
         test.assert_equal(flag, 0)
@@ -756,11 +756,11 @@ class FVCOMReflectingVertBoundaryCondition_test(TestCase):
         x1 = 1.3333333333-self.xmin
         x2 = 1.6666666667-self.ymin
         x3 = -11.0 - 1.e-14
-        host = 0
+        host_elements={'fvcom': 0}
 
         time = 0.0
         
-        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.vert_boundary_condition_calculator.apply_wrapper(self.data_reader, time, particle)
         test.assert_equal(flag, 0)

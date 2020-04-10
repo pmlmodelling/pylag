@@ -1,6 +1,7 @@
 from cython.operator cimport dereference as deref
 
 from libcpp.vector cimport vector
+from libcpp.string cimport string
 
 # Data types
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
@@ -18,7 +19,7 @@ cdef class ParticleSmartPtr:
             DTYPE_FLOAT_t phi1=-999.,  DTYPE_FLOAT_t phi2=-999.,
             DTYPE_FLOAT_t phi3=-999., DTYPE_FLOAT_t omega_interfaces=-999.,
             DTYPE_FLOAT_t omega_layers=-999., bint in_domain=False,
-            DTYPE_INT_t is_beached=0, DTYPE_INT_t host=-999, 
+            DTYPE_INT_t is_beached=0, host_elements={},
             DTYPE_INT_t k_layer=-999, bint in_vertical_boundary_layer=False,
             DTYPE_INT_t k_lower_layer=-999, DTYPE_INT_t k_upper_layer=-999,
             DTYPE_INT_t id=-999, DTYPE_INT_t status=0, ParticleSmartPtr particle_smart_ptr=None):
@@ -46,11 +47,13 @@ cdef class ParticleSmartPtr:
             self._particle.set_omega_layers(omega_layers)
             self._particle.set_in_domain(in_domain)
             self._particle.set_is_beached(is_beached)
-            self._particle.set_host_horizontal_elem(host)
             self._particle.set_k_layer(k_layer)
             self._particle.set_in_vertical_boundary_layer(in_vertical_boundary_layer)
             self._particle.set_k_lower_layer(k_lower_layer)
             self._particle.set_k_upper_layer(k_upper_layer)
+
+            # Add hosts
+            self.set_all_host_horizontal_elems(host_elements)
 
         if not self._particle:
             raise MemoryError()
@@ -82,6 +85,33 @@ cdef class ParticleSmartPtr:
 
         return data
 
+    def set_host_horizontal_elem(self, grid, host):
+        grid_name = grid.encode() if type(grid) == str else grid
+        return self._particle.set_host_horizontal_elem(grid_name, host)
+
+    def get_host_horizontal_elem(self, grid):
+        grid_name = grid.encode() if type(grid) == str else grid
+        return self._particle.get_host_horizontal_elem(grid_name)
+
+    def set_all_host_horizontal_elems(self, host_elements):
+        for grid, host in host_elements.items():
+            self.set_host_horizontal_elem(grid, host)
+
+    def get_all_host_horizontal_elems(self):
+        cdef vector[string] grids
+        cdef vector[int] hosts
+        self._particle.get_all_host_horizontal_elems(grids, hosts)
+
+        host_elements = {}
+        for grid, host in zip(grids, hosts):
+            host_elements[grid.decode()] = host
+
+        return host_elements
+
+    @property
+    def status(self):
+        return self._particle.get_status()
+
     @property
     def x1(self):
         return self._particle.get_x1()
@@ -109,10 +139,6 @@ cdef class ParticleSmartPtr:
     @property
     def is_beached(self):
         return self._particle.get_is_beached()
-
-    @property
-    def host_horizontal_elem(self):
-        return self._particle.get_host_horizontal_elem()
 
     @property
     def k_layer(self):
@@ -160,7 +186,11 @@ cdef ParticleSmartPtr copy(ParticleSmartPtr particle_smart_ptr):
 
 cdef to_string(Particle* particle):
     """ Return a string object that describes a particle
-    
+
+    TODO:
+    -----
+    1) Add back in host elements
+
     Parameters:
     -----------
     particle : Particle C ptr
@@ -184,7 +214,6 @@ cdef to_string(Particle* particle):
         "Particle phi[2] = {} \n"\
         "Particle omega interfaces = {} \n"\
         "Particle omega layers = {} \n"\
-        "Particle host element = {} \n"\
         "Partilce in vertical boundary layer = {} \n"\
         "Partilce k layer = {} \n"\
         "Partilce k lower layer = {} \n"\
@@ -199,7 +228,6 @@ cdef to_string(Particle* particle):
                                              phi[2],
                                              particle.get_omega_interfaces(),
                                              particle.get_omega_layers(),
-                                             particle.get_host_horizontal_elem(),
                                              particle.get_in_vertical_boundary_layer(),
                                              particle.get_k_layer(),
                                              particle.get_k_lower_layer(),
@@ -208,3 +236,4 @@ cdef to_string(Particle* particle):
                                              particle.get_is_beached())
 
     return s
+

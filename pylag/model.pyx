@@ -127,6 +127,11 @@ cdef class OPTModel:
         """
         self.data_reader.read_data(time)
 
+    def get_grid_names(self):
+        """ Return a list of grid names
+        """
+        return self.data_reader.get_grid_names()
+
     def seed(self, time):
         """Set particle positions equal to those of the particle seed.
         
@@ -234,7 +239,7 @@ cdef class OPTModel:
             xmin = 0.0
             ymin = 0.0
 
-        guess = None
+        host_elements = None
         particles_in_domain = 0
         id = 0
         for group, x1, x2, x3 in zip(self._group_ids, self._x1_positions, self._x2_positions, self._x3_positions):
@@ -245,9 +250,9 @@ cdef class OPTModel:
             particle_smart_ptr = ParticleSmartPtr(group_id=group, x1=x1-xmin, x2=x2-ymin, x3=x3, id=id)
 
             # Find particle host element
-            if guess is not None:
+            if host_elements is not None:
                 # Try a local search first using guess as a starting point
-                particle_smart_ptr.get_ptr().set_host_horizontal_elem(guess)
+                particle_smart_ptr.set_all_host_horizontal_elems(host_elements)
                 flag = self.data_reader.find_host_using_local_search(particle_smart_ptr.get_ptr())
                 if flag != IN_DOMAIN:
                     # Local search failed - try a global search
@@ -266,9 +271,9 @@ cdef class OPTModel:
 
                 # Use the location of the last particle to guide the search for the
                 # next. This should be fast if particle initial positions are collocated.
-                guess = particle_smart_ptr.host_horizontal_elem
+                host_elements = particle_smart_ptr.get_all_host_horizontal_elems()
             else:
-                particle_smart_ptr.get_ptr().set_host_horizontal_elem(-999)
+                particle_smart_ptr.get_ptr().clear_host_horizontal_elems()
                 particle_smart_ptr.get_ptr().set_in_domain(False)
                 self.particle_seed_smart_ptrs.append(particle_smart_ptr)
 
@@ -331,7 +336,7 @@ cdef class OPTModel:
         diags : dict
             Dictionary holding particle diagnostic data.
         """
-        cdef Particle* particle_ptr
+        cdef ParticleSmartPtr particle_smart_ptr
 
         # Grid offsets
         if self.coordinate_system == "cartesian":
@@ -342,30 +347,38 @@ cdef class OPTModel:
             ymin = 0.0
 
         # Initialise lists
-        diags = {'x1': [], 'x2': [], 'x3': [], 'host_horizontal_elem': [],
-                 'h': [], 'zeta': [], 'is_beached': [], 'in_domain': [],
-                 'status': []}
+        diags = {'x1': [], 'x2': [], 'x3': [], 'h': [], 'zeta': [], 'is_beached': [],
+                 'in_domain': [], 'status': []}
+
+        # Initialise host data
+        for grid_name in self.get_grid_names():
+            diags['host_{}'.format(grid_name)] = []
 
         # Initialise env var lists
         for var_name in self.environmental_variables:
             diags[var_name] = []
 
-        for particle_ptr in self.particle_ptrs:
+        for particle_smart_ptr in self.particle_smart_ptrs:
+
             # Particle location data
-            diags['x1'].append(particle_ptr.get_x1() + xmin)
-            diags['x2'].append(particle_ptr.get_x2() + ymin)
-            diags['x3'].append(particle_ptr.get_x3())
-            diags['host_horizontal_elem'].append(particle_ptr.get_host_horizontal_elem())
+            diags['x1'].append(particle_smart_ptr.x1 + xmin)
+            diags['x2'].append(particle_smart_ptr.x2 + ymin)
+            diags['x3'].append(particle_smart_ptr.x3)
+
+            # Grid specific host element data
+            host_elements = particle_smart_ptr.get_all_host_horizontal_elems()
+            for grid_name, host in host_elements.items():
+                diags['host_{}'.format(grid_name)].append(host)
 
             # Particle state data
-            diags['is_beached'].append(particle_ptr.get_is_beached())
-            diags['in_domain'].append(particle_ptr.get_in_domain())
-            diags['status'].append(particle_ptr.get_status())
+            diags['is_beached'].append(particle_smart_ptr.is_beached)
+            diags['in_domain'].append(particle_smart_ptr.in_domain)
+            diags['status'].append(particle_smart_ptr.status)
             
             # Grid variables
-            if particle_ptr.get_in_domain():
-                h = self.data_reader.get_zmin(time, particle_ptr)
-                zeta = self.data_reader.get_zmax(time, particle_ptr)
+            if particle_smart_ptr.in_domain:
+                h = self.data_reader.get_zmin(time, particle_smart_ptr.get_ptr())
+                zeta = self.data_reader.get_zmax(time, particle_smart_ptr.get_ptr())
             else:
                 h = FLOAT_ERR
                 zeta = FLOAT_ERR
@@ -374,8 +387,8 @@ cdef class OPTModel:
 
             # Environmental variables
             for var_name in self.environmental_variables:
-                if particle_ptr.get_in_domain():
-                    var = self.data_reader.get_environmental_variable(var_name, time, particle_ptr)
+                if particle_smart_ptr.in_domain:
+                    var = self.data_reader.get_environmental_variable(var_name, time, particle_smart_ptr.get_ptr())
                     diags[var_name].append(var)
                 else:
                     diags[var_name].append(FLOAT_ERR)
