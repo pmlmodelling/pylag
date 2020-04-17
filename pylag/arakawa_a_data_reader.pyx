@@ -94,6 +94,9 @@ cdef class ArakawaADataReader(DataReader):
     cdef DTYPE_INT_t[:, :] _depth_mask_last
     cdef DTYPE_INT_t[:, :] _depth_mask_next
 
+    # Dictionary of variable names
+    cdef object _variable_names
+
     # Sea surface elevation
     cdef DTYPE_FLOAT_t[:] _zeta_last
     cdef DTYPE_FLOAT_t[:] _zeta_next
@@ -145,12 +148,27 @@ cdef class ArakawaADataReader(DataReader):
         # Time direction
         self._time_direction = <int>get_time_direction(config)
 
-        # Set flags from config
-        self._has_w = self.config.getboolean("OCEAN_CIRCULATION_MODEL", "has_w")
-        self._has_Kh = self.config.getboolean("OCEAN_CIRCULATION_MODEL", "has_Kh")
-        self._has_Ah = self.config.getboolean("OCEAN_CIRCULATION_MODEL", "has_Ah")
+        # Setup variable name mappings
+        self._variable_names = {}
+        var_config_names = {'uo': 'uo_var_name', 'vo': 'vo_var_name', 'wo': 'wo_var_name', 'zos': 'zos_var_name',
+                            'Kh': 'Kh_var_name', 'Ah': 'Ah_var_name', 'thetao': 'thetao_var_name',
+                            'so': 'so_var_name'}
+        for var_name, config_name in var_config_names.items():
+            try:
+                var =self.config.get('OCEAN_CIRCULATION_MODEL', config_name).strip()
+                if var:
+                    self._variable_names[var_name] = var
+            except (configparser.NoSectionError, configparser.NoOptionError) as e:
+                pass
+
+        # Set boolean flags
+        self._has_zeta = True if self._variable_names.has_key('zos') else False
+        self._has_w = True if self._variable_names.has_key('wo') else False
+        self._has_Kh = True if self._variable_names.has_key('Kh') else False
+        self._has_Ah = True if self._variable_names.has_key('Ah') else False
+
+        # Has is wet flag?
         self._has_is_wet = self.config.getboolean("OCEAN_CIRCULATION_MODEL", "has_is_wet")
-        self._has_zeta = self.config.getboolean("OCEAN_CIRCULATION_MODEL", "has_zeta")
 
         # Check to see if any environmental variables are being saved.
         try:
@@ -162,10 +180,16 @@ cdef class ArakawaADataReader(DataReader):
         for env_var_name in env_var_names:
             env_var_name = env_var_name.strip()
             if env_var_name is not None:
-                if env_var_name in variable_library.standard_variable_names.keys():
-                    self.env_var_names.append(env_var_name)
-                else:
-                    raise ValueError('Received unsupported variable {}'.format(env_var_name))
+                if env_var_name not in self._variable_names.keys():
+                    raise ValueError("Received request to track environmental tracer `{}'. However, "\
+                            "the corresponding NetCDF variable name was not given. If the variable has been "\
+                            "saved within the inputs, please specify its name in the run config.".format(env_var_name))
+
+                if env_var_name not in variable_library.standard_variable_names.keys():
+                    raise ValueError("Support for tracking the environmental tracer `{}' does not currently "\
+                            "exist within PyLag".format(env_var_name))
+
+                self.env_var_names.append(env_var_name)
 
         self._read_grid()
 
@@ -1101,10 +1125,16 @@ cdef class ArakawaADataReader(DataReader):
 
         # Update memory views for zeta
         if self._has_zeta:
-            zeta_last = self.mediator.get_time_dependent_variable_at_last_time_index('zos', (self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+            zeta_var_name = self._variable_names['zos']
+
+            # Zeta at last time step
+            zeta_last = self.mediator.get_time_dependent_variable_at_last_time_index(zeta_var_name,
+                    (self._n_latitude, self._n_longitude), DTYPE_FLOAT)
             self._zeta_last = self._reshape_var(zeta_last, ('latitude', 'longitude'))
 
-            zeta_next = self.mediator.get_time_dependent_variable_at_next_time_index('zos', (self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+            # Zeta at next time step
+            zeta_next = self.mediator.get_time_dependent_variable_at_next_time_index(zeta_var_name,
+                    (self._n_latitude, self._n_longitude), DTYPE_FLOAT)
             self._zeta_next = self._reshape_var(zeta_next, ('latitude', 'longitude'))
         else:
             # If zeta wasn't given, set it to zero throughout
@@ -1112,32 +1142,43 @@ cdef class ArakawaADataReader(DataReader):
             self._zeta_next = np.zeros((self._n_nodes), dtype=DTYPE_FLOAT)
 
         # Update memory views for u
-        u_last = self.mediator.get_time_dependent_variable_at_last_time_index('uo', (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+        u_var_name = self._variable_names['uo']
+        u_last = self.mediator.get_time_dependent_variable_at_last_time_index(u_var_name,
+                (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
         self._u_last = self._reshape_var(u_last, ('depth', 'latitude', 'longitude'))
 
-        u_next = self.mediator.get_time_dependent_variable_at_next_time_index('uo', (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+        u_next = self.mediator.get_time_dependent_variable_at_next_time_index(u_var_name,
+                (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
         self._u_next = self._reshape_var(u_next, ('depth', 'latitude', 'longitude'))
 
         # Update memory views for v
-        v_last = self.mediator.get_time_dependent_variable_at_last_time_index('vo', (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+        v_var_name = self._variable_names['vo']
+        v_last = self.mediator.get_time_dependent_variable_at_last_time_index(v_var_name,
+                (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
         self._v_last = self._reshape_var(v_last, ('depth', 'latitude', 'longitude'))
 
-        v_next = self.mediator.get_time_dependent_variable_at_next_time_index('vo', (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+        v_next = self.mediator.get_time_dependent_variable_at_next_time_index(v_var_name,
+                (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
         self._v_next = self._reshape_var(v_next, ('depth', 'latitude', 'longitude'))
 
         # Update memory views for w
         if self._has_w:
-            w_last = self.mediator.get_time_dependent_variable_at_last_time_index('wo', (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+            w_var_name = self._variable_names['wo']
+            w_last = self.mediator.get_time_dependent_variable_at_last_time_index(w_var_name,
+                    (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
             self._w_last = self._reshape_var(w_last, ('depth', 'latitude', 'longitude'))
 
-            w_next = self.mediator.get_time_dependent_variable_at_next_time_index('wo', (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+            w_next = self.mediator.get_time_dependent_variable_at_next_time_index(w_var_name,
+                    (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
             self._w_next = self._reshape_var(w_next, ('depth', 'latitude', 'longitude'))
 
         # Update depth mask
-        depth_mask_last = self.mediator.get_mask_at_last_time_index('uo', (self._n_depth, self._n_latitude, self._n_longitude))
+        depth_mask_last = self.mediator.get_mask_at_last_time_index(u_var_name,
+                (self._n_depth, self._n_latitude, self._n_longitude))
         self._depth_mask_last = self._reshape_var(depth_mask_last, ('depth', 'latitude', 'longitude'))
 
-        depth_mask_next = self.mediator.get_mask_at_next_time_index('uo', (self._n_depth, self._n_latitude, self._n_longitude))
+        depth_mask_next = self.mediator.get_mask_at_next_time_index(u_var_name,
+                (self._n_depth, self._n_latitude, self._n_longitude))
         self._depth_mask_next = self._reshape_var(depth_mask_next, ('depth', 'latitude', 'longitude'))
 
         # Compute actual depth levels using reference values and zeta
@@ -1148,18 +1189,24 @@ cdef class ArakawaADataReader(DataReader):
 
         # Update memory views for kh
         if self._has_Kh:
-            kh_last = self.mediator.get_time_dependent_variable_at_last_time_index('kh', (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+            kh_var_name = self._variable_names['Kh']
+            kh_last = self.mediator.get_time_dependent_variable_at_last_time_index(kh_var_name,
+                    (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
             self._kh_last = self._reshape_var(kh_last, ('depth', 'latitude', 'longitude'))
 
-            kh_next = self.mediator.get_time_dependent_variable_at_next_time_index('kh', (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+            kh_next = self.mediator.get_time_dependent_variable_at_next_time_index(kh_var_name,
+                    (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
             self._kh_next = self._reshape_var(kh_next, ('depth', 'latitude', 'longitude'))
 
-        # Update memory views for viscofh
+        # Update memory views for Ah
         if self._has_Ah:
-            ah_last = self.mediator.get_time_dependent_variable_at_last_time_index('ah', (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+            ah_var_name = self._variable_names['Ah']
+            ah_last = self.mediator.get_time_dependent_variable_at_last_time_index(ah_var_name,
+                    (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
             self._ah_last = self._reshape_var(ah_last, ('depth', 'latitude', 'longitude'))
 
-            ah_next = self.mediator.get_time_dependent_variable_at_next_time_index('ah', (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+            ah_next = self.mediator.get_time_dependent_variable_at_next_time_index(ah_var_name,
+                    (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
             self._ah_next = self._reshape_var(ah_next, ('depth', 'latitude', 'longitude'))
 
         # Set is wet status
@@ -1180,19 +1227,23 @@ cdef class ArakawaADataReader(DataReader):
 
         # Read in data as requested
         if 'thetao' in self.env_var_names:
-            var_name = variable_library.standard_variable_names['thetao']
-            thetao_next = self.mediator.get_time_dependent_variable_at_next_time_index(var_name, (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+            var_name = self._variable_names['thetao']
+            thetao_next = self.mediator.get_time_dependent_variable_at_next_time_index(var_name,
+                    (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
             self._thetao_next = self._reshape_var(thetao_next, ('depth', 'latitude', 'longitude'))
 
-            thetao_last = self.mediator.get_time_dependent_variable_at_last_time_index(var_name, (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+            thetao_last = self.mediator.get_time_dependent_variable_at_last_time_index(var_name,
+                    (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
             self._thetao_last = self._reshape_var(thetao_last, ('depth', 'latitude', 'longitude'))
 
         if 'so' in self.env_var_names:
-            var_name = variable_library.standard_variable_names['so']
-            so_next = self.mediator.get_time_dependent_variable_at_next_time_index(var_name, (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+            var_name = self._variable_names['so']
+            so_next = self.mediator.get_time_dependent_variable_at_next_time_index(var_name,
+                    (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
             self._so_next = self._reshape_var(so_next, ('depth', 'latitude', 'longitude'))
 
-            so_last = self.mediator.get_time_dependent_variable_at_last_time_index(var_name, (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
+            so_last = self.mediator.get_time_dependent_variable_at_last_time_index(var_name,
+                    (self._n_depth, self._n_latitude, self._n_longitude), DTYPE_FLOAT)
             self._so_last = self._reshape_var(so_last, ('depth', 'latitude', 'longitude'))
 
         return
