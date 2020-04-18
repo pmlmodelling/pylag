@@ -376,6 +376,12 @@ class FileReader(object):
     def get_time_at_next_time_index(self):
         return self._second_time[self._tidx_second]
 
+    def get_variable_dimensions(self, var_name):
+        return self._first_data_file.variables[var_name].dimensions
+
+    def get_variable_shape(self, var_name):
+        return self._first_data_file.variables[var_name].shape
+
     def get_time_dependent_variable_at_last_time_index(self, var_name):
         var = self._first_data_file.variables[var_name][self._tidx_first, :]
 

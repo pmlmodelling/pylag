@@ -137,6 +137,12 @@ class MockArakawaAMediator(Mediator):
                            'latitude': lat_nodes, 'latitude_c': lat_elements, 'depth': depth, 'h': h,
                            'mask': land_sea_mask_elements}
 
+        # Set dimensions
+        zos_dimensions = ('time', 'latitude', 'longitude')
+        uvwts_dimensions = ('time', 'depth', 'latitude', 'longitude')
+        self._time_dep_var_dimensions = {'zos': zos_dimensions, 'uo': uvwts_dimensions, 'vo': uvwts_dimensions,
+                                         'wo': uvwts_dimensions, 'thetao': uvwts_dimensions, 'so': uvwts_dimensions}
+
         # Store in dictionaries
         self._time_dep_vars_last = {'zos': zeta_t0, 'uo': uvw_t0, 'vo': uvw_t0, 'wo': uvw_t0, 'thetao': ts_t0,
                                     'so': ts_t0}
@@ -165,6 +171,12 @@ class MockArakawaAMediator(Mediator):
 
     def get_grid_variable(self, var_name, var_dims, var_type):
         return self._grid_vars[var_name][:].astype(var_type)
+
+    def get_variable_dimensions(self, var_name):
+        return self._time_dep_var_dimensions[var_name]
+
+    def get_variable_shape(self, var_name):
+        return self._time_dep_vars_last[var_name].shape
 
     def get_time_dependent_variable_at_last_time_index(self, var_name, var_dims, var_type):
         var = self._time_dep_vars_last[var_name][:].astype(var_type)
@@ -209,11 +221,18 @@ class ArawawaADataReader_test(TestCase):
         config.add_section("SIMULATION")
         config.set('SIMULATION', 'time_direction', 'forward')
         config.add_section("OCEAN_CIRCULATION_MODEL")
-        config.set('OCEAN_CIRCULATION_MODEL', 'has_w', 'True')
-        config.set('OCEAN_CIRCULATION_MODEL', 'has_Kh', 'False')
-        config.set('OCEAN_CIRCULATION_MODEL', 'has_Ah', 'False')
+        config.set('OCEAN_CIRCULATION_MODEL', 'time_dim_name', 'time')
+        config.set('OCEAN_CIRCULATION_MODEL', 'depth_dim_name', 'depth')
+        config.set('OCEAN_CIRCULATION_MODEL', 'latitude_dim_name', 'latitude')
+        config.set('OCEAN_CIRCULATION_MODEL', 'longitude_dim_name', 'longitude')
+        config.set('OCEAN_CIRCULATION_MODEL', 'time_var_name', 'time')
+        config.set('OCEAN_CIRCULATION_MODEL', 'uo_var_name', 'uo')
+        config.set('OCEAN_CIRCULATION_MODEL', 'vo_var_name', 'vo')
+        config.set('OCEAN_CIRCULATION_MODEL', 'wo_var_name', 'wo')
+        config.set('OCEAN_CIRCULATION_MODEL', 'zos_var_name', 'zos')
+        config.set('OCEAN_CIRCULATION_MODEL', 'thetao_var_name', 'thetao')
+        config.set('OCEAN_CIRCULATION_MODEL', 'so_var_name', 'so')
         config.set('OCEAN_CIRCULATION_MODEL', 'has_is_wet', 'True')
-        config.set('OCEAN_CIRCULATION_MODEL', 'has_zeta', 'True')
         config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'spherical')
         config.add_section("OUTPUT")
         config.set('OUTPUT', 'environmental_variables', 'thetao, so')

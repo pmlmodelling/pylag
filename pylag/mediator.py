@@ -32,6 +32,12 @@ class Mediator(object):
     def get_time_at_next_time_index(self):
         raise NotImplementedError
 
+    def get_variable_dimensions(self, var_name):
+        raise NotImplementedError
+
+    def get_variable_shape(self, var_name):
+        raise NotImplementedError
+
     def get_time_dependent_variable_at_last_time_index(self, var_name, var_dims, var_type):
         raise NotImplementedError
 
@@ -72,6 +78,12 @@ class SerialMediator(Mediator):
 
     def get_time_at_next_time_index(self):
         return self.file_reader.get_time_at_next_time_index()
+
+    def get_variable_dimensions(self, var_name):
+        return self.file_reader.get_variable_dimensions(var_name)
+
+    def get_variable_shape(self, var_name):
+        return self.file_reader.get_variable_shape(var_name)
 
     def get_time_dependent_variable_at_last_time_index(self, var_name, var_dims, var_type):
         return self.file_reader.get_time_dependent_variable_at_last_time_index(var_name).astype(var_type)
