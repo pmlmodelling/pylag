@@ -1896,7 +1896,7 @@ def get_time_direction(config):
     # Time direction (forward or reverse tracking)
     try:
         time_direction = config.get("SIMULATION", "time_direction")
-    except configparser.NoOptionError:
+    except (configparser.NoSectionError, configparser.NoOptionError) as e:
         time_direction = "forward"
 
     if time_direction == "forward":
