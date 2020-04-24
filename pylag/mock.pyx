@@ -83,6 +83,12 @@ cdef class MockVelocityDataReader(DataReader):
         """ 
         return self._get_w_component(particle.x3)
 
+    cdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, Particle *particle) except INT_ERR:
+        """ Return is_wet status
+
+        """
+        return 1
+
     def get_velocity_analytic(self, x1, x2, x3=0.0):
         """ Python friendly version of get_velocity(...).
         
