@@ -182,10 +182,10 @@ cdef class ArakawaADataReader(DataReader):
         self._variable_dimension_indices = {}
 
         # Set boolean flags
-        self._has_zeta = True if self._variable_names.has_key('zos') else False
-        self._has_w = True if self._variable_names.has_key('wo') else False
-        self._has_Kh = True if self._variable_names.has_key('Kh') else False
-        self._has_Ah = True if self._variable_names.has_key('Ah') else False
+        self._has_zeta = True if 'zos' in self._variable_names else False
+        self._has_w = True if 'wo' in self._variable_names else False
+        self._has_Kh = True if 'Kh' in self._variable_names else False
+        self._has_Ah = True if 'Ah' in self._variable_names else False
 
         # Has is wet flag?
         self._has_is_wet = self.config.getboolean("OCEAN_CIRCULATION_MODEL", "has_is_wet")
