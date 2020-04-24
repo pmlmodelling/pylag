@@ -41,6 +41,7 @@ requirements:
     - jupyter
     - jupyter_client
     - ipykernel
+    - nose
 
 test:
   import:
