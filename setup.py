@@ -187,8 +187,10 @@ setup(name="PyLag",
       tests_require=['nose'],
       install_requires=[
           "cython>=0.29",
-          "numpy>=1.15",
+          "numpy>=1.18",
+          "scipy>=1.4.1",
           "netCDF4",
+          "cftime>=1.1"
           "mpi4py",
           "configparser",
           "natsort",

@@ -1,5 +1,6 @@
 import numpy as np
-from netCDF4 import Dataset, num2date
+from netCDF4 import Dataset
+from cftime import num2pydate
 from datetime import timedelta
 import glob
 import natsort
@@ -293,11 +294,11 @@ class FileReader(object):
             Flag confirming whether the given date time is valid or not
         """
         ds0 = self._dataset_reader.read_dataset(self._data_file_names[0])
-        data_datetime_0 = num2date(ds0.variables['time'][0], units = ds0.variables['time'].units)
+        data_datetime_0 = num2pydate(ds0.variables['time'][0], units = ds0.variables['time'].units)
         ds0.close()
 
         ds1 = self._dataset_reader.read_dataset(self._data_file_names[-1])
-        data_datetime_1 = num2date(ds1.variables['time'][-1], units = ds1.variables['time'].units)
+        data_datetime_1 = num2pydate(ds1.variables['time'][-1], units = ds1.variables['time'].units)
         ds1.close()
 
         if data_datetime_0 <= date_time < data_datetime_1:
@@ -620,10 +621,10 @@ class DefaultDateTimeReader(DateTimeReader):
         rounding_interval = self._config.getint("OCEAN_CIRCULATION_MODEL", "rounding_interval")
 
         if time_index is not None:
-            datetime_raw = num2date(time_raw[time_index], units=units)
+            datetime_raw = num2pydate(time_raw[time_index], units=units)
             return round_time([datetime_raw], rounding_interval)[0]
         else:
-            datetime_raw = num2date(time_raw[:], units=units)
+            datetime_raw = num2pydate(time_raw[:], units=units)
             return round_time(datetime_raw, rounding_interval)
 
 
@@ -652,9 +653,9 @@ class FVCOMDateTimeReader(DateTimeReader):
         rounding_interval = self._config.getint("OCEAN_CIRCULATION_MODEL", "rounding_interval")
 
         if time_index is not None:
-            datetime_raw = num2date(time_raw[time_index], units=units)
+            datetime_raw = num2pydate(time_raw[time_index], units=units)
             return round_time([datetime_raw], rounding_interval)[0]
         else:
-            datetime_raw = num2date(time_raw[:], units=units)
+            datetime_raw = num2pydate(time_raw[:], units=units)
             return round_time(datetime_raw, rounding_interval)
 

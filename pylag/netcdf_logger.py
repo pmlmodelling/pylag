@@ -1,5 +1,7 @@
 import logging
-from netCDF4 import Dataset, date2num, num2date
+from netCDF4 import Dataset
+from cftime import num2pydate
+from cftime import date2num
 
 try:
     import configparser
@@ -154,7 +156,7 @@ class NetCDFLogger(object):
         tidx = self._time.shape[0]
         
         # Rebase time units and save
-        dt = num2date(time, units=self._simulation_time_units)
+        dt = num2pydate(time, units=self._simulation_time_units)
         self._time[tidx] = date2num(dt, units=self._time.units)
         
         self._x1[tidx, :] = particle_data['x1']

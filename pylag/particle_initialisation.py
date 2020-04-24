@@ -9,7 +9,8 @@ This module provides the following functionality:
 
 import numpy as np
 import logging
-from netCDF4 import Dataset, num2date
+from netCDF4 import Dataset
+from cftime import num2pydate
 import datetime
 
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
@@ -127,7 +128,7 @@ class RestartInitialParticleStateReader(InitialParticleStateReader):
         # Check time
         datetime_start_str = self._config.get("SIMULATION", "start_datetime")
         datetime_start = datetime.datetime.strptime(datetime_start_str, "%Y-%m-%d %H:%M:%S")
-        datetime_restart = num2date(restart.variables['time'][0],
+        datetime_restart = num2pydate(restart.variables['time'][0],
                                     units=restart.variables['time'].units,
                                     calendar=restart.variables['time'].calendar)
 

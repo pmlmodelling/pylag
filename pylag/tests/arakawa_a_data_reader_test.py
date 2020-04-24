@@ -243,23 +243,23 @@ class ArawawaADataReader_test(TestCase):
         test.assert_equal(flag, 0)
 
     def test_find_host_when_particle_is_in_the_domain(self):
-        particle_old = ParticleSmartPtr(x1=2.666666667-self.xmin, x2=11.333333333-self.ymin, host=3)
+        particle_old = ParticleSmartPtr(x1=2.666666667-self.xmin, x2=11.333333333-self.ymin, host=5)
         particle_new = ParticleSmartPtr(x1=2.333333333-self.xmin, x2=11.6666666667-self.ymin)
         flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
         test.assert_equal(flag, 0)
-        test.assert_equal(particle_new.host_horizontal_elem, 2)
+        test.assert_equal(particle_new.host_horizontal_elem, 4)
 
     def test_find_host_when_particle_has_crossed_a_land_boundary(self):
-        particle_old = ParticleSmartPtr(x1=2.333333333-self.xmin, x2=11.666666667-self.ymin, host=2)
+        particle_old = ParticleSmartPtr(x1=2.333333333-self.xmin, x2=11.666666667-self.ymin, host=4)
         particle_new = ParticleSmartPtr(x1=2.333333333-self.xmin, x2=12.1-self.ymin)
         flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
         test.assert_equal(flag, -1)
-        test.assert_equal(particle_new.host_horizontal_elem, 2)
+        test.assert_equal(particle_new.host_horizontal_elem, 4)
 
     def test_get_zmin(self):
         x1 = 2.333333333-self.xmin
         x2 = 11.66666667-self.ymin
-        host = 2
+        host = 4
 
         time = 0.0
 
@@ -271,7 +271,7 @@ class ArawawaADataReader_test(TestCase):
     def test_get_zmax(self):
         x1 = 2.3333333333-self.xmin
         x2 = 11.6666666667-self.ymin
-        host = 2
+        host = 4
 
         time = 0.0
         particle = ParticleSmartPtr(x1=x1, x2=x2, host=host)
@@ -290,7 +290,7 @@ class ArawawaADataReader_test(TestCase):
         x1 = 2.3333333333-self.xmin
         x2 = 11.6666666667-self.ymin
         x3 = 0.333333333
-        host = 2
+        host = 4
 
         particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
         self.data_reader.set_local_coordinates_wrapper(particle)
@@ -306,7 +306,7 @@ class ArawawaADataReader_test(TestCase):
         x1 = 2.3333333333-self.xmin
         x2 = 11.6666666667-self.ymin
         x3 = -15.
-        host = 2
+        host = 4
 
         particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
         self.data_reader.set_local_coordinates_wrapper(particle)
@@ -322,7 +322,7 @@ class ArawawaADataReader_test(TestCase):
         x1 = 2.3333333333-self.xmin
         x2 = 11.6666666667-self.ymin
         x3 = -0.666666667  # 1 m below the moving free surface
-        host = 2
+        host = 4
 
         particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host=host)
         self.data_reader.set_local_coordinates_wrapper(particle)
@@ -336,7 +336,7 @@ class ArawawaADataReader_test(TestCase):
     def test_get_velocity_in_surface_layer(self):
         x1 = 2.3333333333-self.xmin
         x2 = 11.6666666667-self.ymin
-        host = 2
+        host = 4
 
         # Test #1
         x3 = 0.333333333
@@ -366,7 +366,7 @@ class ArawawaADataReader_test(TestCase):
     def test_get_velocity_in_middle_layer(self):
         x1 = 2.3333333333-self.xmin
         x2 = 11.6666666667-self.ymin
-        host = 2
+        host = 4
 
         # Test #1
         x3 = -14.666666667  # Half way down middle layer and 0.333 m above the sea floor
@@ -383,7 +383,7 @@ class ArawawaADataReader_test(TestCase):
     def test_get_thetao(self):
         x1 = 2.3333333333-self.xmin
         x2 = 11.6666666667-self.ymin
-        host = 2
+        host = 4
 
         x3 = 0.333333333
         time = 0.0
@@ -397,7 +397,7 @@ class ArawawaADataReader_test(TestCase):
     def test_get_so(self):
         x1 = 2.3333333333-self.xmin
         x2 = 11.6666666667-self.ymin
-        host = 2
+        host = 4
 
         x3 = 0.333333333
         time = 0.0
@@ -469,7 +469,7 @@ class ArawawaADataReader_test(TestCase):
     def test_element_is_wet(self):
         x1 = 2.3333333333-self.xmin
         x2 = 11.6666666667-self.ymin
-        host = 2
+        host = 4
 
         time = 0.0
 

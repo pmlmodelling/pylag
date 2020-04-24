@@ -1,7 +1,7 @@
 import numpy as np
 import copy
 import datetime
-from netCDF4 import num2date
+from cftime import num2pydate
 
 # Data types used for constructing C data structures
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
@@ -191,7 +191,7 @@ cdef class TimeManager(object):
     # Current datetime
     property datetime_current:
         def __get__(self):
-            return num2date(self._time, units='seconds since {}'.format(self._datetime_start))
+            return num2pydate(self._time, units='seconds since {}'.format(self._datetime_start))
 
     # Current time (seconds elapsed since start of the current simulation)
     property time:

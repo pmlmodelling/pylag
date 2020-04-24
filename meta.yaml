@@ -18,7 +18,7 @@ requirements:
     - pip
     - openmpi
     - mpi4py=*=*openmpi*
-    - numpy>=1.15
+    - numpy>=1.18
     - cython>=0.29
   build:
     - {{ compiler('cxx') }}
@@ -26,12 +26,14 @@ requirements:
     - python
     - ipython
     - mpi4py
-    - numpy>=1.15
+    - numpy>=1.18
+    - scipy>=1.4.1
     - cython>=0.29
     - matplotlib
     - progressbar
     - natsort
     - netCDF4
+    - cftime>=1.1
     - configparser
     - sphinx
     - nbsphinx
