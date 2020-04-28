@@ -1757,7 +1757,7 @@ def get_iterative_method(config):
                 "supplied configuration file.")
     
     # Prevent backtracking when using RDMs
-    if "Diff" in config.get("NUMERICS", "iterative_method") and config.get("SIMULATION", "time_direction") == "reverse":
+    if "Diff" in config.get("NUMERICS", "iterative_method") and _get_time_direction_string(config) == "reverse":
         raise ValueError("The use of RDMs when reverse tracking is prohibited")
 
     # Return the specified iterative method
@@ -1830,7 +1830,7 @@ def get_diff_iterative_method(config):
                 " the supplied configuration file.")
 
     # Prevent backtracking when using a RDM
-    if config.get("SIMULATION", "time_direction") == "reverse":
+    if _get_time_direction_string(config) == "reverse":
         raise ValueError("The use of RDMs when reverse tracking is prohibited")
     
     # Return the specified numerical integrator.
@@ -1892,12 +1892,26 @@ def get_global_time_step(config):
     else:
         raise ValueError("Unrecognised config option num_method={}".format(num_method))    
 
-def get_time_direction(config):
-    # Time direction (forward or reverse tracking)
+
+def _get_time_direction_string(config):
+    """ Read time direction string.
+
+    Defaults to "forward" if option not found in config.
+    """
     try:
-        time_direction = config.get("SIMULATION", "time_direction")
+        time_direction = config.get("SIMULATION", "time_direction").strip()
     except (configparser.NoSectionError, configparser.NoOptionError) as e:
         time_direction = "forward"
+
+    if time_direction in ['reverse', 'forward']:
+        return time_direction
+
+    raise ValueError("Invalid time direction option `{}'".format(time_direction))
+
+
+def get_time_direction(config):
+    # Time direction (forward or reverse tracking)
+    time_direction = _get_time_direction_string(config)
 
     if time_direction == "forward":
         return 1.
