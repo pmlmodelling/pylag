@@ -332,6 +332,12 @@ cdef class MockHorizontalEddyViscosityDataReader(DataReader):
 
         return
 
+    cdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, Particle *particle) except INT_ERR:
+        """ Return is_wet status
+
+        """
+        return 1
+
 cdef class MockVelocityEddyViscosityDataReader(DataReader):
     """ Test data reader for advection-diffsion numerical integrations schemes
     
@@ -438,6 +444,14 @@ cdef class MockVelocityEddyViscosityDataReader(DataReader):
         Q = np.exp(-((x1 - self._u*time)**2.0 + (x2 - self._v*time)**2.0)/(4.*self._Ah*time))
         return P*Q
 
+
+    cdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, Particle *particle) except INT_ERR:
+        """ Return is_wet status
+
+        """
+        return 1
+
+
 cdef class MockOneDNumMethod:
     """ Test class for 1D numerical methods
     
@@ -506,7 +520,7 @@ cdef class MockTwoDNumMethod:
             raise ValueError('x1 and x2 array lengths do not match')
         n_particles = len(x1_arr)
 
-        particle = ParticleSmartPtr(x3=0.0, group_id=0, host=0, in_domain=True)
+        particle = ParticleSmartPtr(x3=0.0, group_id=0, in_domain=True)
 
         x1_new_arr = np.empty(n_particles, dtype=DTYPE_FLOAT)
         x2_new_arr = np.empty(n_particles, dtype=DTYPE_FLOAT)
