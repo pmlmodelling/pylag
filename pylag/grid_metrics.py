@@ -176,7 +176,7 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_
     print('Creating FVCOM grid metrics file {}'.format(grid_metrics_file_name))
 
     # Instantiate file creator
-    gm_file_creator = GridMetricsFileCreator()
+    gm_file_creator = GridMetricsFileCreator(file_name=grid_metrics_file_name)
 
     # Create skeleton file
     gm_file_creator.create_file()
