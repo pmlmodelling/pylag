@@ -19,8 +19,5 @@ FVCOM to investigate connectivity along the SWUK coastline.
 
     lateral_adv_analytic
     lateral_adv_diff_analytic
-    vert_diff_analytic
-    vert_diff_gotm
-    flume_fvcom
-    swuk_fvcom
+    fvcom_forward_tracking
 
