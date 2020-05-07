@@ -42,6 +42,7 @@ requirements:
     - jupyter_client
     - ipykernel
     - nose
+    - pylag-tools
 
 test:
   import:
