@@ -41,18 +41,3 @@ Finally, build and install *PyLag* using conda:
 $ conda build .
 $ conda install -n particles --use-local pylag
 ```
-
-Once *PyLag* has been installed, build the accompanying documentation.
-
-```bash
-$ cd $HOME/code/git/PyLag/PyLag/doc
-$ make html
-```
-
-The above commands will create a set of html files in the directory which you can view using a browser of your choosing. For example:
-
-```bash
-$ firefox $HOME/code/git/PyLag/PyLag/doc/build/html/index.html &
-```
-
-A pre-built version of PyLag's documenttion can be found here [TODO ADD LINK].
