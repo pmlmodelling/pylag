@@ -41,3 +41,6 @@ Finally, build and install *PyLag* using conda:
 $ conda build .
 $ conda install -n particles --use-local pylag
 ```
+
+[PyLag's documentation](https://drive.google.com/open?id=1Qp5Z_IihcHRpbehDyWfaCofrJ84lJDig) can be downloaded as a tarball and viewed using a web browser. The documentation pages are under development. In order to run the examples, a number of example [input data files](https://drive.google.com/open?id=15UX7Y9JnuLpnPAz700mzmzd917nTClxR) have been made available for download. Further information on their use can be found in the documentation.
+
