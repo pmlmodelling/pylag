@@ -128,6 +128,12 @@ class FileReader(object):
             raise RuntimeError('A grid metrics file was not listed in the run '\
                 'configuration file. See the log file for more details.')
 
+        # Time variable name
+        try:
+            self._time_var_name = self._config.get("OCEAN_CIRCULATION_MODEL", "time_var_name").strip()
+        except configparser.NoOptionError:
+            self._time_var_name = "time"
+
         # Time interval between data points in input data files
         self._rounding_interval = self._config.getint("OCEAN_CIRCULATION_MODEL", "rounding_interval")
 
@@ -294,11 +300,11 @@ class FileReader(object):
             Flag confirming whether the given date time is valid or not
         """
         ds0 = self._dataset_reader.read_dataset(self._data_file_names[0])
-        data_datetime_0 = num2pydate(ds0.variables['time'][0], units = ds0.variables['time'].units)
+        data_datetime_0 = num2pydate(ds0.variables[self._time_var_name][0], units=ds0.variables[self._time_var_name].units)
         ds0.close()
 
         ds1 = self._dataset_reader.read_dataset(self._data_file_names[-1])
-        data_datetime_1 = num2pydate(ds1.variables['time'][-1], units = ds1.variables['time'].units)
+        data_datetime_1 = num2pydate(ds1.variables[self._time_var_name][-1], units=ds1.variables[self._time_var_name].units)
         ds1.close()
 
         if data_datetime_0 <= date_time < data_datetime_1:
@@ -606,6 +612,12 @@ class DefaultDateTimeReader(DateTimeReader):
     def __init__(self, config):
         self._config = config
 
+        # Time variable name
+        try:
+            self._time_var_name = self._config.get("OCEAN_CIRCULATION_MODEL", "time_var_name").strip()
+        except configparser.NoOptionError:
+            self._time_var_name = "time"
+
     def get_datetime(self, dataset, time_index=None):
         """ Get dates/times for the given dataset
 
@@ -620,8 +632,8 @@ class DefaultDateTimeReader(DateTimeReader):
         dataset : Dataset
             Dataset object for an FVCOM data file.
         """
-        time_raw = dataset.variables['time']
-        units = dataset.variables['time'].units   
+        time_raw = dataset.variables[self._time_var_name]
+        units = dataset.variables[self._time_var_name].units
 
         # Apply rounding
         rounding_interval = self._config.getint("OCEAN_CIRCULATION_MODEL", "rounding_interval")
