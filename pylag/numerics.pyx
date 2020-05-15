@@ -1218,7 +1218,7 @@ cdef class DiffNaive1DItMethod(ItMethod):
 
         Kh = data_reader.get_vertical_eddy_diffusivity(time, particle)
         
-        delta_X.x3 += sqrt(2.0*Kh*self._time_step) * random.gauss(0.0, 1.0)
+        delta_X.x3 = sqrt(2.0*Kh*self._time_step) * random.gauss(0.0, 1.0)
         
         return 0
 
