@@ -177,7 +177,14 @@ cdef class MockVerticalDiffusivityDataReader(DataReader):
         pass
 
     cdef DTYPE_INT_t set_vertical_grid_vars(self, DTYPE_FLOAT_t time, Particle *particle) except INT_ERR:
-        return IN_DOMAIN
+        cdef DTYPE_FLOAT_t x3
+
+        x3 = particle.get_x3()
+
+        if x3 >= self._zmin and x3 <= self._zmax:
+            return IN_DOMAIN
+
+        return BDY_ERROR
 
     cdef get_velocity(self, DTYPE_FLOAT_t time, Particle* particle,
             DTYPE_FLOAT_t vel[3]):
@@ -196,9 +203,9 @@ cdef class MockVerticalDiffusivityDataReader(DataReader):
         """ Returns the vertical eddy diffusivity at x3.
         
         """  
-        return self._get_vertical_eddy_diffusivity(particle.get_x3())
+        return self.get_vertical_eddy_diffusivity_analytic(particle.get_x3())
 
-    def _get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t x3):
+    def get_vertical_eddy_diffusivity_analytic(self, DTYPE_FLOAT_t x3):
         cdef DTYPE_FLOAT_t k
         k = 0.001 + 0.0136245*x3 - 0.00263245*x3**2 + 2.11875e-4 * x3**3 - \
                 8.65898e-6 * x3**4 + 1.7623e-7 * x3**5 - 1.40918e-9 * x3**6
@@ -211,24 +218,19 @@ cdef class MockVerticalDiffusivityDataReader(DataReader):
         This is approximated numerically, as in PyLag, as opposed to being
         computed directly using the derivative of k.
         """
-        return self._get_vertical_eddy_diffusivity_derivative(particle.get_x3())
+        return self.get_vertical_eddy_diffusivity_derivative_analytic(particle.get_x3())
     
-    def _get_vertical_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t x3):
-        cdef DTYPE_FLOAT_t x3_increment, x3_incremented
-        cdef k1, k2
+    def get_vertical_eddy_diffusivity_derivative_analytic(self, DTYPE_FLOAT_t x3):
+        cdef DTYPE_FLOAT_t dkh_dz
+        dkh_dz = 0.0136245 - 0.0052649*x3 + 6.35625e-4*x3**2 - 3.463592e-5*x3**3 + \
+                    8.8115e-7 *x3**4 - 8.45508e-9*x3**5
+        return dkh_dz
 
-        x3_increment = (self._zmax - self._zmin) / 1000.0
-        
-        # Use the negative of x3_increment at the top of the water column
-        if ((x3 + x3_increment) > self._zmax):
-            z_increment = -x3_increment
-        
-        x3_incremented = x3 + x3_increment
+    cdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, Particle *particle) except INT_ERR:
+        """ Return is_wet status
 
-        k1 = self._get_vertical_eddy_diffusivity(x3)
-        k2 = self._get_vertical_eddy_diffusivity(x3_incremented)
-        
-        return (k2 - k1) / x3_increment
+        """
+        return 1
 
 cdef class MockHorizontalEddyViscosityDataReader(DataReader):
     """Test data reader for horizontal random displacement models.
@@ -466,27 +468,24 @@ cdef class MockOneDNumMethod:
 
         self._num_method = get_num_method(config)
     
-    def step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
-            DTYPE_FLOAT_t x1, DTYPE_FLOAT_t x2, x3_arr, DTYPE_INT_t host):
+    def step(self, DataReader data_reader, DTYPE_FLOAT_t time, x3_arr):
         cdef ParticleSmartPtr particle
-        cdef DTYPE_FLOAT_t x3_new, zmin, zmax
-        cdef DTYPE_INT_t i, n_x3
+        cdef DTYPE_FLOAT_t x3_new
+        cdef DTYPE_INT_t n_particles
+        cdef DTYPE_INT_t i
 
         # Create particle
-        particle = ParticleSmartPtr(x1=x1, x2=x2, host=host,
-                group_id=0, in_domain=True)
+        particle = ParticleSmartPtr(in_domain=True)
 
-        # Number of z positions
-        n_x3 = len(x3_arr)
+        # Number of particles
+        n_particles = len(x3_arr)
         
         # Array in which to store updated z positions
-        x3_new_arr = np.empty(n_x3, dtype=DTYPE_FLOAT)
+        x3_new_arr = np.empty(n_particles, dtype=DTYPE_FLOAT)
 
-        for i in xrange(n_x3):
-            # Set x3, local coordinates and variables that define the location
-            # of the particle within the vertical grid
+        for i in xrange(n_particles):
+            # Set x3
             particle.get_ptr().set_x3(x3_arr[i])
-            data_reader.set_local_coordinates(particle.get_ptr())
             if data_reader.set_vertical_grid_vars(time, particle.get_ptr()) != IN_DOMAIN:
                 raise RuntimeError('Test particle is not in the domain.')
 
@@ -515,6 +514,8 @@ cdef class MockTwoDNumMethod:
     def step(self, DataReader data_reader, time, x1_arr, x2_arr):
         cdef ParticleSmartPtr particle
         cdef DTYPE_FLOAT_t x1_new, x2_new
+        cdef DTYPE_INT_t n_particles
+        cdef DTYPE_INT_t i
 
         if len(x1_arr) != len(x2_arr):
             raise ValueError('x1 and x2 array lengths do not match')

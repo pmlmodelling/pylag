@@ -19,6 +19,7 @@ performing ensemble simulations; and exploiting PyLag's parallel computing suppo
 
     lateral_adv_analytic
     lateral_adv_diff_analytic
+    vertical_mixing_analytic
     fvcom_forward_tracking
     fvcom_backward_tracking
     arakawa_a_forward_tracking
