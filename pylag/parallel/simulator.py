@@ -47,7 +47,7 @@ class TraceSimulator(Simulator):
         # particle state data. This only happens on the lead process,
         # so we initialise it to None here, then override this below
         # for the root process.
-        self.initial_particle_state_reader=None
+        self.initial_particle_state_reader = None
 
         # Flag indicating whether or not restart files should be created
         self.create_restarts = self._config.getboolean('RESTART', 'create_restarts') 
@@ -63,6 +63,9 @@ class TraceSimulator(Simulator):
      
             if self.create_restarts:
                 self.restart_creator = RestartFileCreator(self._config)
+
+        # Data logger
+        self.data_logger = None
 
     def run(self):
         # MPI objects and variables
@@ -147,7 +150,8 @@ class TraceSimulator(Simulator):
                 # Data logger on the root process
                 file_name = ''.join([self._config.get('GENERAL', 'output_file'), '_{}'.format(self.time_manager.current_release)])
                 start_datetime = self.time_manager.datetime_start
-                self.data_logger = NetCDFLogger(self._config, file_name, start_datetime, n_particles)
+                grid_names = self.model.get_grid_names()
+                self.data_logger = NetCDFLogger(self._config, file_name, start_datetime, n_particles, grid_names)
 
                 # Write particle group ids to file
                 self.data_logger.write_group_ids(group_ids)
@@ -157,7 +161,8 @@ class TraceSimulator(Simulator):
             self._save_data(particle_diagnostics)
 
             # The main update loop
-            if rank == 0: logger.info('Starting ensemble member {} ...'.format(self.time_manager.current_release))
+            if rank == 0:
+                logger.info('Starting ensemble member {} ...'.format(self.time_manager.current_release))
             while abs(self.time_manager.time) < abs(self.time_manager.time_end):
                 if rank == 0:
                     percent_complete = abs(self.time_manager.time) / abs(self.time_manager.time_end) * 100
