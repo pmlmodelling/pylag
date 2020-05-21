@@ -15,7 +15,7 @@ Installation using Conda
 ------------------------
 
 First `install miniconda3 <https://conda.io/projects/conda/en/latest/user-guide/install/linux.html>`_ in a location of your choosing. 
-Then, activate *Conda* and add the channels *conda-forge* and *JimClark*. The latter channel is a temporary distribution channel for *PyLag*, and will likely change in the near future. For example:
+Then, activate *Conda* and add the channels *conda-forge* and *JimClark*. The latter is a temporary distribution channel for *PyLag*. For example:
 
 .. code-block:: bash
 
@@ -23,13 +23,13 @@ Then, activate *Conda* and add the channels *conda-forge* and *JimClark*. The la
     $ conda config --append channels conda-forge
     $ conda config --append channels JimClark
 
-The above code will install *miniconda3* into the directory ``/opt/miniconda``, once the appropriate write permissions have been set. The default behaviour is to install *miniconda3* into your home directory. This is, of course, also fine.
+The above code assumes *miniconda3* was installed into the directory ``/opt/miniconda``, once the appropriate write permissions have been set. The default behaviour is to install *miniconda3* into your home directory. This is, of course, also fine.
 
 With *miniconda3* installed and configured, create a new environment in which to install *PyLag* using the following commands:
 
 .. code-block:: bash
 
-    $ conda create -n particles
+    $ conda create -n particles python=3.7
     $ conda activate particles
 
 Finally, install *PyLag*:
@@ -68,7 +68,7 @@ The code is actually distributed in two distinct packages. The first contains th
     $ git clone https://gitlab.ecosystem-modelling.pml.ac.uk/PyLag/PyLag-tools.git>
 
 
-If you don't want to use git to access the code, you can always grab a copy by downloading and unpacking tarballs of the two repositories. The cleanest and safest way of installing *PyLag's* dependencies is using *Conda*. Following steps similar to those described above, we can configure a new *Conda* environment so (assuming miniconda has been installed already):
+If you don't want to use git to access the code, you can always grab a copy by downloading and unpacking tarballs of the two repositories. The cleanest and safest way of installing *PyLag's* dependencies is using *Conda*. Following steps similar to those described above, we can configure a new *Conda* environment so:
 
 .. code-block:: bash
 
@@ -81,7 +81,7 @@ The only new step here is the installation of conda-build and conda-verify. Next
 
 .. code-block:: bash
 
-    $ conda create -n particles
+    $ conda create -n particles python=3.7
     $ conda activate particles
 
 And finally, in the PyLag source code directory, build and install *PyLag*.
