@@ -1,46 +1,109 @@
 # Updated 24th April 2020
 
-# PyLag
-
 PyLag is an offline particle tracking model. The model expects as inputs time independent and/or dependent variables that describe the state of a given fluid. These may be measured quantities or the predictions of an analytical or numerical model. Using these, the model computes Lagrangian trajectories for particles released into the fluid at a particular point in time and space. The model is primarily aimed at marine applications, but is intended to be versatile enough to be extended to other contexts; for example, studies of atmospheric dispersion.
 
 PyLag was created with the aim to make available a particle tracking model that is a) fast to run, b) easy to use, c) extensible and d) flexible. The model is written in a mixture of [Python](http://www.python.org) and [Cython](http://www.cython.org).
 
 ## Getting started
 
-The easiest way to install *PyLag* is using *Conda*, which will install *PyLag* and all its dependencies into a clean environment. For now, *PyLag* must be manually built and installed. However, in the future, following the formal release of the model code, it will be possible to install a pre-built release from [anaconda cloud](https://anaconda.org/).
+For end users, the easiest way to install *PyLag* is using *Conda*. This will install *PyLag* and all its dependencies into a clean environment and make it available to use. Developers who wish to work with the source code directly should clone a copy of *PyLag's* source code and install it manually. Both use cases are described below.
 
-First [install miniconda3](https://conda.io/projects/conda/en/latest/user-guide/install/linux.html) in a location of your choosing. Then, activate *conda*; add the *conda-forge* channel; and install *conda-build* and *conda-verify*, which we will use to install *PyLag*. For example:
+---
+**NOTE**
+
+*PyLag* has been developed and tested within a UNIX/Linux environment, and the following instructions assume the user is working within a similar environment.
+
+---
+
+### Instructions for end users
+
+First [install miniconda3](https://conda.io/projects/conda/en/latest/user-guide/install/linux.html) in a location of your choosing. Then, activate *Conda* and add the channels *conda-forge* and *JimClark*. The latter is a temporary distribution channel for *PyLag*. For example:
 
 ```bash
 $ source /opt/miniconda/miniconda3/bin/activate
 $ conda config --append channels conda-forge
-$ conda install conda-build conda-verify
+$ conda config --append channels JimClark
 ```
 
-The above code will install *miniconda3* into the directory `/opt/miniconda`, once the appropriate write permissions have been set (the default is to install *miniconda3* into your home directory, which is, of course, also fine).
+The above code assumes *miniconda3* has been installed in the directory `/opt/miniconda`, once the appropriate write permissions have been set (the default is to install *miniconda3* into your home directory, which is, of course, also fine).
 
 With *miniconda3* installed and configured, create a new environment in which to install *PyLag* using the following commands:
 
 ```bash
-$ conda create -n particles
+$ conda create -n particles python=3.7
 $ conda activate particles
 ```
 
-Next, clone *PyLag* using *git*. The code below assumes that you have configured *ssh* access to *GitLab*:
+Finally, install *PyLag*:
+
+```bash
+$ conda install -n particles -c JimClark pylag
+```
+
+To test that *PyLag* has been correctly installed, type:
+
+```
+$ python -c "import pylag"
+```
+
+which should exit without error.
+
+### Instructions for developers
+
+The code is actually distributed in two distinct packages. The first contains the *PyLag* source code; the second a set of tools to help with setting up and analysing *PyLag* simulations. The former includes the latter as a dependency, meaning *PyLag-tools* is automatically installed when *PyLag* is, if it is not already present within your package list. With SSH access setup, you can clone both repositories using the following commands:
 
 ```bash
 $ mkdir -p $HOME/code/git/PyLag && cd $HOME/code/git/PyLag
-$ git clone git@gitlab.ecosystem-modelling.pml.ac.uk/PyLag/PyLag.git
-$ cd PyLag
+$ git clone https://gitlab.ecosystem-modelling.pml.ac.uk/PyLag/PyLag.git>
+$ git clone https://gitlab.ecosystem-modelling.pml.ac.uk/PyLag/PyLag-tools.git>
 ```
 
-Finally, build and install *PyLag* using conda:
+If you don't want to use git to access the code, you can always grab a copy by downloading and unpacking tarballs of the two repositories. The cleanest and safest way of installing *PyLag's* dependencies is using *Conda*. Following steps similar to those described above, we can configure a new *Conda* environment so:
 
 ```bash
+$ source /opt/miniconda/miniconda3/bin/activate
+$ conda config --append channels conda-forge
+$ conda config --append channels JimClark
+$ conda install conda-build conda-verify
+```
+
+The only new step here is the installation of conda-build and conda-verify. Next, create a new environment as above:
+
+```bash
+$ conda create -n particles python=3.7
+$ conda activate particles
+```
+
+And finally, in the PyLag source code directory, build and install *PyLag*.
+
+```bash
+$ cd $HOME/code/git/PyLag/PyLag
 $ conda build .
 $ conda install -n particles --use-local pylag
 ```
 
-[PyLag's documentation](https://drive.google.com/open?id=1Qp5Z_IihcHRpbehDyWfaCofrJ84lJDig) can be downloaded as a tarball and viewed using a web browser. The documentation pages are under development. In order to run the examples, a number of example [input data files](https://drive.google.com/open?id=15UX7Y9JnuLpnPAz700mzmzd917nTClxR) have been made available for download. Further information on their use can be found in the documentation.
+*PyLag-tools* can be installed from source in exactly the same way:
 
+```bash
+$ cd $HOME/code/git/PyLag/PyLag-tools
+$ conda build .
+$ conda install -n particles --use-local pylag-tools
+```
+
+Occsionally, when building *PyLag* this way, users have hit upon clashes with locally installed packages. To get around this problem, you may find it useful to add the following aliases to your bashrc file, which you can use to activate and deactivate *Conda*:
+
+```bash
+alias start_conda='export PYTHONNOUSERSITE=True && source /opt/miniconda/miniconda3/bin/activate'
+alias stop_conda='unset PYTHONNOUSERSITE && conda deactivate'
+```
+
+The *Conda* build process is quite long, and it doesn't lend itself to rapid build-install-test cycles. If you find yourself wanting to perform repeated builds, it is recommended you build using *Conda* on the first attempt, as described above. This will ensure PyLag's dependencies are correctly installed. Then, after this, you can install *PyLag* using *pip* like so:
+
+```bash
+$ cd $HOME/code/git/PyLag/PyLag
+$ pip install .
+```
+
+## Further information
+
+[PyLag's documentation](https://drive.google.com/open?id=1Qp5Z_IihcHRpbehDyWfaCofrJ84lJDig) can be downloaded as a tarball and viewed using a web browser such as Firefox in linux. PyLag's documentation contains numerous examples of running *PyLag*, which have been included to help users get up and running. In order to run the examples, a number of example [input data files](https://drive.google.com/open?id=15UX7Y9JnuLpnPAz700mzmzd917nTClxR) have been made available for download. Further information on their use can be found in the documentation. Last, please note that PyLag has yet to be officially released, and parts of the code and documentation are still under development. This page will be updated when future releases are made.
