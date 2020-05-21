@@ -21,8 +21,8 @@ First [install miniconda3](https://conda.io/projects/conda/en/latest/user-guide/
 
 ```bash
 $ source /opt/miniconda/miniconda3/bin/activate
-$ conda config --append channels conda-forge
-$ conda config --append channels JimClark
+(base) $ conda config --append channels conda-forge
+(base) $ conda config --append channels JimClark
 ```
 
 The above code assumes *miniconda3* has been installed in the directory `/opt/miniconda`, once the appropriate write permissions have been set (the default is to install *miniconda3* into your home directory, which is, of course, also fine).
@@ -30,20 +30,20 @@ The above code assumes *miniconda3* has been installed in the directory `/opt/mi
 With *miniconda3* installed and configured, create a new environment in which to install *PyLag* using the following commands:
 
 ```bash
-$ conda create -n particles python=3.7
-$ conda activate particles
+(base) $ conda create -n particles python=3.7
+(base) $ conda activate particles
 ```
 
 Finally, install *PyLag*:
 
 ```bash
-$ conda install -n particles -c JimClark pylag
+(particles) $ conda install -n particles -c JimClark pylag
 ```
 
 To test that *PyLag* has been correctly installed, type:
 
 ```
-$ python -c "import pylag"
+(particles) $ python -c "import pylag"
 ```
 
 which should exit without error.
@@ -62,32 +62,32 @@ If you don't want to use git to access the code, you can always grab a copy by d
 
 ```bash
 $ source /opt/miniconda/miniconda3/bin/activate
-$ conda config --append channels conda-forge
-$ conda config --append channels JimClark
-$ conda install conda-build conda-verify
+(base) $ conda config --append channels conda-forge
+(base) $ conda config --append channels JimClark
+(base) $ conda install conda-build conda-verify
 ```
 
 The only new step here is the installation of conda-build and conda-verify. Next, create a new environment as above:
 
 ```bash
-$ conda create -n particles python=3.7
-$ conda activate particles
+(base) $ conda create -n particles python=3.7
+(base) $ conda activate particles
 ```
 
 And finally, in the PyLag source code directory, build and install *PyLag*.
 
 ```bash
-$ cd $HOME/code/git/PyLag/PyLag
-$ conda build .
-$ conda install -n particles --use-local pylag
+(particles) $ cd $HOME/code/git/PyLag/PyLag
+(particles) $ conda build .
+(particles) $ conda install -n particles --use-local pylag
 ```
 
 *PyLag-tools* can be installed from source in exactly the same way:
 
 ```bash
-$ cd $HOME/code/git/PyLag/PyLag-tools
-$ conda build .
-$ conda install -n particles --use-local pylag-tools
+(particles) $ cd $HOME/code/git/PyLag/PyLag-tools
+(particles) $ conda build .
+(particles) $ conda install -n particles --use-local pylag-tools
 ```
 
 Occsionally, when building *PyLag* this way, users have hit upon clashes with locally installed packages. To get around this problem, you may find it useful to add the following aliases to your bashrc file, which you can use to activate and deactivate *Conda*:
@@ -100,8 +100,8 @@ alias stop_conda='unset PYTHONNOUSERSITE && conda deactivate'
 The *Conda* build process is quite long, and it doesn't lend itself to rapid build-install-test cycles. If you find yourself wanting to perform repeated builds, it is recommended you build using *Conda* on the first attempt, as described above. This will ensure PyLag's dependencies are correctly installed. Then, after this, you can install *PyLag* using *pip* like so:
 
 ```bash
-$ cd $HOME/code/git/PyLag/PyLag
-$ pip install .
+(particles) $ cd $HOME/code/git/PyLag/PyLag
+(particles) $ pip install .
 ```
 
 ## Further information
