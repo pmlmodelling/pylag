@@ -4,6 +4,10 @@ PyLag is an offline particle tracking model. The model expects as inputs time in
 
 PyLag was created with the aim to make available a particle tracking model that is a) fast to run, b) easy to use, c) extensible and d) flexible. The model is written in a mixture of [Python](http://www.python.org) and [Cython](http://www.cython.org).
 
+## How to cite
+
+Uncles, R. J., Clark, J. R., Bedington, M., Torres, R. 2020. “On sediment dispersal in the Whitsand Bay Marine Conservation Zone: Neighbor to a closed dredge-spoil disposal site” in Marine Protected Areas: Evidence, Policy and Practise, ed Robert Clark and John Humphreys (Elsevier Inc.).
+
 ## Getting started
 
 For end users, the easiest way to install *PyLag* is using *Conda*. This will install *PyLag* and all its dependencies into a clean environment and make it available to use. Developers who wish to work with the source code directly should clone a copy of *PyLag's* source code and install it manually. Both use cases are described below.
