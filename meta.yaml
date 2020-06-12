@@ -38,6 +38,7 @@ requirements:
     - sphinx
     - nbsphinx
     - sphinx_rtd_theme
+    - sphinxcontrib-napoleon
     - jupyter
     - jupyter_client
     - ipykernel
