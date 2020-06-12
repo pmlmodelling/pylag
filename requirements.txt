@@ -1,16 +1,28 @@
 --index-url https://pypi.python.org/simple/
 
-cython
-numpy
-netCDF4
+# For running PyLag
+ipython
 mpi4py
-ConfigParser2
+numpy>=1.18
+scipy>=1.4.1
+cython>=0.29
+matplotlib
 progressbar
 natsort
+netCDF4
+cftime>=1.1
+configparser
 
 # For testing
 nose
 
 # For building the documentation
+sphinx
+nbsphinx
 sphinx_rtd_theme
-
+sphinxcontrib-napoleon
+jupyter
+jupyter_client
+ipykernel
+ffmpeg-python
+pylag-tools

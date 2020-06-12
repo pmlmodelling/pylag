@@ -54,7 +54,7 @@ test:
     - nose
 
 about:
-  home: TODO
+  home: https://gitlab.ecosystem-modelling.pml.ac.uk/PyLag/PyLag
   license: GPL
   license_family: GPL
   summary: A particle tracking tool for marine applications

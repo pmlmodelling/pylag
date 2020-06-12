@@ -173,7 +173,7 @@ setup(name="PyLag",
       description="Python/Cython Lagrangian Modelling Frmaework",
       author="Jame Clark (PML)",
       author_email="jcl@pml.ac.uk",
-      url="gitlab.ecosystem-modelling.pml.ac.uk:jimc/PyLag.git",
+      url="gitlab.ecosystem-modelling.pml.ac.uk:PyLag/PyLag.git",
       classifiers=[
           'Development Status :: 1 - Alpha',
           'Intended Audience :: Scientific researchers',
