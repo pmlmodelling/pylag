@@ -16,6 +16,30 @@ Contributors
 ------------
 
 * `Dr James Clark (Plymouth Marine Laboratory) <https://www.pml.ac.uk/People/Science_Staff/Dr_James_Clark>`_
+* Dr Pierre Cazenave (formerly Plymouth Marine Laboratory)
 * `Dr Ricardo Torres (Plymouth Marine Laboratory) <https://www.pml.ac.uk/People/Science_Staff/Dr_Ricardo_Torres>`_
 * `Dr Michael Bedington (Plymouth Marine Laboratory) <https://www.pml.ac.uk/People/Science_Staff/_Dr_Michael_Bedington>`_
-* Dr Pierre Cazenave
+
+Dependencies
+------------
+
+PyLag is directly dependent on several other software packages. Without these pacakages, PyLag and its associated documentation would not exist. The list of dependencies include:
+
+* `python <https://www.python.org>`_
+* `ipython <https://www.ipython.org>`_
+* `Cython <https://cython.org>`_
+* `MPI for Python <https://github.com/mpi4py/mpi4py>`_
+* `NumPy <https://numpy.org>`_
+* `SciPy <https://scipy.org>`_
+* `python-progressbar <https://github.com/niltonvolpato/python-progressbar>`_
+* `natsort <https://github.com/SethMMorton/natsort>`_
+* `netCDF4 <https://unidata.github.io/netcdf4-python/netCDF4/index.html>`_
+* `cftime <https://unidata.github.io/cftime/>`_
+* `Sphinx <https://sphinx-doc.org>`_
+* `nbsphinx <https://github.com/spatialaudio/nbsphinx>`_
+* `jupyter <https://jupyter.org>`_
+* `Matplotlib <https://matplotlib.org>`_
+* `Cartopy <https://scitools.org.uk/cartopy>`_
+* `ffmpeg <https://ffmpeg.org>`_
+* `PyQt-Fit by Pierre Barbier de Reuille <https://gitlab.ecosystem-modelling.pml.ac.uk/jimc/pyqt-fit>`_
+* `Simple cubic spline by Tino Kruge <https://kluge.in-chemnitz.de/opensource/spline>`_
