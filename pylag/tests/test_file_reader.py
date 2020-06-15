@@ -1,4 +1,3 @@
-from nose.tools import raises
 from unittest import TestCase
 import numpy.testing as test
 import numpy as np
@@ -138,7 +137,6 @@ class FileReader_test(TestCase):
         # Create file reader
         self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
 
-    @raises(ValueError)
     def test_use_start_datetime_equal_to_data_record_end(self):
         start_datetime = datetime.datetime(2000,1,1,0,8,0) # Invalid - 0 seconds after data record end
         end_datetime = datetime.datetime(2000,1,1,0,0,0) # Invalid - 0 seconds after data record start
@@ -146,9 +144,9 @@ class FileReader_test(TestCase):
         self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
-        self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        self.assertRaises(ValueError, FileReader, self.config, self.file_name_reader, self.dataset_reader,
+                          start_datetime, end_datetime)
 
-    @raises(ValueError)
     def test_use_end_datetime_equal_to_data_record_end(self):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid - 0 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,8,0) # Invalid - 0 seconds after data record end
@@ -156,9 +154,9 @@ class FileReader_test(TestCase):
         self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
-        self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        self.assertRaises(ValueError, FileReader, self.config, self.file_name_reader, self.dataset_reader,
+                          start_datetime, end_datetime)
 
-    @raises(ValueError)
     def test_use_start_datetime_before_data_record_start(self):
         start_datetime = datetime.datetime(1999,1,1,0,0,0) # Invalid - 1 year before data start date
         end_datetime = datetime.datetime(2000,1,1,0,8,0) # Valid - 480 seconds
@@ -166,9 +164,9 @@ class FileReader_test(TestCase):
         self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
-        self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        self.assertRaises(ValueError, FileReader, self.config, self.file_name_reader, self.dataset_reader,
+                          start_datetime, end_datetime)
 
-    @raises(ValueError)
     def test_use_start_datetime_after_data_record_end(self):
         start_datetime = datetime.datetime(2001,1,1,8,0) # Invalid - 1 year after data end date
         end_datetime = datetime.datetime(2000,1,1,0,8,0) # Valid - 480 seconds
@@ -176,9 +174,9 @@ class FileReader_test(TestCase):
         self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
-        self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        self.assertRaises(ValueError, FileReader, self.config, self.file_name_reader, self.dataset_reader,
+                          start_datetime, end_datetime)
 
-    @raises(ValueError)
     def test_use_end_datetime_before_data_record_start(self):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid - 0 seconds after data record start
         end_datetime = datetime.datetime(1999,1,1,0,0,0) # Invalid - 1 year before data start date
@@ -186,9 +184,9 @@ class FileReader_test(TestCase):
         self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
-        self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        self.assertRaises(ValueError, FileReader, self.config, self.file_name_reader, self.dataset_reader,
+                          start_datetime, end_datetime)
 
-    @raises(ValueError)
     def test_use_end_datetime_after_data_record_start(self):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid - 0 seconds after data record start
         end_datetime = datetime.datetime(2001,1,1,0,8,0) # Invalid - 1 year after data end date
@@ -196,7 +194,8 @@ class FileReader_test(TestCase):
         self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
-        self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        self.assertRaises(ValueError, FileReader, self.config, self.file_name_reader, self.dataset_reader,
+                          start_datetime, end_datetime)
 
     def test_set_file_names_with_start_datetime_equal_to_data_record_start(self):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid - 0 seconds after data record start

@@ -1,2 +1,2 @@
 #!/bin/env bash
-nosetests pylag.tests
+nose2 pylag.tests

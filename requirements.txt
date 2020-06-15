@@ -14,7 +14,7 @@ cftime>=1.1
 configparser
 
 # For testing
-nose
+nose2
 
 # For building the documentation
 sphinx

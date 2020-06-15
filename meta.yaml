@@ -43,7 +43,7 @@ requirements:
     - jupyter_client
     - ipykernel
     - ffmpeg
-    - nose
+    - nose2
     - pylag-tools
 
 test:
@@ -51,7 +51,7 @@ test:
     - pylag.main
     - pylag.parallel.main
   requires:
-    - nose
+    - nose2
 
 about:
   home: https://gitlab.ecosystem-modelling.pml.ac.uk/PyLag/PyLag
