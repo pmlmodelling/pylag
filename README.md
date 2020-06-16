@@ -54,12 +54,11 @@ which should exit without error.
 
 ### Instructions for developers
 
-The code is actually distributed in two distinct packages. The first contains the *PyLag* source code; the second a set of tools to help with setting up and analysing *PyLag* simulations. The former includes the latter as a dependency, meaning *PyLag-tools* is automatically installed when *PyLag* is, if it is not already present within your package list. With SSH access setup, you can clone both repositories using the following commands:
+With SSH access setup, you can clone the PyLag repository using the following commands:
 
 ```bash
 $ mkdir -p $HOME/code/git/PyLag && cd $HOME/code/git/PyLag
 $ git clone https://gitlab.ecosystem-modelling.pml.ac.uk/PyLag/PyLag.git>
-$ git clone https://gitlab.ecosystem-modelling.pml.ac.uk/PyLag/PyLag-tools.git>
 ```
 
 If you don't want to use git to access the code, you can always grab a copy by downloading and unpacking tarballs of the two repositories. The cleanest and safest way of installing *PyLag's* dependencies is using *Conda*. Following steps similar to those described above, we can configure a new *Conda* environment so:
@@ -84,14 +83,6 @@ And finally, in the PyLag source code directory, build and install *PyLag*.
 (particles) $ cd $HOME/code/git/PyLag/PyLag
 (particles) $ conda build .
 (particles) $ conda install -n particles --use-local pylag
-```
-
-*PyLag-tools* can be installed from source in exactly the same way:
-
-```bash
-(particles) $ cd $HOME/code/git/PyLag/PyLag-tools
-(particles) $ conda build .
-(particles) $ conda install -n particles --use-local pylag-tools
 ```
 
 Occsionally, when building *PyLag* this way, users have hit upon clashes with locally installed packages. To get around this problem, you may find it useful to add the following aliases to your bashrc file, which you can use to activate and deactivate *Conda*:

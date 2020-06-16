@@ -59,13 +59,12 @@ After you have registered to use the code, a *GitLab* account will be created fo
 
 When accessing the code using *git*, it is recommended that users use secure shell (SSH) to communicate with the *GitLab* server. This allows users to establish a secure connection between their computer and *GitLab*, and to easily pull and push repositories.
 
-The code is actually distributed in two distinct packages. The first contains the *PyLag* source code; the second a set of tools to help with setting up and analysing *PyLag* simulations. The former includes the latter as a dependency, meaning *PyLag-tools* is automatically installed when *PyLag* is, if it is not already present within your package list. With SSH access setup, you can clone both repositories using the following commands:
+With SSH access setup, you can clone both repositories using the following commands:
 
 .. code-block:: bash
 
     $ mkdir -p $HOME/code/git/PyLag && cd $HOME/code/git/PyLag
     $ git clone https://gitlab.ecosystem-modelling.pml.ac.uk/PyLag/PyLag.git>
-    $ git clone https://gitlab.ecosystem-modelling.pml.ac.uk/PyLag/PyLag-tools.git>
 
 
 If you don't want to use git to access the code, you can always grab a copy by downloading and unpacking tarballs of the two repositories. The cleanest and safest way of installing *PyLag's* dependencies is using *Conda*. Following steps similar to those described above, we can configure a new *Conda* environment so:
@@ -92,14 +91,6 @@ And finally, in the PyLag source code directory, build and install *PyLag*.
     $ conda build .
     $ conda install -n particles --use-local pylag
 
-*PyLag-tools* can be installed from source in exactly the same way:
-
-.. code-block:: bash
-
-    $ cd $HOME/code/git/PyLag/PyLag-tools
-    $ conda build .
-    $ conda install -n particles --use-local pylag-tools
-
 Occsionally, when building *PyLag* this way, users have hit upon clashes with locally installed packages. To get around this problem, you may find it useful to add the following aliases to your bashrc file, which you can use to activate and deactivate *Conda*:
 
 .. code-block:: bash
@@ -120,7 +111,7 @@ The *Conda* build process is quite long, and it doesn't lend itself to rapid bui
 Alternative installation methods
 --------------------------------
 
-In principle, there are several other ways *PyLag* can be installed. For example, using `virtualenv <https://virtualenv.pypa.io/en/stable/>`_; or by using *pip* to perform a local install with the ``--user`` flag. The main thing to watch out for with these other methods is dependency issues. In particular, *PyLag-tools* leverages functionality within the `PyFVCOM <https://pypi.org/project/PyFVCOM/>`_ and `PyQt-fit <https://pyqt-fit.readthedocs.io/en/latest/index.html>`_ packages. When building using *Conda*, pre-built versions of theses packages are brought down and installed automatically. However, with custom installs, they may need to be installed separately. Furthermore, *Conda* correctly configures your environment to make it possible to run *PyLag* in serial or parallel modes. When not using *Conda*, you will likely have to configure your environment to support parallel exectution (and, in-fact, installation).
+In principle, there are several other ways *PyLag* can be installed. For example, using `virtualenv <https://virtualenv.pypa.io/en/stable/>`_; or by using *pip* to perform a local install with the ``--user`` flag. The main thing to watch out for with these other methods is dependency issues. In particular, *PyLag* leverages functionality within the `PyFVCOM <https://pypi.org/project/PyFVCOM/>`_ and `PyQt-fit <https://pyqt-fit.readthedocs.io/en/latest/index.html>`_ packages. When building using *Conda*, pre-built versions of theses packages are brought down and installed automatically. However, with custom installs, they may need to be installed separately. Furthermore, *Conda* correctly configures your environment to make it possible to run *PyLag* in serial or parallel modes. When not using *Conda*, you will likely have to configure your environment to support parallel execution (and, in-fact, installation).
 
 This is because *PyLag* includes a dependency on the python package `MPI for Python <https://mpi4py.readthedocs.io/en/stable/>`_. To install *MPI for Python*, it is first necessary to ensure that you have a working MPI implementation on your system, and that all paths to MPI libraries and header files have been correctly set. You must use your Linux package manager to install a working MPI Implementation. On my laptop running Fedora 27, the following commands suffice:
 
@@ -137,4 +128,4 @@ On my machine, *openmpi* is enabled using the module command, which correctly se
    module load mpi/openmpi-x86_64
 
 .. note::
-    The use of *sudo* -- which would allow *PyLag* and *PyLag-tools* to be installed at the system level -- is strongly discouraged.
+    The use of *sudo* -- which would allow *PyLag* to be installed at the system level -- is strongly discouraged.
