@@ -43,8 +43,9 @@ requirements:
     - jupyter_client
     - ipykernel
     - ffmpeg
+    - PyFVCOM
+    - PyQt-fit
     - nose2
-    - pylag-tools
 
 test:
   import:
