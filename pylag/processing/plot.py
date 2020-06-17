@@ -33,7 +33,7 @@ class PyLagPlotter:
     Class to assist in the creation of plots and animations. This is the
     default PyLag plotter, designed to work with PyLag simulation output
     that has been generated using input data that is defined on a single
-    horizontal mesh. The mesh is read the from run's grid metrics file,
+    horizontal mesh. The mesh is read from the run's grid metrics file,
     which must be passed to PyLagPlotter during class initialisation.
 
     Specifically, PyLagPlotter will work with:
@@ -228,33 +228,6 @@ class PyLagPlotter:
 
         return
 
-    def plot_quiver(self, u, v, add_key=True, scale=1.0):
-        """Produce quiver plot using u and v velocity components.
-        
-        Parameters:
-        -----------
-        u : 1D or 2D array
-            u-component of the velocity field.
-            
-        v : 1D or 2D array
-            v-compoent of the velocity field
-            
-        add_key : bool
-            Add key for the quiver plot.
-
-        scale : float
-            Scaling to be provided to arrows with scale_units of inches.
-
-        """
-
-        if hasattr(self, 'quiver_plot'):
-            self.quiver_plot.set_UVC(u, v)
-            return
-        
-        self.quiver_plot = self.axes.quiver(self._xc, self._yc, u, v, units='inches', scale_units='inches', scale=scale)
-        if add_key: plt.quiverkey(self.quiver_plot, 0.9, 0.9, scale, '{} '.format(scale) + r'$\mathrm{ms^{-1}}$', coordinates='axes')
-        return
-
     def plot_lines(self, x, y, group_name='Default', zone='30N', coordinate_system='cartesian', **kwargs):
         """Plot path lines.
 
@@ -414,7 +387,7 @@ class PyLagPlotter:
     def set_title(self, title):
         self.axes.set_title(title, fontsize=self.fs)
 
-    def get_fvcom_nodal_coords(self):
+    def get_nodal_coords(self):
         return np.copy(self.x), np.copy(self.y)
 
 
@@ -756,7 +729,7 @@ class GOTMPlotter(object):
         return axes
 
     def add_colour_bar(self, figure, axes, plot, cb_label, cb_ticks):
-        # Add colobar scaled to axis width
+        # Add colour bar scaled to axis width
         divider = make_axes_locatable(axes)
         cax = divider.append_axes("right", size="5%", pad=0.05)
         cbar = figure.colorbar(plot, cax=cax, ticks=cb_ticks)
@@ -765,6 +738,7 @@ class GOTMPlotter(object):
 
     def set_title(self, title):
         self.axes.set_title(title, fontsize=self.fs)
+
 
 def plot_particle_positions(output_filename, grid_metrics_filename, time_index, **kwargs):
     """Plot the position of particles.
@@ -775,7 +749,7 @@ def plot_particle_positions(output_filename, grid_metrics_filename, time_index, 
     Parameters
     ----------
     output_filename : List, string
-        PyLAg output files to use when plotting particle positions.
+        PyLag output files to use when plotting particle positions.
     
     grid_metrics_filename : str
         Name of file providing grid info.
@@ -803,7 +777,7 @@ def plot_particle_positions(output_filename, grid_metrics_filename, time_index, 
     grid_metrics = Dataset(grid_metrics_filename)
 
     # Create plotter
-    plotter = FVCOMPlotter(grid_metrics, **kwargs)
+    plotter = PyLagPlotter(grid_metrics, **kwargs)
 
     # Dataset holding particle positions
     ds = Dataset(output_filename, 'r')
@@ -817,141 +791,31 @@ def plot_particle_positions(output_filename, grid_metrics_filename, time_index, 
     if overlay_grid is True:
         plotter.draw_grid()
 
-    x = ds.variables['xpos']
-    y = ds.variables['ypos']
+    x = ds.variables['x']
+    y = ds.variables['y']
     gids = ds.variables['group_id']
 
     if (group_ids is not None) and (group_colours is not None): 
         for group_id, group_colour in zip(group_ids, group_colours):
             indices = np.where(gids[:] == group_id)[0]
             plotter.plot_scatter(x[time_index,indices].squeeze(),
-                    y[time_index,indices].squeeze(), group_id, group_colour)
+                    y[time_index, indices].squeeze(), group_id, group_colour)
 
             # Add path lines?
             if path_lines is True:
-                plotter.plot_lines(x[:time_index+1,indices], y[:time_index+1,indices],
+                plotter.plot_lines(x[:time_index+1, indices], y[:time_index+1, indices],
                         group_id, group_colour)
     else:
-        plotter.plot_scatter(x[time_index,:].squeeze(), y[time_index,:].squeeze())
+        plotter.plot_scatter(x[time_index, :].squeeze(), y[time_index, :].squeeze())
 
         # Add path lines?
         if path_lines is True:
-            plotter.plot_lines(x[:time_index,:], y[:time_index,:])
+            plotter.plot_lines(x[:time_index, :], y[:time_index, :])
 
     # Update title with date string for this time index
     time_units = ds.variables['time'].units
-    date = num2date(ds.variables['time'][time_index], units=time_units)
+    date = num2pydate(ds.variables['time'][time_index], units=time_units)
     plotter.set_title(date)
-
-
-def plot_velocity_field(output_filename, grid_metrics_filename, 
-        time_index, layer_index=0, **kwargs):
-    """Plot FVCOM velocity field.
-    
-    Parameters
-    ----------
-    output_filename : List, string
-        FVCOM output file containing variables for the u/v/w components of the
-        velocity field
-    
-    grid_metrics_filename : str
-        Name of file providing grid info.
-    
-    time_index : int
-        Time index at which to plot data.
-        
-    layer_index : int
-        Layer index for plotting. Default = 0.
-    """
-
-    # Plot bathymetry by default
-    bathy = kwargs.pop('bathy', True)
-
-    # Plot grid by default
-    overlay_grid = kwargs.pop('overlay_grid', True)
-    
-    # Grid metrics file
-    grid_metrics = Dataset(grid_metrics_filename)
-
-    # Create plotter
-    plotter = FVCOMPlotter(grid_metrics, **kwargs)
-
-    # Dataset holding particle positions
-    ds = Dataset(output_filename, 'r')
-
-    # Add bathymetry from the grid metrics file?
-    if bathy is True:
-        h = -grid_metrics.variables['h'][:]
-        plotter.plot_field(h)
-
-    # Overlay the grid
-    if overlay_grid is True:
-        plotter.draw_grid()
-        
-    u = ds.variables['u'][time_index, layer_index, :].squeeze()
-    v = ds.variables['v'][time_index, layer_index, :].squeeze()
-    plotter.plot_quiver(u, v)
-
-    # Update title with date string for this time index
-    time_units = ds.variables['time'].units
-    date = num2date(ds.variables['time'][time_index], units=time_units)
-    plotter.set_title(date)
-    
-    plt.savefig('vel_field.png', dpi=300)
-
-
-def plot_fvcom_surface_wind_speed(output_filename, grid_metrics_filename,
-        time_index, **kwargs):
-    """Produce a quiver plot of the sea surface wind speed.
-    
-    Parameters
-    ----------
-    output_filename : string
-        Name of the FVCOM netcdf output file.
-    
-    grid_metrics_filename : str
-        Name of the FVCOM grid metrics file.
-    
-    time_index : int
-        Time index at which to plot data.
-    """
-    # Plot bathymetry by default
-    bathy = kwargs.pop('bathy', True)
-
-    # Plot grid by default
-    overlay_grid = kwargs.pop('overlay_grid', True)
-
-    # Plot bathymetry by default
-    scale = kwargs.pop('scale', 20.0)    
-    
-    # Grid metrics file
-    grid_metrics = Dataset(grid_metrics_filename)
-
-    # Create plotter
-    plotter = FVCOMPlotter(grid_metrics, **kwargs)
-
-    # Dataset holding particle positions
-    ds = Dataset(output_filename, 'r')
-
-    # Add bathymetry from the grid metrics file?
-    if bathy is True:
-        h = -grid_metrics.variables['h'][:]
-        plotter.plot_field(h)
-
-    # Overlay the grid
-    if overlay_grid is True:
-        plotter.draw_grid()
-        
-    uwind = ds.variables['uwind_speed'][time_index, :].squeeze()
-    vwind = ds.variables['vwind_speed'][time_index, :].squeeze()
-    plotter.plot_quiver(uwind, vwind, scale=scale)
-
-    # Update title with date string for this time index
-    time_units = ds.variables['time'].units
-    date = num2date(ds.variables['time'][time_index], units=time_units)
-    plotter.set_title(date)
-    
-    plt.savefig('surface_wind_speed.png', dpi=300)
 
 
 def create_figure(figure_size=(10., 10.),  font_size=10, axis_position=None, projection=None, bg_color='white'):
