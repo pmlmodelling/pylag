@@ -14,7 +14,8 @@ except ImportError:
 
 
 class ReleaseZone(object):
-    """
+    """ Release zone
+
     A release zone is a circular region in cartesian space containing a set of
     particles.
 
@@ -29,7 +30,8 @@ class ReleaseZone(object):
         self.__particle_set = []
 
     def create_particle_set(self, n_particles=100, z=0.0, random=True):
-        """
+        """ Create a new particle set
+
         Create a new particle set (n=n_particles). The spatial coordinates of
         each particle are computed. If random is true, exactly n, random,
         uniformly distributed particles will be created. If false, particles are
@@ -132,7 +134,9 @@ class ReleaseZone(object):
         return [particle_coords[2] for particle_coords in self.__particle_set]
 
     def get_zone_polygon(self):
-        """ Make a polygon of the points in the zone (based on its convex hull) """
+        """ Make a polygon of the points in the zone (based on its convex hull)
+        """
+
         if not have_shapely:
             raise ImportError('Cannot create a polygon for this release zone as we do not have shapely installed.')
 
@@ -149,8 +153,7 @@ class ReleaseZone(object):
 
 def create_release_zone(group_id=1, radius=100.0, centre=[0.0, 0.0],
                         n_particles=100, depth=0.0, random=True):
-    """
-    Create a new release zone.
+    """ Create a new release zone.
 
     Parameters:
     -----------
@@ -195,7 +198,8 @@ def create_release_zone(group_id=1, radius=100.0, centre=[0.0, 0.0],
 
 def create_release_zones_along_cord(r1, r2, group_id=1, radius=100.0,
                                     n_particles=100, depth=0.0, random=True, verbose=False):
-    """
+    """ Generate a set of release zones along a cord
+
     Return particle positions along a line r3, defined by the position vectors r1 and
     r2. Particles are packed into circlular zones of radius radius, running along r3.
     Positions for approximately n particles (= n if random is True) are returned per
@@ -266,8 +270,7 @@ def create_release_zones_around_shape(shape_obj, start, target_length, group_id,
                                       radius, n_particles, depth=0.0, random=True, check_overlaps=False,
                                       overlap_tol=0.0001, zone=None, maximum_vertex_separation=None,
                                       return_end_zone=True, verbose=False, ax=None):
-    """
-    Create a set of adjacent release zones around an arbitrary polygon.
+    """ Create a set of adjacent release zones around an arbitrary polygon.
 
     Parameters:
     -----------
@@ -398,8 +401,7 @@ def create_release_zones_around_shape(shape_obj, start, target_length, group_id,
 def create_release_zones_around_shape_section(shape_obj, start, target_length, group_id,
                                               radius, n_particles, depth=0.0, zone=None, random=True,
                                               check_overlaps=False, overlap_tol=0.0001, verbose=False):
-    """
-    Create a set of adjacent release zones around a some part of an arbritray poloygon.
+    """ Create a set of adjacent release zones around a some part of an arbritray poloygon.
 
     This function is distinct from the function `create_release_zones_around_shape` in
     the sense that it a) only creates release zones around a specified length of the
@@ -462,10 +464,10 @@ def create_release_zones_around_shape_section(shape_obj, start, target_length, g
     n_points = np.shape(points)[0]
 
     # Establish whether or not the shapefile is ordered in a clockwise or anticlockwise manner
-    clockwise_ordering = is_clockwise_ordered(points)
+    clockwise_ordering = _is_clockwise_ordered(points)
 
     # Find starting location
-    start_idx = find_start_index(points, start[0], start[1], zone=zone)
+    start_idx = _find_start_index(points, start[0], start[1], zone=zone)
 
     # Form the first release zone centred on the point corresponding to start_idx
     release_zones = []
@@ -482,14 +484,14 @@ def create_release_zones_around_shape_section(shape_obj, start, target_length, g
     distance_travelled = 0.0  # Cumulative distance travelled around shape_obj (exit when >target_length)
     last_vertex = centre_ref  # Coordinates of the last vertex, used for length calculation
     group_id += 1  # Update group id
-    idx = update_idx(idx, clockwise_ordering)  # Update the current index
+    idx = _update_idx(idx, clockwise_ordering)  # Update the current index
     counter = 1  # Loop counter
     while True:
         if counter > n_points or distance_travelled > target_length:
             break
 
         x, y, zone = utm_from_lonlat(points[idx, 0], points[idx, 1])
-        if get_length(centre_ref, np.array([x[0], y[0]])) >= target_separation:
+        if _get_length(centre_ref, np.array([x[0], y[0]])) >= target_separation:
             # Track back along the last cord in order to find the point
             # giving a release zone separation of 2*radius.
             #
@@ -500,7 +502,7 @@ def create_release_zones_around_shape_section(shape_obj, start, target_length, g
             # also know that |r4-r1| must equal target_separation (i.e. 2x the radius
             # of a relase zone). The task is then to find r4, which lies on the line
             # joining r2 and r3. This is managed by the method find_release_zone_location().
-            r4 = find_release_zone_location(centre_ref, last_vertex, np.array([x[0], y[0]]), target_separation)
+            r4 = _find_release_zone_location(centre_ref, last_vertex, np.array([x[0], y[0]]), target_separation)
 
             # Create location
             release_zone = create_release_zone(group_id, radius, r4, n_particles, depth, random)
@@ -512,10 +514,10 @@ def create_release_zones_around_shape_section(shape_obj, start, target_length, g
             if check_overlaps:
                 for zone_test in release_zones:
                     centre_test = zone_test.get_centre()
-                    zone_separation = get_length(r4, centre_test)
+                    zone_separation = _get_length(r4, centre_test)
                     if (target_separation - zone_separation) / target_separation > overlap_tol:
                         print("WARNING: Area overlap detected between release zones {} \
-                               and {}. Target separation = {}. Actual separation = {}.".format(test_zone.get_group_id(),
+                               and {}. Target separation = {}. Actual separation = {}.".format(zone_test.get_group_id(),
                                                                                                release_zone.get_group_id(),
                                                                                                target_separation,
                                                                                                zone_separation))
@@ -528,18 +530,18 @@ def create_release_zones_around_shape_section(shape_obj, start, target_length, g
             group_id += 1
         else:
             # Update counters
-            distance_travelled += get_length(last_vertex, np.array([x[0], y[0]]))
+            distance_travelled += _get_length(last_vertex, np.array([x[0], y[0]]))
             last_vertex = np.array([x[0], y[0]])
-            idx = update_idx(idx, clockwise_ordering)
+            idx = _update_idx(idx, clockwise_ordering)
             counter += 1
 
     return release_zones
 
 
-def is_clockwise_ordered(points):
-    """
-    Establish the index of the left most point in x, then check for rising or
-    falling y.
+def _is_clockwise_ordered(points):
+    """ Check to see if a set of points are clockwise ordered
+
+    Establish the index of the left most point in x, then check for rising or falling y.
 
     Parameters:
     -----------
@@ -579,9 +581,8 @@ def is_clockwise_ordered(points):
     return is_clockwise
 
 
-def find_start_index(points, lon, lat, tolerance=None, zone=None):
-    """
-    Find start index for release zone creation.
+def _find_start_index(points, lon, lat, tolerance=None, zone=None):
+    """ Find start index for release zone creation.
 
     Parameters:
     -----------
@@ -628,9 +629,8 @@ def find_start_index(points, lon, lat, tolerance=None, zone=None):
     return start_idx
 
 
-def get_length(r1, r2):
-    """
-    Return the length of the line vector joining the position vectors r1 and r2.
+def _get_length(r1, r2):
+    """ Return the length of the line vector joining the position vectors r1 and r2.
 
     Parameters:
     ----------
@@ -656,9 +656,8 @@ def get_length(r1, r2):
     return np.sqrt((r12*r12).sum())
 
 
-def update_idx(idx, clockwise_ordering):
-    """
-    Update idx, depending on the value of clockwise_ordering.
+def _update_idx(idx, clockwise_ordering):
+    """ Update idx, depending on the value of clockwise_ordering.
 
     Parameters:
     -----------
@@ -677,8 +676,9 @@ def update_idx(idx, clockwise_ordering):
     return idx + 1 if clockwise_ordering else idx - 1
 
 
-def find_release_zone_location(r1, r2, r3, r14_length):
-    """
+def _find_release_zone_location(r1, r2, r3, r14_length):
+    """ Find release zone location
+
     Find the position vector r4 that sits on the line joining the position
     vectors r2 and r3, at a distance r14_length from the position vector r1.
     First form three equations with three unknowns (r4[0], r4[1] and |r24|).
@@ -762,3 +762,4 @@ def find_release_zone_location(r1, r2, r3, r14_length):
         r24_length = r24_length_b
 
     return r2 + (r24_length / r23_length) * r23
+
