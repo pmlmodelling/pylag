@@ -1,6 +1,7 @@
 from __future__ import division, print_function
 import os
 
+
 def create_initial_positions_file_single_group(filename, n, group_id, xpos, ypos, zpos):
     """
     Create a file specifying the initial positions of a set of n particles. Each
