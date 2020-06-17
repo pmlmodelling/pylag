@@ -79,8 +79,8 @@ def get_rmse(fvcom_file_name, fvcom_var_name, pylag_file_names, dates, pylag_tim
             positions = np.vstack([fvcom_reader.grid.x[indices], fvcom_reader.grid.y[indices]])
 
             # Compute the concentration from particle positions
-            xpos = viewer('xpos')[pylag_idx, :].squeeze()
-            ypos = viewer('ypos')[pylag_idx, :].squeeze()
+            xpos = viewer('x')[pylag_idx, :].squeeze()
+            ypos = viewer('y')[pylag_idx, :].squeeze()
             values = np.vstack([xpos, ypos])
             kernel = stats.gaussian_kde(values)
             pylag_conc = kernel(positions) * mass_factor
