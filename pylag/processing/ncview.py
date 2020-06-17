@@ -5,6 +5,7 @@ from cftime import num2pydate
 
 from pylag.processing.utils import round_time
 
+
 class Viewer(object):
     """ Class to provide easy access to data stored in netCDF format
     
