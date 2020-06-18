@@ -3,7 +3,8 @@ import os
 
 
 def create_initial_positions_file_single_group(filename, n, group_id, xpos, ypos, zpos):
-    """
+    """ Create an initial positions file for a single group of particles
+
     Create a file specifying the initial positions of a set of n particles. Each
     particle has the same group ID.
 
@@ -51,7 +52,8 @@ def create_initial_positions_file_single_group(filename, n, group_id, xpos, ypos
     f.close()
 
 def create_initial_positions_file_multi_group(filename, release_zones):
-    """
+    """ Create an initial positions file for multiple particle groups
+
     Take a list of ReleaseZone objects, extract particle initial positions and
     write to file.
 
