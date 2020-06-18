@@ -30,6 +30,9 @@ requirements:
     - scipy>=1.4.1
     - cython>=0.29
     - matplotlib
+    - cartopy
+    - shapely
+    - cmocean
     - progressbar
     - natsort
     - netCDF4

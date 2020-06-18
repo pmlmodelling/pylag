@@ -13,12 +13,15 @@ netCDF4
 cftime>=1.1
 configparser
 PyFVCOM
-PyQT-fit
 
 # For testing
 nose2
 
 # For building the documentation
+matplotlib
+cartopy
+shapely
+cmocean
 sphinx
 nbsphinx
 sphinx_rtd_theme
@@ -27,4 +30,4 @@ jupyter
 jupyter_client
 ipykernel
 ffmpeg-python
-pylag-tools
+PyQT-fit
