@@ -1,3 +1,18 @@
+""" Run a PyLag simulation in parallel
+
+Example
+-------
+
+$ mpiexec -np 4 python -m pylag.parallel.main -c pylag.cfg
+
+where the flag `np` is the number of processors, which here has
+been set to four.
+
+For additional information on setting up a PyLag simulation,
+including creating a new run configuration file, see PyLag's
+documentation.
+"""
+
 from __future__ import print_function
 
 import os
@@ -12,6 +27,7 @@ import pylag.random as random
 from pylag import version
 
 from pylag.parallel.simulator import get_simulator
+
 
 def main():
     comm = MPI.COMM_WORLD
@@ -73,6 +89,7 @@ def main():
     # End logging and exit
     if rank == 0:
         logger.info('Stopping PyLag')
+
 
 if __name__ == '__main__':
     main()

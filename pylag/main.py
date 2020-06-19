@@ -1,3 +1,15 @@
+""" Run a PyLag simulation
+
+Example
+-------
+
+$ python -m pylag.main -c pylag.cfg
+
+For additional information on setting up a PyLag simulation,
+including creating a new run configuration file, see PyLag's
+documentation.
+"""
+
 from __future__ import print_function
 
 import os
@@ -9,6 +21,7 @@ from pylag.configuration import get_config
 from pylag.simulator import get_simulator
 import pylag.random as random
 from pylag import version
+
 
 def main():
     # Parse command line agruments
@@ -55,6 +68,7 @@ def main():
      
     # End logging and exit
     logger.info('Stopping PyLag')
+
 
 if __name__ == '__main__':
     main()
