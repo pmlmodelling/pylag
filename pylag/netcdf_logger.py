@@ -1,3 +1,7 @@
+"""
+Module containing classes that facilitate the writing of data to file
+"""
+
 import logging
 from netCDF4 import Dataset
 from cftime import num2pydate
@@ -12,11 +16,17 @@ from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 
 from pylag import variable_library
 
+
 class NetCDFLogger(object):
     """ NetCDF data logger.
 
-    Parameters:
-    -----------
+    Objects of type NetCDFLogger can be used to write particle data to file.
+
+    Parameters
+    ----------
+    config : SafeConfigParser
+        Configuration object
+
     file_name : str
         Name of the *.nc output file to be generated. If the `.nc' extension
         is not present it is automatically added.
@@ -160,9 +170,34 @@ class NetCDFLogger(object):
             self._env_vars[var_name].long_name = long_name
 
     def write_group_ids(self, group_ids):
+        """ Write particle group IDs to file
+
+        Parameters
+        ----------
+        group_ids : array_like
+            Particle group IDs.
+
+        Returns
+        -------
+        None
+        """
         self._group_id[:] = group_ids
 
     def write(self, time, particle_data):
+        """ Write particle data to file
+
+        Parameters
+        ----------
+        time : float
+            The current time
+
+        particle_data : dict
+            Dictionary containing particle data with format ['attribute': [...]].
+
+        Returns
+        -------
+        None
+        """
         # Next time index
         tidx = self._time.shape[0]
         
@@ -188,11 +223,25 @@ class NetCDFLogger(object):
             self._env_vars[var_name][tidx, :] = particle_data[var_name]
 
     def sync(self):
+        """ Sync data to disk
+
+        Returns
+        -------
+        None
+        """
         # Sync data to disk
         self._ncfile.sync()
         
     def close(self):
+        """ Close the logger
+
+        Returns
+        -------
+        None
+        """
         logger = logging.getLogger(__name__)
         logger.info('Closing data logger.')
         self._ncfile.close()
 
+
+__all__ = ['NetCDFLogger']

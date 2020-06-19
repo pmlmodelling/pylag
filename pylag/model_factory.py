@@ -1,8 +1,5 @@
 """
-TODO
-----
-
-1) Should get_model() return a statically typed object?
+Module containing factory method for Model Objects
 """
 
 from pylag.model import OPTModel
@@ -15,6 +12,24 @@ from pylag.mediator import SerialMediator
 
 
 def get_model(config, datetime_start, datetime_end):
+    """ Factory method for model objects
+
+    Parameters
+    ----------
+    config : SafeConfigParser
+        Configuration object
+
+    datetime_start : Datetime
+        Start datetime
+
+    datetime_end : Datetime
+        End datetime
+
+    Returns
+    -------
+     : pylag.model.OPTModel
+         Offline particle tracking model object
+    """
     if config.get("OCEAN_CIRCULATION_MODEL", "name") == "ArakawaA":
         mediator = SerialMediator(config, datetime_start, datetime_end)
         data_reader = ArakawaADataReader(config, mediator)
@@ -30,3 +45,5 @@ def get_model(config, datetime_start, datetime_end):
     else:
         raise ValueError('Unsupported ocean circulation model.')
 
+
+__all__ = ['get_model']

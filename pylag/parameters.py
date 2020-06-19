@@ -1,3 +1,7 @@
+"""
+Module in which mathematical or physical constants are defined
+"""
+
 import numpy as np
 
 # Earth's radius in m
