@@ -152,10 +152,12 @@ extensions = [makeExtension(name, file_type) for name in ext_names]
 if file_type == '.pyx':
     if build_type == 'prod':
         ext_modules = cythonize(extensions, include_path=['include'],
-              compiler_directives={'boundscheck': False})
+                compiler_directives={'boundscheck': False,
+                'embedsignature': True})
     elif build_type == 'prof':
         ext_modules = cythonize(extensions, include_path=['include'],
-              compiler_directives={'profile': True, 'linetrace': True})
+              compiler_directives={'profile': True, 'linetrace': True,
+              'embedsignature': True})
     elif build_type == 'debug':
         ext_modules = cythonize(extensions, include_path=['include'],
               compiler_directives={'profile': True, 
