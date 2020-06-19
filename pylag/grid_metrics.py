@@ -1,3 +1,8 @@
+"""
+The grid metrics module exists to assist with the creation of PyLag
+grid metrics files.
+"""
+
 from __future__ import print_function
 
 import numpy as np
@@ -11,14 +16,14 @@ class GridMetricsFileCreator(object):
 
     Class to assist with the creation of PyLag grid metrics files
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     file_name : str, optional
         The name of the grid metrics file that will be created.
 
-    Returns:
-    --------
-    N/A
+    format : str, optional
+        The format of the NetCDF file (e.g. NetCDF4). Default: NetCDF4.
+
     """
 
     def __init__(self, file_name='./grid_metrics.nc', format="NETCDF4"):
@@ -46,12 +51,12 @@ class GridMetricsFileCreator(object):
 
         Create a new, skeleton file. Dimensions and variables must be added separately.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         N/A
 
-        Returns:
-        --------
+        Returns
+        -------
         N/A
         """
         # Create the file
@@ -66,8 +71,8 @@ class GridMetricsFileCreator(object):
     def create_dimension(self, name, size):
         """ Add dimension variable
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         name : str
             Name of the dimension
 
@@ -79,8 +84,8 @@ class GridMetricsFileCreator(object):
     def create_variable(self, var_name, var_data, dimensions, dtype, fill_value=None, attrs=None):
         """" Add variable
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         var_name : str
             Name of the variable to add
 
@@ -93,11 +98,11 @@ class GridMetricsFileCreator(object):
         dtype : str
             Data type (e.g. float)
 
-        fill_value : int, float ...
-            Fill value to use
+        fill_value : int, float, optional.
+            Fill value to use. Default: None.
 
-        attrs : dict
-            Dictionary of attributes.
+        attrs : dict, optional
+            Dictionary of attributes. Default: None.
         """
         for dimension in dimensions:
             if dimension not in self.dims.keys():
@@ -135,6 +140,8 @@ class GridMetricsFileCreator(object):
         return global_attrs
 
     def close_file(self):
+        """ Close the file
+        """
         try:
             self.ncfile.close()
         except:
@@ -150,11 +157,8 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_
     given a -1 flag. This function rectifies these problems by generating a
     separate grid metrics file that can be passed to PyLag.
 
-    NB This function only needs to be called once per FVCOM model grid - the
-    grid metrics file generated can be reused by all future simulations.
-
-    Parameters:
-    -----------
+    Parameters
+    ----------
     fvcom_file_name : str
         The path to an FVCOM output file that can be read in a processed
 
@@ -163,6 +167,12 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_
 
     grid_metrics_file_name : str, optional
         The name of the grid metrics file that will be created
+
+    Note
+    ----
+    This function only needs to be called once per model grid - the
+    grid metrics file generated can be reused by all future simulations.
+
     """
     # Open the FVCOM dataset for reading
     fvcom_dataset = Dataset(fvcom_file_name, 'r')
@@ -265,11 +275,8 @@ def create_arakawa_a_grid_metrics_file(file_name, has_mask=True, has_bathymetry=
     The approach taken is to reinterpret the regular grid as a single, unstructured
     grid which can be understood by PyLag.
 
-    NB This function only needs to be called once per model grid - the
-    grid metrics file generated can be reused by all future simulations.
-
-    Parameters:
-    -----------
+    Parameters
+    ----------
     file_name : str
         The path to an file that can be read in a processed
 
@@ -289,6 +296,12 @@ def create_arakawa_a_grid_metrics_file(file_name, has_mask=True, has_bathymetry=
 
     grid_metrics_file_name : str, optional
         The name of the grid metrics file that will be created
+
+    Note
+    ----
+    This function only needs to be called once per model grid - the
+    grid metrics file generated can be reused by all future simulations.
+
     """
     # Open the input file for reading
     input_dataset = Dataset(file_name, 'r')
@@ -495,13 +508,13 @@ def sort_axes(nc_var):
     The function will attempt to reorder variables given common time,
     depth, longitude and latitude names.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     nc_var : NetCDF4 variable
         NetCDF variable to sort
 
-    Returns:
-    --------
+    Returns
+    -------
     var : NumPy NDArray
         Variable array with sorted axes.
     """
@@ -610,16 +623,16 @@ def sort_adjacency_array(nv, nbe):
     elements surrounding each element; the latter the nodes surrounding each
     element.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     nv : 2D ndarray, int
         Nodes surrounding element, shape (3, n_elems)
 
     nbe : 2D ndarray, int
         Elements surrounding element, shape (3, n_elems)
 
-    Returns:
-    --------
+    Returns
+    -------
     nbe_sorted: 2D ndarray, int
         The new nbe array
     """
@@ -665,10 +678,15 @@ def sort_adjacency_array(nv, nbe):
 def get_fvcom_open_boundary_nodes(file_name):
     """Read fvcom open boundary nodes from file
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     file_name : str
         Name of file containing a list of the open boundary nodes
+
+    Returns
+    -------
+    nodes : list, int
+        A list of open boundary nodes as read in from file
     """
     with open(file_name, 'r') as f:
         lines = f.readlines()
@@ -694,8 +712,8 @@ def add_fvcom_open_boundary_flags(nv, nbe, ob_nodes):
     on the open boundary. If they do, it flags the corresponding neighbour
     element with a -2, rather than a -1 as is the case in FVCOM output files.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     nv : 2D ndarray, int
         Nodes surrounding element, shape (3, n_elems)
 
@@ -704,6 +722,11 @@ def add_fvcom_open_boundary_flags(nv, nbe, ob_nodes):
 
     ob_nodes : list, int
         List of nodes that lie along the open boundary
+
+    Returns
+    -------
+    nbe_new : ndarray, int
+        Array of neighbouring elements with open boundary flags added.
     """
     n_elems = nv.shape[1]
 
@@ -739,3 +762,6 @@ def _get_number_of_matching_nodes(array1, array2):
 
     return match
 
+
+__all__ = ['create_fvcom_grid_metrics_file',
+           'create_arakawa_a_grid_metrics_file']
