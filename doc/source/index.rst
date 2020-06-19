@@ -22,6 +22,7 @@ Contents
     install/installation
     examples/index
     documentation/index
+    api/modules
     licensing
     acknowledgements
 

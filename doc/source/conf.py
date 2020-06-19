@@ -33,18 +33,20 @@ sys.path.insert(0, os.path.abspath('../'))
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = ['sphinx.ext.autodoc',
-              'sphinxcontrib.napoleon',
+              'sphinx.ext.autosummary',
+              'sphinx.ext.napoleon',
               'sphinx.ext.intersphinx',
               'sphinx.ext.todo',
               'sphinx.ext.mathjax',
               'sphinx.ext.viewcode',
+              'sphinx.ext.githubpages',
               'nbsphinx',
+              'sphinx_rtd_theme',
               'IPython.sphinxext.ipython_console_highlighting']
 
 # Autodoc
 napoleon_google_docstring = False
-#napoleon_use_param = False
-#napoleon_use_ivar = True
+napoleon_use_ivar = True
 
 # Use this kernel instead of the one stored in the notebook metadata:
 nbsphinx_kernel_name = 'python3'
