@@ -1,4 +1,5 @@
-""" Run a PyLag simulation
+"""
+Run a PyLag simulation in serial
 
 Example
 -------
@@ -8,6 +9,10 @@ $ python -m pylag.main -c pylag.cfg
 For additional information on setting up a PyLag simulation,
 including creating a new run configuration file, see PyLag's
 documentation.
+
+See Also
+--------
+pylag.parallel.main : Run a PyLag simulation in parallel
 """
 
 from __future__ import print_function

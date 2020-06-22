@@ -1,10 +1,10 @@
-""" Particle initialiser
+"""
+Particle state initialisation
 
 This module provides the following functionality:
 
 1) Reading of particle initialisation files
 2) Reading of model restart files
-3) Writing of model restart files
 """
 
 import numpy as np
