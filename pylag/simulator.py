@@ -1,3 +1,15 @@
+"""
+This module contains classes that can be used to manage the running of
+PyLag simulations in serial mode. All Simulators inherit from a common
+Abstract base class `Simulator`. This structure was introduced in order
+to make it possible to run different types of simulation (e.g. a trace,
+or LCS calculation) through configuration switches.
+
+See Also
+--------
+pylag.parallel.simulator - Simulators for parallel execution
+"""
+
 from __future__ import print_function
 
 import logging
@@ -12,6 +24,18 @@ from pylag.model_factory import get_model
 
 
 def get_simulator(config):
+    """ Factory method for PyLag simulators
+
+    Parameters
+    ----------
+    config : SafeConfigParser
+        PyLag configuraton object
+
+    Returns
+    -------
+     : Simulator
+         Object of type Simulator
+    """
     if config.get("SIMULATION", "simulation_type") == "trace":
         return TraceSimulator(config)
     else:
@@ -19,11 +43,27 @@ def get_simulator(config):
 
 
 class Simulator(object):
+    """ Simulator
+
+    Abstract base class for PyLag simulators.
+    """
     def run(self):
-        pass
+        """ Run a PyLag simulation
+        """
+        raise NotImplementedError
 
 
 class TraceSimulator(Simulator):
+    """ Trace simulator
+
+    Simulator for tracing particle pathlines through time. Trace simulators can perform
+    forward or backward in time integrations.
+
+    Parameters
+    ----------
+    config : SafeConfigParser
+        PyLag configuraton object
+    """
     def __init__(self, config):
         # Configuration object
         self._config = config
@@ -46,6 +86,15 @@ class TraceSimulator(Simulator):
         self.data_logger = None
     
     def run(self):
+        """ Run a simulation
+
+        Run a single or multiple integrations according to options set out
+        in the run configuration file.
+
+        Returns
+        -------
+         : None
+        """
         # For logging
         logger = logging.getLogger(__name__)
 
@@ -135,3 +184,7 @@ class TraceSimulator(Simulator):
             else:
                 run_simulation = False
 
+
+__all__ = ['Simulator',
+           'TraceSimulator',
+           'get_simulator']

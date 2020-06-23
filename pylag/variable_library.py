@@ -1,4 +1,5 @@
-""" Library of standard PyLag variables
+"""
+Library of standard PyLag variables.
 
 This is a hardcoded library of standard variable names and units
 which is intended to help with the consistent writing of data to
@@ -12,18 +13,73 @@ from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 
 
 def get_data_type(var_name):
+    """ Get variable data type
+
+    Parameters
+    ----------
+    var_name : str
+        The variable name
+
+    Returns
+    -------
+        : Python data type
+        The variable data type
+
+    """
     return _variable_data_types[var_name]
 
 
 def get_units(var_name):
+    """ Get the variable's units
+
+    Parameters
+    ----------
+    var_name : str
+        The variable name
+
+    Returns
+    -------
+     : str
+         It's units
+
+    """
     return _variable_units[var_name]
 
 
 def get_long_name(var_name):
+    """ Get the variable long name
+
+    Parameters
+    ----------
+    var_name : str
+        The variable's name
+
+    Returns
+    -------
+     : str
+         The variable's long name
+
+    """
     return _variable_long_names[var_name]
 
 
 def get_coordinate_variable_name(coordinate_system, variable_name):
+    """ Get coordinate variable name
+
+    Parameters
+    ----------
+    coordinate_system : str
+        The coordinate system (i.e. `cartesian` or `spherical`)
+
+    variable_name : str
+        The variable name (i.e. `x1`, `x2` or `x3`)
+
+    Returns
+    -------
+     : str
+         The coordinate variable name (e.g. `longitude`)
+
+    """
     if coordinate_system == "cartesian":
         return cartesian_coordinate_variable_names[variable_name]
     elif coordinate_system == "spherical":
@@ -114,3 +170,8 @@ fvcom_variable_names = {'thetao': 'temp', 'so': 'salinity'}
 # GOTM name mappings
 gotm_variable_names = {'thetao': 'temp', 'so': 'salt', 'rsdo': 'rad'}
 
+
+__all__ = ['get_data_type',
+           'get_units',
+           'get_long_name',
+           'get_coordinate_variable_name']

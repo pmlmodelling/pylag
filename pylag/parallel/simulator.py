@@ -1,3 +1,12 @@
+"""
+This module contains classes that can be used to manage the running of
+PyLag simulations in parallel mode.
+
+See Also
+--------
+pylag.simulator - Simulators for serial execution
+"""
+
 from __future__ import print_function
 
 import logging
@@ -16,6 +25,19 @@ from pylag.parallel.model_factory import get_model
 
 
 def get_simulator(config):
+    """ Factory method for PyLag MPI simulators
+
+    Parameters
+    ----------
+    config : SafeConfigParser
+        PyLag configuraton object
+
+    Returns
+    -------
+     : Simulator
+         Object of type Simulator
+    """
+
     if config.get("SIMULATION", "simulation_type") == "trace":
         return TraceSimulator(config)
     else:
@@ -23,11 +45,27 @@ def get_simulator(config):
 
 
 class Simulator(object):
+    """ Simulator
+
+    Abstract base class for PyLag MPI simulators.
+    """
     def run(self):
+        """ Run a PyLag MPI simulation
+        """
         pass
 
 
 class TraceSimulator(Simulator):
+    """ Trace simulator
+
+    Simulator for tracing particle pathlines through time. Trace simulators can perform
+    forward or backward in time integrations.
+
+    Parameters
+    ----------
+    config : SafeConfigParser
+        PyLag configuraton object
+    """
     def __init__(self, config):
         # MPI objects and variables
         comm = MPI.COMM_WORLD
@@ -68,6 +106,15 @@ class TraceSimulator(Simulator):
         self.data_logger = None
 
     def run(self):
+        """ Run a simulation
+
+        Run a single or multiple integrations according to options set out
+        in the run configuration file.
+
+        Returns
+        -------
+         : None
+        """
         # MPI objects and variables
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
@@ -266,3 +313,7 @@ class TraceSimulator(Simulator):
             datetime_current = self.time_manager.datetime_current
             self.restart_creator.create(file_name_stem, self.n_particles, datetime_current, global_data)
 
+
+__all__ = ['Simulator',
+           'TraceSimulator',
+           'get_simulator']

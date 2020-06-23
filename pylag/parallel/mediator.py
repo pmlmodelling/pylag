@@ -1,3 +1,12 @@
+"""
+Module containing the derived class MPIMediator, which helps to manage
+access to input data during parallel execution.
+
+See Also
+--------
+pylag.mediator - Serial mediator for serial execution
+"""
+
 import numpy as np
 import logging
 import traceback
@@ -13,6 +22,30 @@ from pylag.mediator import Mediator
 
 
 class MPIMediator(Mediator):
+    """ MPI mediator
+
+    MPI mediator for parallel runs.
+
+    Parameters
+    ----------
+    config : SafeConfigParser
+        Run configuration object
+
+    start_datetime : Datetime
+        Simulation start date/time.
+
+    end_datetime : Datetime
+        Simulation end date/time.
+
+    Attributes
+    ----------
+    config : SafeConfigParser
+        Run configuration object
+
+    file_reader : pylag.FileReader
+        FileReader object.
+
+    """
     def __init__(self, config, datetime_start, datetime_end):
         self.config = config
 

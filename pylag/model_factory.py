@@ -1,5 +1,9 @@
 """
 Module containing factory method for Model Objects
+
+See Also
+--------
+pylag.parallel.model_factory - Factory method for parallel execution
 """
 
 from pylag.model import OPTModel

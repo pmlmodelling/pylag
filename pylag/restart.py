@@ -1,11 +1,9 @@
-""" restart
-
-This module provides the following functionality:
+"""
+Restart module that provides the following functionality:
 
 1) Writing of model restart files
 
-The reading of restart files is implemented in
-`particle_initialisation.py`.
+The reading of restart files is implemented in `particle_initialisation.py`.
 """
 
 import os

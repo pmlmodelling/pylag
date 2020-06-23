@@ -1,3 +1,15 @@
+"""
+Data reader for input data defined on an Arakawa A-grid.
+
+Note
+----
+arakawa_a_data_reader is implemented in Cython. Only a small portion of the
+API is exposed in Python with accompanying documentation. However, more
+details can be found in `pylag.data_reader`, where a set of python wrappers
+have been implemented.
+"""
+
+
 include "constants.pxi"
 
 import logging
@@ -31,22 +43,25 @@ from pylag.math cimport Intersection
 from pylag import variable_library
 from pylag.numerics import get_time_direction
 
+
 cdef class ArakawaADataReader(DataReader):
-    """ DataReader for inputs defined on a Arakawa-a grid
+    """ DataReader for inputs defined on an Arakawa A-grid
     
     Objects of type ArakawaADataReader are intended to manage all access to
-    data objects defined on a Arakawa-a grid, including data describing the
+    data objects defined on a Arakawa A-grid, including data describing the
     model grid itself as well as model output variables. Provided are methods
     for searching the model grid for host horizontal elements and for
     interpolating gridded field data to a given point in space and time.
     
-    Parameters:
-    -----------
+    Parameters
+    ----------
     config : SafeConfigParser
         Configuration object.
     
     mediator : Mediator
         Mediator object for managing access to data read from file.
+
+
     """
     
     # Configurtion object
@@ -217,14 +232,19 @@ cdef class ArakawaADataReader(DataReader):
 
     cpdef get_grid_names(self):
         """ Return a list of grid names
+
+        Returns
+        -------
+         : list [str]
+             List of grid names on which which input data are defined.
         """
         return [self._name.decode()]
 
     cpdef setup_data_access(self, start_datetime, end_datetime):
         """ Set up access to time-dependent variables.
         
-        Parameters:
-        -----------
+        Parameters
+        ----------
         start_datetime : Datetime
             Datetime object corresponding to the simulation start time.
         
@@ -241,8 +261,8 @@ cdef class ArakawaADataReader(DataReader):
         `time' is used to test if new data should be read in from file. If this
         is the case, arrays containing time-dependent variable data are updated.
         
-        Parameters:
-        -----------
+        Parameters
+        ----------
         time : float
             The current time.
         """
@@ -293,16 +313,16 @@ cdef class ArakawaADataReader(DataReader):
             boundary. Host is set to the last element the particle passed
             through before exiting the domain.
         
-        Parameters:
-        -----------       
+        Parameters
+        ----------
         particle_old: *Particle
             The particle at its old position.
 
         particle_new: *Particle
             The particle at its new position. The host element will be updated.
         
-        Returns:
-        --------
+        Returns
+        -------
         flag : int
             Integer flag that indicates whether or not the seach was successful.
         """
@@ -330,13 +350,13 @@ cdef class ArakawaADataReader(DataReader):
         
         This function is a wrapper for the same function implemented in UnstructuredGrid.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         particle: *Particle
             The particle.
 
-        Returns:
-        --------
+        Returns
+        -------
         flag : int
             Integer flag that indicates whether or not the seach was successful.
         """
@@ -347,13 +367,13 @@ cdef class ArakawaADataReader(DataReader):
         
         This function is a wrapper for the same function implemented in UnstructuredGrid.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         particle_old: *Particle
             The particle.
         
-        Returns:
-        --------
+        Returns
+        -------
         flag : int
             Integer flag that indicates whether or not the seach was successful.
         """
@@ -364,16 +384,16 @@ cdef class ArakawaADataReader(DataReader):
 
         This function is a wrapper for the same function implemented in UnstructuredGrid.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         particle_old: *Particle
             The particle at its old position.
 
         particle_new: *Particle
             The particle at its new position.
 
-        Returns:
-        --------
+        Returns
+        -------
         intersection: Intersection
             Object describing the boundary intersection.
         """
@@ -393,8 +413,8 @@ cdef class ArakawaADataReader(DataReader):
 
         This function is a wrapper for the same function implemented in UnstructuredGrid.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         particle: *Particle
             Pointer to a Particle struct
         """
@@ -486,9 +506,23 @@ cdef class ArakawaADataReader(DataReader):
         return BDY_ERROR
 
     cpdef DTYPE_FLOAT_t get_xmin(self) except FLOAT_ERR:
+        """ Get minimum x-value for the domain
+
+        Returns
+        -------
+         : float
+             The minimum value of `x` across the grid.
+        """
         return self._xmin
 
     cpdef DTYPE_FLOAT_t get_ymin(self) except FLOAT_ERR:
+        """ Get minimum y-value for the domain
+
+        Returns
+        -------
+         : float
+             The minimum value of `y` across the grid.
+        """
         return self._ymin
 
     cdef DTYPE_FLOAT_t get_zmin(self, DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR:
@@ -498,16 +532,16 @@ cdef class ArakawaADataReader(DataReader):
         to compute h(x,y). NB the negative of h (which is +ve downwards) is
         returned.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         time : float
             Time.
 
         particle: *Particle
             Pointer to a Particle object.
 
-        Returns:
-        --------
+        Returns
+        -------
         zmin : float
             The bottom depth.
         """
@@ -533,16 +567,16 @@ cdef class ArakawaADataReader(DataReader):
         zeta is defined at element nodes. Interpolation proceeds through linear
         interpolation in time followed by interpolation in space.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         time : float
             Time.
 
         particle: *Particle
             Pointer to a Particle object.
         
-        Returns:
-        --------
+        Returns
+        -------
         zmax : float
             Sea surface elevation.
         """
@@ -583,16 +617,16 @@ cdef class ArakawaADataReader(DataReader):
         
         Returns the velocity u(t,x,y,z) through interpolation for a particle.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         time : float
             Time at which to interpolate.
         
         particle: *Particle
             Pointer to a Particle object.
 
-        Return:
-        -------
+        Return
+        ------
         vel : C array, float
             u/v/w velocity components stored in a C array.           
         """
@@ -615,8 +649,8 @@ cdef class ArakawaADataReader(DataReader):
 
         so - Sea water salinty
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         var_name : str
             The name of the variable. See above for a list of supported options.
 
@@ -646,16 +680,16 @@ cdef class ArakawaADataReader(DataReader):
             Particle* particle):
         """ Returns the horizontal eddy viscosity through linear interpolation
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         time : float
             Time at which to interpolate.
 
         particle: *Particle
             Pointer to a Particle object.
 
-        Returns:
-        --------
+        Returns
+        -------
         viscofh : float
             The interpolated value of the horizontal eddy viscosity at the specified point in time and space.
         """
@@ -669,8 +703,8 @@ cdef class ArakawaADataReader(DataReader):
             Particle* particle, DTYPE_FLOAT_t Ah_prime[2]):
         """ Returns the gradient in the horizontal eddy viscosity
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         time : float
             Time at which to interpolate.
         
@@ -680,12 +714,12 @@ cdef class ArakawaADataReader(DataReader):
         Ah_prime : C array, float
             dAh_dx and dH_dy components stored in a C array of length two.  
 
-        TODO:
-        -----
+        TODO
+        ----
         1) Test this.
 
-        References:
-        -----------
+        References
+        ----------
         Lynch, D. R. et al (2014). Particles in the coastal ocean: theory and
         applications. Cambridge: Cambridge University Press.
         doi.org/10.1017/CBO9781107449336
@@ -782,16 +816,16 @@ cdef class ArakawaADataReader(DataReader):
             Particle* particle) except FLOAT_ERR:
         """ Returns the vertical eddy diffusivity through linear interpolation.
         
-        Parameters:
-        -----------
+        Parameters
+        ----------
         time : float
             Time at which to interpolate.
         
         particle: *Particle
             Pointer to a Particle object.
         
-        Returns:
-        --------
+        Returns
+        -------
         kh : float
             The vertical eddy diffusivity.        
         
@@ -820,23 +854,23 @@ cdef class ArakawaADataReader(DataReader):
         code, as implemented here, is highly repetitive, and no doubt efficiency
         savings could be found. 
 
-        TODO:
-        -----
+        TODO
+        ----
         1) Can this be done using a specialised interpolating object? Would need to
         compute depths and kh at all levels, then interpolate between then. Would
         need to give some thought to how to do this efficiently.
         2) Test this.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         time : float
             Time at which to interpolate.
         
         particle: *Particle
             Pointer to a Particle object.
         
-        Returns:
-        --------
+        Returns
+        -------
         k_prime : float
             Gradient in the vertical eddy diffusivity field.
         """
@@ -924,8 +958,8 @@ cdef class ArakawaADataReader(DataReader):
         yield non-zero values, depending on the state of the host and
         surrounding elements in the given time window.
         
-        Parameters:
-        -----------
+        Parameters
+        ----------
         time : float
             Time (unused)
 
@@ -957,8 +991,8 @@ cdef class ArakawaADataReader(DataReader):
         For particle at depths above h and above a lower level with masked nodes, extrapolation
         is used.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         var_last : 2D MemoryView
             Array of variable values at the last time index.
 
@@ -971,8 +1005,8 @@ cdef class ArakawaADataReader(DataReader):
         particle: *Particle
             Pointer to a Particle object. 
         
-        Returns:
-        --------
+        Returns
+        -------
         var : float
             The interpolated value of the variable at the specified point in time and space.
         """
@@ -1000,8 +1034,8 @@ cdef class ArakawaADataReader(DataReader):
         For particle at depths above h and above a lower level with masked nodes, extrapolation
         is used.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         var_last_arr : 2D MemoryView
             Array of variable values at the last time index.
 
@@ -1017,8 +1051,8 @@ cdef class ArakawaADataReader(DataReader):
         k_level : int
             The dpeth level on which to interpolate.
 
-        Returns:
-        --------
+        Returns
+        -------
         var : float
             The interpolated value of the variable on the specified level
         """
@@ -1056,12 +1090,12 @@ cdef class ArakawaADataReader(DataReader):
         All communications go via the mediator in order to guarantee support for
         both serial and parallel simulations.
         
-        Parameters:
-        -----------
+        Parameters
+        ----------
         N/A
         
-        Returns:
-        --------
+        Returns
+        -------
         N/A
         """
         # Read in the grid's dimensions
@@ -1148,12 +1182,12 @@ cdef class ArakawaADataReader(DataReader):
         All communications go via the mediator in order to guarantee support for
         both serial and parallel simulations.
         
-        Parameters:
-        -----------
+        Parameters
+        ----------
         N/A
         
-        Returns:
-        --------
+        Returns
+        -------
         N/A
         """
         cdef DTYPE_INT_t i, j, k
@@ -1298,16 +1332,16 @@ cdef class ArakawaADataReader(DataReader):
 
         3D - [depth, lat, lon] in any order
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         var : NDArray
             The variable to sort
 
         dimension_indices : dict
             Dictionary of dimension indices
 
-        Returns:
-        --------
+        Returns
+        -------
         var_reshaped : NDArray
             Reshaped variable
         """
@@ -1346,8 +1380,8 @@ cdef class ArakawaADataReader(DataReader):
             DTYPE_INT_t host, DTYPE_INT_t kidx) except INT_ERR:
         """ Return the masked status of the given depth level
  
-        Parameters:
-        -----------
+        Parameters
+        ----------
         phi : c array, float
             Array of length three giving the barycentric coordinates at which 
             to interpolate.
@@ -1358,8 +1392,8 @@ cdef class ArakawaADataReader(DataReader):
         kidx : int
             Sigma layer on which to interpolate.
 
-        Returns:
-        --------
+        Returns
+        -------
         mask : int
             Masked status (1 is masked, 0 not masked).
         """

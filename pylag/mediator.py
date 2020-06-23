@@ -4,6 +4,10 @@ objects of type DataReader and objects of type FileReader. Primarily, the
 mediator module was introduced in order to abstract away the MPI interface,
 making it easier to PyLag either in serial or parallel. It also assists with
 testing.
+
+See Also
+--------
+pylag.parallel.mediator - MPI mediator for parallel execution
 """
 
 from pylag.data_types_python import DTYPE_INT
@@ -208,7 +212,18 @@ class Mediator:
 class SerialMediator(Mediator):
     """ Serial mediator
 
-    Serial mediator used for serial runs.
+    Serial mediator for serial runs.
+
+    Parameters
+    ----------
+    config : SafeConfigParser
+        Run configuration object
+
+    start_datetime : Datetime
+        Simulation start date/time.
+
+    end_datetime : Datetime
+        Simulation end date/time.
 
     Attributes
     ----------
@@ -217,6 +232,7 @@ class SerialMediator(Mediator):
 
     file_reader : pylag.FileReader
         FileReader object.
+
     """
 
     def __init__(self, config, datetime_start, datetime_end):

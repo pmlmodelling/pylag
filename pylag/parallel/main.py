@@ -11,6 +11,10 @@ been set to four.
 For additional information on setting up a PyLag simulation,
 including creating a new run configuration file, see PyLag's
 documentation.
+
+See Also
+--------
+pylag.main : Run a PyLag simulation in serial
 """
 
 from __future__ import print_function

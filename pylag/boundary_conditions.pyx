@@ -1,3 +1,12 @@
+"""
+A set of classes for handling particle interactions with horizontal and vertical
+boundaries.
+
+Note
+----
+boundary_conditions is implemented in Cython. Only a small portion of the
+API is exposed in Python with accompanying documentation.
+"""
 include "constants.pxi"
 
 import logging
@@ -13,14 +22,38 @@ from pylag.math cimport inner_product
 from pylag.math cimport Intersection
 
 cdef class HorizBoundaryConditionCalculator:
+    """ Base class for horizontal boundary condition calculators
+    """
 
     def apply_wrapper(self, DataReader data_reader,
                       ParticleSmartPtr particle_old,
                       ParticleSmartPtr particle_new):
         """ Python friendly wrapper for apply()
-        
-        """
 
+        In the apply() method must be implemented in the derived class.
+        It should apply the selected horizontal boundary condition in response
+        to a particle crossing a lateral boundary, and update the position of
+        `particle_new`.
+
+        Parameters
+        ----------
+        data_reader : pylag.data_reader.DataReader
+            A concrete PyLag data reader which inherits from the base class
+            `pylag.data_reader.DataReader`.
+
+        particle_old : pylag.particle_cpp_wrapper.ParticleSmartPtr
+            The particle before it crossed the lateral boundary. The particle
+            should lie inside the model domain.
+
+        particle_new : pylag.particle_cpp_Wrapper.ParticleSmartPtr
+            The particle after it has crossed the lateral boundary. The particle
+            should lie outside the model domain.
+
+        Returns
+        -------
+         : int
+            Flag signifying whether or not the application was successful.
+        """
         return self.apply(data_reader, particle_old.get_ptr(), particle_new.get_ptr())
 
     cdef DTYPE_INT_t apply(self, DataReader data_reader, Particle *particle_old,
@@ -28,6 +61,14 @@ cdef class HorizBoundaryConditionCalculator:
         raise NotImplementedError
 
 cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator):
+    """ Reflecting horizontal boundary condition calculator
+
+    Reflecting horizontal boundary condition calculators reflect particles
+    back into the domain should they have crossed a model boundary. A particle
+    may be reflected multiple times if the first or a subsequent reflection also
+    leaves it outside of the domain. The position of the reflected particle is
+    updated in place.
+    """
 
     cdef DTYPE_INT_t apply(self, DataReader data_reader, Particle *particle_old,
                Particle *particle_new) except INT_ERR:
@@ -186,9 +227,30 @@ cdef class VertBoundaryConditionCalculator:
                       DTYPE_FLOAT_t time,
                       ParticleSmartPtr particle):
         """ Python friendly wrapper for apply()
-        
-        """
 
+        The apply() method must be implemented in the derived class.
+        It should apply the selected vertical boundary condition in response
+        to a particle crossing a vertical boundary, and update the position of
+        `particle_new`.
+
+        Parameters
+        ----------
+        data_reader : pylag.data_reader.DataReader
+            A concrete PyLag data reader which inherits from the base class
+            `pylag.data_reader.DataReader`.
+
+        time : float
+            The time the crossing occurred.
+
+        particle : pylag.particle_cpp_wrapper.ParticleSmartPtr
+            The particle after it has crossed the vertical boundary. The particle
+            should lie inside the model domain.
+
+        Returns
+        -------
+         : int
+            Flag signifying whether or not the application was successful.
+        """
         return self.apply(data_reader, time, particle.get_ptr())
 
     cdef DTYPE_INT_t apply(self, DataReader data_reader, DTYPE_FLOAT_t time, 
@@ -196,7 +258,12 @@ cdef class VertBoundaryConditionCalculator:
         raise NotImplementedError
 
 cdef class RefVertBoundaryConditionCalculator(VertBoundaryConditionCalculator):
-    """ Apply reflecting vertical boundary condition in cartesian coords """
+    """ Reflecting vertical boundary condition calculator
+
+    The calculator reflects the particle back into the domain. It may apply
+    multiple reflections if required. The particle's position is updated in
+    place.
+    """
 
     cdef DTYPE_INT_t apply(self, DataReader data_reader, DTYPE_FLOAT_t time, 
                            Particle *particle) except INT_ERR:
@@ -238,6 +305,18 @@ cdef class RefVertBoundaryConditionCalculator(VertBoundaryConditionCalculator):
 # ---------------
 
 def get_horiz_boundary_condition_calculator(config):
+    """ Factory method for horizontal boundary condition calculators
+
+    Parameters
+    ----------
+    config : SafeConfigParser
+        PyLag configuraton object
+
+    Returns
+    -------
+     : HorizontalBoundaryConditionCalculator
+         A horizontal boundary condition calculator
+    """
     try:
         boundary_condition = config.get("BOUNDARY_CONDITIONS", "horiz_bound_cond")
     except (configparser.NoSectionError, configparser.NoOptionError) as e:
@@ -250,7 +329,20 @@ def get_horiz_boundary_condition_calculator(config):
         else:
             raise ValueError('Unsupported horizontal boundary condtion.')
 
+
 def get_vert_boundary_condition_calculator(config):
+    """ Factory method for vertical boundary condition calculators
+
+    Parameters
+    ----------
+    config : SafeConfigParser
+        PyLag configuraton object
+
+    Returns
+    -------
+     : VerticalBoundaryConditionCalculator
+         A vertical boundary condition calculator
+    """
     try:
         boundary_condition = config.get("BOUNDARY_CONDITIONS", "vert_bound_cond")
     except (configparser.NoSectionError, configparser.NoOptionError) as e:
