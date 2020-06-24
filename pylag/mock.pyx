@@ -1,3 +1,17 @@
+"""
+Module containing mock objects that are used to help test different parts of the
+model. Several of these subclass DataReader, and feedback the results of analytical
+expressions (as opposed to reading in and giving access to data stored on disk) that
+can be used to drive the particle tracking model.
+
+Note
+----
+mock is implemented in Cython. Only a small portion of the
+API is exposed in Python with accompanying documentation. However, more
+details can be found in `pylag.data_reader`, where a set of python wrappers
+for data_reader objects have been implemented.
+"""
+
 include "constants.pxi"
 
 import numpy as np
@@ -21,8 +35,9 @@ from pylag.delta cimport Delta, reset
 from pylag.numerics cimport NumMethod, ItMethod
 from pylag.boundary_conditions cimport VertBoundaryConditionCalculator
 
+
 cdef class MockVelocityDataReader(DataReader):
-    """ Test data reader for numerical integration schemes
+    """ Test data reader for reading in velocity data
     
     The example is taken from Kreyszig, E. (2006) Advanced Engineering
     Mathematics, Ch. 18. P762. In the example, the complex potential
@@ -125,7 +140,7 @@ cdef class MockVelocityDataReader(DataReader):
         return 0.0
 
 cdef class MockVerticalDiffusivityDataReader(DataReader):
-    """Test data reader for vertical random displacement models.
+    """Test data reader for reading in the vertical eddy diffusivity
     
     The data reader returns vertical eddy diffusivities drawn from the analytic
     profile:
@@ -137,16 +152,16 @@ cdef class MockVerticalDiffusivityDataReader(DataReader):
     above the sea bed (positivite up). See Visser (1997) and Ross and 
     Sharples (2004).
     
-    Attributes:
-    -----------
+    Attributes
+    ----------
     _zmin : float
         The minimum depth in m.
     
     _zmax : float
         The maximum depth in m.
     
-    References:
-    -----------
+    References
+    ----------
     Visser, A. Using random walk models to simulate the vertical distribution of
     particles in a turbulent water column Marine Ecology Progress Series, 1997,
     158, 275-281
@@ -188,7 +203,7 @@ cdef class MockVerticalDiffusivityDataReader(DataReader):
 
     cdef get_velocity(self, DTYPE_FLOAT_t time, Particle* particle,
             DTYPE_FLOAT_t vel[3]):
-        """ Returns a zeroed velocity vector.
+        """ Returns a zeroed velocity vector
         
         The advective velocity is used by random displacement models adapted to
         work in non-homogeneous diffusivity fields, thus the need to implement
@@ -233,7 +248,7 @@ cdef class MockVerticalDiffusivityDataReader(DataReader):
         return 1
 
 cdef class MockHorizontalEddyViscosityDataReader(DataReader):
-    """Test data reader for horizontal random displacement models.
+    """Test data reader for reading in the horizontal eddy viscosity
     
     The data reader returns horizontal eddy viscosities using the analytic
     formula:
@@ -341,7 +356,7 @@ cdef class MockHorizontalEddyViscosityDataReader(DataReader):
         return 1
 
 cdef class MockVelocityEddyViscosityDataReader(DataReader):
-    """ Test data reader for advection-diffsion numerical integrations schemes
+    """ Test data reader for reading in horizontal velocity and eddy viscosities
     
     The data reader represents a very simple 2D advection-diffusion test case
     based upon the point release of a tracer into an environment with a
@@ -360,8 +375,8 @@ cdef class MockVelocityEddyViscosityDataReader(DataReader):
     For testing purposes, u = 1.0 m s-1, v = 1.0 m s-1, Ah = 10 m2 s-1 and
     M = 1 kg. Furthermore, w = 0.0 m s-1 and Kh = 0.0 m2 s-1.
     
-    Attributes:
-    -----------
+    Attributes
+    ----------
     _u : float
         x velocity component in Cartesian space.
     _v : float
@@ -455,10 +470,10 @@ cdef class MockVelocityEddyViscosityDataReader(DataReader):
 
 
 cdef class MockOneDNumMethod:
-    """ Test class for 1D numerical methods
+    """ Helper class for performing integrations in 1D
     
-    Parameters:
-    -----------
+    Parameters
+    ----------
     config : ConfigParser
         Configuration object.
     """
@@ -498,10 +513,10 @@ cdef class MockOneDNumMethod:
         return x3_new_arr
     
 cdef class MockTwoDNumMethod:
-    """ Test class for 2D numerical methods
-    
-    Parameters:
-    -----------
+    """ Helper class for performing integrations in 2D
+
+    Parameters
+    ----------
     config : ConfigParser
         Configuration object.
     """
@@ -543,10 +558,10 @@ cdef class MockTwoDNumMethod:
         return x1_new_arr, x2_new_arr
 
 cdef class MockThreeDNumMethod:
-    """ Test class for 3D numerical methods
-    
-    Parameters:
-    -----------
+    """ Helper class for performing integrations in 2D
+
+    Parameters
+    ----------
     config : ConfigParser
         Configuration object.
     """

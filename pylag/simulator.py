@@ -33,7 +33,7 @@ def get_simulator(config):
 
     Returns
     -------
-     : Simulator
+     : pylag.simulator.Simulator
          Object of type Simulator
     """
     if config.get("SIMULATION", "simulation_type") == "trace":

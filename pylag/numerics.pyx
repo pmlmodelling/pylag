@@ -1,3 +1,19 @@
+"""
+Numerical and iterative methods for computing changes in particle positions.
+A distinction is made between numerical methods and iterative methods,
+where iterative methods are taken to be any iterative process which computes
+changes in a particle's position (e.g. a simple Euler scheme); while numerical
+methods are algorithms which combine the results of one or more iterative
+schemes to compute the final change in a particles position. The split between
+the two was introduced in order to make it possible to implement some form of
+operator splitting in which advection and diffusion are handled separately.
+
+Note
+----
+numerics is implemented in Cython. Only a small portion of the
+API is exposed in Python with accompanying documentation.
+"""
+
 include "constants.pxi"
 
 from libc.math cimport sqrt
@@ -68,8 +84,8 @@ cdef class StdNumMethod(NumMethod):
     (e.g. to reduce simulation times) use the methods `OS1NumMethod' or 
     `OS2NumMethod' instead.
     
-    Attributes:
-    -----------
+    Attributes
+    ----------
     _time_step : float
         Time step to be used by the iterative method
     
@@ -96,8 +112,8 @@ cdef class StdNumMethod(NumMethod):
     def __init__(self, config):
         """ Initialise class data members
         
-        Parameters:
-        -----------
+        Parameters
+        ----------
         config : ConfigParser
             Configuration object
         """
@@ -129,8 +145,8 @@ cdef class StdNumMethod(NumMethod):
         to tell the caller whether the particle's position was successfully
         updated.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         data_reader : DataReader
             DataReader object used for calculating point velocities
             and/or diffusivities.
@@ -141,8 +157,8 @@ cdef class StdNumMethod(NumMethod):
         particle : C pointer
             C pointer to a particle struct.
 
-        Returns:
-        --------
+        Returns
+        -------
         flag : int
             Flag identifying if a boundary crossing has occurred.
         """
@@ -243,8 +259,8 @@ cdef class OS0NumMethod(NumMethod):
     step, which must be set in the supplied config, should be an exact multiple
     of the diffusion time step; if it isn't, an exception will be raised.
 
-    Attributes:
-    -----------
+    Attributes
+    ----------
     _adv_time_step : float
         Time step used for advection
 
@@ -326,8 +342,8 @@ cdef class OS0NumMethod(NumMethod):
         to tell the caller whether the particle's position was successfully
         updated.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         data_reader: object of type DataReader
             A DataReader object used for reading velocities and eddy
             diffusivities/viscosities.
@@ -338,8 +354,8 @@ cdef class OS0NumMethod(NumMethod):
         *particle: C pointer
             C Pointer to a Particle struct
 
-        Returns:
-        --------
+        Returns
+        -------
         flag : int
             Flag identifying if a boundary crossing has occurred.
         """
@@ -479,8 +495,8 @@ cdef class OS1NumMethod(NumMethod):
     first a half diffusion step is computed, then a full advection step, then
     a half diffusion step.
 
-    Attributes:
-    -----------
+    Attributes
+    ----------
     _adv_time_step : float
         Time step used for advection
 
@@ -515,8 +531,8 @@ cdef class OS1NumMethod(NumMethod):
     def __init__(self, config):
         """ Initialise class data members
         
-        Parameters:
-        -----------
+        Parameters
+        ----------
         config : ConfigParser
             Configuration object
         """
@@ -550,8 +566,8 @@ cdef class OS1NumMethod(NumMethod):
         to tell the caller whether the particle's position was successfully
         updated.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         data_reader: object of type DataReader
             A DataReader object used for reading velocities and eddy
             diffusivities/viscosities.
@@ -562,8 +578,8 @@ cdef class OS1NumMethod(NumMethod):
         *particle: C pointer
             C Pointer to a Particle struct
 
-        Returns:
-        --------
+        Returns
+        -------
         flag : int
             Flag identifying if a boundary crossing has occurred.
         """
@@ -742,8 +758,8 @@ cdef class OS1NumMethod(NumMethod):
 def get_num_method(config):
     """ Factory method for constructing NumMethod objects
     
-    Parameters:
-    -----------
+    Parameters
+    ----------
     config : ConfigParser
         Object of type ConfigParser.
     """
@@ -771,8 +787,8 @@ cdef class ItMethod:
     
     * :meth: `step`
 
-    Attributes:
-    -----------
+    Attributes
+    ----------
     _time_step : float
         Time step to be used by the iterative method
 
@@ -790,8 +806,13 @@ cdef class ItMethod:
 cdef class AdvRK42DItMethod(ItMethod):
     """ 2D deterministic Fourth Order Runge-Kutta iterative method
 
-    Attributes:
-    -----------
+    Parameters
+    ----------
+    config : ConfigParser
+        Configuration object
+
+    Attributes
+    ----------
     _horiz_bc_calculator : HorizBoundaryConditionCalculator
         The method used for computing horizontal boundary conditions.
     """
@@ -800,13 +821,6 @@ cdef class AdvRK42DItMethod(ItMethod):
     cdef PositionModifier _position_modifier
 
     def __init__(self, config):
-        """ Initialise class data members
-        
-        Parameters:
-        -----------
-        config : ConfigParser
-            Configuration object
-        """
         # Time direction (forward or reverse)
         self._time_direction = get_time_direction(config)
 
@@ -830,8 +844,8 @@ cdef class AdvRK42DItMethod(ItMethod):
         delta_X is left unchanged and the flag identifying that a boundary
         crossing has occurred is returned.
         
-        Parameters:
-        -----------
+        Parameters
+        ----------
         data_reader : DataReader
             DataReader object used for calculating point velocities.
 
@@ -844,8 +858,8 @@ cdef class AdvRK42DItMethod(ItMethod):
         delta_X : C pointer
             C pointer to a Delta struct
         
-        Returns:
-        --------
+        Returns
+        -------
         flag : int
             Flag identifying if a boundary crossing has occurred.
         """
@@ -964,8 +978,13 @@ cdef class AdvRK42DItMethod(ItMethod):
 cdef class AdvRK43DItMethod(ItMethod):
     """ 3D deterministic Fourth Order Runge-Kutta iterative method
     
-    Attributes:
-    -----------
+    Parameters
+    ----------
+    config : ConfigParser
+        Configuration object
+
+    Attributes
+    ----------
     _horiz_bc_calculator : HorizBoundaryConditionCalculator
         The method used for computing horizontal boundary conditions.
 
@@ -978,13 +997,6 @@ cdef class AdvRK43DItMethod(ItMethod):
     cdef PositionModifier _position_modifier
 
     def __init__(self, config):
-        """ Initialise class data members
-        
-        Parameters:
-        -----------
-        config : ConfigParser
-            Configuration object
-        """
         # Time direction (forward or reverse)
         self._time_direction = get_time_direction(config)
        
@@ -1011,8 +1023,8 @@ cdef class AdvRK43DItMethod(ItMethod):
         domain delta_X is left unchanged and the flag identifying that a boundary
         crossing has occurred is returned.
         
-        Parameters:
-        -----------
+        Parameters
+        ----------
         data_reader : DataReader
             DataReader object used for calculating point velocities.
 
@@ -1025,8 +1037,8 @@ cdef class AdvRK43DItMethod(ItMethod):
         delta_X : C pointer
             C pointer to a Delta struct
         
-        Returns:
-        --------
+        Returns
+        -------
         flag : int
             Flag identifying if a boundary crossing has occurred.
         """
@@ -1174,14 +1186,12 @@ cdef class AdvRK43DItMethod(ItMethod):
 
 cdef class DiffNaive1DItMethod(ItMethod):
     """ Stochastic Naive Euler 1D iterative method
+
+    Parameters
+    ----------
+    config : ConfigParser
     """
     def __init__(self, config):
-        """ Initialise class data members
-        
-        Parameters:
-        -----------
-        config : ConfigParser
-        """
         # Set time step
         self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
@@ -1193,8 +1203,8 @@ cdef class DiffNaive1DItMethod(ItMethod):
         is homogeneous. When it is not, particles will accumulate in regions of
         low diffusivity.
         
-        Parameters:
-        -----------
+        Parameters
+        ----------
         data_reader : DataReader
             DataReader object.
 
@@ -1207,8 +1217,8 @@ cdef class DiffNaive1DItMethod(ItMethod):
         delta_X : C pointer
             C pointer to a Delta struct
             
-        Returns:
-        --------
+        Returns
+        -------
         flag : int
             Flag identifying if a boundary crossing has occurred. This should
             always be zero since the method does not check for boundary
@@ -1224,14 +1234,12 @@ cdef class DiffNaive1DItMethod(ItMethod):
 
 cdef class DiffEuler1DItMethod(ItMethod):
     """ Stochastic Euler 1D iterative method
+
+    Parameters
+    ----------
+    config : ConfigParser
     """
     def __init__(self, config):
-        """ Initialise class data members
-        
-        Parameters:
-        -----------
-        config : ConfigParser
-        """
         # Set time step
         self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
@@ -1243,8 +1251,8 @@ cdef class DiffEuler1DItMethod(ItMethod):
         tendency for particles to accumulate in regions of low diffusivity
         (c.f. the NaiveEuler scheme). See Grawe (2012) for more details.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         data_reader : DataReader
             DataReader object.
 
@@ -1257,8 +1265,8 @@ cdef class DiffEuler1DItMethod(ItMethod):
         delta_X : C pointer
             C pointer to a Delta struct
             
-        Returns:
-        --------
+        Returns
+        -------
         flag : int
             Flag identifying if a boundary crossing has occurred. This should
             always be zero since the method does not check for boundary
@@ -1285,20 +1293,18 @@ cdef class DiffVisser1DItMethod(ItMethod):
     too. Vertical boundary conditions are invoked if the computed offset is 
     outside of the model grid. See Visser (1997).
 
-    Attributes:
-    -----------
+    Parameters
+    ----------
+    config : ConfigParser
+
+    Attributes
+    ----------
     _vert_bc_calculator : VertBoundaryConditionCalculator
         The method used for computing vertical boundary conditions.
     """
     cdef VertBoundaryConditionCalculator _vert_bc_calculator
 
     def __init__(self, config):
-        """ Initialise class data members
-        
-        Parameters:
-        -----------
-        config : ConfigParser
-        """
         # Set time step
         self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
@@ -1308,8 +1314,8 @@ cdef class DiffVisser1DItMethod(ItMethod):
             Particle *particle, Delta *delta_X) except INT_ERR:
         """ Compute position delta in 1D using Visser iterative method
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         data_reader : DataReader
             DataReader object.
 
@@ -1322,15 +1328,15 @@ cdef class DiffVisser1DItMethod(ItMethod):
         delta_X : C pointer
             C pointer to a Delta struct
             
-        Returns:
-        --------
+        Returns
+        -------
         flag : int
             Flag identifying if a boundary crossing has occurred. This should
             always be zero since the method does not check for boundary
             crossings.
         
-        References:
-        -----------
+        References
+        ----------
         Visser, A. (1997) Using random walk models to simulate the vertical 
         distribution of particles in a turbulent water column.
         Marine Ecology Progress Series, 158, 275-281
@@ -1376,14 +1382,12 @@ cdef class DiffMilstein1DItMethod(ItMethod):
     This scheme was highlighted by Grawe (2012) as being more
     accurate than the Euler or Visser schemes, but still computationally
     efficient.
+
+    Parameters
+    ----------
+    config : ConfigParser
     """
     def __init__(self, config):
-        """ Initialise class data members
-        
-        Parameters:
-        -----------
-        config : ConfigParser
-        """
         # Set time step
         self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
@@ -1391,8 +1395,8 @@ cdef class DiffMilstein1DItMethod(ItMethod):
             Particle *particle, Delta *delta_X) except INT_ERR:
         """ Compute position delta in 1D using Milstein iterative method
         
-        Parameters:
-        -----------
+        Parameters
+        ----------
         data_reader : DataReader
             DataReader object.
 
@@ -1405,15 +1409,15 @@ cdef class DiffMilstein1DItMethod(ItMethod):
         delta_X : C pointer
             C pointer to a Delta struct
         
-        Returns:
-        --------
+        Returns
+        -------
         flag : int
             Flag identifying if a boundary crossing has occurred. This should
             always be zero since the method does not check for boundary
             crossings.
         
-        References:
-        -----------
+        References
+        ----------
         Gräwe, U. (2011) Implementation of high-order particle-tracking schemes
         in a water column model Ocean Modelling, 36, 80 - 89
         """
@@ -1432,20 +1436,18 @@ cdef class DiffMilstein1DItMethod(ItMethod):
 cdef class DiffConst2DItMethod(ItMethod):
     """ Stochastic Constant 2D iterative method
 
-    Attributes:
-    -----------
+    Parameters
+    ----------
+    config : ConfigParser
+
+    Attributes
+    ----------
     _Ah : float
         Horizontal eddy viscosity constant
     """
     cdef DTYPE_FLOAT_t _Ah
 
     def __init__(self, config):
-        """ Initialise class data members
-        
-        Parameters:
-        -----------
-        config : ConfigParser
-        """
         # Set time step
         self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
@@ -1458,8 +1460,8 @@ cdef class DiffConst2DItMethod(ItMethod):
         This method uses a constant value for the horizontal eddy viscosity that
         is set in the run config.
         
-        Parameters:
-        -----------
+        Parameters
+        ----------
         data_reader : DataReader
             DataReader object.
 
@@ -1472,8 +1474,8 @@ cdef class DiffConst2DItMethod(ItMethod):
         delta_X : C pointer
             C pointer to a Delta struct
             
-        Returns:
-        --------
+        Returns
+        -------
         flag : int
             Flag identifying if a boundary crossing has occurred. This should
             always be zero since the method does not check for boundary
@@ -1491,14 +1493,12 @@ cdef class DiffNaive2DItMethod(ItMethod):
     with the difference being the eddy viscosity is provided by DataReader.
     As in the 1D case, this method should not be used when the eddy 
     viscosity field is inhomogeneous.
+
+    Parameters
+    ----------
+    config : ConfigParser
     """
     def __init__(self, config):
-        """ Initialise class data members
-        
-        Parameters:
-        -----------
-        config : ConfigParser
-        """
         # Set time step
         self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
@@ -1506,8 +1506,8 @@ cdef class DiffNaive2DItMethod(ItMethod):
             Particle *particle, Delta *delta_X) except INT_ERR:
         """ Compute position delta in 2D using Naive Euler iterative method
         
-        Parameters:
-        -----------
+        Parameters
+        ----------
         data_reader : DataReader
             DataReader object.
 
@@ -1520,8 +1520,8 @@ cdef class DiffNaive2DItMethod(ItMethod):
         delta_X : C pointer
             C pointer to a Delta struct
             
-        Returns:
-        --------
+        Returns
+        -------
         flag : int
             Flag identifying if a boundary crossing has occurred. This should
             always be zero since the method does not check for boundary
@@ -1543,14 +1543,12 @@ cdef class DiffMilstein2DItMethod(ItMethod):
     """ Stochastic Milstein 2D iterative method
 
     This method is a 2D implementation of the Milstein scheme.
+
+    Parameters
+    ----------
+    config : ConfigParser
     """
     def __init__(self, config):
-        """ Initialise class data members
-        
-        Parameters:
-        -----------
-        config : ConfigParser
-        """
         # Set time step
         self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
@@ -1558,8 +1556,8 @@ cdef class DiffMilstein2DItMethod(ItMethod):
             Particle *particle, Delta *delta_X) except INT_ERR:
         """ Compute position delta in 2D using Milstein iterative method
         
-        Parameters:
-        -----------
+        Parameters
+        ----------
         data_reader : DataReader
             DataReader object.
 
@@ -1572,8 +1570,8 @@ cdef class DiffMilstein2DItMethod(ItMethod):
         delta_X : C pointer
             C pointer to a Delta struct
             
-        Returns:
-        --------
+        Returns
+        -------
         flag : int
             Flag identifying if a boundary crossing has occurred. This should
             always be zero since the method does not check for boundary
@@ -1600,14 +1598,12 @@ cdef class DiffMilstein3DItMethod(ItMethod):
     """ Stochastic Milstein 3D iterative method
 
     This method is a 3D implementation of the Milstein scheme.
+
+    Parameters
+    ----------
+    config : ConfigParser
     """
     def __init__(self, config):
-        """ Initialise class data members
-        
-        Parameters:
-        -----------
-        config : ConfigParser
-        """
         # Set time step
         self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
@@ -1615,8 +1611,8 @@ cdef class DiffMilstein3DItMethod(ItMethod):
             Particle *particle, Delta *delta_X) except INT_ERR:
         """ Compute position delta in 3D using Milstein iterative method
         
-        Parameters:
-        -----------
+        Parameters
+        ----------
         data_reader : DataReader
             DataReader object.
 
@@ -1629,8 +1625,8 @@ cdef class DiffMilstein3DItMethod(ItMethod):
         delta_X : C pointer
             C pointer to a Delta struct
             
-        Returns:
-        --------
+        Returns
+        -------
         flag : int
             Flag identifying if a boundary crossing has occurred. This should
             always be zero since the method does not check for boundary
@@ -1666,14 +1662,12 @@ cdef class AdvDiffMilstein3DItMethod(ItMethod):
 
     In this class the contributions of both advection and diffusion are
     accounted for.
+
+    Parameters
+    ----------
+    config : ConfigParser
     """
     def __init__(self, config):
-        """ Initialise class data members
-        
-        Parameters:
-        -----------
-        config : ConfigParser
-        """
         # Set time step
         self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
@@ -1684,8 +1678,8 @@ cdef class AdvDiffMilstein3DItMethod(ItMethod):
         This method is a 3D implementation of the Milstein scheme that accounts
         for the contributions of both advection and diffusion.
         
-        Parameters:
-        -----------
+        Parameters
+        ----------
         data_reader : DataReader
             DataReader object.
 
@@ -1698,8 +1692,8 @@ cdef class AdvDiffMilstein3DItMethod(ItMethod):
         delta_X : C pointer
             C pointer to a Delta struct
             
-        Returns:
-        --------
+        Returns
+        -------
         flag : int
             Flag identifying if a boundary crossing has occurred. This should
             always be zero since the method does not check for boundary
@@ -1745,11 +1739,10 @@ def get_iterative_method(config):
     type ConfigParser which is passed in as a function argument. All types of
     ItMethod object are supported.
     
-    Parameters:
-    -----------
+    Parameters
+    ----------
     config : ConfigParser
         Object of type ConfigParser.
-    
     """
     
     if not config.has_option("NUMERICS", "iterative_method"):
@@ -1793,11 +1786,10 @@ def get_adv_iterative_method(config):
     type ConfigParser which is passed in as a function argument. The method will
     only create types that handle pure advection.
     
-    Parameters:
-    -----------
+    Parameters
+    ----------
     config : ConfigParser
         Object of type ConfigParser.
-    
     """
 
     if not config.has_option("NUMERICS", "adv_iterative_method"):
@@ -1819,11 +1811,10 @@ def get_diff_iterative_method(config):
     type ConfigParser which is passed in as a function argument. The method will
     only create types that handle pure diffusion.
     
-    Parameters:
-    -----------
+    Parameters
+    ----------
     config : ConfigParser
         Object of type ConfigParser.
-    
     """
     if not config.has_option("NUMERICS", "diff_iterative_method"):
         raise ValueError("Failed to find the option `diff_iterative_method' in"\
@@ -1870,11 +1861,10 @@ def get_global_time_step(config):
     3) Return the diffusion tim step if operator splitting isn't being used,
     and the iterative method is for diffusion only or advection+diffusion.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     config : ConfigParser
         Object of type ConfigParser.
-    
     """
     num_method = config.get("NUMERICS", "num_method")
     if num_method == "operator_split_0" or num_method == "operator_split_1":
@@ -1910,6 +1900,19 @@ def _get_time_direction_string(config):
 
 
 def get_time_direction(config):
+    """ Get time direction
+
+    Parameters
+    ----------
+    config : configparser.SafeConfigParser
+        Configuration object
+
+    Returns
+    -------
+     : int
+         Flag signifying whether forward or reverse tracking is being used.
+    """
+
     # Time direction (forward or reverse tracking)
     time_direction = _get_time_direction_string(config)
 

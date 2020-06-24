@@ -1,3 +1,13 @@
+"""
+Tools for navigating unstructured triangular grids
+
+Note
+----
+unstructured is implemented in Cython. Only a small portion of the
+API is exposed in Python with accompanying documentation.
+"""
+
+
 include "constants.pxi"
 
 from libcpp.vector cimport vector
@@ -29,17 +39,42 @@ from pylag.math cimport Intersection
 cdef class UnstructuredGrid:
     """ Unstructured grid
 
-    Objects of type Unstructured can perform grid searches, compute local
+    Objects of type UnstructuredGrid can perform grid searches, compute local
     coordinates to assist with interpolation and help identify grid
     boundary crossings.
 
-    Parameters:
-    -----------
-    config : SafeConfigParser
-        Configuration object.
+    Parameters
+    ----------
+    config : configparser.SafeConfigParser
+        PyLag configuration object.
 
-    mediator : Mediator
-        Mediator object for managing access to data read from file.
+    name : str
+        The grid name. Useful if data are defined on multiple unstructured grids
+        and a means is required to distinguish one from the other.
+
+    n_nodes : int
+        The number of nodes
+
+    n_elems : int
+        The number of elements
+
+    nv : memoryview
+        Memory view of nodes surrounding elements. With shape [3, n_elems]
+
+    nbe : memoryview
+        Memory view of elements surrounding elements. With shape [3, n_elems]
+
+    x : 1D memory view
+        x-coordinates of grid nodes
+
+    y : 1D memory view
+        y-coordinates of grid nodes
+
+    xc : 1D memory view
+        x-coordinates of element centres
+
+    yc : 1D memory view
+        y-coordinates of element centres
     """
 
     def __init__(self, config, name, n_nodes, n_elems, nv, nbe, x, y, xc, yc):

@@ -34,7 +34,7 @@ def get_simulator(config):
 
     Returns
     -------
-     : Simulator
+     : pylag.parallel.simulator.Simulator
          Object of type Simulator
     """
 

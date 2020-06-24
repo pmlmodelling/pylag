@@ -88,8 +88,7 @@ def get_file_list(data_dir, file_stem):
     file_stem : str
         The part of the file name that is common to all output files. For
         example, if ensemble outputs are stored in the files `pylag_1.nc',
-        `pylag_2.nc' etc, then the file_stem could be `pylag_', `pylag' etc
-        etc.
+        `pylag_2.nc' etc, then the file_stem could be `pylag_'.
     """
     file_names = natsorted(glob.glob("{}/{}*.nc".format(data_dir, file_stem)), alg=ns.D)
 

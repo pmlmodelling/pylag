@@ -1,3 +1,10 @@
+"""
+This module provides a Python friendly API for interacting with
+Particle objects. The code for the latter is implemented in C++.
+Particle objects include a set of attributes that describe their
+state and location within a given domain.
+"""
+
 from cython.operator cimport dereference as deref
 
 from libcpp.vector cimport vector
@@ -72,8 +79,8 @@ cdef class ParticleSmartPtr:
         is to return just enough data to make it possible to recreate
         the particle at some later time (e.g. from a restart file).
 
-        Returns:
-        --------
+        Returns
+        -------
         data : dict
             Dictionary containing data that describes the particle's basic state.
         """
@@ -86,10 +93,32 @@ cdef class ParticleSmartPtr:
         return data
 
     def set_phi(self, grid, phi):
+        """ Set local coordinates for the given grid
+
+        Parameters
+        ----------
+        grid : str
+            The name of the grid.
+
+        phi : 1D NumPy array
+            1D array of particle local coordinates.
+        """
         grid_name = grid.encode() if type(grid) == str else grid
         self._particle.set_phi(grid_name, phi)
 
     def get_phi(self, grid):
+        """ Get local coordinates for the given grid
+
+        Parameters
+        ----------
+        grid : str
+            The name of the grid.
+
+        Returns
+        -------
+        phi : 1D NumPy array
+            Particle local coordinates for the given grid.
+        """
         grid_name = grid.encode() if type(grid) == str else grid
 
         phi = []
@@ -98,24 +127,67 @@ cdef class ParticleSmartPtr:
         return phi
 
     def set_all_phis(self, phis):
+        """ Set local coordinates for all grids
+
+        Parameters
+        ----------
+        phis : dict
+            Dictionary of local coords {grid_name: [phi1, phi2, [phi3]}
+        """
         self._particle.clear_phis()
         for grid, phi in phis.items():
             self.set_phi(grid, phi)
 
     def set_host_horizontal_elem(self, grid, host):
+        """ Set host element for the given grid
+
+        Parameters
+        ----------
+        grid : str
+            The name of the grid.
+
+        host : int
+            The host element
+        """
         grid_name = grid.encode() if type(grid) == str else grid
         self._particle.set_host_horizontal_elem(grid_name, host)
 
     def get_host_horizontal_elem(self, grid):
+        """ Get host element for the given grid
+
+        Parameters
+        ----------
+        grid : str
+            The name of the grid.
+
+        Returns
+        -------
+         : int
+             The host element.
+        """
         grid_name = grid.encode() if type(grid) == str else grid
         return self._particle.get_host_horizontal_elem(grid_name)
 
     def set_all_host_horizontal_elems(self, host_elements):
+        """ Set host elements for all grids
+
+        Parameters
+        ----------
+        host_elements : dict
+            Dictionary of host elements {grid_name: host}
+        """
         self._particle.clear_host_horizontal_elems()
         for grid, host in host_elements.items():
             self.set_host_horizontal_elem(grid, host)
 
     def get_all_host_horizontal_elems(self):
+        """ Get all host elements for the given grid
+
+        Returns
+        -------
+        host_elements : dict
+             The host elements stored in a dictionary by grid name.
+        """
         cdef vector[string] grids
         cdef vector[int] hosts
         self._particle.get_all_host_horizontal_elems(grids, hosts)
@@ -128,50 +200,62 @@ cdef class ParticleSmartPtr:
 
     @property
     def status(self):
+        """ The particle's status (0 - okay; 1 - error) """
         return self._particle.get_status()
 
     @property
     def x1(self):
+        """ The particle's x1-coordinate """
         return self._particle.get_x1()
 
     @property
     def x2(self):
+        """ The particle's x2-coordinate """
         return self._particle.get_x2()
 
     @property
     def x3(self):
+        """ The particle's x1-coordinate """
         return self._particle.get_x3()
 
     @property
     def omega_interfaces(self):
+        """ Vertical interpolation coefficient for variables defined at the interfaces between k-levels """
         return self._particle.get_omega_interfaces()
 
     @property
     def omega_layers(self):
+        """ Vertical interpolation coefficient for variables defined at the interfaces between k-layers """
         return self._particle.get_omega_layers()
 
     @property
     def in_domain(self):
+        """ Flag identifying whether or not the particle resides within the model domain (1 - yes; 0 - no) """
         return self._particle.get_in_domain()
 
     @property
     def is_beached(self):
+        """ Flag identifying whether or not the particle is beached (1 - yes; 0 - no) """
         return self._particle.get_is_beached()
 
     @property
     def k_layer(self):
+        """ Index identifying the k-layer the particle currently resides in """
         return self._particle.get_k_layer()
 
     @property
     def k_lower_layer(self):
+        """ Index identifying the k-level immediately below the particle """
         return self._particle.get_k_lower_layer()
 
     @property
     def k_upper_layer(self):
+        """ Index identifying the k-level immediately above the particle """
         return self._particle.get_k_upper_layer()
 
     @property
     def in_vertical_boundary_layer(self):
+        """ Flag signifying whether or not the particle resides in either the top or bottom boundary layers """
         return self._particle.get_in_vertical_boundary_layer()
 
 
@@ -182,13 +266,13 @@ cdef ParticleSmartPtr copy(ParticleSmartPtr particle_smart_ptr):
     new memory is allocated. This memory is automatically freed when the
     ParticleSmartPtr is deleted.
     
-    Parameters:
-    -----------
+    Parameters
+    ----------
     particle_smart_ptr : ParticleSmartPtr
         ParticleSmartPtr object.
     
-    Returns:
-    --------
+    Returns
+    -------
     particle_smart_ptr : ParticleSmartPtr
         An exact copy of the ParticleSmartPtr object passed in.
     """
@@ -199,20 +283,20 @@ cdef ParticleSmartPtr copy(ParticleSmartPtr particle_smart_ptr):
 cdef to_string(Particle* particle):
     """ Return a string object that describes a particle
 
-    TODO:
-    -----
-    1) Add back in host elements
-    2) Add back in phis
-
-    Parameters:
-    -----------
+    Parameters
+    ----------
     particle : Particle C ptr
         Pointer to a particle object
 
-    Returns:
-    --------
+    Returns
+    -------
     s : str
         String describing the particle
+
+    TODO
+    ----
+    1) Add back in host elements
+    2) Add back in phis
     """
 
     s = "Particle properties \n"\

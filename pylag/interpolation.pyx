@@ -1,3 +1,12 @@
+"""
+Interpolators and interpolation helpers
+
+Note
+----
+interpolation is implemented in Cython. Only a small portion of the
+API is exposed in Python with accompanying documentation.
+"""
+
 include "constants.pxi"
 
 import numpy as np
@@ -40,8 +49,8 @@ cdef class Linear1DInterpolator:
     
     This class contains methods that perform linear 1D interpolation.
     
-    Parameters:
-    -----------
+    Parameters
+    ----------
     n_elems : int
         The number of points at which data are defined. This is used to
         create data arrays of the correct size, which are later used for
@@ -60,8 +69,8 @@ cdef class Linear1DInterpolator:
         The two memory view objects should have the same length, equal to 
         `n_elems'.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         xp : 1D MemoryView
             A MemoryView giving the location coordinates of points at which
             the interpolating function is defined.
@@ -86,8 +95,8 @@ cdef class Linear1DInterpolator:
     cdef DTYPE_FLOAT_t get_value(self, Particle* particle) except FLOAT_ERR:
         """ Evaluate the interpolating function at the particle's location
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         *particle: C pointer
             C Pointer to a Particle struct
         """
@@ -98,8 +107,8 @@ cdef class Linear1DInterpolator:
     cdef DTYPE_FLOAT_t get_first_derivative(self, Particle* particle) except FLOAT_ERR:
         """ Evaluate the derivative of the interpolating function
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         *particle: C pointer
             C Pointer to a Particle struct
         """
@@ -112,8 +121,8 @@ cdef class CubicSpline1DInterpolator:
     
     This class contains methods that perform cubic spline 1D interpolation.
     
-    Parameters:
-    -----------
+    Parameters
+    ----------
     n_elems : int
         The number of points at which data are defined. This is used to
         create data arrays of the correct size, which are later used for
@@ -157,8 +166,8 @@ cdef class CubicSpline1DInterpolator:
 
         This function is basically a wrapper - all the hard work is done in C++.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         *particle: C pointer
             C Pointer to a Particle struct
         """
@@ -170,8 +179,8 @@ cdef class CubicSpline1DInterpolator:
         The derivative is computed at the particle's location. As before, this
         function is basically a wrapper - all the hard work is done in C++.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         *particle: C pointer
             C Pointer to a Particle struct
         """
@@ -180,8 +189,8 @@ cdef class CubicSpline1DInterpolator:
 def get_interpolator(config, n_elems):
     """ Interpolator factory method
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         config : SafeConfigParser
             Configuration object.
         
@@ -203,8 +212,8 @@ cdef get_barycentric_coords(DTYPE_FLOAT_t x, DTYPE_FLOAT_t y,
     Compute and return barycentric coordinates for the point (x,y) within the
     triangle defined by x/y coordinates stored in the vectors x_tri and y_tri.
      
-    Parameters:
-    -----------
+    Parameters
+    ----------
     x : float
         x-position.
     
@@ -244,8 +253,8 @@ cdef get_barycentric_gradients(const vector[DTYPE_FLOAT_t] &x_tri, const vector[
     barycentric coordinates. In all cases phi_i is linear in both x and y 
     meaning the gradient is constant within the element.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     x_tri : vector, float
         Triangle x coordinates.
 
@@ -280,7 +289,7 @@ cdef get_barycentric_gradients(const vector[DTYPE_FLOAT_t] &x_tri, const vector[
 cdef DTYPE_FLOAT_t shepard_interpolation(DTYPE_FLOAT_t x,
         DTYPE_FLOAT_t y, vector[DTYPE_FLOAT_t] xpts, vector[DTYPE_FLOAT_t] ypts,
         vector[DTYPE_FLOAT_t] vals) except FLOAT_ERR:
-    """Shepard interpolation.
+    """ Shepard interpolation
 
     """
     # Euclidian distance between the point and a reference point
@@ -318,7 +327,7 @@ cdef DTYPE_FLOAT_t shepard_interpolation(DTYPE_FLOAT_t x,
 
 cdef DTYPE_FLOAT_t get_linear_fraction_safe(DTYPE_FLOAT_t var, DTYPE_FLOAT_t var1,
         DTYPE_FLOAT_t var2) except FLOAT_ERR:
-    """Compute the fractional linear distance of a point between two numbers.
+    """ Compute the fractional linear distance of a point between two numbers
     
     The function is deemed safe as it raises an exception if `var' does not lie
     between `var1' and`var2'. Clients should call `get_linear_fraction' if this

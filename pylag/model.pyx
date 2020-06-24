@@ -1,3 +1,13 @@
+"""
+Model objects are used to calculate changes in particle states during
+the course of a typical simulation. They hold and manage all particle data.
+
+Note
+----
+model is implemented in Cython. Only a small portion of the
+API is exposed in Python with accompanying documentation.
+"""
+
 include "constants.pxi"
 
 import logging
@@ -32,6 +42,14 @@ cdef class OPTModel:
     2) Reading input data
     3) Updating particle positions
     4) Returning diagnostic data
+
+    Parameters
+    ----------
+    config : configparser.SafeConfigParser
+        PyLag configuration object
+
+    data_reader : pylag.data_reader.DataReader
+        PyLag data reader
     """
     cdef object config
     cdef object coordinate_system
@@ -85,8 +103,8 @@ cdef class OPTModel:
     def set_particle_data(self, group_ids, x1_positions, x2_positions, x3_positions):
         """Initialise memory views for data describing the particle seed.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         group_ids : ndarray, int
             Particle groups IDs.
 
@@ -107,8 +125,8 @@ cdef class OPTModel:
     def setup_input_data_access(self, start_datetime, end_datetime):
         """Setup access to FVCOM time dependent variables.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         start_datime : Datetime
             The simulation start date and time.
 
@@ -120,8 +138,8 @@ cdef class OPTModel:
     def read_input_data(self, time):
         """Update reading frames for FVCOM data fields.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         time : float
             The current time.
         """
@@ -138,8 +156,8 @@ cdef class OPTModel:
         Create the particle seed if it has not been created already. Make
         an `active' copy of the particle seed.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         time : float
             The current time.
         """
@@ -291,8 +309,8 @@ cdef class OPTModel:
         particles that remain in the model domain. If a particle has beached
         update its status.
         
-        Parameters:
-        -----------
+        Parameters
+        ----------
         time : float
             The current time.
         """
@@ -326,13 +344,13 @@ cdef class OPTModel:
     def get_diagnostics(self, time):
         """ Get particle diagnostics
         
-        Parameters:
-        -----------
+        Parameters
+        ----------
         time : float
             The current time.
         
-        Returns:
-        --------
+        Returns
+        -------
         diags : dict
             Dictionary holding particle diagnostic data.
         """

@@ -1,9 +1,16 @@
+"""
+This Cython module has the purpose of providing clients with rapid access to
+pseudo random numbers generated the Mersenne Twister pseudo random number
+generator.
+
+Note
+----
+random is implemented in Cython. Only a small portion of the
+API is exposed in Python with accompanying documentation.
+"""
+
 include "constants.pxi"
 
-"""
-This Cython module has the purpose of providing clients with rapid access to 
-pseudo random numbers generated the Mersenne Twister pseudo RNG.
-"""
 import os
 import time
 
@@ -13,6 +20,11 @@ cimport crandom
 
 cdef class Pymt19937:
     """Cython wrapper class for mt19937
+
+    Parameters
+    ----------
+    seed : float
+        Seed for the PRNG.
 
     """
     cdef crandom.mt19937 c_mt19937
@@ -31,15 +43,18 @@ _seed = None
 def get_seed():
     """Return the value of the seed used with the PRNG.
 
+    Returns
+    -------
+    _seed : float
+        The seed.
     """
     return _seed
 
 def seed(seed=None):
-    """
-    Seed the random number generator. If seed is None, use a combination of the
-    system time and processor ID to set the random seed. The approach ensures
-    each worker uses a unique seed during parallel simulations. Algorithm
-    adapted from http://goo.gl/BVxgFl.
+    """ Seed the random number generator
+    If seed is None, use a combination of the system time and processor ID
+    to set the random seed. The approach ensures each worker uses a unique
+    seed during parallel simulations. Algorithm adapted from http://goo.gl/BVxgFl.
     
     Parameters:
     -----------
@@ -64,13 +79,13 @@ cpdef DTYPE_FLOAT_t gauss(DTYPE_FLOAT_t mean = 0.0, DTYPE_FLOAT_t std = 1.0) exc
     Generate a random Gaussian variate. The Gaussian distribution has a standard
     deviation of std, and a mean of 0.0.
     
-    Parameters:
-    -----------
+    Parameters
+    ----------
     std: float, optional
         Standard deviation of the Gaussian distribution.
         
-    Returns:
-    --------
+    Returns
+    -------
     variate: float
         Random Gaussian variate
     """
@@ -86,15 +101,15 @@ cpdef DTYPE_FLOAT_t uniform(DTYPE_FLOAT_t a = -1.0, DTYPE_FLOAT_t b = 1.0) excep
     """
     Generate a random variate within the range [a, b].
     
-    Parameters:
-    -----------
+    Parameters
+    ----------
     a: float, optional
         Lower limit
     b: float, optional
         Upper limit
         
-    Returns:
-    --------
+    Returns
+    -------
     variate: float
         Random variate
     """

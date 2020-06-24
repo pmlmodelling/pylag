@@ -1,3 +1,13 @@
+"""
+Position modifiers which manage the application of deltas to particle positions.
+Included within a separate module in order to support multiple coordinate systems.
+
+Note
+----
+position_modifier is implemented in Cython. Only a small portion of the
+API is exposed in Python with accompanying documentation.
+"""
+
 include "constants.pxi"
 
 from libc.math cimport cos
@@ -26,7 +36,7 @@ cdef class CartesianPositionModifier(PositionModifier):
     cdef void update_position(self, Particle *particle, Delta *delta_X) except *:
         """ Update the particle's position
 
-        Parameters:
+        Parameters
         -----------
         particle : C pointer
             C pointer to a Particle struct
@@ -59,7 +69,7 @@ cdef class SphericalPositionModifier(PositionModifier):
     cdef void update_position(self, Particle *particle, Delta *delta_X) except *:
         """ Update the particle's position
 
-        Parameters:
+        Parameters
         -----------
         particle : C pointer
             C pointer to a Particle struct
@@ -81,8 +91,8 @@ cdef class SphericalPositionModifier(PositionModifier):
 def get_position_modifier(config):
     """ Factory method for constructing PositionModifier objects
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     config : ConfigParser
         Object of type ConfigParser.
     """

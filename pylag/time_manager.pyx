@@ -1,3 +1,8 @@
+"""
+Time manager manages all time counters. It also tracks events, and
+can be used to flag when data should be written or synced to disk.
+"""
+
 import numpy as np
 import copy
 import datetime
@@ -10,6 +15,20 @@ from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 from pylag.numerics import get_global_time_step, get_time_direction
 
 cdef class TimeManager(object):
+    """ Time manager
+
+    Time manager keeps track of all time counters, including the current simulation
+    time. It is responsible for updating the current time. It can also be used as
+    an event manage which flags when key events should happen, including when
+    individual ensemble members should start and stop, and when data should be
+    written or synced to disk.
+
+    Parameters
+    ----------
+    config : configparser.SafeConfigParser
+        PyLag configuration object.
+
+    """
     cdef object _config
 
     cdef object _datetime_start_str
@@ -139,9 +158,15 @@ cdef class TimeManager(object):
         return True
 
     def update_current_time(self):
+        """ Update the current time
+        """
         self._time = self._time + self._time_step * self._time_direction
 
     def write_output_to_file(self):
+        """ Write data to file?
+
+        Return a flag signifying whether data should be written to file.
+        """
         cdef DTYPE_FLOAT_t time_diff
 
         time_diff = abs(self._time - self._time_start)
@@ -150,6 +175,10 @@ cdef class TimeManager(object):
         return 0
 
     def sync_data_to_disk(self):
+        """ Sync data to disk?
+
+        Return a flag signifying whether data should be synced to disk.
+        """
         cdef DTYPE_FLOAT_t time_diff
 
         time_diff = abs(self._time - self._time_start)
@@ -158,6 +187,10 @@ cdef class TimeManager(object):
         return 0
 
     def create_restart_file(self):
+        """ Create a restart file?
+
+        Return a flag signifying whether a restart file should be created.
+        """
         cdef DTYPE_FLOAT_t time_diff
 
         time_diff = abs(self._time - self._time_start)
@@ -168,43 +201,42 @@ cdef class TimeManager(object):
     # Properties
     # ----------
 
-    # The total number of particle releases
     property number_of_particle_releases:
+        """ The total number of particle releases """
         def __get__(self):
             return self._number_of_particle_releases
 
-    # Integer identifying the current particle release
     property current_release:
+        """ Integer identifying the current particle release """
         def __get__(self):
             return self._current_release
 
-    # Integration start datetime for the current release
     property datetime_start:
+        """ Integration start datetime for the current release """
         def __get__(self):
             return self._datetime_start
 
-    # Integration end datetime for the current release
     property datetime_end:
+        """ Integration end datetime for the current release """
         def __get__(self):
             return self._datetime_end
 
-    # Current datetime
     property datetime_current:
+        """ Current datetime """
         def __get__(self):
             return num2pydate(self._time, units='seconds since {}'.format(self._datetime_start))
 
-    # Current time (seconds elapsed since start of the current simulation)
     property time:
+        """ Current time (seconds elapsed since start of the current simulation) """
         def __get__(self):
             return self._time
 
-    # Integration time step (seconds)
     property time_step:
+        """ Integration time step (seconds) """
         def __get__(self):
             return self._time_step
 
-     # Integration end time (seconds)
     property time_end:
+        """ Integration end time (seconds) """
         def __get__(self):
             return self._time_end
-

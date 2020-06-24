@@ -1,6 +1,11 @@
-# To change this license header, choose License Headers in Project Properties.
-# To change this template file, choose Tools | Templates
-# and open the template in the editor.
+"""
+Module implementing several basic mathematical functions
+
+Note
+----
+math is implemented in Cython. Only a small portion of the
+API is exposed in Python with accompanying documentation.
+"""
 
 cdef class Intersection:
     """ Simple class describing the intersection point of two lines

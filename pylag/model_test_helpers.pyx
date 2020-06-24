@@ -1,3 +1,13 @@
+"""
+Test data reader to that is included to help test the
+OPTModel's functionality.
+
+TODO
+----
+I have a feeling this should be moved to mock.pyx and the module
+deleted.
+"""
+
 include "constants.pxi"
 
 # Data types used for constructing C data structures

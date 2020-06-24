@@ -1,3 +1,7 @@
+"""
+Cython wrapper for cublic spline, which is implemented in C++.
+"""
+
 include "constants.pxi"
 
 cdef class SplineWrapper:
