@@ -44,7 +44,7 @@ cdef class NumMethod:
     
     The following method(s) should be implemented in the derived class:
     
-    * :meth: `step`
+    * :meth: step
     """
 
     def step_wrapper(self, DataReader data_reader, DTYPE_FLOAT_t time,
@@ -82,9 +82,14 @@ cdef class StdNumMethod(NumMethod):
     or advection and diffusion are modelled. In the case of the latter,
     the deterministic and stochastic components of particle movement share the
     same time step. If you would prefer to use some form of operator splitting
-    (e.g. to reduce simulation times) use the methods `OS1NumMethod' or 
-    `OS2NumMethod' instead.
+    (e.g. to reduce simulation times) use the methods `OS1NumMethod` or
+    `OS2NumMethod` instead.
     
+    Parameters
+    ----------
+    config : ConfigParser
+        Configuration object
+
     Attributes
     ----------
     _time_step : float
@@ -111,13 +116,6 @@ cdef class StdNumMethod(NumMethod):
     cdef PositionModifier _position_modifier
 
     def __init__(self, config):
-        """ Initialise class data members
-        
-        Parameters
-        ----------
-        config : ConfigParser
-            Configuration object
-        """
         self._iterative_method = get_iterative_method(config)
         
         self._horiz_bc_calculator = get_horiz_boundary_condition_calculator(config)
@@ -142,7 +140,7 @@ cdef class StdNumMethod(NumMethod):
         """ Perform one iteration of the numerical method
         
         If the particle's new position lies outside of the model domain, the
-        specified boundary conditions are applied. The `flag' variable is used
+        specified boundary conditions are applied. The `flag` variable is used
         to tell the caller whether the particle's position was successfully
         updated.
 
@@ -253,12 +251,17 @@ cdef class OS0NumMethod(NumMethod):
     
     The numerical method should be used when the effects of advection and
     diffusion are combined using a form of operator splitting in which
-    first the advection step is computed, then `n' diffusion steps. The two
+    first the advection step is computed, then `n` diffusion steps. The two
     processes can use different time steps - typically, the time step used
     for diffusion will be smaller than that used for advection - which has
     the potential to significantly reduce run times. Note the advection time 
     step, which must be set in the supplied config, should be an exact multiple
     of the diffusion time step; if it isn't, an exception will be raised.
+
+    Parameters
+    ----------
+    config : ConfigParser
+        Configuration object
 
     Attributes
     ----------
@@ -298,13 +301,6 @@ cdef class OS0NumMethod(NumMethod):
     cdef PositionModifier _position_modifier
 
     def __init__(self, config):
-        """ Initialise class data members
-
-        Parameters:
-        -----------
-        config : ConfigParser
-            Configuration object
-        """
         self._adv_iterative_method = get_adv_iterative_method(config)
         self._diff_iterative_method = get_diff_iterative_method(config)
         
@@ -496,6 +492,11 @@ cdef class OS1NumMethod(NumMethod):
     first a half diffusion step is computed, then a full advection step, then
     a half diffusion step.
 
+    Parameters
+    ----------
+    config : ConfigParser
+        Configuration object
+
     Attributes
     ----------
     _adv_time_step : float
@@ -530,13 +531,6 @@ cdef class OS1NumMethod(NumMethod):
     cdef PositionModifier _position_modifier
 
     def __init__(self, config):
-        """ Initialise class data members
-        
-        Parameters
-        ----------
-        config : ConfigParser
-            Configuration object
-        """
         self._adv_iterative_method = get_adv_iterative_method(config)
         self._diff_iterative_method = get_diff_iterative_method(config)
 
@@ -786,7 +780,7 @@ cdef class ItMethod:
     
     The following method(s) should be implemented in the derived class:
     
-    * :meth: `step`
+    * :meth: step
 
     Attributes
     ----------

@@ -1,3 +1,7 @@
+"""
+PyLag utility functions
+"""
+
 from __future__ import division, print_function
 
 import numpy as np
@@ -12,8 +16,8 @@ def round_time(datetime_raw, rounding_interval=3600):
     Rounding is sometimes required when simulation times are written to file 
     with limited precision.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     datetime_raw: List, Datetime
         List of datetime objects to which rounding should be applied
 
@@ -52,13 +56,13 @@ def get_time_index(dates, ref_date, tol=60):
 def get_grid_bands(array_in):
     """ Return grid bands for data on a regular 1D grid
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     array : 1D NumPy array
         1D array of regularly spaced data
 
-    Returns:
-    --------
+    Returns
+    -------
      : 1D NumPy Array
         1D array with size len(array) + 1, corresponding to the grid edges
     """
@@ -80,15 +84,15 @@ def get_grid_bands(array_in):
 def get_file_list(data_dir, file_stem):
     """ Get sorted file list
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     data_dir : str
         The directory containing the files.
 
     file_stem : str
         The part of the file name that is common to all output files. For
-        example, if ensemble outputs are stored in the files `pylag_1.nc',
-        `pylag_2.nc' etc, then the file_stem could be `pylag_'.
+        example, if ensemble outputs are stored in the files `pylag_1.nc`,
+        `pylag_2.nc` etc, then the file_stem could be `pylag_`.
     """
     file_names = natsorted(glob.glob("{}/{}*.nc".format(data_dir, file_stem)), alg=ns.D)
 

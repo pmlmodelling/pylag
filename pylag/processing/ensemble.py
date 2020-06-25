@@ -1,8 +1,11 @@
+"""
+Tools to assist with processing the results of ensemble simulations
+"""
+
 from __future__ import division, print_function
 
 import numpy as np
 from scipy import stats
-from warnings import warn
 
 from pylag.processing.ncview import Viewer
 
@@ -17,7 +20,7 @@ def get_probability_density_1D(file_names, dates, depths, depth_bnds, pylag_time
     """Compute the ensemble mean concentration in 1D
     
     Particle concentrations are computed on the dates and at the depth levels
-    given in the arrays `dates' and `depth'. Each member of the ensemble is
+    given in the arrays `dates` and `depth`. Each member of the ensemble is
     a separate realisation, with particles starting at the sames locations
     and at the same time in each run. A different method should be used to
     compute probability densities for ensembles in which particles are released
@@ -27,8 +30,8 @@ def get_probability_density_1D(file_names, dates, depths, depth_bnds, pylag_time
     is used. Boundaries are treated as being reflecting, thus there is no loss
     of density.
     
-    Parameters:
-    -----------
+    Parameters
+    ---------
     file_names : list[str]
         List of sorted PyLag output files. Each output file corresponds to one member
         of the ensemble.
@@ -49,8 +52,8 @@ def get_probability_density_1D(file_names, dates, depths, depth_bnds, pylag_time
     pylag_time_rounding : int
         The number of seconds PyLag outputs should be rounded to.
 
-    Returns:
-    --------
+    Returns
+    -------
     conc : 2D Numpy array (float)
         The concentration at the specified times and depths
     """
@@ -89,15 +92,15 @@ def get_probability_density_2D(file_names, time_deltas, x_points, y_points, pyla
     """Compute the probability density in 2D
     
     Probability densities are computed at the x and y points provided, and at time
-    time points after the start of the simulation, as listed in the `time_deltas'
+    time points after the start of the simulation, as listed in the `time_deltas`
     array. Each member of the ensemble is a separate realisation. Typically, particles
     will have been released from the same points in space in each simulation. Particles
     may or may not have been released at different times.
     
     To compute the probability density a gaussian kernel density estimator is used.
     
-    Parameters:
-    -----------
+    Parameters
+    ----------
     file_names : list[str]
         List of sorted PyLag output files. Each output file corresponds to one member
         of the ensemble.
@@ -126,8 +129,8 @@ def get_probability_density_2D(file_names, time_deltas, x_points, y_points, pyla
     group_id : int, optional
         Calculate the probability density for a single group.
 
-    Returns:
-    --------
+    Returns
+    -------
     dens: 2D Numpy array (float)
         The concentration at the specified times and x/y positions.
     """

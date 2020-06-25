@@ -102,7 +102,7 @@ class FileReader:
         current point in time.
 
     second_time : array_like[float]
-        Time array containing the `second' time point bounding the
+        Time array containing the `second` time point bounding the
         current point in time.
 
     tidx_first : int
@@ -876,7 +876,7 @@ class DefaultDateTimeReader(DateTimeReader):
     def get_datetime(self, dataset, time_index=None):
         """ Get dates/times for the given dataset
 
-        This function searches for the basic variable `time'.
+        This function searches for the basic variable `time`.
         If a given source of data uses a different variable
         name or approach to saving time points, support for
         them can be added through subclassing (as with
@@ -962,12 +962,12 @@ class FVCOMDateTimeReader(DateTimeReader):
             return round_time(datetime_raw, rounding_interval)
 
 
-__all__ = [FileReader,
-           FileNameReader,
-           DiskFileNameReader,
-           DatasetReader,
-           NetCDFDatasetReader,
-           DateTimeReader,
-           DefaultDateTimeReader,
-           FVCOMDateTimeReader,
-           get_datetime_reader]
+__all__ = ["FileReader",
+           "FileNameReader",
+           "DiskFileNameReader",
+           "DatasetReader",
+           "NetCDFDatasetReader",
+           "DateTimeReader",
+           "DefaultDateTimeReader",
+           "FVCOMDateTimeReader",
+           "get_datetime_reader"]

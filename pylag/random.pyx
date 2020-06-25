@@ -56,8 +56,8 @@ def seed(seed=None):
     to set the random seed. The approach ensures each worker uses a unique
     seed during parallel simulations. Algorithm adapted from http://goo.gl/BVxgFl.
     
-    Parameters:
-    -----------
+    Parameters
+    ----------
     seed: long, optional
         The seed to be used.
     """

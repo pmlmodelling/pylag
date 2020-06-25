@@ -67,16 +67,6 @@ cdef class OPTModel:
     cdef DTYPE_FLOAT_t[:] _x3_positions
 
     def __init__(self, config, data_reader):
-        """ Initialise class data members
-
-        Parameters:
-        -----------
-        config : SafeConfigParser
-            Configuration obect.
-
-        data_reader : DataReader
-            Data reader object.
-        """
         # Initialise config
         self.config = config
 
@@ -154,7 +144,7 @@ cdef class OPTModel:
         """Set particle positions equal to those of the particle seed.
         
         Create the particle seed if it has not been created already. Make
-        an `active' copy of the particle seed.
+        an `active` copy of the particle seed.
 
         Parameters
         ----------
@@ -419,8 +409,8 @@ cdef class OPTModel:
         Pool, sort and return data describing the basic state of each particle. The
         main purpose of this function is to assist with the creation of restart files.
         
-        Returns:
-        --------
+        Returns
+        -------
         all_particle_data : dict
             Dictionary holding particle data.
         """

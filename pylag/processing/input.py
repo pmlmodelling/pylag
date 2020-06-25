@@ -1,5 +1,8 @@
+"""
+Tools to assist with the creation of PyLag initial position files
+"""
+
 from __future__ import division, print_function
-import os
 
 
 def create_initial_positions_file_single_group(filename, n, group_id, xpos, ypos, zpos):
@@ -8,20 +11,20 @@ def create_initial_positions_file_single_group(filename, n, group_id, xpos, ypos
     Create a file specifying the initial positions of a set of n particles. Each
     particle has the same group ID.
 
-    Expected file format is:
-    n
-    group_id_1 xpos_1 ypos_1 zpos_1
-    group_id_1 xpos_2 ypos_2 zpos_2
-    ...
-    ...
-    group_id_2 xpos_n ypos_n zpos_n
+    Expected file format is: \n
+    n \n
+    group_id_1 xpos_1 ypos_1 zpos_1 \n
+    group_id_1 xpos_2 ypos_2 zpos_2 \n
+    ... \n
+    ... \n
+    group_id_2 xpos_n ypos_n zpos_n \n
 
     where n is the total number of particles, {x,y,z}pos_i is the initial
     x/y/z position of particle i (i= 1 to n) in UTM coordinates, and 
     group_id_1 is an integer specifying the group to which the particle belongs.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     filename : string
         Output file name (either local or full path)
 
@@ -51,26 +54,27 @@ def create_initial_positions_file_single_group(filename, n, group_id, xpos, ypos
         f.write(line)
     f.close()
 
+
 def create_initial_positions_file_multi_group(filename, release_zones):
     """ Create an initial positions file for multiple particle groups
 
     Take a list of ReleaseZone objects, extract particle initial positions and
     write to file.
 
-    Expected file format is:
-    n
-    group_id_1 xpos_1 ypos_1 zpos_1
-    group_id_1 xpos_2 ypos_2 zpos_2
-    ...
-    ...
-    group_id_2 xpos_n ypos_n zpos_n
+    Expected file format is: \n
+    n \n
+    group_id_1 xpos_1 ypos_1 zpos_1 \n
+    group_id_1 xpos_2 ypos_2 zpos_2 \n
+    ... \n
+    ... \n
+    group_id_2 xpos_n ypos_n zpos_n \n
 
     where n is the total number of particles, {x,y,z}pos_i is the initial
     x/y/z position of particle i (i= 1 to n) in UTM coordinates, and 
     group_id_1 is an integer specifying the group to which the particle belongs.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     filename : string
         Output file name (either local or full path)
 

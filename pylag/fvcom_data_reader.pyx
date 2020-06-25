@@ -52,8 +52,8 @@ cdef class FVCOMDataReader(DataReader):
     host horizontal elements and for interpolating gridded field data to
     a given point in space and time.
     
-    Parameters:
-    -----------
+    Parameters
+    ----------
     config : SafeConfigParser
         Configuration object.
     
@@ -191,8 +191,8 @@ cdef class FVCOMDataReader(DataReader):
     cpdef setup_data_access(self, start_datetime, end_datetime):
         """ Set up access to time-dependent variables.
         
-        Parameters:
-        -----------
+        Parameters
+        ----------
         start_datetime : Datetime
             Datetime object corresponding to the simulation start time.
         
@@ -206,11 +206,11 @@ cdef class FVCOMDataReader(DataReader):
     cpdef read_data(self, DTYPE_FLOAT_t time):
         """ Read in time dependent variable data from file?
         
-        `time' is used to test if new data should be read in from file. If this
+        `time` is used to test if new data should be read in from file. If this
         is the case, arrays containing time-dependent variable data are updated.
         
-        Parameters:
-        -----------
+        Parameters
+        ----------
         time : float
             The current time.
         """

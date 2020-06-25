@@ -270,8 +270,8 @@ cdef class GOTMDataReader(DataReader):
     cpdef setup_data_access(self, start_datetime, end_datetime):
         """ Set up access to time-dependent variables.
         
-        Parameters:
-        -----------
+        Parameters
+        ----------
         start_datetime : Datetime
             Datetime object corresponding to the simulation start time.
         
@@ -285,12 +285,12 @@ cdef class GOTMDataReader(DataReader):
     cpdef read_data(self, DTYPE_FLOAT_t time):
         """ Read in time dependent variable data from file?
         
-        `time' is used to test if new data should be read in from file. If this
+        `time` is used to test if new data should be read in from file. If this
         is the case arrays containing time-dependent variable data are updated.
         Following this, all time interpolated gridded fields are computed.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         time : float
             The current time.
         """

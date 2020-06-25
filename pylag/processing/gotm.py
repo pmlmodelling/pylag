@@ -1,3 +1,7 @@
+"""
+Tools to assist with analysing GOTM based outputs
+"""
+
 from __future__ import division, print_function
 
 import numpy as np
@@ -18,8 +22,8 @@ def get_rmse(gotm_file_name, gotm_var_name, pylag_file_names, dates, gotm_time_r
 
     Compute the RMSE between GOTM and PyLag model outputs.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     gotm_file_name : str
         Name of the file containing output from the Eulerian model. At the
         moment, only GOTM-based outptus are supported.
@@ -41,8 +45,8 @@ def get_rmse(gotm_file_name, gotm_var_name, pylag_file_names, dates, gotm_time_r
     pylag_time_rounding : int
         The number of seconds PyLag outputs should be rounded to.
 
-    Returns:
-    --------
+    Returns
+    -------
     rmse : float
         The RMSE.
     """

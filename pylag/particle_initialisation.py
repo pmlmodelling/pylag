@@ -38,9 +38,15 @@ class ASCIIInitialParticleStateReader(InitialParticleStateReader):
     ASCIIInitialParticleStateReaders read in particle state data 
     from an ascii file and return it to the caller.
 
-    TODO - At the moment, such objects only read in particle position info.
-           It may be desirable to have them read other types of data in the
-           future.
+    Parameters
+    ----------
+    config : configparser.SafeConfigParser
+        Configuration object
+
+    TODO
+    ----
+    * At the moment, such objects only read in particle position info. It may be desirable
+      to have them read other types of data in the future.
     """
     def __init__(self, config):
         self._config = config
@@ -90,6 +96,11 @@ class RestartInitialParticleStateReader(InitialParticleStateReader):
 
     RestartInitialParticleStateReaders read in particle state data from a
     restart file in NetCDF format.
+
+    Parameters
+    ----------
+    config : configparser.SafeConfigParser
+        Configuration object
     """
     def __init__(self, config):
         self._config = config
@@ -108,11 +119,6 @@ class RestartInitialParticleStateReader(InitialParticleStateReader):
 
         Particle data is read in from a NetCDF file that has been created
         using an object of type RestartFileCreator.
-
-        Parameters:
-        -----------
-        file_name : str
-            The name of the NetCDF file containing particle state data.
         """
         logger = logging.getLogger(__name__)
         logger.info('Using restart file {}'.format(self._restart_file_name))
@@ -156,6 +162,19 @@ class RestartInitialParticleStateReader(InitialParticleStateReader):
 
 
 def get_initial_particle_state_reader(config):
+    """ Factor method for particle initial state readers
+
+    Parameters
+    ----------
+    config : configparser.SafeConfigParser
+        Configuraiton object
+
+    Returns
+    -------
+     : plag.particle_initialisation.InitialParticleStateReader
+        Particle initial state reader
+
+    """
     if config.get("SIMULATION", "initialisation_method") == "init_file":
         return ASCIIInitialParticleStateReader(config)
     elif config.get("SIMULATION", "initialisation_method") == "restart_file":

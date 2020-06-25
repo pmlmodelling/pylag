@@ -1,3 +1,6 @@
+"""
+Tools to assist with opening and inspecting PyLag input and output files
+"""
 from __future__ import division, print_function
 
 from netCDF4 import Dataset
@@ -13,20 +16,20 @@ class Viewer(object):
     general it will work with GOTM outputs too, although FVCOM outputs are
     are best read using PyFVCOM's FileReader class.
 
-    Attributes:
-    -----------
-    _filename : full or absolute path to the data file
-    
-    Credits:
-    --------
     Code adapted from the python module ncdfView.py written by Momme
     Butenschon (CMCC, formerly PML).
+
+    Attributes
+    ----------
+    _filename : str
+        Full or absolute path to the data file
+    
     """
     def __init__(self, filename, mask=True, quiet=True, time_rounding=None):
         """Open the file for reading
         
-        Parameters:
-        -----------
+        Parameters
+        ----------
         filename : str
             Full or absolute path to the file.
         
@@ -58,6 +61,8 @@ class Viewer(object):
 
     @property
     def time(self):
+        """ Time array
+        """
         if self._time is not None:
             return self._time
 
@@ -69,6 +74,8 @@ class Viewer(object):
 
     @property
     def date(self):
+        """ Date array
+        """
         if self._date is not None:
             return self._date
 
@@ -125,8 +132,8 @@ class Viewer(object):
     def var_info(self, var_str):
         """Print variable info
         
-        Parameters:
-        -----------
+        Parameters
+        ----------
         var_str : string
             Variable name/key
         """

@@ -44,7 +44,7 @@ cdef class DataReader:
     cpdef read_data(self, DTYPE_FLOAT_t time):
         """ Read in time dependent variable data from file
 
-        `time' is used to test if new data should be read in from file.
+        `time` is used to test if new data should be read in from file.
 
         Parameters
         ----------

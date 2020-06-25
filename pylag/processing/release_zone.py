@@ -1,3 +1,7 @@
+"""
+A set of classes and functions to help with creating particle release zones.
+"""
+
 from __future__ import division, print_function
 
 import numpy as np
@@ -19,9 +23,16 @@ class ReleaseZone(object):
     A release zone is a circular region in cartesian space containing a set of
     particles.
 
-    Author:
-    -------
-    James Clark (PML)
+    Parameters
+    ----------
+    group_id : int
+        Group ID associated with the release zone
+
+    radius : float
+        The radius of the release zone in m.
+
+    centre : array_like
+        Two element array giving the coordinates of the centre of the release zone.
     """
     def __init__(self, group_id=1, radius=100.0, centre=[0.0, 0.0]):
         self.__group_id = group_id
@@ -32,33 +43,33 @@ class ReleaseZone(object):
     def create_particle_set(self, n_particles=100, z=0.0, random=True):
         """ Create a new particle set
 
-        Create a new particle set (n=n_particles). The spatial coordinates of
+        Create a new particle set (`n=n_particles`). The spatial coordinates of
         each particle are computed. If random is true, exactly n, random,
         uniformly distributed particles will be created. If false, particles are
         uniformly distributed on a cartesian grid, which is then filtered for
         the area encompassed by the release zone, which is determined from the
-        radius. The latter algorithm yields a particle set with n <= n_particles
-        where |n - n_particles| / n -> 1 for large n. The former guarantees
+        radius. The latter algorithm yields a particle set with `n <= n_particles`
+        where `|n - n_particles| / n -> 1` for large n. The former guarantees
         that positions for exactly n particles are created. However, for small n
         the particle distribution with be patchy. All particles are created are
         given the same depth coordinates.
 
-        Parameters:
-        -----------
-        n_particles: int, optional
+        Parameters
+        ----------
+        n_particles : int, optional
             The number of particles to be created and added to the release zone.
 
-        z: float, optional
+        z : float, optional
             The depth of the particles.
 
-        random: bool, optional
+        random : bool, optional
             If True (default) create particle positions at random. This
             guarantees that n_particles will be added to the release zone. If
             False, particles are regularly spaced on a Cartesian grid, which is
             then filtered for the area of the circle.
 
-        Returns:
-        --------
+        Returns
+        -------
         N/A
         """
 
@@ -95,46 +106,158 @@ class ReleaseZone(object):
         return
 
     def get_group_id(self):
+        """ Return the group ID
+
+        Returns
+        -------
+         : int
+             The group ID.
+        """
         return self.__group_id
 
     def set_group_id(self, id):
+        """ Set the group ID
+
+        Parameters
+        ----------
+        id : int
+            The group ID.
+
+        Returns
+        -------
+         : None
+        """
         self.__group_id = id
 
     def get_radius(self):
+        """ Get the radius
+
+        Returns
+        -------
+         : float
+            The radius of the relase zone
+
+        """
         return self.__radius
 
     def get_area(self):
+        """ Get the area
+
+        Returns
+        -------
+         : float
+            The area of the release zone
+
+        """
         return np.pi * self.__radius * self.__radius
 
     def get_centre(self):
+        """ Get the central coordinates
+
+        Returns
+        -------
+         : array_list
+            Array of central coordinates [x, y].
+
+        """
         return self.__centre
 
     def get_particle_set(self):
+        """ Get the particle set
+
+        Returns
+        -------
+         : list[tuple]
+             List of tuples of particle coordinates
+        """
         return self.__particle_set
 
     def add_particle(self, x, y, z):
+        """ Add a particle to the release zone
+
+        Parameters
+        ----------
+        x : float
+            x-coordinate
+
+        y : float
+            y-coordinate
+
+        z : float
+            z-coordinate
+
+        Returns
+        -------
+         : None
+        """
         if np.sqrt((x-self.__centre[0]) * (x-self.__centre[0]) + (y-self.__centre[1]) * (y-self.__centre[1])) <= self.__radius:
             self.__particle_set.append((x, y, z))
             return
         raise ValueError('Particle coordinates lie outside of the release zone')
 
     def get_number_of_particles(self):
+        """ Get the total number of particles
+
+        Returns
+        -------
+         : int
+            The total number of particles
+        """
         return np.shape(self.__particle_set)[0]
 
     def get_coords(self):
+        """ Get particle coordinates
+
+        Returns
+        -------
+         : array_like
+            Eastings
+
+         : array_like
+            Northings
+
+         : array_like
+            Depths
+        """
         return self.get_eastings(), self.get_northings(), self.get_depths()
 
     def get_eastings(self):
+        """
+
+        Returns
+        -------
+         : array_like
+            Eastings
+        """
         return [particle_coords[0] for particle_coords in self.__particle_set]
 
     def get_northings(self):
+        """ Get northings
+
+        Returns
+        -------
+         : array_like
+            Northings
+        """
         return [particle_coords[1] for particle_coords in self.__particle_set]
 
     def get_depths(self):
+        """ Get depths
+
+        Returns
+        -------
+         : array_like
+            Depths
+        """
         return [particle_coords[2] for particle_coords in self.__particle_set]
 
     def get_zone_polygon(self):
         """ Make a polygon of the points in the zone (based on its convex hull)
+
+        Returns
+        -------
+        poly : shapely.geometry.Polygon
+            Polygon
         """
 
         if not have_shapely:
@@ -153,31 +276,31 @@ class ReleaseZone(object):
 
 def create_release_zone(group_id=1, radius=100.0, centre=[0.0, 0.0],
                         n_particles=100, depth=0.0, random=True):
-    """ Create a new release zone.
+    """ Create a new release zone
 
-    Parameters:
-    -----------
-    group_id: integer, optional
+    Parameters
+    ----------
+    group_id : integer, optional
         Group identifier.
 
-    radius: float, optional
+    radius : float, optional
         Radius of the circle in meters.
 
-    centre: ndarray [float, float], optional
+    centre : ndarray [float, float], optional
         x, y coordinates of the circle centre in meters.
 
-    n_particles: integer, optional
+    n_particles : integer, optional
         The number of particles.
 
-    depth: float, optional
+    depth : float, optional
         Zone depth in m (default 0.0m).
 
-    random: boolean, optional
+    random : boolean, optional
         Assign x/y positions randomly (default).
 
-    Returns:
-    --------
-    release_zone: ReleaseZone
+    Returns
+    -------
+    release_zone : ReleaseZone
        ReleaseZone object.
 
     """      
@@ -200,40 +323,40 @@ def create_release_zones_along_cord(r1, r2, group_id=1, radius=100.0,
                                     n_particles=100, depth=0.0, random=True, verbose=False):
     """ Generate a set of release zones along a cord
 
-    Return particle positions along a line r3, defined by the position vectors r1 and
-    r2. Particles are packed into circlular zones of radius radius, running along r3.
-    Positions for approximately n particles (= n if random is True) are returned per
-    zone. If 2*radius is > |r3|, no zones are created.
+    Return particle positions along a line `r3`, defined by the position vectors `r1` and
+    `r2`. Particles are packed into circlular zones of radius radius, running along `r3`.
+    Positions for approximately n particles (`= n` if random is `True`) are returned per
+    zone. If `2*radius` is `> |r3|`, no zones are created.
 
-    Parameters:
-    -----------
-    r1: ndarray [float, float]
+    Parameters
+    ----------
+    r1 : ndarray [float, float]
         Two component position vector in cartesian coordinates (x,y).
 
-    r2: ndarray [float, float]
+    r2 : ndarray [float, float]
         Two component position vector in cartesian coordinates (x,y).
 
-    group_id: integer, optional
+    group_id : integer, optional
         Group id for the 1st release zone created along the cord.
 
-    radius: float, optional
+    radius : float, optional
         Zone radius in m.
 
-    n_particles: integer, optional
+    n_particles : integer, optional
         Number of particles per zone.
 
-    depth: float, optional
+    depth : float, optional
         Zone depth in m.
 
-    random: boolean, optional
+    random : boolean, optional
         If true create a random uniform distribution of particles within each zone (default).
 
-    verbose: boolean, optional
+    verbose : boolean, optional
         Hide warnings and progress details (default).
 
-    Returns:
-    --------
-    zones: object, iterable
+    Returns
+    -------
+    zones : object, iterable
         List of release zone objects along the cord.
     """
 
@@ -272,38 +395,38 @@ def create_release_zones_around_shape(shape_obj, start, target_length, group_id,
                                       return_end_zone=True, verbose=False, ax=None):
     """ Create a set of adjacent release zones around an arbitrary polygon.
 
-    Parameters:
-    -----------
-    shape_obj: _Shape from module shapefile, np.ndarray
+    Parameters
+    ----------
+    shape_obj : _Shape from module shapefile, np.ndarray
         Shapefile describing a given landmass or an array of points (n, 2) as (x, y).
 
-    start: tuple(float,float)
+    start : tuple(float,float)
         Approximate starting point (lon,lat) in degrees
 
-    target_length: float
+    target_length : float
         Distance along which to position release zones
 
-    group_id: integer
+    group_id : integer
         Group identifier.
 
-    radius: float
+    radius : float
         Zone radius in m.
 
-    n_particles: integer
+    n_particles : integer
         Number of particles per zone.
 
-    depth: float, optional
+    depth : float, optional
         Zone depth in m.
 
-    random: boolean, optional
+    random : boolean, optional
         If true create a random uniform distribution of particles within each
         zone (default).
 
-    check_overlaps: boolean, optional
+    check_overlaps : boolean, optional
         If true check for overlaps between non-adjacent release zones that may
         result from jagged features.
 
-    overlap_tol: float, optional
+    overlap_tol : float, optional
         Overlap tolerance, ratio ((target-act)/target < overlap_tol). Assists
         in avoiding false positives, which can arise from rounding issues.
 
@@ -319,7 +442,7 @@ def create_release_zones_around_shape(shape_obj, start, target_length, group_id,
         If False, do not return the last zone. Defaults to True (do return it). This is useful when chaining release
         zones along a shapefile with a fixed distance and we want to use the end of one chain as the start of another.
 
-    verbose: boolean, optional
+    verbose : boolean, optional
         Hide warnings and progress details (default).
 
     """
@@ -407,45 +530,45 @@ def create_release_zones_around_shape_section(shape_obj, start, target_length, g
     the sense that it a) only creates release zones around a specified length of the
     polygon, and b) gives each release zone a separate individual ID tag.
 
-    Parameters:
-    -----------
-    shape_obj: _Shape from module shapefile
+    Parameters
+    ----------
+    shape_obj : _Shape from module shapefile
         Shapefile describing a given landmass
 
-    start: tuple(float,float)
+    start : tuple(float,float)
         Approximate starting point (lon,lat) in degrees
 
-    target_length: float
+    target_length : float
         Distance along which to position release zones
 
-    group_id: integer
+    group_id : integer
         Group identifier.
 
-    radius: float
+    radius : float
         Zone radius in m.
 
-    n_particles: integer
+    n_particles : integer
         Number of particles per zone.
 
-    depth: float
+    depth : float
         Zone depth in m.
 
-    zone: float
+    zone : float
         Zone within which to calculate lat/lon coordinates
 
-    random: boolean
+    random : boolean
         If true create a random uniform distribution of particles within each
         zone (default).
 
-    check_overlaps: boolean
+    check_overlaps : boolean
         If true check for overlaps between non-adjacent release zones that may
         result from jagged features. NOT YET IMPLEMENTED.
 
-    overlap_tol: float
+    overlap_tol : float
         Overlap tolerance, ratio ((target-act)/target < overlap_tol). Assists
         in avoiding false positives, which can arise from rounding issues.
 
-    verbose: boolean
+    verbose : boolean
         Hide warnings and progress details (default).
 
     TODO
@@ -543,15 +666,15 @@ def _is_clockwise_ordered(points):
 
     Establish the index of the left most point in x, then check for rising or falling y.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     points: ndarray
         2D array (n,2) containing lon/lat coordinates for n locations. Ordering
         is critical, and must adhere to points[:, 0] -> lon values, points[:, 1]
         -> lat values.
 
-    Returns:
-    --------
+    Returns
+    -------
     : boolean
        True if clockwise ordered.
 
@@ -584,8 +707,8 @@ def _is_clockwise_ordered(points):
 def _find_start_index(points, lon, lat, tolerance=None, zone=None):
     """ Find start index for release zone creation.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     points: ndarray
         2D array (n,2) containing lon/lat coordinates for n locations. Ordering
         is criticial, and must adhere to points[:,0] -> lon values, points[:,1]
@@ -632,7 +755,7 @@ def _find_start_index(points, lon, lat, tolerance=None, zone=None):
 def _get_length(r1, r2):
     """ Return the length of the line vector joining the position vectors r1 and r2.
 
-    Parameters:
+    Parameters
     ----------
     r1: ndarray (float, float)
         Position vector [x,y] for point 1 in m.
@@ -640,8 +763,8 @@ def _get_length(r1, r2):
     r2: ndarray (float, float)
         Position vector [x,y] for point 2 in m.
 
-    Returns:
-    --------
+    Returns
+    -------
     length: float
        Length in m.
 
@@ -659,16 +782,16 @@ def _get_length(r1, r2):
 def _update_idx(idx, clockwise_ordering):
     """ Update idx, depending on the value of clockwise_ordering.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     idx: integer
         Current index.
 
     clockwise_ordering: boolean
         Is clockwise ordered?
 
-    Returns:
-    --------
+    Returns
+    -------
     idx: integer
         New index.
 
@@ -684,8 +807,8 @@ def _find_release_zone_location(r1, r2, r3, r14_length):
     First form three equations with three unknowns (r4[0], r4[1] and |r24|).
     Solve for |r24|, then solve for r4 (=(|r24|/|r23|)*r23).
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     r1, r2, r3: ndarray, 2D
         Position vectors r1, r2, and r3.
 

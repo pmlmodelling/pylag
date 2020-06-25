@@ -6,9 +6,9 @@ to allow clients to call these functions in isolation.
 
 TODO
 ----
-1) Document these wrappers
-2) Move the wrappers into the modules that contain the functions they wrap, then
-delete this module entirely.
+* Document these wrappers
+* Move the wrappers into the modules that contain the functions they wrap, then delete this module entirely.
+
 """
 
 include "constants.pxi"

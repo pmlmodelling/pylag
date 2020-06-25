@@ -1,12 +1,12 @@
+"""
+Tools to assist with the creation of animations
+"""
 from __future__ import division, print_function
 
 import os
 import numpy as np
 from netCDF4 import Dataset, num2date
 from matplotlib import pyplot as plt
-
-from pylag.processing.utils import round_time
-from pylag.processing.utils import get_time_index
 
 from pylag.processing.plot import PyLagPlotter
 
@@ -37,12 +37,12 @@ class Animation(object):
         fig_dirname : str
             Name of the directory in which to save individual figures.
             
-            Default `./figs'.
+            Default `./figs`.
 
         verbose : bool
             Print progress information.
             
-            Default `False'.
+            Default `False`.
         """
         # Create figure directory if it does not exist already
         if not os.path.isdir('{}'.format(fig_dirname)):
@@ -72,22 +72,22 @@ class ParticleTrajectoryAnimation(Animation):
             If true, plot particle path lines in addition to the particle's
             current location.
             
-            Default `False'.
+            Default `False`.
             
         bathy : bool
             If true, include a background plot of the bathymetry.
 
-            Default `False'.
+            Default `False`.
 
         group_ids : int
             LIst of group IDs to plot.
             
-            Default `None'.
+            Default `None`.
 
         group_colours : str
             List of colours to use when plotting.
 
-            Default `None'.
+            Default `None`.
 
         TDDO
         ----

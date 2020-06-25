@@ -1,3 +1,6 @@
+"""
+Tools to assist with analysing FVCOM based outputs
+"""
 from __future__ import division, print_function
 
 import numpy as np
@@ -14,8 +17,8 @@ def get_rmse(fvcom_file_name, fvcom_var_name, pylag_file_names, dates, pylag_tim
 
     Compute the RMSE between FVCOM and PyLag model outputs.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     fvcom_file_name : str
         Name of the file containing output from the Eulerian model. At the
         moment, only FVCOM-based outptus are supported.
@@ -38,11 +41,11 @@ def get_rmse(fvcom_file_name, fvcom_var_name, pylag_file_names, dates, pylag_tim
         Factor used to convert probability densities into concentrations.
 
     n_points : int, optional
-        Restrict the comparison to the `n' points which have the highest
+        Restrict the comparison to the `n` points which have the highest
         FVCOM tracer concentration. If None, all grid points are compared.
 
-    Returns:
-    --------
+    Returns
+    -------
     rmse : float
         The RMSE.
 
@@ -118,3 +121,6 @@ def get_fvcom_var(fvcom_reader, fvcom_var_name, time_index, depth_integrated=Tru
     dz = np.abs(np.diff(siglev, axis=0)) * (zeta + h)
 
     return np.sum(dz * fvcom_tracer, axis=0)
+
+
+__all__ = ["get_rmse"]

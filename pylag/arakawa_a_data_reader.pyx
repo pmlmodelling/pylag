@@ -258,7 +258,7 @@ cdef class ArakawaADataReader(DataReader):
     cpdef read_data(self, DTYPE_FLOAT_t time):
         """ Read in time dependent variable data from file?
         
-        `time' is used to test if new data should be read in from file. If this
+        `time` is used to test if new data should be read in from file. If this
         is the case, arrays containing time-dependent variable data are updated.
         
         Parameters

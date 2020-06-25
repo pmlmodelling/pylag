@@ -1,3 +1,7 @@
+"""
+PyLag plotting functions
+"""
+
 from __future__ import division, print_function
 
 import numpy as np
@@ -34,8 +38,8 @@ class PyLagPlotter:
     1) Arakawa A-grid derived data
     2) FVCOM derived data
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     grid_metrics_file : Dataset or str
         This is either the path to a PyLag grid metrics file or a
         NetCDF Dataset object. If the former, PyLagPlotter will try to
@@ -44,7 +48,7 @@ class PyLagPlotter:
     geospatial_coords : boolean, optional
         Boolean specifying whether or not to use cartopy to create a 2D map
         on top of which the data will be plotted. The default option is
-        `True'. If `False', a simple Cartesian grid is drawn instead.
+        `True`. If `False`, a simple Cartesian grid is drawn instead.
 
     font_size : int, optional
         Font size to use when rendering plot text
@@ -52,10 +56,6 @@ class PyLagPlotter:
     line_width : float, optional
         Default line width to use when plotting
 
-    Author(s):
-    ----------
-    James Clark (PML)
-    Pierre Cazenave (PML)
     """
     def __init__(self, grid_metrics_file, geospatial_coords=True, font_size=10, line_width=0.2):
         if isinstance(grid_metrics_file, Dataset):
@@ -63,7 +63,7 @@ class PyLagPlotter:
         elif isinstance(grid_metrics_file, str):
             ds = Dataset(grid_metrics_file, 'r')
         else:
-            raise ValueError("`grid_metrics_file' should be either a pre-constructed netCDF.Dataset or a srting "\
+            raise ValueError("`grid_metrics_file` should be either a pre-constructed netCDF.Dataset or a srting "\
                              "giving the path to a PyLag grid metrics file.")
 
         self.geospatial_coords = geospatial_coords
@@ -121,14 +121,14 @@ class PyLagPlotter:
 
         The field must be defined on the same triangular mesh that is defined in the grid metrics
         file (either nodes or element centres). Included here to make it possible to overlay
-        particle tracks on different fields (e.g. bathymetry, temperature). If `geospatial_coords' is
+        particle tracks on different fields (e.g. bathymetry, temperature). If `geospatial_coords` is
         True, Cartopy will be used to graph the supplied field.
 
-        Additional plotting options are passed to `matplotlib.pyplot.pcolormesh'. See the matplotlib documentation
+        Additional plotting options are passed to `matplotlib.pyplot.pcolormesh`. See the matplotlib documentation
         for a full list of supported options.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         ax : matplotlib.axes.Axes
             Axes object
 
@@ -168,8 +168,8 @@ class PyLagPlotter:
         resolution : str, optional
             Resolution to use when plotting the coastline. Only used when draw_coastline=True. Default: '10m'.
 
-        Returns:
-        --------
+        Returns
+        -------
         axes : matplotlib.axes.Axes
             Axes object
 
@@ -239,8 +239,8 @@ class PyLagPlotter:
         In addition to the listed parameters, the function accepts all keyword arguments taken by the Matplotlib
         plot command.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         ax : matplotlib.axes.Axes
             Axes object
 
@@ -272,8 +272,8 @@ class PyLagPlotter:
 
         Useful when updating plots for animations.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         line_plots : list
             List of line plot objects created during call to plot_lines()
         """
@@ -292,8 +292,8 @@ class PyLagPlotter:
         See Matplotlib's scatter documentation for a list of additional key
         word arguments.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         ax : matplotlib.axes.Axes
             Axes object
 
@@ -364,8 +364,8 @@ class PyLagPlotter:
     def draw_grid(self, ax, draw_masked_elements=False, **kwargs):
         """ Draw the underlying grid or mesh
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         ax : matplotlib.axes.Axes
             Axes object
 
@@ -391,8 +391,8 @@ class PyLagPlotter:
     def set_title(self, ax, title):
         """ Set the title
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         ax : matplotlib.axes.Axes
             Axes object
 
@@ -425,43 +425,33 @@ class GOTMPlotter(object):
     Class to assist in the creation of plots and animations based on output
     from the GOTM model, including additional support to plot PyLag outputs.
 
+    Methods
+    -------
+    time_series : Plot variable through time at a given depth
+
+    profile : Plot depth profile
+
+    hovmoller : pcolormesh plot of a variable on a depth - time grid
+
+    hovmoller_particles : pcolormesh plot of particle concentrations on a depth - time grid
+
+    scatter : scatter plot of particle positions on a depth - time grid
+
+    pathlines : line plot of particle pathlines on a depth - time grid
+
+    Parameters
+    ----------
+    file_name : str
+        File from which to read grid info.
+
+    fs : int, optional
+        Font size to use when rendering plot text
+
+    time_rounding : int
+        Period between saved data points (in seconds) which is used
+        to round datetime objects.
     """
-
     def __init__(self, file_name, fs=10, time_rounding=None):
-        """
-        GOTMPlotter presently supports the creation of the following plot types:
-
-        "time_series" : Plot variable through time at a given depth
-
-        "profile" : Plot depth profile
-
-        "hovmoller" : pcolormesh plot of a variable on a depth - time grid
-
-        "hovmoller_particles" : pcolormesh plot of particle concentrations on a depth - time grid
-
-        "scatter" : scatter plot of particle positions on a depth - time grid
-
-        "pathlines" : line plot of particle pathlines on a depth - time grid
-
-        See function documentation for more details.
-
-        Parameters:
-        -----------
-        file_name : str
-            File from which to read grid info.
-
-        fs : int, optional
-            Font size to use when rendering plot text
-
-        time_rounding : int
-            Period between saved data points (in seconds) which is used
-            to round datetime objects.
-
-        Author(s):
-        -------
-        James Clark (PML)
-
-        """
         self.file_name = file_name
         self.font_size = fs
         self.time_rounding = time_rounding
@@ -535,8 +525,8 @@ class GOTMPlotter(object):
         The function plots a time series of the given variable at the given depth below the free surface.
         GOTM variable data is first interpolated to the given depth.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         axes : matplotlib.axes.Axes
             Axes object
 
@@ -546,8 +536,8 @@ class GOTMPlotter(object):
         depth : float
             Depth relative to the free surface (= 0 m). Positive up.
 
-        Returns:
-        --------
+        Returns
+        -------
         axes : matplotlib.axes.Axes
             Axes object
         """
@@ -570,8 +560,8 @@ class GOTMPlotter(object):
     def profile(self, axes, var_name, date):
         """ Generate a depth profile of the listed variable at the given time point
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         axes : matplotlib.axes.Axes
             Axes object.
 
@@ -582,8 +572,8 @@ class GOTMPlotter(object):
             The date on which to extract the profile.
 
 
-        Returns:
-        --------
+        Returns
+        -------
         axes : Matplotlib.axes.Axes
             Axes object.
         """
@@ -603,8 +593,8 @@ class GOTMPlotter(object):
     def hovmoller(self, axes, var_name, add_colorbar=True, cb_label=None, cb_ticks=None, **kwargs):
         """ Draw a hovmoller diagram
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         axes : matplotlib.axes.Axes
             Axes object
 
@@ -617,8 +607,8 @@ class GOTMPlotter(object):
         cb_ticks : list[float], optional
             Colorbar ticks.
 
-        Returns:
-        --------
+        Returns
+        -------
         axes : matplotlib.axes.Axes
             Axes object
         """
@@ -633,7 +623,7 @@ class GOTMPlotter(object):
             depth_grid = self.zi_bnds
             time_grid = self.date_zi_bnds
         else:
-            raise ValueError("Variable `{}' is not depth resolved".format(var_name))
+            raise ValueError("Variable `{}` is not depth resolved".format(var_name))
 
         plot = axes.pcolormesh(time_grid, depth_grid, var[:].squeeze(), **kwargs)
 
@@ -655,8 +645,8 @@ class GOTMPlotter(object):
                             cb_label=None, cb_ticks=None, **kwargs):
         """ Plot particle concentrations
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         axes : matplotlib.axes.Axes
             Axes object
 
@@ -736,6 +726,19 @@ class GOTMPlotter(object):
     def plot_scatter(self, axes, dates, zpos, **kwargs):
         """ Scatter plot of particle positions through time
 
+        Parameters
+        ----------
+        axes : matplotlib.axes.Axes
+            Axes object
+
+        dates : array_like
+            List of dates
+
+        zpos : array_like
+            List of z-positions
+
+        kwargs : dict
+            Dictionary of keyword arguments for the scatter plot
         """
         for i in range(zpos.shape[1]):
             axes.scatter(dates, zpos[:, i], **kwargs)
@@ -745,7 +748,25 @@ class GOTMPlotter(object):
         axes.set_ylim([np.min(zpos), np.max(zpos)])
 
     def plot_pathlines(self, axes, dates, zpos, **kwargs):
-        """ Plot particle pathlines through time
+        """ Plot pathlines through time
+
+        Parameters
+        ----------
+        axes : matplotlib.axes.Axes
+            Axes object
+
+        dates : array_like
+            List of dates
+
+        zpos : array_like
+            List of zpositions
+
+        kwargs : dict
+            Dictionary of keyword arguments for the scatter plot
+
+        Returns
+        -------
+         : None
 
         """
         axes.plot(dates, zpos[:, :], **kwargs)
@@ -757,6 +778,7 @@ class GOTMPlotter(object):
         return axes
 
     def add_colour_bar(self, figure, axes, plot, cb_label, cb_ticks):
+        """ Add a colour bar """
         # Add colour bar scaled to axis width
         divider = make_axes_locatable(axes)
         cax = divider.append_axes("right", size="5%", pad=0.05)
@@ -765,15 +787,15 @@ class GOTMPlotter(object):
         cbar.set_label(cb_label)
 
     def set_title(self, title):
+        """ Set title """
         self.axes.set_title(title, fontsize=self.font_size)
 
 
 def create_figure(figure_size=(10., 10.),  font_size=10, axis_position=None, projection=None, bg_color='white'):
     """ Create a Figure object
 
-    Parameters:
-    -----------
-
+    Parameters
+    ----------
     figure_size : tuple(float), optional
         Figure size in cm. This is only used if a new Figure object is
         created.
@@ -785,16 +807,12 @@ def create_figure(figure_size=(10., 10.),  font_size=10, axis_position=None, pro
         Array giving axis dimensions
 
     bg_color : str, optional
-        Colour to use for the axis background. Default is `white'. When
+        Colour to use for the axis background. Default is `white`. When
         creating a figure for plotting FVCOM outputs, it can be useful
-        to set this to `gray'. When FVCOM is fitted to a coastline, the
+        to set this to `gray`. When FVCOM is fitted to a coastline, the
         gray areas mark the land boundary used by the model. This provides
-        a fast alternative to plotting a high resolution (e.g. `res' = 'f')
+        a fast alternative to plotting a high resolution (e.g. `res` = `f`)
         land boundary using methods provided by the Basemap class instance.
-
-    Author(s):
-    -------
-    James Clark (PML)
 
     """
     figure_size_inches = (cm2inch(figure_size[0]), cm2inch(figure_size[1]))
@@ -843,7 +861,7 @@ def colourmap(variable):
     ----------
     variable : str, iterable
         For the given variable name(s), return the appropriate colour palette from the cmocean/matplotlib colour maps.
-        If the variable is not in the pre-defined variables here, the returned values will be 'viridis'.
+        If the variable is not in the pre-defined variables here, the returned values will be `viridis`.
 
     Returns
     -------
@@ -955,5 +973,4 @@ def colourmap(variable):
             colourmaps = default_cmap
 
     return colourmaps
-
 

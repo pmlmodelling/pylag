@@ -21,8 +21,8 @@ class RestartFileCreator(object):
     Objects of type RestartFileCreator manage the creation of
     model restart files.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     config : SafeConfigParser
         Configuration obect.
     """
@@ -61,8 +61,8 @@ class RestartFileCreator(object):
         be provided in the dictionary `particle_data`. This allows for a
         completely generic structure.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         filename_str : str
             The file name stem, as explaing above (e.g. `set_1`).
 
@@ -116,8 +116,8 @@ class RestartFileCreator(object):
     def _create_file_structure(self, nc_file, n_particles, variable_names):
         """ Create NetCDF dimension and particle data variables
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         nc_file : NetCDF4.Dataset
             The restart dataset
 

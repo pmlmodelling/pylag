@@ -58,7 +58,7 @@ cdef class MockVelocityDataReader(DataReader):
 
     The speed is:
 
-    |V| = sqrt(x^2 + y^2).
+    `|V| = sqrt(x^2 + y^2)`.
 
     An analytical expression for the postion vector (X, Y) can be found by
     integrating (2) and (3):
@@ -255,14 +255,14 @@ cdef class MockHorizontalEddyViscosityDataReader(DataReader):
     
     Ah = x^2 + y^2 + C (1)
     
-    where `x' is the x cartesian coordinate, `y' is the y cartesian coordinate
+    where `x` is the x cartesian coordinate, `y` is the y cartesian coordinate
     and C is some constant, set equal to 1.0 m2/s. Ah has units
     m^2/s; the time unit is implicit within equation (1). This class is designed
     to help test 2D random displacement models; for example, using the well
     mixed condition.
     
-    Attributes:
-    -----------
+    Attributes
+    ----------
     _C : float
         Constant used in equation (1)
 
@@ -272,8 +272,8 @@ cdef class MockHorizontalEddyViscosityDataReader(DataReader):
     _ymin, _ymax : float
         Min and max y values between which Ah is defined.
         
-    TODO:
-    -----
+    TODO
+    ----
     Will not work as is! It needs find_host() and get_boundary_intersection()
     implementing properly in order to allow horizontal boundary conditions to
     be applied.
@@ -312,16 +312,16 @@ cdef class MockHorizontalEddyViscosityDataReader(DataReader):
             Particle* particle):
         """ Returns the horizontal eddy viscosity
         
-        Parameters:
-        -----------
+        Parameters
+        ----------
         time : float
             Time at which to interpolate.
         
         particle: *Particle
             Pointer to a Particle object. 
         
-        Returns:
-        --------
+        Returns
+        -------
         Ah : float
             The horizontal eddy viscosity. 
         """
@@ -333,8 +333,8 @@ cdef class MockHorizontalEddyViscosityDataReader(DataReader):
 
         This is computed by taking the derivate of eqn (1) wrt x and y.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         time : float
             Time at which to interpolate.
         

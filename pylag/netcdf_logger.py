@@ -28,7 +28,7 @@ class NetCDFLogger(object):
         Configuration object
 
     file_name : str
-        Name of the *.nc output file to be generated. If the `.nc' extension
+        Name of the `*.nc` output file to be generated. If the `.nc` extension
         is not present it is automatically added.
 
     start_datetime : str
