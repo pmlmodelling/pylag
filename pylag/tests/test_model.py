@@ -9,7 +9,8 @@ except ImportError:
 
 from pylag.model import OPTModel
 
-from pylag.model_test_helpers import TestOPTModelDataReader
+from pylag.mock import MockOPTModelDataReader
+
 
 class OPTModel_test1(TestCase):
     """ Ensure the model behaves sensible given an invalid particle seed """
@@ -28,7 +29,7 @@ class OPTModel_test1(TestCase):
         config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'cartesian')
         
         # Create test data reader
-        data_reader = TestOPTModelDataReader()
+        data_reader = MockOPTModelDataReader()
         
         # Create data reader
         self.model = OPTModel(config, data_reader)
@@ -67,7 +68,7 @@ class OPTModel_test2(TestCase):
         config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'cartesian')
         
         # Create test data reader
-        data_reader = TestOPTModelDataReader()
+        data_reader = MockOPTModelDataReader()
         
         # Create data reader
         self.model = OPTModel(config, data_reader)
@@ -106,7 +107,7 @@ class OPTModel_test3(TestCase):
         config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'cartesian')
         
         # Create test data reader
-        data_reader = TestOPTModelDataReader()
+        data_reader = MockOPTModelDataReader()
         
         # Create data reader
         self.model = OPTModel(config, data_reader)
