@@ -1,12 +1,13 @@
 """
 Numerical and iterative methods for computing changes in particle positions.
-A distinction is made between numerical methods and iterative methods,
-where iterative methods are taken to be any iterative process which computes
-changes in a particle's position (e.g. a simple Euler scheme); while numerical
+The following distinction is made between numerical methods and iterative methods:
+iterative methods are any iterative process which computes changes in a particle's
+position (e.g. a simple Euler scheme) during a single time step; while numerical
 methods are algorithms which combine the results of one or more iterative
 schemes to compute the final change in a particles position. The split between
 the two was introduced in order to make it possible to implement some form of
-operator splitting in which advection and diffusion are handled separately.
+operator splitting in which advection and diffusion are handled separately
+with potentially different time steps for each.
 
 Note
 ----

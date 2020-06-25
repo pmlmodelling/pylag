@@ -1,9 +1,14 @@
-""" PyLag cwrappers
-
-For speed, several of PyLag's Cython functions take c arrays or pointers as 
-arguments. Cython does not appear to produce python wrappers for functions 
+"""
+For speed, several of PyLag's Cython functions take c arrays or pointers as
+arguments. Cython does not produce python wrappers for functions
 that have arguments with these types. The wrappers provided here are intended
 to allow clients to call these functions in isolation.
+
+TODO
+----
+1) Document these wrappers
+2) Move the wrappers into the modules that contain the functions they wrap, then
+delete this module entirely.
 """
 
 include "constants.pxi"
