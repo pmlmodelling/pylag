@@ -13,8 +13,6 @@ Conact:
 James Clark (Plymouth Marine Laboratory). Email: jcl@pml.ac.uk
 """
 
-import pylag.main
-
 
 __all__ = ['parallel',
            'processing',
