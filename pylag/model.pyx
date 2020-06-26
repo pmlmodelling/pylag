@@ -154,7 +154,10 @@ cdef class OPTModel:
         # Grid boundary limits
         cdef DTYPE_FLOAT_t zmin
         cdef DTYPE_FLOAT_t zmax
-        
+
+        # Depth used in intermediate calculations
+        cdef DTYPE_FLOAT_t z_test
+
         # Particle raw pointer
         cdef Particle* particle_ptr
 
@@ -182,26 +185,41 @@ cdef class OPTModel:
                 if self.config.get("SIMULATION", "initialisation_method") != "restart_file":
 
                     if self.config.get("SIMULATION", "depth_coordinates") == "depth_below_surface":
-                        # Use zero geoid to check for semi-sensible starting depths
-                        if particle_ptr.get_x3() < zmin:
-                            raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(particle_ptr.get_x3(), zmin))
+                        z_test = particle_ptr.get_x3() + zmax
 
-                        # x3 is given as the depth below the moving free surface. Use this and zeta (zmax) to compute z
-                        particle_ptr.set_x3(particle_ptr.get_x3() + zmax)
-
-                    elif self.config.get("SIMULATION", "depth_coordinates") == "height_above_bottom":
-                        # Use zero geoid to check for semi-sensible starting depths
-                        if particle_ptr.get_x3() + zmin > 0.0:
+                        # Block the user from trying to start particles off above the free surface
+                        if z_test > zmax:
                             raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(particle_ptr.get_x3(), zmax))
 
+                        # If z_test lies below the sea floor, move it up so that the particle starts on the sea floor
+                        if z_test < zmin:
+                            z_test = zmin
+
+                        particle_ptr.set_x3(z_test)
+
+                    elif self.config.get("SIMULATION", "depth_coordinates") == "height_above_bottom":
+                        z_test = particle_ptr.get_x3() + zmin
+
+                        # Block the user from trying to start off particles below the sea floor
+                        if z_test < zmin:
+                            raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(particle_ptr.get_x3(), zmin))
+
+                        # Shift down to the sea floor
+                        if zmin > zmax and z_test > zmin:
+                            z_test = zmin
+
+                        # Shift down to the free surface
+                        if zmax > zmin and z_test > zmax:
+                            z_test = zmax
+
                         # x3 is given as the height above the sea floor. Use this and h (zmin) to compute z
-                        particle_ptr.set_x3(particle_ptr.get_x3() + zmin)
+                        particle_ptr.set_x3(z_test)
 
                 # Determine if the host element is presently dry
                 if self.data_reader.is_wet(time, particle_ptr) == 1:
                     particle_ptr.set_is_beached(0)
 
-                    # Second check that the given depth is valid
+                    # Confirm the given depth is valid for wet cells
                     if particle_ptr.get_x3() < zmin:
                         raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(particle_ptr.get_x3(), zmin))
                     elif particle_ptr.get_x3() > zmax:
