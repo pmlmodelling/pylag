@@ -100,7 +100,7 @@ class OPTModel_test3(TestCase):
         config.set('GENERAL', 'log_level', 'info')
         config.add_section("SIMULATION")
         config.set('SIMULATION', 'initialisation_method', 'init_file')
-        config.set('SIMULATION', 'depth_coordinates', 'depth_below_surface')
+        config.set('SIMULATION', 'depth_coordinates', 'height_above_bottom')
         config.add_section("NUMERICS")
         config.set('NUMERICS', 'num_method', 'test')
         config.add_section("OCEAN_CIRCULATION_MODEL")
@@ -119,7 +119,7 @@ class OPTModel_test3(TestCase):
         group_ids = np.array([1])
         x_positions = np.array([0.5])
         y_positions = np.array([0.5])
-        z_positions = np.array([-1.1])
+        z_positions = np.array([-0.1])
         time = 0.0
         self.model.set_particle_data(group_ids, x_positions, y_positions, z_positions)
         self.assertRaises(ValueError, self.model.seed, time)
