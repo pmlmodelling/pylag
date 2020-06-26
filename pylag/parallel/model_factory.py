@@ -3,6 +3,7 @@ Module containing factory method for Model Objects
 """
 
 from pylag.model import OPTModel
+from pylag.arakawa_a_data_reader import ArakawaADataReader
 from pylag.fvcom_data_reader import FVCOMDataReader
 from pylag.gotm_data_reader import GOTMDataReader
 
