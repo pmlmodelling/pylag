@@ -14,7 +14,7 @@ before_install:
   - conda update --yes conda
 
 install:
-  - conda install conda-build conda-verify
+  - conda install -y conda-build conda-verify
   - conda config --append channels conda-forge
   - conda config --append channels JimClark
 
