@@ -1,0 +1,34 @@
+language: python
+
+matrix:
+  include:
+    - python: 3.6
+    - python: 3.7
+    - python: 3.8
+
+before_install:
+  # Install the latest version of Miniconda
+  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+  - chmod +x miniconda.sh
+  - ./miniconda.sh -b
+  - export PATH=/home/travis/miniconda/bin:$PATH
+  - conda update --yes conda
+
+install:
+  - conda install conda-build conda-verify
+  - conda config --append channels conda-forge
+  - conda config --append channels JimClark
+
+  # Build the conda recipe for this package
+  - conda build -q --no-test meta.yaml --python=$TRAVIS_PYTHON_VERSION --output-folder bld-dir
+
+  # Add the built package as a channel with highest priority
+  - conda config --add channels "file://`pwd`/bld-dir"
+
+  # Create and activate the test environment
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pylag
+  - source activate test-environment
+
+script:
+    - nose2 -C -s pylag/tests
+
