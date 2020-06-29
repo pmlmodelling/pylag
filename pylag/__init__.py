@@ -13,7 +13,3 @@ Conact:
 James Clark (Plymouth Marine Laboratory). Email: jcl@pml.ac.uk
 """
 
-
-__all__ = ['parallel',
-           'processing',
-           'main']
