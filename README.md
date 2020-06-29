@@ -1,4 +1,7 @@
-# Updated 24th April 2020
+[![Build Status](https://travis-ci.com/jimc101/PyLag.svg?token=xhJEih8gZ2xQGCcgLLsu&branch=master)](https://travis-ci.com/jimc101/PyLag)
+[![Anaconda-Server Badge](https://anaconda.org/jimclark/pylag/badges/installer/conda.svg)](https://conda.anaconda.org/jimclark)
+[![Anaconda-Server Badge](https://anaconda.org/jimclark/pylag/badges/downloads.svg)](https://anaconda.org/jimclark/pylag)
+
 
 PyLag is an offline particle tracking model. The model expects as inputs time independent and/or dependent variables that describe the state of a given fluid. These may be measured quantities or the predictions of an analytical or numerical model. Using these, the model computes Lagrangian trajectories for particles released into the fluid at a particular point in time and space. The model is primarily aimed at marine applications, but is intended to be versatile enough to be extended to other contexts; for example, studies of atmospheric dispersion.
 
