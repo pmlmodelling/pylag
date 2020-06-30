@@ -299,7 +299,9 @@ cdef class OPTModel:
                 # next. This should be fast if particle initial positions are collocated.
                 host_elements = particle_smart_ptr.get_all_host_horizontal_elems()
             else:
-                particle_smart_ptr.get_ptr().clear_host_horizontal_elems()
+                # Flag host elements as being invalid
+                for grid_name in self.get_grid_names():
+                    particle_smart_ptr.set_host_horizontal_elem(grid_name, INT_ERR)
                 particle_smart_ptr.get_ptr().set_in_domain(False)
                 self.particle_seed_smart_ptrs.append(particle_smart_ptr)
 
