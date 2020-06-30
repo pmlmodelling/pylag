@@ -11,8 +11,9 @@ from libcpp.vector cimport vector
 from libcpp.string cimport string
 
 # Data types
-from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
+from pylag.data_types_python import INT_INVALID, FLOAT_INVALID
 
+from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 cdef class ParticleSmartPtr:
     """ Python object for managing the memory associated with Particle objects
@@ -21,14 +22,14 @@ cdef class ParticleSmartPtr:
     the lifetime of a ParticleSmartPtr object.
     """
     
-    def __cinit__(self, DTYPE_INT_t group_id=-999, DTYPE_FLOAT_t x1=-999., 
-                  DTYPE_FLOAT_t x2=-999., DTYPE_FLOAT_t x3=-999., phis={},
-                  DTYPE_FLOAT_t omega_interfaces=-999.,
-                  DTYPE_FLOAT_t omega_layers=-999., bint in_domain=False,
+    def __cinit__(self, DTYPE_INT_t group_id=INT_INVALID, DTYPE_FLOAT_t x1=FLOAT_INVALID,
+                  DTYPE_FLOAT_t x2=FLOAT_INVALID, DTYPE_FLOAT_t x3=FLOAT_INVALID, phis={},
+                  DTYPE_FLOAT_t omega_interfaces=FLOAT_INVALID,
+                  DTYPE_FLOAT_t omega_layers=FLOAT_INVALID, bint in_domain=False,
                   DTYPE_INT_t is_beached=0, host_elements={},
-                  DTYPE_INT_t k_layer=-999, bint in_vertical_boundary_layer=False,
-                  DTYPE_INT_t k_lower_layer=-999, DTYPE_INT_t k_upper_layer=-999,
-                  DTYPE_INT_t id=-999, DTYPE_INT_t status=0, ParticleSmartPtr particle_smart_ptr=None):
+                  DTYPE_INT_t k_layer=INT_INVALID, bint in_vertical_boundary_layer=False,
+                  DTYPE_INT_t k_lower_layer=INT_INVALID, DTYPE_INT_t k_upper_layer=INT_INVALID,
+                  DTYPE_INT_t id=INT_INVALID, DTYPE_INT_t status=0, ParticleSmartPtr particle_smart_ptr=None):
 
         cdef ParticleSmartPtr _particle_smart_ptr
 
@@ -38,6 +39,7 @@ cdef class ParticleSmartPtr:
             self._particle = new Particle(deref(_particle_smart_ptr._particle))
 
         else:
+            # TODO drop use of default constructor here and make it private?
             self._particle = new Particle()
 
             # Overwrite with supplied optional arguments

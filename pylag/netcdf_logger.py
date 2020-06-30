@@ -12,7 +12,8 @@ try:
 except ImportError:
     import ConfigParser as configparser
 
-from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT 
+from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
+from pylag.data_types_python import INT_INVALID, FLOAT_INVALID
 
 from pylag import variable_library
 
@@ -99,15 +100,15 @@ class NetCDFLogger(object):
         self._ncfile.createDimension('time', None)
  
         # Add time variable
-        self._time = self._ncfile.createVariable('time', DTYPE_INT,('time',))
+        self._time = self._ncfile.createVariable('time', DTYPE_INT, ('time',))
         self._time.units = 'seconds since 1960-01-01 00:00:00'
         self._time.calendar = 'standard'
         self._time.long_name = 'Time'
 
         # Add particle group ids
-        self._group_id = self._ncfile.createVariable('group_id', DTYPE_INT,('particles',))
+        self._group_id = self._ncfile.createVariable('group_id', DTYPE_INT, ('particles',))
         self._group_id.long_name = 'Particle group ID'
-        
+
         # x1
         x1_var_name = variable_library.get_coordinate_variable_name(self.coordinate_system, 'x1')
         self._x1 = self._ncfile.createVariable(x1_var_name,
@@ -138,6 +139,7 @@ class NetCDFLogger(object):
                                                                     ('time', 'particles',), **self._ncopts)
             self._host_vars[grid_name].units = 'None'
             self._host_vars[grid_name].long_name = 'Host horizontal element on grid {}'.format(grid_name)
+            self._host_vars[grid_name].invalid = '{}'.format(INT_INVALID)
         
         # Add status variables
         self._in_domain = self._ncfile.createVariable('in_domain', 'i4', ('time', 'particles',), **self._ncopts)
@@ -152,22 +154,28 @@ class NetCDFLogger(object):
         self._is_beached.long_name = 'Is beached'
         
         # Add grid variables
-        self._h = self._ncfile.createVariable('h', DTYPE_FLOAT, ('time', 'particles',), **self._ncopts)
-        self._h.units = 'meters (m)'
-        self._h.long_name = 'Water depth'
+        self._h = self._ncfile.createVariable('h', variable_library.get_data_type('h'),
+                                              ('time', 'particles',), **self._ncopts)
+        self._h.units = variable_library.get_units('h')
+        self._h.long_name = variable_library.get_long_name('h')
+        self._h.invalid = '{}'.format(variable_library.get_invalid_value('h'))
         
-        self._zeta = self._ncfile.createVariable('zeta', DTYPE_FLOAT, ('time', 'particles',), **self._ncopts)
-        self._zeta.units = 'meters (m)'
-        self._zeta.long_name = 'Sea surface elevation'
+        self._zeta = self._ncfile.createVariable('zeta', variable_library.get_data_type('zeta'),
+                                                 ('time', 'particles',), **self._ncopts)
+        self._zeta.units = variable_library.get_units('zeta')
+        self._zeta.long_name = variable_library.get_long_name('zeta')
+        self._zeta.invalid = '{}'.format(variable_library.get_invalid_value('zeta'))
 
         for var_name in self.environmental_variables:
             data_type = variable_library.get_data_type(var_name)
             units = variable_library.get_units(var_name)
             long_name = variable_library.get_long_name(var_name)
+            invalid = variable_library.get_invalid_value(var_name)
 
             self._env_vars[var_name] = self._ncfile.createVariable(var_name, data_type, ('time', 'particles',), **self._ncopts)
             self._env_vars[var_name].units = units
             self._env_vars[var_name].long_name = long_name
+            self._env_vars[var_name].invalid = '{}'.format(invalid)
 
     def write_group_ids(self, group_ids):
         """ Write particle group IDs to file

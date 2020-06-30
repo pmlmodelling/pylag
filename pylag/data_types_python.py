@@ -13,3 +13,6 @@ import numpy as np
 
 DTYPE_FLOAT = np.float64
 DTYPE_INT = np.int64
+
+FLOAT_INVALID = np.ma.default_fill_value(np.dtype(DTYPE_FLOAT))
+INT_INVALID = -999

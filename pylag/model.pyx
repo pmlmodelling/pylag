@@ -21,6 +21,10 @@ except ImportError:
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
+# Error flagging
+from pylag.data_types_python import INT_INVALID, FLOAT_INVALID
+from pylag.variable_library import get_invalid_value
+
 from pylag.numerics import get_num_method
 
 from libcpp.vector cimport vector
@@ -301,7 +305,7 @@ cdef class OPTModel:
             else:
                 # Flag host elements as being invalid
                 for grid_name in self.get_grid_names():
-                    particle_smart_ptr.set_host_horizontal_elem(grid_name, INT_ERR)
+                    particle_smart_ptr.set_host_horizontal_elem(grid_name, INT_INVALID)
                 particle_smart_ptr.get_ptr().set_in_domain(False)
                 self.particle_seed_smart_ptrs.append(particle_smart_ptr)
 
@@ -408,8 +412,8 @@ cdef class OPTModel:
                 h = self.data_reader.get_zmin(time, particle_smart_ptr.get_ptr())
                 zeta = self.data_reader.get_zmax(time, particle_smart_ptr.get_ptr())
             else:
-                h = FLOAT_ERR
-                zeta = FLOAT_ERR
+                h = get_invalid_value('h')
+                zeta = get_invalid_value('zeta')
             diags['h'].append(h)
             diags['zeta'].append(zeta)
 
@@ -419,7 +423,7 @@ cdef class OPTModel:
                     var = self.data_reader.get_environmental_variable(var_name, time, particle_smart_ptr.get_ptr())
                     diags[var_name].append(var)
                 else:
-                    diags[var_name].append(FLOAT_ERR)
+                    diags[var_name].append(get_invalid_value(var_name))
 
         return diags
 

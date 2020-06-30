@@ -10,6 +10,7 @@ PyLag names (e.g. "temperature") to those used in different types
 of input data (e.g. "temp" in FVCOM).
 """
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
+from pylag.data_types_python import INT_INVALID, FLOAT_INVALID
 
 
 def get_data_type(var_name):
@@ -63,6 +64,23 @@ def get_long_name(var_name):
     return _variable_long_names[var_name]
 
 
+def get_invalid_value(var_name):
+    """ Get value used for invalid entries
+
+    Parameters
+    ----------
+    var_name : str
+        The variable's name
+
+    Returns
+    -------
+     : int, float
+         Value of invalid values
+
+    """
+    return _variable_invalid_values[var_name]
+
+
 def get_coordinate_variable_name(coordinate_system, variable_name):
     """ Get coordinate variable name
 
@@ -92,6 +110,7 @@ def get_coordinate_variable_name(coordinate_system, variable_name):
 _variable_data_types = {}
 _variable_units = {}
 _variable_long_names = {}
+_variable_invalid_values = {}
 
 
 # Particle group ID
@@ -143,6 +162,22 @@ _variable_units['depth'] = 'm'
 _variable_long_names['depth'] = 'depth'
 
 
+# Extra grid variables
+# --------------------
+
+# h
+_variable_data_types['h'] = DTYPE_FLOAT
+_variable_units['h'] = 'meters (m)'
+_variable_long_names['h'] = 'Water depth'
+_variable_invalid_values['h'] = FLOAT_INVALID
+
+# zeta
+_variable_data_types['zeta'] = DTYPE_FLOAT
+_variable_units['zeta'] = 'meters (m)'
+_variable_long_names['zeta'] = 'Sea surface elevation'
+_variable_invalid_values['zeta'] = FLOAT_INVALID
+
+
 # Environmental variables
 # -----------------------
 
@@ -150,16 +185,19 @@ _variable_long_names['depth'] = 'depth'
 _variable_data_types['thetao'] = DTYPE_FLOAT
 _variable_units['thetao'] = 'degC'
 _variable_long_names['thetao'] = 'Sea Water Potential Temperature'
+_variable_invalid_values['thatao'] = FLOAT_INVALID
 
 # so
 _variable_data_types['so'] = DTYPE_FLOAT
 _variable_units['so'] = 'psu'
 _variable_long_names['so'] = 'Sea Water Salinity'
+_variable_invalid_values['so'] = FLOAT_INVALID
 
 # rsdo
 _variable_data_types['rsdo'] = DTYPE_FLOAT
 _variable_units['rsdo'] = 'W m-2'
 _variable_long_names['rsdo'] = 'Downwelling Shortwave Radiation in Sea Water '
+_variable_invalid_values['rsdo'] = FLOAT_INVALID
 
 # Standard name mappings
 standard_variable_names = {'thetao': 'thetao', 'so': 'so'}
@@ -174,4 +212,5 @@ gotm_variable_names = {'thetao': 'temp', 'so': 'salt', 'rsdo': 'rad'}
 __all__ = ['get_data_type',
            'get_units',
            'get_long_name',
+           'get_invalid_value',
            'get_coordinate_variable_name']
