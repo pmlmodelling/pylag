@@ -213,13 +213,18 @@ cdef class StdNumMethod(NumMethod):
         if self._depth_restoring is True:
             zmax = data_reader.get_zmax(time+self._time_step, &_particle_copy)
             _particle_copy.set_x3(self._fixed_depth_below_surface + zmax)
-            
-            # Determine the new host zlayer
-            flag = data_reader.set_vertical_grid_vars(time+self._time_step, &_particle_copy)
 
-            # Return if failure recorded
-            if flag != IN_DOMAIN:
-                return flag
+            # Only try to set vertical grid vars if the particle is not beached
+            if data_reader.is_wet(time+self._time_step, &_particle_copy) == 1:
+
+                # Determine the new host zlayer
+                flag = data_reader.set_vertical_grid_vars(time+self._time_step, &_particle_copy)
+
+                # Return if failure recorded
+                if flag != IN_DOMAIN:
+                    return flag
+            else:
+                _particle_copy.set_is_beached(1)
 
             # Copy back particle properties
             particle[0] = _particle_copy
@@ -423,6 +428,15 @@ cdef class OS0NumMethod(NumMethod):
             if flag == BDY_ERROR:
                 return flag
 
+        # Check to see if the particle has beached
+        if data_reader.is_wet(time, &_particle_copy_a) == 0:
+            _particle_copy_a.set_is_beached(1)
+
+            particle[0] = _particle_copy_a
+
+            return flag
+
+
         # Diffusion
         # ---------
 
@@ -461,6 +475,14 @@ cdef class OS0NumMethod(NumMethod):
                 if flag == BDY_ERROR:
                     return flag
 
+            # Check to see if the particle has beached
+            if data_reader.is_wet(t+self._diff_time_step, &_particle_copy_b) == 0:
+                _particle_copy_b.set_is_beached(1)
+
+                particle[0] = _particle_copy_b
+
+                return flag
+
             # Save the particle's last position to help with host element searching
             _particle_copy_a = _particle_copy_b
 
@@ -469,12 +491,22 @@ cdef class OS0NumMethod(NumMethod):
             zmax = data_reader.get_zmax(time+self._adv_time_step, &_particle_copy_b)
             _particle_copy_b.set_x3(self._fixed_depth_below_surface + zmax)
             
-            # Determine the new host zlayer
-            flag = data_reader.set_vertical_grid_vars(time+self._adv_time_step, &_particle_copy_b)
+            # Only try to set vertical grid vars if the particle is not beached
+            if data_reader.is_wet(time+self._adv_time_step, &_particle_copy_b) == 1:
 
-            # Return if failure recorded
-            if flag != IN_DOMAIN:
-                return flag
+                # Determine the new host zlayer
+                flag = data_reader.set_vertical_grid_vars(time+self._adv_time_step, &_particle_copy_b)
+
+                # Return if failure recorded
+                if flag != IN_DOMAIN:
+                    return flag
+
+            else:
+                _particle_copy_b.set_is_beached(1)
+
+            particle[0] = _particle_copy_b
+
+            return flag
 
         # Check to see if the particle has beached
         if data_reader.is_wet(time+self._adv_time_step, &_particle_copy_b) == 0:
@@ -642,6 +674,14 @@ cdef class OS1NumMethod(NumMethod):
             if flag == BDY_ERROR:
                 return flag
 
+        # Check is beached status
+        if data_reader.is_wet(time, &_particle_copy_a) == 0:
+            _particle_copy_a.set_is_beached(1)
+
+            particle[0] = _particle_copy_a
+
+            return flag
+
         # Advection step
         # --------------
 
@@ -686,6 +726,14 @@ cdef class OS1NumMethod(NumMethod):
             if flag == BDY_ERROR:
                 return flag
 
+        # Check is beached status
+        if data_reader.is_wet(t, &_particle_copy_b) == 0:
+            _particle_copy_a.set_is_beached(1)
+
+            particle[0] = _particle_copy_b
+
+            return flag
+
         # Save the particle's last position to help with host element searching
         _particle_copy_a = _particle_copy_b
 
@@ -717,13 +765,18 @@ cdef class OS1NumMethod(NumMethod):
         if self._depth_restoring is True:
             zmax = data_reader.get_zmax(t, &_particle_copy_b)
             _particle_copy_b.set_x3(self._fixed_depth_below_surface + zmax)
-            
-            # Determine the new host zlayer
-            flag = data_reader.set_vertical_grid_vars(t, &_particle_copy_b)
 
-            # Return if failure recorded
-            if flag != IN_DOMAIN:
-                return flag
+            if data_reader.is_wet(t, &_particle_copy_b) == 0:
+
+                # Determine the new host zlayer
+                flag = data_reader.set_vertical_grid_vars(t, &_particle_copy_b)
+
+                # Return if failure recorded
+                if flag != IN_DOMAIN:
+                    return flag
+
+            else:
+                _particle_copy_b.set_is_beached(1)
 
             # Copy back particle properties
             particle[0] = _particle_copy_b
@@ -910,7 +963,14 @@ cdef class AdvRK42DItMethod(ItMethod):
         if flag != IN_DOMAIN:
             return flag
 
-        data_reader.get_horizontal_velocity(t, &_particle, vel) 
+        # Check for wet/dry status - return early if the particle has beached
+        if data_reader.is_wet(t, &_particle) == 0:
+            delta_X.x1 = k1[0]/6.0
+            delta_X.x2 = k1[1]/6.0
+
+            return flag
+
+        data_reader.get_horizontal_velocity(t, &_particle, vel)
         for i in xrange(ndim):
             k2[i] = self._time_step * vel[i]
         _particle.set_x1(particle.get_x1())
@@ -933,6 +993,13 @@ cdef class AdvRK42DItMethod(ItMethod):
         # Update particle local coordinates
         flag = data_reader.set_vertical_grid_vars(t, &_particle)
         if flag != IN_DOMAIN:
+            return flag
+
+        # Check for wet/dry status - return early if the particle has beached
+        if data_reader.is_wet(t, &_particle) == 0:
+            delta_X.x1 = (k1[0] + 2.0*k2[0])/6.0
+            delta_X.x2 = (k1[1] + 2.0*k2[1])/6.0
+
             return flag
 
         data_reader.get_horizontal_velocity(t, &_particle, vel)
@@ -959,6 +1026,13 @@ cdef class AdvRK42DItMethod(ItMethod):
         # Update particle local coordinates
         flag = data_reader.set_vertical_grid_vars(t, &_particle)
         if flag != IN_DOMAIN:
+            return flag
+
+        # Check for wet/dry status - return early if the particle has beached
+        if data_reader.is_wet(t, &_particle) == 0:
+            delta_X.x1 = (k1[0] + 2.0*k2[0] + 2.0*k3[0])/6.0
+            delta_X.x2 = (k1[1] + 2.0*k2[1] + 2.0*k3[1])/6.0
+
             return flag
 
         data_reader.get_horizontal_velocity(t, &_particle, vel)
@@ -1098,6 +1172,14 @@ cdef class AdvRK43DItMethod(ItMethod):
             if flag == BDY_ERROR:
                 return flag
 
+        # Check for wet/dry status - return early if the particle has beached
+        if data_reader.is_wet(t, &_particle) == 0:
+            delta_X.x1 = k1[0]/6.0
+            delta_X.x2 = k1[1]/6.0
+            delta_X.x3 = k1[2]/6.0
+
+            return flag
+
         data_reader.get_velocity(t, &_particle, vel)
         for i in xrange(ndim):
             k2[i] = self._time_step * vel[i]
@@ -1132,6 +1214,14 @@ cdef class AdvRK43DItMethod(ItMethod):
             # Return if failure recorded
             if flag == BDY_ERROR:
                 return flag
+
+        # Check for wet/dry status - return early if the particle has beached
+        if data_reader.is_wet(t, &_particle) == 0:
+            delta_X.x1 = (k1[0] + 2.0*k2[0])/6.0
+            delta_X.x2 = (k1[1] + 2.0*k2[1])/6.0
+            delta_X.x3 = (k1[2] + 2.0*k2[2])/6.0
+
+            return flag
 
         data_reader.get_velocity(t, &_particle, vel)
         for i in xrange(ndim):
@@ -1168,14 +1258,22 @@ cdef class AdvRK43DItMethod(ItMethod):
             if flag == BDY_ERROR:
                 return flag
 
+        # Check for wet/dry status - return early if the particle has beached
+        if data_reader.is_wet(t, &_particle) == 0:
+            delta_X.x1 = (k1[0] + 2.0*k2[0] + 2.0*k3[0])/6.0
+            delta_X.x2 = (k1[1] + 2.0*k2[1] + 2.0*k3[1])/6.0
+            delta_X.x3 = (k1[2] + 2.0*k2[2] + 2.0*k3[2])/6.0
+
+            return flag
+
         data_reader.get_velocity(t, &_particle, vel)
         for i in xrange(ndim):
             k4[i] = self._time_step * vel[i]
 
         # Sum changes and save
-        delta_X.x1 += (k1[0] + 2.0*k2[0] + 2.0*k3[0] + k4[0])/6.0
-        delta_X.x2 += (k1[1] + 2.0*k2[1] + 2.0*k3[1] + k4[1])/6.0
-        delta_X.x3 += (k1[2] + 2.0*k2[2] + 2.0*k3[2] + k4[2])/6.0
+        delta_X.x1 = (k1[0] + 2.0*k2[0] + 2.0*k3[0] + k4[0])/6.0
+        delta_X.x2 = (k1[1] + 2.0*k2[1] + 2.0*k3[1] + k4[1])/6.0
+        delta_X.x3 = (k1[2] + 2.0*k2[2] + 2.0*k3[2] + k4[2])/6.0
 
         return flag
 

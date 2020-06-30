@@ -276,11 +276,15 @@ cdef class RefVertBoundaryConditionCalculator(VertBoundaryConditionCalculator):
         zmax = data_reader.get_zmax(time, particle)
         x3 = particle.get_x3()
 
-        while x3 < zmin or x3 > zmax:
-            if x3 < zmin:
-                x3 = zmin + zmin - x3
-            elif x3 > zmax:
-                x3 = zmax + zmax - x3
+        if zmin < zmax:
+            while x3 < zmin or x3 > zmax:
+                if x3 < zmin:
+                    x3 = zmin + zmin - x3
+                elif x3 > zmax:
+                    x3 = zmax + zmax - x3
+        else:
+            # Cell is dry. Place the particle on the sea floor.
+            x3 = zmin
 
         particle.set_x3(x3)
 
