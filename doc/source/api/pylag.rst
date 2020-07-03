@@ -32,7 +32,6 @@ Submodules
    pylag.mock
    pylag.model
    pylag.model_factory
-   pylag.model_test_helpers
    pylag.netcdf_logger
    pylag.numerics
    pylag.parameters
