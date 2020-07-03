@@ -98,7 +98,7 @@ class FileReader_test(TestCase):
 
     def setUp(self):
         # Create config
-        self.config = configparser.SafeConfigParser()
+        self.config = configparser.ConfigParser()
         self.config.add_section("OCEAN_CIRCULATION_MODEL")
         self.config.set('OCEAN_CIRCULATION_MODEL', 'name', 'TEST')
         self.config.set('OCEAN_CIRCULATION_MODEL', 'data_dir', '')

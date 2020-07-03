@@ -49,7 +49,7 @@ cdef class OPTModel:
 
     Parameters
     ----------
-    config : configparser.SafeConfigParser
+    config : configparser.ConfigParser
         PyLag configuration object
 
     data_reader : pylag.data_reader.DataReader

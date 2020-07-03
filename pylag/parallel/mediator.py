@@ -28,7 +28,7 @@ class MPIMediator(Mediator):
 
     Parameters
     ----------
-    config : SafeConfigParser
+    config : ConfigParser
         Run configuration object
 
     start_datetime : Datetime
@@ -39,7 +39,7 @@ class MPIMediator(Mediator):
 
     Attributes
     ----------
-    config : SafeConfigParser
+    config : ConfigParser
         Run configuration object
 
     file_reader : pylag.FileReader

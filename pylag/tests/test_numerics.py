@@ -11,7 +11,7 @@ class Numerics_test(TestCase):
 
     def test_set_valid_OSONumMethod_advection_and_diffusion_time_steps(self):
         # Create config
-        config = configparser.SafeConfigParser()
+        config = configparser.ConfigParser()
 
         config.add_section("SIMULATION")
         config.set("SIMULATION", "depth_restoring", 'False')
@@ -38,7 +38,7 @@ class Numerics_test(TestCase):
 
     def test_set_invalid_OSONumMethod_diffusion_time_step_that_is_greater_than_the_advection_time_step(self):
         # Create config
-        config = configparser.SafeConfigParser()
+        config = configparser.ConfigParser()
 
         config.add_section("SIMULATION")
         config.set("SIMULATION", "depth_restoring", 'False')
@@ -65,7 +65,7 @@ class Numerics_test(TestCase):
 
     def test_set_invalid_OS0NumMethod_diffusion_time_step_that_is_not_an_exact_multiple_of_the_advection_time_step(self):
         # Create config
-        config = configparser.SafeConfigParser()
+        config = configparser.ConfigParser()
 
         config.add_section("SIMULATION")
         config.set("SIMULATION", "depth_restoring", 'False')
@@ -92,7 +92,7 @@ class Numerics_test(TestCase):
 
     def test_set_valid_OS1NumMethod_advection_and_diffusion_time_steps(self):
         # Create config
-        config = configparser.SafeConfigParser()
+        config = configparser.ConfigParser()
 
         config.add_section("SIMULATION")
         config.set("SIMULATION", "depth_restoring", 'False')
@@ -119,7 +119,7 @@ class Numerics_test(TestCase):
 
     def test_set_invalid_OS1NumMethod_diffusion_time_step_that_is_not_equal_to_half_the_advection_time_step(self):
         # Create config
-        config = configparser.SafeConfigParser()
+        config = configparser.ConfigParser()
 
         config.add_section("SIMULATION")
         config.set("SIMULATION", "depth_restoring", 'False')

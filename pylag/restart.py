@@ -23,7 +23,7 @@ class RestartFileCreator(object):
 
     Parameters
     ----------
-    config : SafeConfigParser
+    config : ConfigParser
         Configuration obect.
     """
 

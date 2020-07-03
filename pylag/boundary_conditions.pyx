@@ -313,7 +313,7 @@ def get_horiz_boundary_condition_calculator(config):
 
     Parameters
     ----------
-    config : SafeConfigParser
+    config : ConfigParser
         PyLag configuraton object
 
     Returns
@@ -339,7 +339,7 @@ def get_vert_boundary_condition_calculator(config):
 
     Parameters
     ----------
-    config : SafeConfigParser
+    config : ConfigParser
         PyLag configuraton object
 
     Returns

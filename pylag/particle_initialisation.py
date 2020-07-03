@@ -40,7 +40,7 @@ class ASCIIInitialParticleStateReader(InitialParticleStateReader):
 
     Parameters
     ----------
-    config : configparser.SafeConfigParser
+    config : configparser.ConfigParser
         Configuration object
 
     TODO
@@ -99,7 +99,7 @@ class RestartInitialParticleStateReader(InitialParticleStateReader):
 
     Parameters
     ----------
-    config : configparser.SafeConfigParser
+    config : configparser.ConfigParser
         Configuration object
     """
     def __init__(self, config):
@@ -166,7 +166,7 @@ def get_initial_particle_state_reader(config):
 
     Parameters
     ----------
-    config : configparser.SafeConfigParser
+    config : configparser.ConfigParser
         Configuraiton object
 
     Returns

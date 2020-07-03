@@ -120,7 +120,7 @@ class FVCOMDataReader_test(TestCase):
 
     def setUp(self):
         # Create config
-        config = configparser.SafeConfigParser()
+        config = configparser.ConfigParser()
         config.add_section("GENERAL")
         config.set('GENERAL', 'log_level', 'info')
         config.add_section("SIMULATION")
@@ -605,7 +605,7 @@ class FVCOMReflectingHorizBoundaryCondition_test(TestCase):
 
     def setUp(self):
         # Create config
-        config = configparser.SafeConfigParser()
+        config = configparser.ConfigParser()
         config.add_section("GENERAL")
         config.set('GENERAL', 'log_level', 'info')
         config.add_section("SIMULATION")
@@ -678,7 +678,7 @@ class FVCOMReflectingVertBoundaryCondition_test(TestCase):
 
     def setUp(self):
         # Create config
-        config = configparser.SafeConfigParser()
+        config = configparser.ConfigParser()
         config.add_section("GENERAL")
         config.set('GENERAL', 'log_level', 'info')
         config.add_section("SIMULATION")

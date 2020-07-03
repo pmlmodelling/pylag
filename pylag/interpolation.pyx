@@ -191,7 +191,7 @@ def get_interpolator(config, n_elems):
 
         Parameters
         ----------
-        config : SafeConfigParser
+        config : ConfigParser
             Configuration object.
         
         n_elems : int

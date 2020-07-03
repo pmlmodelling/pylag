@@ -25,7 +25,7 @@ cdef class TimeManager(object):
 
     Parameters
     ----------
-    config : configparser.SafeConfigParser
+    config : configparser.ConfigParser
         PyLag configuration object.
 
     """

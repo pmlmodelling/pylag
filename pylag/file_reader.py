@@ -40,7 +40,7 @@ class FileReader:
 
     Parameters
     ----------
-    config : SafeConfigParser
+    config : ConfigParser
         Configuration object.
 
     datetime_start : Datetime
@@ -51,7 +51,7 @@ class FileReader:
 
     Attributes
     ----------
-    config : SafeConfigParser
+    config : ConfigParser
         Run configuration object.
 
     file_name_reader : FileNameReader
@@ -811,7 +811,7 @@ def get_datetime_reader(config):
 
     Parameters
     ----------
-    config : SafeConfigParser
+    config : ConfigParser
         Configuration object
 
     Returns
@@ -860,7 +860,7 @@ class DefaultDateTimeReader(DateTimeReader):
 
     Parameters
     ----------
-    config : SafeConfigParser
+    config : ConfigParser
         A run configuration object,
     """
 
@@ -921,7 +921,7 @@ class FVCOMDateTimeReader(DateTimeReader):
 
     Parameters
     ----------
-    config : SafeConfigParser
+    config : ConfigParser
         A run configuration object,
     """
 

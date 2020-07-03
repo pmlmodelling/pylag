@@ -28,7 +28,7 @@ def get_simulator(config):
 
     Parameters
     ----------
-    config : SafeConfigParser
+    config : ConfigParser
         PyLag configuraton object
 
     Returns
@@ -61,7 +61,7 @@ class TraceSimulator(Simulator):
 
     Parameters
     ----------
-    config : SafeConfigParser
+    config : ConfigParser
         PyLag configuraton object
     """
     def __init__(self, config):

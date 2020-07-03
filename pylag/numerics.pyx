@@ -1997,7 +1997,7 @@ def get_time_direction(config):
 
     Parameters
     ----------
-    config : configparser.SafeConfigParser
+    config : configparser.ConfigParser
         Configuration object
 
     Returns

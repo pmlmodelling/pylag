@@ -25,7 +25,7 @@ class NetCDFLogger(object):
 
     Parameters
     ----------
-    config : SafeConfigParser
+    config : ConfigParser
         Configuration object
 
     file_name : str

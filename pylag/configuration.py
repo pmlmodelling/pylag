@@ -2,7 +2,7 @@
 PyLag runtime configuration options are set in a dedicated run configuration
 file, which typically has a name like "pylag.cfg". The run configuration file
 is formatted for configparser, which is used here to read in the configuration
-file. A object of type SafeConfigParser is saved as a module level variable
+file. A object of type ConfigParser is saved as a module level variable
 with a reference returned to the caller. This structure allows the same
 ConfigParser to be passed to all PyLag objects that use information within
 the PyLag configuration file during class initialisation.
@@ -32,7 +32,7 @@ def get_config(config_filename=None):
 
     Returns
     -------
-    _config : SafeConfigParser
+    _config : ConfigParser
         The ConfigParser.
 
     Raises
@@ -45,7 +45,7 @@ def get_config(config_filename=None):
     global _config
     if _config is None:
         # Create new configuration object
-        _config = configparser.SafeConfigParser()
+        _config = configparser.ConfigParser()
         
         if config_filename:
             _config.read(config_filename)

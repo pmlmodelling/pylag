@@ -55,7 +55,7 @@ cdef class ArakawaADataReader(DataReader):
     
     Parameters
     ----------
-    config : SafeConfigParser
+    config : ConfigParser
         Configuration object.
     
     mediator : Mediator

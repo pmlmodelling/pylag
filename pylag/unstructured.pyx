@@ -45,7 +45,7 @@ cdef class UnstructuredGrid:
 
     Parameters
     ----------
-    config : configparser.SafeConfigParser
+    config : configparser.ConfigParser
         PyLag configuration object.
 
     name : str

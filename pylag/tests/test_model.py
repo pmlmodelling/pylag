@@ -17,7 +17,7 @@ class OPTModel_test1(TestCase):
 
     def setUp(self):
         # Create config
-        config = configparser.SafeConfigParser()
+        config = configparser.ConfigParser()
         config.add_section("GENERAL")
         config.set('GENERAL', 'log_level', 'info')
         config.add_section("SIMULATION")
@@ -56,7 +56,7 @@ class OPTModel_test2(TestCase):
 
     def setUp(self):
         # Create config
-        config = configparser.SafeConfigParser()
+        config = configparser.ConfigParser()
         config.add_section("GENERAL")
         config.set('GENERAL', 'log_level', 'info')
         config.add_section("SIMULATION")
@@ -95,7 +95,7 @@ class OPTModel_test3(TestCase):
 
     def setUp(self):
         # Create config
-        config = configparser.SafeConfigParser()
+        config = configparser.ConfigParser()
         config.add_section("GENERAL")
         config.set('GENERAL', 'log_level', 'info')
         config.add_section("SIMULATION")

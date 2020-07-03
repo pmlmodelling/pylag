@@ -66,7 +66,7 @@ class GOTMDataReader_test(TestCase):
 
     def setUp(self):
         # Create config
-        config = configparser.SafeConfigParser()
+        config = configparser.ConfigParser()
         config.add_section("SIMULATION")
         config.set('SIMULATION', 'time_direction', 'forward')
         config.add_section("OCEAN_CIRCULATION_MODEL")
@@ -261,7 +261,7 @@ class GOTMReflectingVertBoundaryCondition_test(TestCase):
 
     def setUp(self):
         # Create config
-        config = configparser.SafeConfigParser()
+        config = configparser.ConfigParser()
         config.add_section("SIMULATION")
         config.set('SIMULATION', 'time_direction', 'forward')
         config.add_section("OCEAN_CIRCULATION_MODEL")

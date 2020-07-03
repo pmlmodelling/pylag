@@ -16,7 +16,7 @@ def get_model(config, datetime_start, datetime_end):
 
     Parameters
     ----------
-    config : SafeConfigParser
+    config : ConfigParser
         Configuration object
 
     datetime_start : Datetime

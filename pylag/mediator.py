@@ -216,7 +216,7 @@ class SerialMediator(Mediator):
 
     Parameters
     ----------
-    config : SafeConfigParser
+    config : ConfigParser
         Run configuration object
 
     start_datetime : Datetime
@@ -227,7 +227,7 @@ class SerialMediator(Mediator):
 
     Attributes
     ----------
-    config : SafeConfigParser
+    config : ConfigParser
         Run configuration object
 
     file_reader : pylag.FileReader
