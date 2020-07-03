@@ -5,7 +5,7 @@ from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 from libcpp.vector cimport vector
 
-from spline cimport spline
+from pylag.spline cimport spline
 
 cdef class SplineWrapper:
     cdef spline c_spline

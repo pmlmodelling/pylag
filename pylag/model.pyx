@@ -19,7 +19,7 @@ except ImportError:
 
 # Data types used for constructing C data structures
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
-from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
+from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 # Error flagging
 from pylag.data_types_python import INT_INVALID, FLOAT_INVALID
@@ -349,7 +349,7 @@ cdef class OPTModel:
                           "and its position will no longer be updated. The following \n"\
                           "information may be used to study the failure in more detail. \n\n"\
                           "{}".format(time, s)
-                    print msg
+                    print(msg)
 
                     particle_ptr.set_in_domain(False)
                     particle_ptr.set_status(1)

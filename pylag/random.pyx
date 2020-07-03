@@ -16,7 +16,8 @@ import time
 
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
-cimport crandom
+from pylag cimport crandom
+
 
 cdef class Pymt19937:
     """Cython wrapper class for mt19937

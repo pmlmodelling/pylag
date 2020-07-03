@@ -153,18 +153,18 @@ if file_type == '.pyx':
     if build_type == 'prod':
         ext_modules = cythonize(extensions, include_path=['include'],
                 compiler_directives={'boundscheck': False,
-                'embedsignature': True})
+                    'embedsignature': True, 'language_level': '3str'})
     elif build_type == 'prof':
         ext_modules = cythonize(extensions, include_path=['include'],
               compiler_directives={'profile': True, 'linetrace': True,
-              'embedsignature': True})
+                  'embedsignature': True, 'language_level': '3str'})
     elif build_type == 'debug':
         ext_modules = cythonize(extensions, include_path=['include'],
               compiler_directives={'profile': True, 
               'linetrace': True, 'boundscheck': True,
               'cdivision_warnings': True, 'initializedcheck': True,
-              'nonecheck': True, 'embedsignature': True
-              }, gdb_debug=True, verbose=True)
+              'nonecheck': True, 'embedsignature': True,
+              'language_level': '3str'}, gdb_debug=True, verbose=True)
     else:
         raise ValueError('Unknown build_type {}'.format(build_type))
 elif file_type == '.cpp':

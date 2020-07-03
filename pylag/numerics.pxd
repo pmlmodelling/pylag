@@ -1,6 +1,6 @@
 include "constants.pxi"
 
-from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
+from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 # PyLag cimports
 from pylag.particle cimport Particle

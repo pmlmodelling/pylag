@@ -10,7 +10,7 @@ from cftime import num2pydate
 
 # Data types used for constructing C data structures
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
-from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
+from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 from pylag.numerics import get_global_time_step, get_time_direction
 

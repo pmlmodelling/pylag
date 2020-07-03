@@ -21,16 +21,16 @@ cimport numpy as np
 np.import_array()
 
 # Data types used for constructing C data structures
-from data_types_python import DTYPE_INT, DTYPE_FLOAT
-from data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
+from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
+from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 # PyLag python imports
 from pylag.numerics import get_num_method, get_adv_iterative_method, get_diff_iterative_method
 from pylag.boundary_conditions import get_vert_boundary_condition_calculator
 
-from particle cimport Particle
-from particle_cpp_wrapper cimport ParticleSmartPtr
-from data_reader cimport DataReader
+from pylag.particle cimport Particle
+from pylag.particle_cpp_wrapper cimport ParticleSmartPtr
+from pylag.data_reader cimport DataReader
 from pylag.delta cimport Delta, reset
 from pylag.numerics cimport NumMethod, ItMethod
 from pylag.boundary_conditions cimport VertBoundaryConditionCalculator

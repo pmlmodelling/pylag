@@ -30,8 +30,8 @@ from libcpp.string cimport string
 from libcpp.vector cimport vector
 
 # PyLag cython imports
-from particle cimport Particle
-from particle_cpp_wrapper cimport to_string
+from pylag.particle cimport Particle
+from pylag.particle_cpp_wrapper cimport to_string
 from pylag.data_reader cimport DataReader
 from pylag.unstructured cimport UnstructuredGrid
 cimport pylag.interpolation as interp

@@ -1,7 +1,7 @@
 # Data types
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
-from particle cimport Particle
+from pylag.particle cimport Particle
 
 
 cdef class ParticleSmartPtr:

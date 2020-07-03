@@ -28,8 +28,8 @@ from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 # PyLag cython imports
-from particle cimport Particle
-from particle_cpp_wrapper cimport to_string
+from pylag.particle cimport Particle
+from pylag.particle_cpp_wrapper cimport to_string
 from pylag.data_reader cimport DataReader
 cimport pylag.interpolation as interp
 from pylag.math cimport int_min, float_min, get_intersection_point
@@ -568,13 +568,12 @@ cdef class UnstructuredGrid:
             elif phi[i] >= -EPSILON:
                 phi[i] = 0.0
             else:
-                print phi[i]
                 s = to_string(particle)
                 msg = "One or more local coordinates are invalid (phi = {}) \n\n"\
                       "The following information may be used to study the \n"\
                       "failure in more detail. \n\n"\
                       "{}".format(phi[i], s)
-                print msg
+                print(msg)
 
                 raise ValueError('One or more local coordinates are negative')
 
