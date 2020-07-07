@@ -250,8 +250,8 @@ class PyLagPlotter:
         y : ND array
             Array of y coordinates to plot.
 
-        Returns:
-        --------
+        Returns
+        -------
         axes : matplotlib.axes.Axes
             Axes object
 
@@ -318,8 +318,8 @@ class PyLagPlotter:
         tick_inc : bool
             Draw ticks? Only used if geospatial_coords is True. Optional.
 
-        Returns:
-        --------
+        Returns
+        -------
         ax : matplotlib.axes.Axes
             Axes object
 
@@ -372,8 +372,8 @@ class PyLagPlotter:
         draw_masked_elements : bool
             Include masked elements. Default False.
 
-        Returns:
-        --------
+        Returns
+        -------
         ax : matplotlib.axes.Axes
             Axes object
         """
@@ -414,6 +414,434 @@ class PyLagPlotter:
         gl.ylabels_right=False
         gl.xlabels_bottom=True
         gl.ylabels_left=True
+
+        gl.xformatter = LONGITUDE_FORMATTER
+        gl.yformatter = LATITUDE_FORMATTER
+
+
+class ArakawaCPlotter:
+    """ Create PyLag plot objects based on Arakawa C-grid inputs
+
+    Class to assist in the creation of plots and animations for PyLag
+    simulations that used input data defined on an Arakawa C-grid.
+    The C-grid mesh is read from the run's grid metrics file, which must
+    be passed to ArakawaCPlotter during class initialisation.
+
+    Specifically, ArakawaCPlotter will work with:
+
+    1) Arakawa C-grid derived data
+
+    Parameters
+    ----------
+    grid_metrics_file : Dataset or str
+        This is the path to the PyLag grid metrics file or a NetCDF4 dataset
+        object that has been created from the grid metrics file.
+
+    geospatial_coords : boolean, optional
+        Boolean specifying whether or not to use cartopy to create a 2D map
+        on top of which the data will be plotted. The default option is
+        `True`. If `False`, a simple Cartesian grid is drawn instead.
+
+    font_size : int, optional
+        Font size to use when rendering plot text
+
+    line_width : float, optional
+        Default line width to use when plotting
+
+    """
+
+    def __init__(self, grid_metrics_file, geospatial_coords=True, font_size=10, line_width=0.2):
+        if isinstance(grid_metrics_file, Dataset):
+            ds = grid_metrics_file
+        elif isinstance(grid_metrics_file, str):
+            ds = Dataset(grid_metrics_file, 'r')
+        else:
+            raise ValueError("`grid_metrics_file` should be either a pre-constructed netCDF.Dataset or a srting " \
+                             "giving the path to a PyLag grid metrics file.")
+
+        self.geospatial_coords = geospatial_coords
+
+        self.font_size = font_size
+
+        self.line_width = line_width
+
+        # Initialise the figure
+        self.__init_figure(ds)
+
+        # Close the NetCDF file for reading
+        ds.close()
+        del ds
+
+    def __init_figure(self, ds):
+        # Initialise dictionaries
+        self.n_nodes = {}
+        self.n_elems = {}
+        self.nv = {}
+        self.maskc = {}
+        self.x = {}
+        self.y = {}
+        self.xc = {}
+        self.yc = {}
+        self.triangles = {}
+        self.tri = {}
+
+        # Read in the required grid variables per grid
+        for grid_name in ['grid_u', 'grid_v', 'grid_rho']:
+
+            # Check to see whether the file contains dimension variables for the given grid
+            has_grid_info = False
+            for dim_name in ds.dimensions.keys():
+                if grid_name in dim_name:
+                    has_grid_info = True
+                    break
+
+            # Pass on this grid if it is not present
+            if has_grid_info is False:
+                continue
+
+            self.n_nodes[grid_name] = len(ds.dimensions['node_{}'.format(grid_name)])
+            self.n_elems[grid_name] = len(ds.dimensions['element_{}'.format(grid_name)])
+            self.nv[grid_name] = ds.variables['nv_{}'.format(grid_name)][:]
+
+            # Try to read the element mask
+            try:
+                self.maskc[grid_name] = ds.variables['mask_{}'.format(grid_name)][:]
+            except KeyError:
+                self.maskc[grid_name] = None
+
+            if self.geospatial_coords:
+                self.x[grid_name] = ds.variables['longitude_{}'.format(grid_name)][:]
+                self.y[grid_name] = ds.variables['latitude_{}'.format(grid_name)][:]
+                self.xc[grid_name] = ds.variables['longitude_c_{}'.format(grid_name)][:]
+                self.yc[grid_name] = ds.variables['latitude_c_{}'.format(grid_name)][:]
+            else:
+                self.x[grid_name] = ds.variables['x_{}'.format(grid_name)][:]
+                self.y[grid_name] = ds.variables['y_{}'.format(grid_name)][:]
+                self.xc[grid_name] = ds.variables['xc_{}'.format(grid_name)][:]
+                self.yc[grid_name] = ds.variables['yc_{}'.format(grid_name)][:]
+
+            # Triangles
+            self.triangles[grid_name] = self.nv[grid_name].transpose()
+
+            # Store triangulation
+            self.tri[grid_name] = Triangulation(self.x[grid_name], self.y[grid_name], self.triangles[grid_name], mask=self.maskc[grid_name])
+
+    def _get_default_extents(self, grid_name):
+        return np.array([self.x[grid_name].min(),
+                         self.x[grid_name].max(),
+                         self.y[grid_name].min(),
+                         self.y[grid_name].max()])
+
+    def plot_field(self, ax, grid_name, field, update=False, configure=True, add_colour_bar=True, cb_label=None, tick_inc=True,
+                   extents=None, transform=ccrs.PlateCarree(), draw_coastlines=False, resolution='10m',
+                   **kwargs):
+        """ Map the supplied field
+
+        The field must be defined on the same triangular mesh that is defined in the grid metrics
+        file (either nodes or element centres). Included here to make it possible to overlay
+        particle tracks on different fields (e.g. bathymetry, temperature). If `geospatial_coords` is
+        True, Cartopy will be used to graph the supplied field.
+
+        Additional plotting options are passed to `matplotlib.pyplot.pcolormesh`. See the matplotlib documentation
+        for a full list of supported options.
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes
+            Axes object
+
+        grid_name : str
+            The name of the grid on which the field data is defined
+
+        field : 1D NumPy array
+            The field to plot.
+
+        update : bool, optional
+            If true, update the existing plot. Specifically, the axes will be checked to see if it contains a
+            PolyCollection object, as generated by tripcolor. If found, the associated data array will be
+            updated with the supplied field data. This is faster than drawing a new map
+
+        configure : bool, optional
+            If true, configure the plot by setting plot extents, drawing coastlines etc. This can be
+            useful when overlaying plots, and you only want to incur the cost of configuring the plot
+            once. The default is True, with the expectation that in most circumstances users will
+            draw any underlying field data before overlaying particle tracks. Default: True.
+
+        add_colour_bar : bool, optional
+            If true, draw a colour bar.
+
+        cb_label : str, optional
+            The colour bar label.
+
+        tick_inc : bool, optional
+            Add coordinate axes (i.e. lat/long).
+
+        extents : 1D array, optional
+            Four element numpy array giving lon/lat limits (e.g. [-4.56, -3.76,
+            49.96, 50.44])
+
+        transform : cartopy.crs.Projection
+            Type of projection.
+
+        draw_coastlines : boolean, optional
+            Draw coastlines. Default False.
+
+        resolution : str, optional
+            Resolution to use when plotting the coastline. Only used when draw_coastline=True. Default: '10m'.
+
+        Returns
+        -------
+        axes : matplotlib.axes.Axes
+            Axes object
+
+        plot : matplotlib.collections.PolyCollection
+            The plot object
+        """
+        if update is True:
+            for collection in ax.collections:
+                if type(collection) == mpl.collections.PolyCollection:
+                    collection.set_array(field)
+                    return ax
+            raise RuntimeError(
+                'Received update is True, but the current axis does not contain a PolyCollection object.')
+
+        # If not configuring the plot, simply plot the field and return
+        if not configure:
+            if self.geospatial_coords:
+                plot = ax.tripcolor(self.tri[grid_name], field, transform=transform, **kwargs)
+            else:
+                plot = ax.tripcolor(self.tri[grid_name], field, **kwargs)
+
+            return ax
+
+        # Set extents
+        if extents is None:
+            extents = self._get_default_extents(grid_name)
+
+        # Create plot
+        if self.geospatial_coords:
+            plot = ax.tripcolor(self.tri[grid_name], field, transform=transform, **kwargs)
+            ax.set_extent(extents, transform)
+
+            if draw_coastlines:
+                ax.coastlines(resolution=resolution, linewidth=self.line_width)
+
+            if tick_inc:
+                self._add_ticks(ax)
+
+            ax.set_xlabel('Longitude (E)', fontsize=self.font_size)
+            ax.set_ylabel('Longitude (N)', fontsize=self.font_size)
+        else:
+            plot = ax.tripcolor(self.tri, field, **kwargs)
+            ax.set_extent(extents)
+
+            ax.set_xlabel('x (m)', fontsize=self.font_size)
+            ax.set_ylabel('y (m)', fontsize=self.font_size)
+
+        # Add colour bar
+        if add_colour_bar:
+            figure = ax.get_figure()
+            self._add_colour_bar(figure, ax, plot, cb_label)
+
+        return ax, plot
+
+    def _add_colour_bar(self, figure, axes, plot, cb_label=None):
+        # Add colobar scaled to axis width
+        divider = make_axes_locatable(axes)
+        cax = divider.append_axes("right", size="5%", pad=0.05, axes_class=plt.Axes)
+        cbar = figure.colorbar(plot, cax=cax)
+        cbar.ax.tick_params(labelsize=self.font_size)
+        if cb_label:
+            cbar.set_label(cb_label, size=self.font_size)
+        return
+
+    def plot_lines(self, ax, x, y, **kwargs):
+        """Plot path lines.
+
+        In addition to the listed parameters, the function accepts all keyword arguments taken by the Matplotlib
+        plot command.
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes
+            Axes object
+
+        x : ND array
+            Array of x coordinates to plot.
+
+        y : ND array
+            Array of y coordinates to plot.
+
+        Returns:
+        --------
+        axes : matplotlib.axes.Axes
+            Axes object
+
+        line_plot : matplotlib.collections.Line2D
+            The plot object
+        """
+        # Use some better default attributes if they have not been supplied
+        alpha = kwargs.pop('alpha', 0.25)
+        color = kwargs.pop('color', 'r')
+        linewidth = kwargs.pop('linewidth', 1.0)
+
+        line_plots = ax.plot(x, y, zorder=3, alpha=alpha, color=color, linewidth=linewidth, **kwargs)
+
+        return ax, line_plots
+
+    def remove_line_plots(self, line_plots):
+        """ Remove line plots
+
+        Useful when updating plots for animations.
+
+        Parameters
+        ----------
+        line_plots : list
+            List of line plot objects created during call to plot_lines()
+        """
+        while line_plots:
+            line_plots.pop(0).remove()
+
+        return
+
+    def scatter(self, ax, grid_name, x, y, configure=False, transform=ccrs.PlateCarree(), zorder=4,
+                extents=None, draw_coastlines=False, resolution='10m', tick_inc=False, **kwargs):
+        """ Create a scatter plot using the provided x and y values
+
+        If geospatial_coords is True, x and y should be geospatial (lat, lon) coordinates. If not, x any y should
+        be given as cartesian coordinates.
+
+        See Matplotlib's scatter documentation for a list of additional key
+        word arguments.
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes
+            Axes object
+
+        grid_name : str
+            The name of the grid on which the field data is defined
+
+        x : 1D array
+            Array of 'x' positions. If plotting in geospatial coords, these should be longitudes.
+
+        y : 1D array
+            Array of 'y' positions. If plotting in geospatial coords, these should be latitudes.
+
+        configure : bool, optional
+            If true, configure the plot by setting plot extents, drawing coastlines etc. Default: False.
+
+        transform : cartopy.crs.Projection
+            The type of transform to perform if geospatial_coords is True. Optional.
+
+        draw_coastlines : bool
+            Draw coastlines? Only used if geospatial_coords is True. Optional.
+
+        resolution : str, optional
+            Resolution to use when plotting the coastline. Only used when draw_coastline=True. Default: '10m'.
+
+        tick_inc : bool
+            Draw ticks? Only used if geospatial_coords is True. Optional.
+
+        Returns
+        -------
+        ax : matplotlib.axes.Axes
+            Axes object
+
+        scatter_plot : matplotlib.collection.PathCollection
+            The scatter plot
+        """
+        # Check to see if a field has already been plotted, indicating we can simply overlay
+        # particle positions without setting up the plot in full.
+        if not configure:
+            if self.geospatial_coords:
+                scatter_plot = ax.scatter(x, y, transform=transform, zorder=zorder, **kwargs)
+            else:
+                scatter_plot = ax.scatter(x, y, zorder=zorder, **kwargs)
+
+            return ax, scatter_plot
+
+        # Create a new plot
+
+        # Set extents
+        if extents is None:
+            extents = self._get_default_extents(grid_name)
+
+        # Create plot
+        if self.geospatial_coords:
+            scatter_plot = ax.scatter(x, y, transform=transform, zorder=zorder, **kwargs)
+            ax.set_extent(extents, transform)
+
+            if draw_coastlines:
+                ax.coastlines(resolution=resolution, linewidth=self.line_width)
+
+            if tick_inc:
+                self._add_ticks(ax)
+        else:
+            scatter_plot = ax.scatter(x, y, zorder=zorder, **kwargs)
+            ax.set_extent(extents)
+
+            ax.set_xlabel('x (m)', fontsize=self.font_size)
+            ax.set_ylabel('y (m)', fontsize=self.font_size)
+
+        return ax, scatter_plot
+
+    def draw_grid(self, ax, grid_name, draw_masked_elements=False, **kwargs):
+        """ Draw the underlying grid or mesh
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes
+            Axes object
+
+        grid_name : str
+            The name of the grid on which the field data is defined
+
+        draw_masked_elements : bool
+            Include masked elements. Default False.
+
+        Returns
+        --------
+        ax : matplotlib.axes.Axes
+            Axes object
+        """
+        reinstate_mask = False
+        if self.maskc[grid_name] is not None and draw_masked_elements:
+            reinstate_mask = True
+            self.tri[grid_name].set_mask(None)
+
+        ax.triplot(self.tri[grid_name], zorder=2, **kwargs)
+
+        # Reinstate the mask if needed
+        if reinstate_mask:
+            self.tri[grid_name].set_mask(self.maskc[grid_name])
+
+    def set_title(self, ax, title):
+        """ Set the title
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes
+            Axes object
+
+        title : str
+            Plot title
+        """
+        ax.set_title(title, fontsize=self.font_size)
+
+    #    def get_nodal_coords(self):
+    #        return np.copy(self.x), np.copy(self.y)
+
+    def _add_ticks(self, ax):
+        gl = ax.gridlines(linewidth=self.line_width, draw_labels=True, linestyle='--', color='k')
+
+        gl.xlabel_style = {'fontsize': self.font_size}
+        gl.ylabel_style = {'fontsize': self.font_size}
+
+        gl.xlabels_top = False
+        gl.ylabels_right = False
+        gl.xlabels_bottom = True
+        gl.ylabels_left = True
 
         gl.xformatter = LONGITUDE_FORMATTER
         gl.yformatter = LATITUDE_FORMATTER
