@@ -708,7 +708,25 @@ def create_roms_grid_metrics_file(file_name,
 
         # Save mask
         if mask_var_names[grid_name] is not None:
-            raise NotImplementedError('Support for named masks still needs to be implemented')
+            mask_var, _ = _get_variable(input_dataset, [mask_var_names[grid_name]])
+
+            # Generate land-sea mask at nodes
+            land_sea_mask_nodes[grid_name] = sort_axes(mask_var, lat_name=eta_grid_names[grid_name],
+                                                       lon_name=xi_grid_names[grid_name]).squeeze()
+            if len(land_sea_mask_nodes[grid_name].shape) < 2 or len(land_sea_mask_nodes[grid_name].shape) > 3:
+                raise ValueError('Unsupported land sea mask with shape {}'.format(land_sea_mask_nodes[grid_name].shape))
+
+            # Flip meaning yielding: 1 - masked land point, and 0 sea point.
+            land_sea_mask_nodes[grid_name] = 1 - land_sea_mask_nodes[grid_name]
+
+            # Use surface mask only if shape is 3D
+            if len(land_sea_mask_nodes[grid_name].shape) == 3:
+                land_sea_mask_nodes[grid_name] = land_sea_mask_nodes[grid_name][0, :, :]
+
+            # Fix up long name to reflect flipping of mask
+            mask_attrs[grid_name] = {'standard_name': '{} mask'.format(grid_name),
+                                     'units': 1,
+                                     'long_name': "Land-sea mask: sea = 0 ; land = 1"}
         else:
             # Try to use the surface mask for reference u-grid variable name
             ref_var, _ = _get_variable(input_dataset, [reference_var_names[grid_name]])
@@ -727,18 +745,20 @@ def create_roms_grid_metrics_file(file_name,
 
         land_sea_mask_nodes[grid_name] = land_sea_mask_nodes[grid_name].reshape(np.prod(land_sea_mask_nodes[grid_name].shape), order='C')
 
-        points = np.array([lon2d.flatten(order='C'), lat2d.flatten(order='C')]).T
-
         # Save lon and lat points at nodes
-        lon_nodes[grid_name] = points[:, 0]
-        lat_nodes[grid_name] = points[:, 1]
-        nodes[grid_name] = points.shape[0]
+        lon_nodes[grid_name] = lon2d.flatten(order='C')
+        lat_nodes[grid_name] = lat2d.flatten(order='C')
+        nodes[grid_name] = lon_nodes[grid_name].shape[0]
 
         # Save original lon and lat sizes
         n_longitude[grid_name] = lon_var.shape[0]
         n_latitude[grid_name] = lat_var.shape[0]
 
-        # Create the Triangulation
+        # Create the Triangulation using local coordinates which helps to ensure a regular grid is made
+        xi = range(input_dataset.dimensions[xi_grid_names[grid_name]].size)
+        eta = range(input_dataset.dimensions[eta_grid_names[grid_name]].size)
+        xi2d, eta2d = np.meshgrid(xi[:], eta[:], indexing='ij')
+        points = np.array([xi2d.flatten(order='C'), eta2d.flatten(order='C')]).T
         tris[grid_name] = Delaunay(points)
 
         # Save simplices
@@ -883,7 +903,7 @@ def sort_axes(nc_var, time_name='depth', depth_name='depth', lat_name='latitude'
     var = nc_var[:]
     dimensions = nc_var.dimensions
     if len(dimensions) == 2:
-        lon_index = _get_dimension_index(dimensions, lat_name)
+        lon_index = _get_dimension_index(dimensions, lon_name)
 
         # Shift axes to give [x, y]
         var = np.moveaxis(var, lon_index, 0)
