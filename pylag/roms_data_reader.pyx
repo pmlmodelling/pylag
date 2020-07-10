@@ -558,8 +558,6 @@ cdef class ROMSDataReader(DataReader):
         to compute h(x,y). NB the negative of h (which is +ve downwards) is
         returned.
 
-        TODO - Implement this.
-
         Parameters
         ----------
         time : float
@@ -573,8 +571,21 @@ cdef class ROMSDataReader(DataReader):
         zmin : float
             The bottom depth.
         """
-        pass
+        cdef int i # Loop counters
+        cdef int vertex # Vertex identifier
+        cdef vector[DTYPE_FLOAT_t] h_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.) # Bathymetry at nodes
+        cdef DTYPE_FLOAT_t h # Bathymetry at (x1, x2)
 
+        # Host element
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name_grid_rho)
+
+        for i in xrange(N_VERTICES):
+            vertex = self._nv_grid_rho[i, host_element]
+            h_tri[i] = self._h[vertex]
+
+        h = interp.interpolate_within_element(h_tri, particle.get_phi(self._name_grid_rho))
+
+        return -h
 
     cdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR:
         """ Returns the sea surface height in cartesian coordinates
