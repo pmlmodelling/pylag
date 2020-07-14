@@ -527,18 +527,67 @@ cdef class ROMSDataReader(DataReader):
 
     cdef DTYPE_INT_t set_vertical_grid_vars(self, DTYPE_FLOAT_t time,
                                             Particle *particle) except INT_ERR:
-        """ Find the host depth layer
+        """ Find the host sigma layer
         
-        Find the depth layer containing x3. The function allows for situations is
-        which the particle position lies outside of the specified grid but below
-        zeta or above h. In which case, values are generally extrapolated. However,
-        while this situation is allowed, it is not prioritised, and when this occurs
-        the code run more slowly, as the model will first search the defined grid to
-        try and find the particle.
-
-        TODO - Implement this.
         """
-        pass
+
+        cdef DTYPE_FLOAT_t time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
+
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name_grid_rho)
+
+        cdef vector[DTYPE_FLOAT_t] phi = particle.get_phi(self._name_grid_rho)
+
+        cdef DTYPE_FLOAT_t x3 = particle.get_x3()
+
+        cdef DTYPE_FLOAT_t depth_upper_level_grid_w, depth_lower_level_grid_w
+
+        cdef DTYPE_FLOAT_t depth_upper_level_grid_rho, depth_lower_level_grid_rho
+
+        cdef DTYPE_INT_t k
+
+        # Loop over all sigma levels to find the host z layer
+        depth_upper_level_grid_w = self._get_level_depth_on_w_grid(time_fraction, particle, 0)
+        for k in xrange(self._n_s_w - 1):
+            depth_lower_level_grid_w = depth_upper_level_grid_w
+            depth_upper_level_grid_w = self._get_level_depth_on_w_grid(time_fraction, particle, k+1)
+
+            if x3 <= depth_upper_level_grid_w and x3 >= depth_lower_level_grid_w:
+                # Host layer found
+                particle.set_k_layer(k)
+
+                # Set the sigma level interpolation coefficient
+                particle.set_omega_interfaces(interp.get_linear_fraction(x3, depth_lower_level_grid_w,
+                                              depth_upper_level_grid_w))
+
+                # Set variables describing where on the rho grid the particle
+                # sits and whether or not it resides in a boundary layer
+                depth_test = self._get_level_depth_on_rho_grid(time_fraction, particle, k)
+
+                # Is x3 in the top or bottom boundary layer?
+                if (k == 0 and x3 >= depth_test) or (k == self._n_s_rho - 1 and x3 <= depth_test):
+                        particle.set_in_vertical_boundary_layer(True)
+                        return IN_DOMAIN
+
+                # x3 bounded by upper and lower sigma layers
+                particle.set_in_vertical_boundary_layer(False)
+                if x3 >= depth_test:
+                    particle.set_k_upper_layer(k - 1)
+                    particle.set_k_lower_layer(k)
+                else:
+                    particle.set_k_upper_layer(k)
+                    particle.set_k_lower_layer(k + 1)
+
+                # Set the rho grid interpolation coefficient
+                depth_lower_level_grid_rho = self._get_level_depth_on_rho_grid(time_fraction, particle,
+                                                                               particle.get_k_lower_layer())
+                depth_upper_level_grid_rho = self._get_level_depth_on_rho_grid(time_fraction, particle,
+                                                                               particle.get_k_upper_layer())
+                particle.set_omega_layers(interp.get_linear_fraction(x3, depth_lower_level_grid_rho,
+                                                                     depth_upper_level_grid_rho))
+
+                return IN_DOMAIN
+
+        return BDY_ERROR
 
     cpdef DTYPE_FLOAT_t get_xmin(self) except FLOAT_ERR:
         """ Get minimum x-value for the domain
@@ -873,6 +922,80 @@ cdef class ROMSDataReader(DataReader):
             The interpolated value of the variable on the specified level
         """
         pass
+
+    cdef DTYPE_FLOAT_t _get_level_depth_on_rho_grid(self, DTYPE_FLOAT_t time_fraction, Particle* particle,
+            DTYPE_INT_t k_level) except FLOAT_ERR:
+        """ Returns depth on the given rho grid level at the particle's position
+
+        Parameters
+        ----------
+        time_fraction : float
+            Time interpolation coefficient.
+
+        particle : *Particle
+            Pointer to a Particle object.
+
+        k_level : int
+            The dpeth level on which to interpolate.
+
+        Returns
+        -------
+         : float
+             The depth.
+        """
+        cdef vector[DTYPE_FLOAT_t] var_nodes = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name_grid_rho)
+        cdef DTYPE_FLOAT_t var_last, var_next
+        cdef DTYPE_INT_t i, vertex
+
+        for i in xrange(N_VERTICES):
+            vertex = self._nv_grid_rho[i, host_element]
+            var_last = self._depth_levels_grid_rho_last[k_level, vertex]
+            var_next = self._depth_levels_grid_rho_next[k_level, vertex]
+
+            if var_last != var_next:
+                var_nodes[i] = interp.linear_interp(time_fraction, var_last, var_next)
+            else:
+                var_nodes[i] = var_last
+
+        return interp.interpolate_within_element(var_nodes, particle.get_phi(self._name_grid_rho))
+
+    cdef DTYPE_FLOAT_t _get_level_depth_on_w_grid(self, DTYPE_FLOAT_t time_fraction, Particle* particle,
+            DTYPE_INT_t k_level) except FLOAT_ERR:
+        """ Returns depth on the given w grid level at the particle's position
+
+        Parameters
+        ----------
+        time_fraction : float
+            Time interpolation coefficient.
+
+        particle : *Particle
+            Pointer to a Particle object.
+
+        k_level : int
+            The dpeth level on which to interpolate.
+
+        Returns
+        -------
+         : float
+             The depth.
+        """
+        cdef vector[DTYPE_FLOAT_t] var_nodes = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name_grid_rho)
+        cdef DTYPE_FLOAT_t var_last, var_next
+        cdef DTYPE_INT_t i, vertex
+
+        for i in xrange(N_VERTICES):
+            vertex = self._nv_grid_rho[i, host_element]
+            var_last = self._depth_levels_grid_w_last[k_level, vertex]
+            var_next = self._depth_levels_grid_w_next[k_level, vertex]
+
+            if var_last != var_next:
+                var_nodes[i] = interp.linear_interp(time_fraction, var_last, var_next)
+            else:
+                var_nodes[i] = var_last
+
+        return interp.interpolate_within_element(var_nodes, particle.get_phi(self._name_grid_rho))
 
     def _read_grid(self):
         """ Set grid and coordinate variables.
@@ -1320,42 +1443,3 @@ cdef class ROMSDataReader(DataReader):
             return np.flip(z.values.copy(), axis=0)
 
         return z.values.copy()
-
-    cdef DTYPE_INT_t _interp_mask_status_on_level(self,
-            DTYPE_INT_t host, DTYPE_INT_t kidx) except INT_ERR:
-        """ Return the masked status of the given depth level
- 
-        Parameters
-        ----------
-        phi : c array, float
-            Array of length three giving the barycentric coordinates at which 
-            to interpolate.
-            
-        host : int
-            Host element index.
-
-        kidx : int
-            Sigma layer on which to interpolate.
-
-        Returns
-        -------
-        mask : int
-            Masked status (1 is masked, 0 not masked).
-        """
-        cdef int vertex # Vertex identifier
-        cdef DTYPE_INT_t mask_status_last, mask_status_next
-        cdef DTYPE_INT_t mask
-        cdef DTYPE_INT_t i
-
-        mask = 0
-        for i in xrange(N_VERTICES):
-            vertex = self._nv[i,host]
-            mask_status_last = self._depth_mask_last[kidx, vertex]
-            mask_status_next = self._depth_mask_next[kidx, vertex]
-
-            if mask_status_last == 1 or mask_status_next == 1:
-                mask = 1
-                break
-
-        return mask
-
