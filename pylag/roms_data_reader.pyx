@@ -20,6 +20,7 @@ except ImportError:
     import ConfigParser as configparser
 
 import numpy as np
+import xarray as xr
 
 from cpython cimport bool
 
@@ -108,8 +109,13 @@ cdef class ROMSDataReader(DataReader):
     cdef DTYPE_FLOAT_t _xmin_grid_u, _xmin_grid_v, _xmin_grid_rho
     cdef DTYPE_FLOAT_t _ymin_grid_u, _ymin_grid_v, _ymin_grid_rho
 
-    # Depth coordinate variables
-    cdef DTYPE_FLOAT_t[:] _s_rho, _cs_r, _s_w, _cs_w
+    # Vertical transform function
+    cdef DTYPE_INT_t _vtransform
+
+    cdef bint _flip_vertical_axis
+
+    # Depth coordinate variables (xarray DataArrays)
+    cdef object _s_rho, _cs_r, _s_w, _cs_w
     cdef DTYPE_FLOAT_t _hc
 
     # Actual depth levels, accounting for changes in sea surface elevation
@@ -192,7 +198,9 @@ cdef class ROMSDataReader(DataReader):
 
         # Setup dimension name mappings
         self._dimension_names = {}
-        dim_config_names = {'time': 'time_dim_name', 'depth': 'depth_dim_name',
+        dim_config_names = {'time': 'time_dim_name',
+                            'depth_grid_rho': 'depth_dim_name_grid_rho',
+                            'depth_grid_w': 'depth_dim_name_grid_w'
                             'latitude_grid_u': 'latitude_dim_name_grid_u',
                             'longitude_grid_u': 'longitude_dim_name_grid_u',
                             'latitude_grid_v': 'latitude_dim_name_grid_v',
@@ -963,11 +971,25 @@ cdef class ROMSDataReader(DataReader):
                                                      x_grid_rho, y_grid_rho, xc_grid_rho, yc_grid_rho)
 
         # Read in depth vars
-        self._s_rho = self.mediator.get_grid_variable('s_rho', (self._n_s_rho), DTYPE_FLOAT)
-        self._cs_r = self.mediator.get_grid_variable('cs_r', (self._n_s_rho), DTYPE_FLOAT)
-        self._s_w = self.mediator.get_grid_variable('s_w', (self._n_s_w), DTYPE_FLOAT)
-        self._cs_w = self.mediator.get_grid_variable('cs_w', (self._n_s_w), DTYPE_FLOAT)
+        self._s_rho = xr.DataArray(self.mediator.get_grid_variable('s_rho', (self._n_s_rho), DTYPE_FLOAT),
+                                   dims=self.mediator.get_variable_dimensions('s_rho'))
+        self._s_w = xr.DataArray(self.mediator.get_grid_variable('s_w', (self._n_s_w), DTYPE_FLOAT),
+                                 dims=self.mediator.get_variable_dimensions('s_w'))
+        self._cs_r = xr.DataArray(self.mediator.get_grid_variable('cs_r', (self._n_s_rho), DTYPE_FLOAT),
+                                  dims=self.mediator.get_variable_dimensions('cs_r'))
+        self._cs_w = xr.DataArray(self.mediator.get_grid_variable('cs_w', (self._n_s_w), DTYPE_FLOAT),
+                                  dims=self.mediator.get_variable_dimensions('cs_w'))
         self._hc = self.mediator.get_grid_variable('hc', (1), DTYPE_FLOAT)
+
+        # Vertical transform used when constructing depth grid
+        self._vtransform = self.mediator.get_grid_variable('vtransform', (1), DTYPE_INT))
+        if self._vtransform < 1 or self._vtransform > 2:
+            raise ValueError('Unsupported vertical transform {}'.format(self._vtransform)))
+
+        # Orientation of vertical variables
+        self._flip_vertical_axis = False
+        if self._s_rho[0] < self._s_rho[-1]:
+            self._flip_vertical_axis = True
 
         # Bathymetry
         self._h = self.mediator.get_grid_variable('h', (self._n_nodes_grid_rho), DTYPE_FLOAT)
@@ -979,6 +1001,56 @@ cdef class ROMSDataReader(DataReader):
 
         # Land sea mask - elements (grid rho only)
         self._mask_c_grid_rho = self.mediator.get_grid_variable('mask_c_grid_rho', (self._n_elems_grid_rho), DTYPE_INT)
+
+        # Add zeta to shape and dimension indices dictionaries
+        if self._has_zeta:
+            self._variable_shapes['zos'] = self.mediator.get_variable_shape(self._variable_names['zos'])[1:]
+            dimensions = self.mediator.get_variable_dimensions(self._variable_names['zos'])[1:]
+            self._variable_dimension_indices['zos'] = {'latitude_grid_rho': dimensions.index(self._dimension_names['latitude_grid_rho']),
+                                                       'longitude_grid_rho': dimensions.index(self._dimension_names['longitude_grid_rho'])}
+
+        # Add 3D vars to shape and dimension indices dictionaries
+        var_names = ['uo', 'vo']
+        grid_names = ['grid_u', 'grid_v']
+        depth_grid_names = ['grid_rho', 'grid_rho']
+
+        # Vertical velocity
+        if self._has_w:
+            var_names.append('wo')
+            grid_names.append('grid_rho')
+            depth_grid_names.append('grid_w')
+
+        # Vertical diffusion coefficient
+        if self._has_Kh:
+            var_names.append('Kh')
+            grid_names.append('grid_rho')
+            depth_grid_names.append('grid_w')
+
+        # Horizontal diffusion coefficient
+        if self._has_Ah:
+            var_names.append('Ah')
+            grid_names.append('grid_rho')
+            depth_grid_names.append('grid_rho')
+
+        # Temperature
+        if 'thetao' in self.env_var_names:
+            var_names.append('thetao')
+            grid_names.append('grid_rho')
+            depth_grid_names.append('grid_rho')
+
+        # Salinity
+        if 'so' in self.env_var_names:
+            var_names.append('so')
+            grid_names.append('grid_rho')
+            depth_grid_names.append('grid_rho')
+
+        # Construct dictionary of variable shapes and dimension indices
+        for var_name, grid_name, depth_grid_name in zip(var_names, grid_names, depth_grid_names):
+            self._variable_shapes[var_name] = self.mediator.get_variable_shape(self._variable_names[var_name])[1:]
+            dimensions = self.mediator.get_variable_dimensions(self._variable_names[var_name])[1:]
+            self._variable_dimension_indices[var_name] = {'depth': dimensions.index(self._dimension_names['depth_{}'.format(depth_grid_name)]),
+                                                          'latitude': dimensions.index(self._dimension_names['latitude_{}'.format(grid_name)]),
+                                                          'longitude': dimensions.index(self._dimension_names['longitude_{}'.format(grid_name)])}
 
     cdef _read_time_dependent_vars(self):
         """ Update time variables and memory views for data fields.
@@ -1021,8 +1093,12 @@ cdef class ROMSDataReader(DataReader):
             self._zeta_next = self._reshape_var(zeta_next, self._variable_dimension_indices['zos'])
         else:
             # If zeta wasn't given, set it to zero throughout
-            self._zeta_last = np.zeros((self._n_nodes), dtype=DTYPE_FLOAT)
-            self._zeta_next = np.zeros((self._n_nodes), dtype=DTYPE_FLOAT)
+            self._zeta_last = np.zeros((self._n_nodes_grid_rho), dtype=DTYPE_FLOAT)
+            self._zeta_next = np.zeros((self._n_nodes_grid_rho), dtype=DTYPE_FLOAT)
+
+        # Update depth levels
+        self._depth_levels_last = self._compute_depths(self._h, self._zeta_last)
+        self._depth_levels_next = self._compute_depths(self._h, self._zeta_next)
 
         # Update memory views for u
         u_var_name = self._variable_names['uo']
@@ -1055,21 +1131,6 @@ cdef class ROMSDataReader(DataReader):
                     self._variable_shapes['wo'], DTYPE_FLOAT)
             self._w_next = self._reshape_var(w_next, self._variable_dimension_indices['wo'])
 
-        # Update depth mask
-        depth_mask_last = self.mediator.get_mask_at_last_time_index(u_var_name,
-                self._variable_shapes['uo'])
-        self._depth_mask_last = self._reshape_var(depth_mask_last, self._variable_dimension_indices['uo'])
-
-        depth_mask_next = self.mediator.get_mask_at_next_time_index(u_var_name,
-                self._variable_shapes['uo'])
-        self._depth_mask_next = self._reshape_var(depth_mask_next, self._variable_dimension_indices['uo'])
-
-        # Compute actual depth levels using reference values and zeta
-        for k in xrange(self._n_depth):
-            for i in xrange(self._n_nodes):
-                self._depth_levels_last[k, i] = self._reference_depth_levels[k] + self._zeta_last[i]
-                self._depth_levels_next[k, i] = self._reference_depth_levels[k] + self._zeta_next[i]
-
         # Update memory views for kh
         if self._has_Kh:
             kh_var_name = self._variable_names['Kh']
@@ -1095,18 +1156,18 @@ cdef class ROMSDataReader(DataReader):
         # Set is wet status
         # NB the status of cells is inferred from the depth mask and the land-sea element mask. If a surface cell is
         # masked but it is not a land cell, then it is assumed to be dry.
-        for i in xrange(self._n_elems):
-            if self._land_sea_mask[i] == 0:
-                is_wet_last = 1
-                is_wet_next = 1
-                for j in xrange(3):
-                    node = self._nv[j, i]
-                    if self._depth_mask_last[0, node] == 1:
-                        is_wet_last = 0
-                    if self._depth_mask_next[0, node] == 1:
-                        is_wet_next = 0
-                self._wet_cells_last[i] = is_wet_last
-                self._wet_cells_next[i] = is_wet_next
+#        for i in xrange(self._n_elems):
+#            if self._land_sea_mask[i] == 0:
+#                is_wet_last = 1
+#                is_wet_next = 1
+#                for j in xrange(3):
+#                    node = self._nv[j, i]
+#                    if self._depth_mask_last[0, node] == 1:
+#                        is_wet_last = 0
+#                    if self._depth_mask_next[0, node] == 1:
+#                        is_wet_next = 0
+#                self._wet_cells_last[i] = is_wet_last
+#                self._wet_cells_next[i] = is_wet_next
 
         # Read in data as requested
         if 'thetao' in self.env_var_names:
@@ -1140,6 +1201,9 @@ cdef class ROMSDataReader(DataReader):
 
         3D - [depth, lat, lon] in any order
 
+        The lon/lat/depth key names should be specific to the grid on which the variable is
+        defined.
+
         Parameters
         ----------
         var : NDArray
@@ -1156,8 +1220,8 @@ cdef class ROMSDataReader(DataReader):
         n_dimensions = len(var.shape)
 
         if n_dimensions == 2:
-            lat_index = dimension_indices['latitude']
-            lon_index = dimension_indices['longitude']
+            longitude_dim_name = self._get_dimension_name('longitude', dimension_indices.keys())
+            lon_index = dimension_indices[longitude_dim_name]
 
             # Shift axes to give [x, y]
             var = np.moveaxis(var, lon_index, 0)
@@ -1165,9 +1229,13 @@ cdef class ROMSDataReader(DataReader):
             return var.reshape(np.prod(var.shape), order='C')[:]
 
         elif n_dimensions == 3:
-            depth_index = dimension_indices['depth']
-            lat_index = dimension_indices['latitude']
-            lon_index = dimension_indices['longitude']
+            depth_dim_name = self._get_dimension_name('depth', dimension_indices.keys())
+            latitude_dim_name = self._get_dimension_name('latitude', dimension_indices.keys())
+            longitude_dim_name = self._get_dimension_name('longitude', dimension_indices.keys())
+
+            depth_index = dimension_indices[depth_dim_name]
+            lat_index = dimension_indices[latitude_dim_name]
+            lon_index = dimension_indices[longitude_dim_name]
 
             # Shift axes to give [z, x, y]
             var = np.moveaxis(var, depth_index, 0)
@@ -1183,6 +1251,82 @@ cdef class ROMSDataReader(DataReader):
             return var.reshape(var.shape[0], np.prod(var.shape[1:]), order='C')[:]
         else:
             raise ValueError('Unsupported number of dimensions {}.'.format(n_dimensions))
+
+    def _get_dimension_name(dimension, grid_dimension_names):
+        """ Helper function for finding dimension names
+
+        The function searches the list of grid dimension names in order to find
+        the one that contains the string `dimension`. Once found, that grid dimension
+        name is returned to the caller.
+
+        Parameters
+        ----------
+        dimension : str
+            Dimension string (e.g. longitude or latitude)
+
+        grid_dimension_names : list[str]
+            List of grid dimensions names (e.g. ['longitude_grid_rho', 'latitude_grid_rho', ...].
+        """
+        for grid_dimension_name in grid_dimension_names:
+            if dimension in grid_dimension_name:
+               return grid_dimension_name
+
+        raise RuntimeError('Dimension {} not found in list of dimension names'.format(dimension))
+
+    def compute_depths(self, depth_grid, h, zeta):
+        """ Compute depth levels
+
+        Compute ROMS depth levels using h and zeta. Supports ROMS vertical coordinate transform
+        option one and two. See ROMS documentation for more details.
+
+        Parameters
+        ----------
+        depth_grid : str
+            The depth grid. Options are `grid_rho` or `grid_w`.
+
+        h : 1D memory view
+            Bathymetry at nodes
+
+        zeta : 1D memory view
+            Sea surface elevation at nodes
+
+        Returns
+        -------
+        depth : 2D NumPy NDArray
+        """
+        if depth_grid == 'grid_rho':
+            cs = self._cs_r
+            s = self._s_rho
+        elif depth_grid == 'grid_w':
+            cs = self._cs_w
+            s = self._s_w
+        else:
+            raise ValueError('Unrecognised vertical grid name {}'.format(depth_grid))
+
+        # Define dim names
+        node_dim_name = 'nodes_grid_rho'
+        depth_dim_name = s.dims[0]
+
+        # Generate xarray data arrays for h and zeta
+        h = xr.DataArray(h, dims=(node_dim_name))
+        zeta = xr.DataArray(zeta, dims=(node_dim_name))
+
+        # Apply vertical transform
+        if self._vtransform == 1:
+            zo = self._hc * (s - cs) + cs * h
+            z = zo + zeta * (1 + zo/h)
+        elif self._vtransform == 2:
+            zo = (self._hc * s + cs * h) / (self._hc + h)
+            z = zeta + (zeta + h) * zo
+
+        # Ensure depth is the first axis
+        z = z.transpose(depth_dim_name, node_dim_name)
+
+        # Apply vertical flip?
+        if self._flip_vertical_axis == True:
+            return np.flip(z.values.copy(), axis=0)
+
+        return z.values.copy()
 
     cdef DTYPE_INT_t _interp_mask_status_on_level(self,
             DTYPE_INT_t host, DTYPE_INT_t kidx) except INT_ERR:
