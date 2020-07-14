@@ -112,15 +112,16 @@ cdef class ROMSDataReader(DataReader):
     # Vertical transform function
     cdef DTYPE_INT_t _vtransform
 
+    # Boolean flag signifying whether the vertical grid should be flipped
     cdef bint _flip_vertical_axis
 
     # Depth coordinate variables (xarray DataArrays)
     cdef object _s_rho, _cs_r, _s_w, _cs_w
     cdef DTYPE_FLOAT_t _hc
 
-    # Actual depth levels, accounting for changes in sea surface elevation
-    cdef DTYPE_FLOAT_t[:, :] _depth_levels_last
-    cdef DTYPE_FLOAT_t[:, :] _depth_levels_next
+    # Actual depth levels, accounting for changes in sea surface elevation on rho and w grids
+    cdef DTYPE_FLOAT_t[:, :] _depth_levels_grid_rho_last, _depth_levels_grid_rho_next
+    cdef DTYPE_FLOAT_t[:, :] _depth_levels_grid_w_last, _depth_levels_grid_w_next
 
     # Bathymetry
     cdef DTYPE_FLOAT_t[:] _h
@@ -143,7 +144,7 @@ cdef class ROMSDataReader(DataReader):
     # Dictionaries of variable dimension indices (e.g. {'u': {'depth': 0, 'latitude': 1, 'longitude': 2}})
     cdef object _variable_dimension_indices
 
-    # TODO Sea surface elevation
+    # Sea surface elevation
     cdef DTYPE_FLOAT_t[:] _zeta_last
     cdef DTYPE_FLOAT_t[:] _zeta_next
     
@@ -1097,8 +1098,10 @@ cdef class ROMSDataReader(DataReader):
             self._zeta_next = np.zeros((self._n_nodes_grid_rho), dtype=DTYPE_FLOAT)
 
         # Update depth levels
-        self._depth_levels_last = self._compute_depths(self._h, self._zeta_last)
-        self._depth_levels_next = self._compute_depths(self._h, self._zeta_next)
+        self._depth_levels_grid_rho_last = self._compute_depths('grid_rho', self._h, self._zeta_last)
+        self._depth_levels_grid_rho_next = self._compute_depths('grid_rho', self._h, self._zeta_next)
+        self._depth_levels_grid_w_last = self._compute_depths('grid_w', self._h, self._zeta_last)
+        self._depth_levels_grid_w_next = self._compute_depths('grid_w', self._h, self._zeta_next)
 
         # Update memory views for u
         u_var_name = self._variable_names['uo']
