@@ -1153,21 +1153,7 @@ cdef class ROMSDataReader(DataReader):
                     self._variable_shapes['Ah'], DTYPE_FLOAT)
             self._ah_next = self._reshape_var(ah_next, self._variable_dimension_indices['Ah'])
 
-        # Set is wet status
-        # NB the status of cells is inferred from the depth mask and the land-sea element mask. If a surface cell is
-        # masked but it is not a land cell, then it is assumed to be dry.
-#        for i in xrange(self._n_elems):
-#            if self._land_sea_mask[i] == 0:
-#                is_wet_last = 1
-#                is_wet_next = 1
-#                for j in xrange(3):
-#                    node = self._nv[j, i]
-#                    if self._depth_mask_last[0, node] == 1:
-#                        is_wet_last = 0
-#                    if self._depth_mask_next[0, node] == 1:
-#                        is_wet_next = 0
-#                self._wet_cells_last[i] = is_wet_last
-#                self._wet_cells_next[i] = is_wet_next
+         # TODO - read wet/dry masks
 
         # Read in data as requested
         if 'thetao' in self.env_var_names:
@@ -1247,6 +1233,10 @@ cdef class ROMSDataReader(DataReader):
                 lon_index += 1
 
             var = np.moveaxis(var, lon_index, 1)
+
+            # Flip z axis?
+            if self._flip_vertical_axis == True:
+                var = np.flip(var, axis=0)
 
             return var.reshape(var.shape[0], np.prod(var.shape[1:]), order='C')[:]
         else:
