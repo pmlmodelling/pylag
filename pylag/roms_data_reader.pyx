@@ -651,8 +651,6 @@ cdef class ROMSDataReader(DataReader):
         zeta is defined at element nodes. Interpolation proceeds through linear
         interpolation in time followed by interpolation in space.
 
-        TODO - Implement this.
-
         Parameters
         ----------
         time : float
@@ -666,7 +664,35 @@ cdef class ROMSDataReader(DataReader):
         zmax : float
             Sea surface elevation.
         """
-        pass
+        cdef int i # Loop counters
+        cdef int vertex # Vertex identifier
+        cdef DTYPE_FLOAT_t zeta # Sea surface elevation at (t, x1, x2)
+
+        # Host element
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name_grid_rho)
+
+        # Intermediate variables
+        cdef DTYPE_FLOAT_t zeta_last
+        cdef DTYPE_FLOAT_t zeta_next
+        cdef vector[DTYPE_FLOAT_t] zeta_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+
+        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
+
+        for i in xrange(N_VERTICES):
+            vertex = self._nv_grid_rho[i, host_element]
+            zeta_last = self._zeta_last[vertex]
+            zeta_next = self._zeta_next[vertex]
+
+            # Interpolate in time
+            if zeta_last == zeta_next:
+                zeta_tri[i] = zeta_last
+            else:
+                zeta_tri[i] = interp.linear_interp(time_fraction, zeta_last, zeta_next)
+
+        # Interpolate in space
+        zeta = interp.interpolate_within_element(zeta_tri, particle.get_phi(self._name_grid_rho))
+
+        return zeta
 
     cdef get_velocity(self, DTYPE_FLOAT_t time, Particle* particle,
             DTYPE_FLOAT_t vel[3]):
