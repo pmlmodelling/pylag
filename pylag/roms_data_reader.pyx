@@ -577,7 +577,7 @@ cdef class ROMSDataReader(DataReader):
                     particle.set_k_upper_layer(k)
                     particle.set_k_lower_layer(k + 1)
 
-                # Set the rho grid interpolation coefficient
+                # Set the rho vert grid interpolation coefficient
                 depth_lower_level_grid_rho = self._get_level_depth_on_rho_grid(time_fraction, particle,
                                                                                particle.get_k_lower_layer())
                 depth_upper_level_grid_rho = self._get_level_depth_on_rho_grid(time_fraction, particle,
@@ -660,7 +660,10 @@ cdef class ROMSDataReader(DataReader):
 
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
-        zeta = self._unstructured_grid_rho(self._zeta_last, self._zeta_next, time_fraction, particle)
+        zeta = self._unstructured_grid_rho.interpolate_in_time_and_space(self._zeta_last,
+                                                                         self._zeta_next,
+                                                                         time_fraction,
+                                                                         particle)
 
         return zeta
 
@@ -683,7 +686,63 @@ cdef class ROMSDataReader(DataReader):
         vel : C array, float
             u/v/w velocity components stored in a C array.           
         """
-        pass
+        # Time interpolation coefficient
+        cdef DTYPE_FLOAT_t time_fraction
+
+        # Particle k_layer
+        cdef DTYPE_INT_t k_layer
+
+        # Interpolated values on lower and upper bounding depth levels
+        cdef DTYPE_FLOAT_t var_level_1
+        cdef DTYPE_FLOAT_t var_level_2
+
+        k_layer = particle.get_k_layer()
+
+        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
+
+        # u and v components
+        if particle.get_in_vertical_boundary_layer() is True:
+            vel[0] = self._unstructured_grid_u.interpolate_in_time_and_space(self._u_last[k_layer, :],
+                                                                             self._u_next[k_layer, :],
+                                                                             time_fraction, particle)
+            vel[1] = self._unstructured_grid_v.interpolate_in_time_and_space(self._v_last[k_layer, :],
+                                                                             self._v_next[k_layer, :],
+                                                                             time_fraction, particle)
+        else:
+            # u-component
+            var_level_1 = self._unstructured_grid_u.interpolate_in_time_and_space(self._u_last[k_lower_layer, :],
+                                                                                  self._u_next[k_lower_layer, :],
+                                                                                  time_fraction, particle)
+            var_level_2 = self._unstructured_grid_u.interpolate_in_time_and_space(self._u_last[k_upper_layer, :],
+                                                                                  self._u_next[k_upper_layer, :],
+                                                                                  time_fraction, particle)
+
+            vel[0] = interp.linear_interp(particle.get_omega_layers(), var_level_1, var_level_2)
+
+            # v-component
+            var_level_1 = self._unstructured_grid_v.interpolate_in_time_and_space(self._v_last[k_lower_layer, :],
+                                                                                  self._v_next[k_lower_layer, :],
+                                                                                  time_fraction, particle)
+            var_level_2 = self._unstructured_grid_v.interpolate_in_time_and_space(self._v_last[k_upper_layer, :],
+                                                                                  self._v_next[k_upper_layer, :],
+                                                                                  time_fraction, particle)
+
+            vel[1] = interp.linear_interp(particle.get_omega_layers(), var_level_1, var_level_2)
+
+        # w-component
+        if self._has_w:
+            var_level_1 = self._unstructured_grid_rho.interpolate_in_time_and_space(self._w_last[k_layer+1, :],
+                                                                                    self._w_next[k_layer+1, :],
+                                                                                    time_fraction, particle)
+            var_level_2 = self._unstructured_grid_rho.interpolate_in_time_and_space(self._v_last[k_layer, :],
+                                                                                    self._v_next[k_layer, :],
+                                                                                    time_fraction, particle)
+
+            vel[2] = interp.linear_interp(particle.get_omega_interfaces(), var_level_1, var_level_2)
+        else:
+            vel[2] = 0.0
+
+        return
 
     cdef DTYPE_FLOAT_t get_environmental_variable(self, var_name,
             DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR:
