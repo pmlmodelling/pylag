@@ -734,8 +734,8 @@ cdef class ROMSDataReader(DataReader):
             var_level_1 = self._unstructured_grid_rho.interpolate_in_time_and_space(self._w_last[k_layer+1, :],
                                                                                     self._w_next[k_layer+1, :],
                                                                                     time_fraction, particle)
-            var_level_2 = self._unstructured_grid_rho.interpolate_in_time_and_space(self._v_last[k_layer, :],
-                                                                                    self._v_next[k_layer, :],
+            var_level_2 = self._unstructured_grid_rho.interpolate_in_time_and_space(self._w_last[k_layer, :],
+                                                                                    self._w_next[k_layer, :],
                                                                                     time_fraction, particle)
 
             vel[2] = interp.linear_interp(particle.get_omega_interfaces(), var_level_1, var_level_2)
@@ -926,8 +926,6 @@ cdef class ROMSDataReader(DataReader):
             Particle* particle) except FLOAT_ERR:
         """ Returns the vertical eddy diffusivity through linear interpolation.
 
-        TODO - Implement this.
-
         Parameters
         ----------
         time : float
@@ -942,7 +940,30 @@ cdef class ROMSDataReader(DataReader):
             The vertical eddy diffusivity.        
         
         """
-        pass
+               # Variables used in interpolation in time
+        cdef DTYPE_FLOAT_t time_fraction
+
+        # Particle k_layer
+        cdef DTYPE_INT_t k_layer = particle.get_k_layer()
+
+
+        # Interpolated values on lower and upper bounding w grid levels
+        cdef DTYPE_FLOAT_t var_lower_level
+        cdef DTYPE_FLOAT_t var_upper_level
+
+        # Time fraction
+        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
+
+        # Variable on bounding levels
+        var_level_1 = self._unstructured_grid_rho.interpolate_in_time_and_space(self._kh_last[k_layer+1, :],
+                                                                                self._kh_next[k_layer+1, :],
+                                                                                time_fraction, particle)
+
+        var_level_2 = self._unstructured_grid_rho.interpolate_in_time_and_space(self._kh_last[k_layer, :],
+                                                                                self._kh_next[k_layer, :],
+                                                                                time_fraction, particle)
+
+        return interp.linear_interp(particle.get_omega_interfaces(), var_level_1, var_level_2)
 
     cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity_derivative(self,
             DTYPE_FLOAT_t time, Particle* particle) except FLOAT_ERR:
@@ -977,7 +998,57 @@ cdef class ROMSDataReader(DataReader):
         k_prime : float
             Gradient in the vertical eddy diffusivity field.
         """
-        pass
+        # Containers for kh and z
+        cdef vector[DTYPE_FLOAT_t] kh
+        cdef vector[DTYPE_FLOAT_t] z
+
+        # Gradient at bounding levels
+        cdef DTYPE_FLOAT_t dkh_lower_level, dkh_upper_level
+
+        # Particle k_layer
+        cdef DTYPE_INT_t k_layer = particle.get_k_layer()
+        cdef DTYPE_INT_t k, layer
+
+        if k_layer == 0:
+            for k in xrange(3):
+                kh.push_back(self._unstructured_grid_rho.interpolate_in_time_and_space(self._kh_last[k_layer+k],
+                                                                                       self._kh_next[k_layer+k],
+                                                                                       time_fraction, particle))
+
+                z.push_back(self._unstructured_grid_rho.interpolate_in_time_and_space(self._depth_levels_grid_w_last[k_layer+k],
+                                                                                      self._depth_levels_grid_w_next[k_layer+k],
+                                                                                      time_fraction, particle)
+
+            dkh_lower_level = (kh[0] - kh[2]) / (z[0] - z[2])
+            dkh_upper_level = (kh[0] - kh[1]) / (z[0] - z[1])
+
+        elif k_layer == self._n_s_rho - 1:
+            for k in xrange(3):
+                kh.push_back(self._unstructured_grid_rho.interpolate_in_time_and_space(self._kh_last[k_layer - 1 + k],
+                                                                                       self._kh_next[k_layer - 1 + k],
+                                                                                       time_fraction, particle))
+
+                z.push_back(self._unstructured_grid_rho.interpolate_in_time_and_space(self._depth_levels_grid_w_last[k_layer - 1 + k],
+                                                                                      self._depth_levels_grid_w_next[k_layer - 1 + k],
+                                                                                      time_fraction, particle)
+
+            dkh_lower_level = (kh[1] - kh[2]) / (z[1] - z[2])
+            dkh_upper_level = (kh[0] - kh[2]) / (z[0] - z[2])
+
+        else:
+            for k in xrange(4):
+                kh.push_back(self._unstructured_grid_rho.interpolate_in_time_and_space(self._kh_last[k_layer - 1 + k],
+                                                                                       self._kh_next[k_layer - 1 + k],
+                                                                                       time_fraction, particle))
+
+                z.push_back(self._unstructured_grid_rho.interpolate_in_time_and_space(self._depth_levels_grid_w_last[k_layer - 1 + k],
+                                                                                      self._depth_levels_grid_w_next[k_layer - 1 + k],
+                                                                                      time_fraction, particle)
+
+            dkh_lower_level = (kh[1] - kh[3]) / (z[1] - z[3])
+            dkh_upper_level = (kh[0] - kh[2]) / (z[0] - z[2])
+
+        return interp.linear_interp(particle.get_omega_interfaces(), dkh_lower_level, dkh_upper_level)
 
     cdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, Particle *particle) except INT_ERR:
         """ Return an integer indicating whether `host' is wet or dry
