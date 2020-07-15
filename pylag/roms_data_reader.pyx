@@ -1241,7 +1241,7 @@ cdef class ROMSDataReader(DataReader):
         self._hc = self.mediator.get_grid_variable('hc', (1), DTYPE_FLOAT)
 
         # Vertical transform used when constructing depth grid
-        self._vtransform = self.mediator.get_grid_variable('vtransform', (1), DTYPE_INT))
+        self._vtransform = int(self.mediator.get_grid_variable('vtransform', (1), DTYPE_FLOAT)))
         if self._vtransform < 1 or self._vtransform > 2:
             raise ValueError('Unsupported vertical transform {}'.format(self._vtransform)))
 
