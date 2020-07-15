@@ -62,3 +62,7 @@ cdef class UnstructuredGrid:
 
     cdef DTYPE_FLOAT_t interpolate_in_time_and_space(self, DTYPE_FLOAT_t[:] var_last_arr, DTYPE_FLOAT_t[:] var_next_arr,
                                                      DTYPE_FLOAT_t time_fraction, Particle *particle) except FLOAT_ERR
+
+    cdef void interpolate_grad_in_time_and_space(self, DTYPE_FLOAT_t[:] var_last_arr, DTYPE_FLOAT_t[:] var_next_arr,
+                                                 DTYPE_FLOAT_t time_fraction, Particle *particle,
+                                                 DTYPE_FLOAT_t var_prime[2]) except +

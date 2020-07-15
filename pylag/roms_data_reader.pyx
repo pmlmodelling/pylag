@@ -746,7 +746,7 @@ cdef class ROMSDataReader(DataReader):
 
     cdef DTYPE_FLOAT_t get_environmental_variable(self, var_name,
             DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR:
-        """ Returns the value of the given environmental variable through linear interpolation
+        """ Returns the value of the given environmental variable through interpolation
 
         Support for extracting the following environmental variables has been implemented:
 
@@ -819,9 +819,7 @@ cdef class ROMSDataReader(DataReader):
 
     cdef get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
             Particle* particle):
-        """ Returns the horizontal eddy viscosity through linear interpolation
-
-        TODO - Implement this.
+        """ Returns the horizontal eddy viscosity through interpolation
 
         Parameters
         ----------
@@ -836,7 +834,35 @@ cdef class ROMSDataReader(DataReader):
         viscofh : float
             The interpolated value of the horizontal eddy viscosity at the specified point in time and space.
         """
-        pass
+               # Variables used in interpolation in time
+        cdef DTYPE_FLOAT_t time_fraction
+
+        # Particle k layers
+        cdef DTYPE_INT_t k_layer = particle.get_k_layer()
+        cdef DTYPE_INT_t k_lower_layer = particle.get_k_lower_layer()
+        cdef DTYPE_INT_t k_upper_layer = particle.get_k_upper_layer()
+
+        # Interpolated values on lower and upper bounding sigma layers
+        cdef DTYPE_FLOAT_t var_lower_layer
+        cdef DTYPE_FLOAT_t var_upper_layer
+
+        # Time fraction
+        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
+
+        if particle.get_in_vertical_boundary_layer() is True:
+            return self._unstructured_grid_rho.interpolate_in_time_and_space(self._ah_last[k_layer, :],
+                                                                             self._ah_next[k_layer, :],
+                                                                             time_fraction, particle)
+        else:
+            var_lower_layer = self._unstructured_grid_rho.interpolate_in_time_and_space(self._ah_last[k_lower_layer, :],
+                                                                                        self._ah_next[k_lower_layer, :],
+                                                                                        time_fraction, particle)
+
+            var_upper_layer = self._unstructured_grid_rho.interpolate_in_time_and_space(self._ah_last[k_upper_layer, :],
+                                                                                        self._ah_next[k_upper_layer, :],
+                                                                                        time_fraction, particle)
+
+        return interp.linear_interp(particle.get_omega_layers(), var_lower_layer, var_upper_layer)
 
     cdef get_horizontal_eddy_viscosity_derivative(self, DTYPE_FLOAT_t time,
             Particle* particle, DTYPE_FLOAT_t Ah_prime[2]):
@@ -853,15 +879,48 @@ cdef class ROMSDataReader(DataReader):
         Ah_prime : C array, float
             dAh_dx and dH_dy components stored in a C array of length two.  
 
-        TODO - Implement this.
-
         References
         ----------
         Lynch, D. R. et al (2014). Particles in the coastal ocean: theory and
         applications. Cambridge: Cambridge University Press.
         doi.org/10.1017/CBO9781107449336
         """
-        pass
+        # Variables used in interpolation in time
+        cdef DTYPE_FLOAT_t time_fraction
+
+        # Particle k_layer
+        cdef DTYPE_INT_t k_layer = particle.get_k_layer()
+        cdef DTYPE_INT_t k_lower_layer = particle.get_k_lower_layer()
+        cdef DTYPE_INT_t k_upper_layer = particle.get_k_upper_layer()
+
+        # Gradients on lower and upper layers
+        cdef DTYPE_FLOAT_t grad_lower_layer[2], grad_upper_layer[2]
+
+        # Time fraction
+        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
+
+        # No vertical interpolation for particles near to the surface or bottom,
+        # i.e. above or below the top or bottom sigma layer depths respectively.
+        if particle.get_in_vertical_boundary_layer() is True:
+            self._unstructured_grid_rho.interpolate_grad_in_time_and_space(self._ah_last[k_layer, :],
+                                                                           self._ah_next[k_layer, :],
+                                                                           time_fraction, particle,
+                                                                           Ah_prime)
+        else:
+            self._unstructured_grid_rho.interpolate_grad_in_time_and_space(self._ah_last[k_lower_layer, :],
+                                                                           self._ah_next[k_lower_layer, :],
+                                                                           time_fraction, particle,
+                                                                           grad_lower_layer)
+
+            self._unstructured_grid_rho.interpolate_grad_in_time_and_space(self._ah_last[k_upper_layer, :],
+                                                                           self._ah_next[k_upper_layer, :],
+                                                                           time_fraction, particle
+                                                                           grad_upper_layer)
+
+            Ah_prime[0] = interp.linear_interp(particle.get_omega_layers(), grad_lower_layer[0], grad_upper_layer[0])
+            Ah_prime[1] = interp.linear_interp(particle.get_omega_layers(), grad_lower_layer[1], grad_upper_layer[1])
+
+        return
 
     cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time,
             Particle* particle) except FLOAT_ERR:
