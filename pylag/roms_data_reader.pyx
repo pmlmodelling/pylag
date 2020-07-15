@@ -519,9 +519,9 @@ cdef class ROMSDataReader(DataReader):
         particle: *Particle
             Pointer to a Particle struct
         """
-        self._unstructured_grid_grid_u.set_local_coordinates(particle)
-        self._unstructured_grid_grid_v.set_local_coordinates(particle)
-        self._unstructured_grid_grid_rho.set_local_coordinates(particle)
+        self._unstructured_grid_u.set_local_coordinates(particle)
+        self._unstructured_grid_v.set_local_coordinates(particle)
+        self._unstructured_grid_rho.set_local_coordinates(particle)
 
         return
 
@@ -629,19 +629,9 @@ cdef class ROMSDataReader(DataReader):
         zmin : float
             The bottom depth.
         """
-        cdef int i # Loop counters
-        cdef int vertex # Vertex identifier
-        cdef vector[DTYPE_FLOAT_t] h_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.) # Bathymetry at nodes
         cdef DTYPE_FLOAT_t h # Bathymetry at (x1, x2)
 
-        # Host element
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name_grid_rho)
-
-        for i in xrange(N_VERTICES):
-            vertex = self._nv_grid_rho[i, host_element]
-            h_tri[i] = self._h[vertex]
-
-        h = interp.interpolate_within_element(h_tri, particle.get_phi(self._name_grid_rho))
+        h = self._unstructured_grid_rho.interpolate_in_space(self._h, particle)
 
         return -h
 
@@ -664,43 +654,21 @@ cdef class ROMSDataReader(DataReader):
         zmax : float
             Sea surface elevation.
         """
-        cdef int i # Loop counters
-        cdef int vertex # Vertex identifier
+        cdef DTYPE_FLOAT_t time_fraction # Time interpolation coefficient
+
         cdef DTYPE_FLOAT_t zeta # Sea surface elevation at (t, x1, x2)
-
-        # Host element
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name_grid_rho)
-
-        # Intermediate variables
-        cdef DTYPE_FLOAT_t zeta_last
-        cdef DTYPE_FLOAT_t zeta_next
-        cdef vector[DTYPE_FLOAT_t] zeta_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
 
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
-        for i in xrange(N_VERTICES):
-            vertex = self._nv_grid_rho[i, host_element]
-            zeta_last = self._zeta_last[vertex]
-            zeta_next = self._zeta_next[vertex]
-
-            # Interpolate in time
-            if zeta_last == zeta_next:
-                zeta_tri[i] = zeta_last
-            else:
-                zeta_tri[i] = interp.linear_interp(time_fraction, zeta_last, zeta_next)
-
-        # Interpolate in space
-        zeta = interp.interpolate_within_element(zeta_tri, particle.get_phi(self._name_grid_rho))
+        zeta = self._unstructured_grid_rho(self._zeta_last, self._zeta_next, time_fraction, particle)
 
         return zeta
 
     cdef get_velocity(self, DTYPE_FLOAT_t time, Particle* particle,
             DTYPE_FLOAT_t vel[3]):
-        """ Returns the velocity u(t,x,y,z) through linear interpolation
+        """ Returns the velocity u(t,x,y,z) through interpolation
         
-        Returns the velocity u(t,x,y,z) through interpolation for a particle.
-
-        TODO - Implement this.
+        Returns the velocity u(t,x,y,z) through interpolation.
 
         Parameters
         ----------
@@ -881,71 +849,6 @@ cdef class ROMSDataReader(DataReader):
 
         host : int
             Integer that identifies the host element in question
-        """
-        pass
-
-    cdef DTYPE_FLOAT_t _get_variable(self, DTYPE_FLOAT_t[:, :] var_last, DTYPE_FLOAT_t[:, :] var_next,
-            DTYPE_FLOAT_t time, Particle* particle) except FLOAT_ERR:
-        """ Returns the value of the variable through linear interpolation
-
-        Private method for interpolating fields specified at element nodes on depth levels.
-        For particle at depths above h and above a lower level with masked nodes, extrapolation
-        is used.
-
-        TODO - Implement this.
-
-        Parameters
-        ----------
-        var_last : 2D MemoryView
-            Array of variable values at the last time index.
-
-        var_next : 2D MemoryView
-            Array of variable values at the next time index.
-
-        time : float
-            Time at which to interpolate.
-        
-        particle: *Particle
-            Pointer to a Particle object. 
-        
-        Returns
-        -------
-        var : float
-            The interpolated value of the variable at the specified point in time and space.
-        """
-        pass
-
-    cdef DTYPE_FLOAT_t _get_variable_on_level(self, DTYPE_FLOAT_t[:, :] var_last_arr, DTYPE_FLOAT_t[:, :] var_next_arr,
-            DTYPE_FLOAT_t time, Particle* particle, DTYPE_INT_t k_level) except FLOAT_ERR:
-        """ Returns the value of the variable on a level through linear interpolation
-
-        Private method for interpolating fields specified at element nodes on depth levels.
-        For particle at depths above h and above a lower level with masked nodes, extrapolation
-        is used.
-
-        TODO - Implement this.
-
-        Parameters
-        ----------
-        var_last_arr : 2D MemoryView
-            Array of variable values at the last time index.
-
-        var_next_arr : 2D MemoryView
-            Array of variable values at the next time index.
-
-        time : float
-            Time at which to interpolate.
-
-        particle: *Particle
-            Pointer to a Particle object.
-
-        k_level : int
-            The dpeth level on which to interpolate.
-
-        Returns
-        -------
-        var : float
-            The interpolated value of the variable on the specified level
         """
         pass
 
