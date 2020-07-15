@@ -872,22 +872,10 @@ cdef class ROMSDataReader(DataReader):
          : float
              The depth.
         """
-        cdef vector[DTYPE_FLOAT_t] var_nodes = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name_grid_rho)
-        cdef DTYPE_FLOAT_t var_last, var_next
-        cdef DTYPE_INT_t i, vertex
-
-        for i in xrange(N_VERTICES):
-            vertex = self._nv_grid_rho[i, host_element]
-            var_last = self._depth_levels_grid_rho_last[k_level, vertex]
-            var_next = self._depth_levels_grid_rho_next[k_level, vertex]
-
-            if var_last != var_next:
-                var_nodes[i] = interp.linear_interp(time_fraction, var_last, var_next)
-            else:
-                var_nodes[i] = var_last
-
-        return interp.interpolate_within_element(var_nodes, particle.get_phi(self._name_grid_rho))
+        return self._unstructured_grid_rho(self._depth_levels_grid_rho_last[k_level, :],
+                                           self._depth_levels_grid_rho_next[k_level, :],
+                                           time_fraction,
+                                           particle)
 
     cdef DTYPE_FLOAT_t _get_level_depth_on_w_grid(self, DTYPE_FLOAT_t time_fraction, Particle* particle,
             DTYPE_INT_t k_level) except FLOAT_ERR:
@@ -909,22 +897,10 @@ cdef class ROMSDataReader(DataReader):
          : float
              The depth.
         """
-        cdef vector[DTYPE_FLOAT_t] var_nodes = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name_grid_rho)
-        cdef DTYPE_FLOAT_t var_last, var_next
-        cdef DTYPE_INT_t i, vertex
-
-        for i in xrange(N_VERTICES):
-            vertex = self._nv_grid_rho[i, host_element]
-            var_last = self._depth_levels_grid_w_last[k_level, vertex]
-            var_next = self._depth_levels_grid_w_next[k_level, vertex]
-
-            if var_last != var_next:
-                var_nodes[i] = interp.linear_interp(time_fraction, var_last, var_next)
-            else:
-                var_nodes[i] = var_last
-
-        return interp.interpolate_within_element(var_nodes, particle.get_phi(self._name_grid_rho))
+        return self._unstructured_grid_rho(self._depth_levels_grid_w_last[k_level, :],
+                                           self._depth_levels_grid_w_next[k_level, :],
+                                           time_fraction,
+                                           particle)
 
     def _read_grid(self):
         """ Set grid and coordinate variables.
