@@ -754,8 +754,6 @@ cdef class ROMSDataReader(DataReader):
 
         so - Sea water salinty
 
-        TODO - Implement this.
-
         Parameters
         ----------
         var_name : str
@@ -772,7 +770,52 @@ cdef class ROMSDataReader(DataReader):
         var : float
             The interpolated value of the variable at the specified point in time and space.
         """
-        pass
+        # Variables used in interpolation in time
+        cdef DTYPE_FLOAT_t time_fraction
+
+        # Particle k layers
+        cdef DTYPE_INT_t k_layer = particle.get_k_layer()
+        cdef DTYPE_INT_t k_lower_layer = particle.get_k_lower_layer()
+        cdef DTYPE_INT_t k_upper_layer = particle.get_k_upper_layer()
+
+        # Interpolated values on lower and upper bounding sigma layers
+        cdef DTYPE_FLOAT_t var_lower_layer
+        cdef DTYPE_FLOAT_t var_upper_layer
+
+        # Time fraction
+        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
+
+        if var_name in self.env_var_names:
+            if var_name == 'thetao':
+                if particle.get_in_vertical_boundary_layer() is True:
+                    return self._unstructured_grid_rho.interpolate_in_time_and_space(self._thetao_last[k_layer, :],
+                                                                                     self._thetao_next[k_layer, :],
+                                                                                     time_fraction, particle)
+                else:
+                    var_lower_layer = self._unstructured_grid_rho.interpolate_in_time_and_space(self._theato_last[k_lower_layer, :],
+                                                                                                self._thetao_next[k_lower_layer, :],
+                                                                                                time_fraction, particle)
+
+                    var_upper_layer = self._unstructured_grid_rho.interpolate_in_time_and_space(self._theato_last[k_upper_layer, :],
+                                                                                                self._thetao_next[k_upper_layer, :],
+                                                                                                time_fraction, particle)
+            elif var_name == 'so':
+                if particle.get_in_vertical_boundary_layer() is True:
+                    return self._unstructured_grid_rho.interpolate_in_time_and_space(self._so_last[k_layer, :],
+                                                                                     self._so_next[k_layer, :],
+                                                                                     time_fraction, particle)
+                else:
+                    var_lower_layer = self._unstructured_grid_rho.interpolate_in_time_and_space(self._so_last[k_lower_layer, :],
+                                                                                                self._so_next[k_lower_layer, :],
+                                                                                                time_fraction, particle)
+
+                    var_upper_layer = self._unstructured_grid_rho.interpolate_in_time_and_space(self._so_last[k_upper_layer, :],
+                                                                                                self._so_next[k_upper_layer, :],
+                                                                                                time_fraction, particle)
+
+            return interp.linear_interp(particle.get_omega_layers(), var_lower_layer, var_upper_layer)
+        else:
+            raise ValueError("Invalid variable name `{}'".format(var_name))
 
     cdef get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
             Particle* particle):
