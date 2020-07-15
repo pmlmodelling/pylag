@@ -57,3 +57,8 @@ cdef class UnstructuredGrid:
     cdef void get_grad_phi(self, DTYPE_INT_t host,
                            vector[DTYPE_FLOAT_t] &dphi_dx,
                            vector[DTYPE_FLOAT_t] &dphi_dy) except *
+
+    cdef DTYPE_FLOAT_t interpolate_in_space(self, DTYPE_FLOAT_t[:] var_arr, Particle *particle) except FLOAT_ERR
+
+    cdef DTYPE_FLOAT_t interpolate_in_time_and_space(self, DTYPE_FLOAT_t[:] var_last_arr, DTYPE_FLOAT_t[:] var_next_arr,
+                                                     DTYPE_FLOAT_t time_fraction, Particle *particle) except FLOAT_ERR

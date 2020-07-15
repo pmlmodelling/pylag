@@ -648,3 +648,85 @@ cdef class UnstructuredGrid:
         # Calculate gradient in barycentric coordinates
         interp.get_barycentric_gradients(x_tri, y_tri, dphi_dx, dphi_dy)
 
+    cdef DTYPE_FLOAT_t interpolate_in_space(self, DTYPE_FLOAT_t[:] var_arr,  Particle* particle) except FLOAT_ERR:
+        """ Interpolate the given field in space
+
+        Interpolate the given field on the horizontal grid. The supplied fields
+        should be 1D arrays of values defined at element nodes.
+
+        Parameters
+        ----------
+        var_last_arr : 1D MemoryView
+            Array of variable values at the last time index.
+
+        var_next_arr : 1D MemoryView
+            Array of variable values at the next time index.
+
+        particle: *Particle
+            Pointer to a Particle object.
+
+        Returns
+        -------
+         : float
+            The interpolated value of the variable
+        """
+        cdef DTYPE_INT_t vertex # Vertex identifier
+        cdef vector[DTYPE_FLOAT_t] var_nodes = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+
+        # Host element
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
+
+        cdef DTYPE_INT_t i
+
+        for i in xrange(N_VERTICES):
+            vertex = self._nv[i, host_element]
+            var_nodes[i] = var_arr[vertex]
+
+        return interp.interpolate_within_element(var_nodes, particle.get_phi(self._name))
+
+    cdef DTYPE_FLOAT_t interpolate_in_time_and_space(self, DTYPE_FLOAT_t[:] var_last_arr, DTYPE_FLOAT_t[:] var_next_arr,
+            DTYPE_FLOAT_t time_fraction, Particle* particle) except FLOAT_ERR:
+        """ Interpolate the given field in time and space
+
+        Interpolate the given field in time and space on the horizontal grid. The supplied fields
+        should be 1D arrays of values defined at element nodes.
+
+        Parameters
+        ----------
+        var_last_arr : 1D MemoryView
+            Array of variable values at the last time index.
+
+        var_next_arr : 1D MemoryView
+            Array of variable values at the next time index.
+
+        time_fraction : float
+            Time interpolation coefficient
+
+        particle: *Particle
+            Pointer to a Particle object.
+
+        Returns
+        -------
+         : float
+            The interpolated value of the variable
+        """
+        cdef DTYPE_INT_t vertex # Vertex identifier
+        cdef DTYPE_FLOAT_t var_last, var_next
+        cdef vector[DTYPE_FLOAT_t] var_nodes = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+
+        # Host element
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
+
+        cdef DTYPE_INT_t i
+
+        for i in xrange(N_VERTICES):
+            vertex = self._nv[i, host_element]
+            var_last = var_last_arr[vertex]
+            var_next = var_next_arr[vertex]
+
+            if var_last != var_next:
+                var_nodes[i] = interp.linear_interp(time_fraction, var_last, var_next)
+            else:
+                var_nodes[i] = var_last
+
+        return interp.interpolate_within_element(var_nodes, particle.get_phi(self._name))
