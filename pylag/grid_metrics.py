@@ -516,8 +516,8 @@ def create_roms_grid_metrics_file(file_name,
     these should be passed in.
 
     The keyword arguments that are not explicitly listed are those that help define
-    the vertical rho and w grids. They are s_rho, cs_r, s_w, cs_w and hc. Further
-    details on these can be found in the ROMS manual. If the name of these variables
+    the vertical rho and w grids. They are s_rho, cs_r, s_w, cs_w, hc and vtransform.
+    Further details on these can be found in the ROMS manual. If the name of these variables
     are not given using keyword arguments are not given, the model resorts to trying
     standard ROMS variable names.
 
@@ -630,6 +630,15 @@ def create_roms_grid_metrics_file(file_name,
     vertical_grid_var_names['s_w'] = kwargs.pop('s_w', 's_w')
     vertical_grid_var_names['cs_w'] = kwargs.pop('cs_w', 'Cs_w')
     vertical_grid_var_names['hc'] = kwargs.pop('hc', 'hc')
+
+    vtransform = kwargs.pop('vtransform', None)
+    if vtransform is None:
+        # If not given, try to read it in the data file
+        try:
+            vtransform = input_dataset.variables['Vtransform'][0]
+        except KeyError:
+            print('Vtransform variable not found in dataset. Please provide it as a keyword argument.')
+            raise
 
     # Initialise dictionaries
     nodes = {}
@@ -822,6 +831,9 @@ def create_roms_grid_metrics_file(file_name,
     for key, name in vertical_grid_var_names.items():
         var, attrs = _get_variable(input_dataset, [name])
         gm_file_creator.create_variable(key, var[:], var.dimensions, float, attrs=attrs)
+
+    gm_file_creator.create_variable('vtransform', vtransform, (), float,
+                                    attrs={'long_name': 'vertical terrain following transformation equation'})
 
     # Close input dataset
     input_dataset.close()
