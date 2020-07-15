@@ -127,7 +127,7 @@ cdef class ROMSDataReader(DataReader):
     cdef DTYPE_FLOAT_t[:] _h
 
     # Land sea mask on nodes (1 - sea point, 0 - land point)
-    cdef DTYPE_INT_t[:] _mask_grid_u, _mask_grid_v, _mask_grid_rho
+    #cdef DTYPE_INT_t[:] _mask_grid_u, _mask_grid_v, _mask_grid_rho
 
     # Land sea mask on rho grid element (1 - sea point, 0 - land point)
     cdef DTYPE_INT_t[:] _mask_c_grid_rho
@@ -216,7 +216,7 @@ cdef class ROMSDataReader(DataReader):
         self._variable_names = {}
         var_config_names = {'uo': 'uo_var_name', 'vo': 'vo_var_name', 'wo': 'wo_var_name', 'zos': 'zos_var_name',
                             'Kh': 'Kh_var_name', 'Ah': 'Ah_var_name', 'thetao': 'thetao_var_name',
-                            'so': 'so_var_name'}
+                            'so': 'so_var_name', 'wetdry_mask_rho': 'wetdry_var_name'}
         for var_name, config_name in var_config_names.items():
             try:
                 var = self.config.get('OCEAN_CIRCULATION_MODEL', config_name).strip()
@@ -983,8 +983,6 @@ cdef class ROMSDataReader(DataReader):
         code, as implemented here, is highly repetitive, and no doubt efficiency
         savings could be found. 
 
-        TODO - Implement this
-
         Parameters
         ----------
         time : float
@@ -1256,19 +1254,26 @@ cdef class ROMSDataReader(DataReader):
         self._h = self.mediator.get_grid_variable('h', (self._n_nodes_grid_rho), DTYPE_FLOAT)
 
         # Land sea mask - nodes
-        self._mask_grid_u = self.mediator.get_grid_variable('mask_grid_u', (self._n_nodes_grid_u), DTYPE_INT)
-        self._mask_grid_v = self.mediator.get_grid_variable('mask_grid_v', (self._n_nodes_grid_v), DTYPE_INT)
-        self._mask_grid_rho = self.mediator.get_grid_variable('mask_grid_rho', (self._n_nodes_grid_rho), DTYPE_INT)
+        #self._mask_grid_u = self.mediator.get_grid_variable('mask_grid_u', (self._n_nodes_grid_u), DTYPE_INT)
+        #self._mask_grid_v = self.mediator.get_grid_variable('mask_grid_v', (self._n_nodes_grid_v), DTYPE_INT)
+        #self._mask_grid_rho = self.mediator.get_grid_variable('mask_grid_rho', (self._n_nodes_grid_rho), DTYPE_INT)
 
         # Land sea mask - elements (grid rho only)
         self._mask_c_grid_rho = self.mediator.get_grid_variable('mask_c_grid_rho', (self._n_elems_grid_rho), DTYPE_INT)
 
-        # Add zeta to shape and dimension indices dictionaries
+        # Add zeta to shape and dimension indices to dictionaries
         if self._has_zeta:
             self._variable_shapes['zos'] = self.mediator.get_variable_shape(self._variable_names['zos'])[1:]
             dimensions = self.mediator.get_variable_dimensions(self._variable_names['zos'])[1:]
             self._variable_dimension_indices['zos'] = {'latitude_grid_rho': dimensions.index(self._dimension_names['latitude_grid_rho']),
                                                        'longitude_grid_rho': dimensions.index(self._dimension_names['longitude_grid_rho'])}
+
+        # Add is wet/dry mask shape and dimension indices to dictionaries
+        if self._has_is_wet:
+            self._variable_shapes['wetdry_mask_rho'] = self.mediator.get_variable_shape(self._variable_names['wetdry_mask_rho'])[1:]
+            dimensions = self.mediator.get_variable_dimensions(self._variable_names['wetdry_mask_rho'])[1:]
+            self._variable_dimension_indices['wetdry_mask_rho'] = {'latitude_grid_rho': dimensions.index(self._dimension_names['latitude_grid_rho']),
+                                                                   'longitude_grid_rho': dimensions.index(self._dimension_names['longitude_grid_rho'])}
 
         # Add 3D vars to shape and dimension indices dictionaries
         var_names = ['uo', 'vo']
@@ -1416,7 +1421,30 @@ cdef class ROMSDataReader(DataReader):
                     self._variable_shapes['Ah'], DTYPE_FLOAT)
             self._ah_next = self._reshape_var(ah_next, self._variable_dimension_indices['Ah'])
 
-         # TODO - read wet/dry masks
+        # Set is wet status
+        # The wet/dry status is
+        if self._has_is_wet:
+            wetdry_mask_var_name = self._variable_names['wetdry_mask_rho']
+            wetdry_mask_last = self.mediator.get_time_dependent_variable_at_last_time_index(wetdry_mask_var_name,
+                    self._variable_shapes['wetdry_mask_rho'], DTYPE_FLOAT)
+            wetdry_mask_last = self._reshape_var(wetdry_mask_last, self._variable_dimension_indices['wetdry_mask_rho'])
+
+            wetdry_mask_next = self.mediator.get_time_dependent_variable_at_next_time_index(wetdry_mask_var_name,
+                    self._variable_shapes['wetdry_mask_rho'], DTYPE_FLOAT)
+            wetdry_mask_next = self._reshape_var(wetdry_mask_next, self._variable_dimension_indices['wetdry_mask_rho'])
+
+            for i in xrange(self._n_elems_grid_rho):
+                if self._mask_c_grid_rho[i] == 0:
+                    is_wet_last = 1
+                    is_wet_next = 1
+                    for j in xrange(3):
+                        node = self._nv_grid_rho[j, i]
+                        if wetdry_mask_last[node] == 1:
+                            is_wet_last = 0
+                        if wetdry_mask_next[node] == 1:
+                            is_wet_next = 0
+                    self._wet_cells_last[i] = is_wet_last
+                    self._wet_cells_next[i] = is_wet_next
 
         # Read in data as requested
         if 'thetao' in self.env_var_names:
