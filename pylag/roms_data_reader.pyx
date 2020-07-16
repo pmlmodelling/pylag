@@ -546,10 +546,16 @@ cdef class ROMSDataReader(DataReader):
         cdef DTYPE_INT_t k
 
         # Loop over all sigma levels to find the host z layer
-        depth_upper_level_grid_w = self._get_level_depth_on_w_grid(time_fraction, particle, 0)
+        depth_upper_level_grid_w = self._unstructured_grid_rho(self._depth_levels_grid_w_last[0, :],
+                                                               self._depth_levels_grid_w_next[0, :],
+                                                               time_fraction,
+                                                               particle)
         for k in xrange(self._n_s_w - 1):
             depth_lower_level_grid_w = depth_upper_level_grid_w
-            depth_upper_level_grid_w = self._get_level_depth_on_w_grid(time_fraction, particle, k+1)
+            depth_upper_level_grid_w = self._unstructured_grid_rho(self._depth_levels_grid_w_last[k+1, :],
+                                                                   self._depth_levels_grid_w_next[k+1,
+                                                                   time_fraction,
+                                                                   particle)
 
             if x3 <= depth_upper_level_grid_w and x3 >= depth_lower_level_grid_w:
                 # Host layer found
@@ -578,12 +584,17 @@ cdef class ROMSDataReader(DataReader):
                     particle.set_k_lower_layer(k + 1)
 
                 # Set the rho vert grid interpolation coefficient
-                depth_lower_level_grid_rho = self._get_level_depth_on_rho_grid(time_fraction, particle,
-                                                                               particle.get_k_lower_layer())
-                depth_upper_level_grid_rho = self._get_level_depth_on_rho_grid(time_fraction, particle,
-                                                                               particle.get_k_upper_layer())
-                particle.set_omega_layers(interp.get_linear_fraction(x3, depth_lower_level_grid_rho,
-                                                                     depth_upper_level_grid_rho))
+                depth_lower_level_grid_rho = self._unstructured_grid_rho(self._depth_levels_grid_rho_last[particle.get_k_lower_layer(), :],
+                                                                         self._depth_levels_grid_rho_next[particle.get_k_lower_layer(), :],
+                                                                         time_fraction,
+                                                                         particle)
+
+                depth_upper_level_grid_rho = self._unstructured_grid_rho(self._depth_levels_grid_rho_last[particle.get_k_upper_layer(), :],
+                                                                         self._depth_levels_grid_rho_next[particle.get_k_upper_layer(), :],
+                                                                         time_fraction,
+                                                                         particle)
+
+                particle.set_omega_layers(interp.get_linear_fraction(x3, depth_lower_level_grid_rho, depth_upper_level_grid_rho))
 
                 return IN_DOMAIN
 
@@ -1081,56 +1092,6 @@ cdef class ROMSDataReader(DataReader):
             Integer that identifies the host element in question
         """
         pass
-
-    cdef DTYPE_FLOAT_t _get_level_depth_on_rho_grid(self, DTYPE_FLOAT_t time_fraction, Particle* particle,
-            DTYPE_INT_t k_level) except FLOAT_ERR:
-        """ Returns depth on the given rho grid level at the particle's position
-
-        Parameters
-        ----------
-        time_fraction : float
-            Time interpolation coefficient.
-
-        particle : *Particle
-            Pointer to a Particle object.
-
-        k_level : int
-            The dpeth level on which to interpolate.
-
-        Returns
-        -------
-         : float
-             The depth.
-        """
-        return self._unstructured_grid_rho(self._depth_levels_grid_rho_last[k_level, :],
-                                           self._depth_levels_grid_rho_next[k_level, :],
-                                           time_fraction,
-                                           particle)
-
-    cdef DTYPE_FLOAT_t _get_level_depth_on_w_grid(self, DTYPE_FLOAT_t time_fraction, Particle* particle,
-            DTYPE_INT_t k_level) except FLOAT_ERR:
-        """ Returns depth on the given w grid level at the particle's position
-
-        Parameters
-        ----------
-        time_fraction : float
-            Time interpolation coefficient.
-
-        particle : *Particle
-            Pointer to a Particle object.
-
-        k_level : int
-            The dpeth level on which to interpolate.
-
-        Returns
-        -------
-         : float
-             The depth.
-        """
-        return self._unstructured_grid_rho(self._depth_levels_grid_w_last[k_level, :],
-                                           self._depth_levels_grid_w_next[k_level, :],
-                                           time_fraction,
-                                           particle)
 
     def _read_grid(self):
         """ Set grid and coordinate variables.
