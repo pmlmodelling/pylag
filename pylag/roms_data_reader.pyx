@@ -1081,8 +1081,6 @@ cdef class ROMSDataReader(DataReader):
         yield non-zero values, depending on the state of the host and
         surrounding elements in the given time window.
 
-        TODO - Implement this.
-
         Parameters
         ----------
         time : float
@@ -1091,7 +1089,12 @@ cdef class ROMSDataReader(DataReader):
         host : int
             Integer that identifies the host element in question
         """
-        pass
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name_grid_rho)
+
+        if self._has_is_wet:
+            if self._wet_cells_last[host_element] == 0 or self._wet_cells_next[host_element] == 0:
+                return 0
+        return 1
 
     def _read_grid(self):
         """ Set grid and coordinate variables.
