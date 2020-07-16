@@ -666,6 +666,12 @@ def create_roms_grid_metrics_file(file_name,
     else:
         raise RuntimeError('Bathymetry array is not 2D.')
 
+    # Remove chunk size from attrs
+    try:
+        del bathy_attrs['_ChunkSizes']
+    except KeyError:
+        pass
+
     # Loop over all grids
     for grid_name in grid_names:
         if process_grid[grid_name] is False:
@@ -676,6 +682,18 @@ def create_roms_grid_metrics_file(file_name,
         # Read in coordinate variables.
         lon_var, lon_attrs[grid_name] = _get_variable(input_dataset, lon_var_names[grid_name])
         lat_var, lat_attrs[grid_name] = _get_variable(input_dataset, lat_var_names[grid_name])
+
+        # Remove chunk size from attrs
+        try:
+            del lon_attrs[grid_name]['_ChunkSizes']
+        except KeyError:
+            pass
+
+        # Remove chunk size from attrs
+        try:
+            del lat_attrs[grid_name]['_ChunkSizes']
+        except KeyError:
+            pass
 
         if len(lon_var.shape) != len(lat_var.shape):
             raise RuntimeError('Lon and lat var shapes do not match')
