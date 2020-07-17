@@ -580,7 +580,6 @@ cdef class ArakawaADataReader(DataReader):
         zmax : float
             Sea surface elevation.
         """
-        pass
         cdef int i # Loop counters
         cdef int vertex # Vertex identifier
         cdef DTYPE_FLOAT_t zeta # Sea surface elevation at (t, x1, x2)
