@@ -9,6 +9,7 @@ pylag.parallel.model_factory - Factory method for parallel execution
 from pylag.model import OPTModel
 from pylag.arakawa_a_data_reader import ArakawaADataReader
 from pylag.fvcom_data_reader import FVCOMDataReader
+from pylag.roms_data_reader import ROMSDataReader
 from pylag.gotm_data_reader import GOTMDataReader
 
 # Serial imports
@@ -41,6 +42,10 @@ def get_model(config, datetime_start, datetime_end):
     elif config.get("OCEAN_CIRCULATION_MODEL", "name") == "FVCOM":
         mediator = SerialMediator(config, datetime_start, datetime_end)
         data_reader = FVCOMDataReader(config, mediator)
+        return OPTModel(config, data_reader)
+    elif config.get("OCEAN_CIRCULATION_MODEL", "name") == "ROMS":
+        mediator = SerialMediator(config, datetime_start, datetime_end)
+        data_reader = ROMSDataReader(config, mediator)
         return OPTModel(config, data_reader)
     elif config.get("OCEAN_CIRCULATION_MODEL", "name") == "GOTM":
         mediator = SerialMediator(config, datetime_start, datetime_end)
