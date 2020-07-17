@@ -674,15 +674,15 @@ cdef class UnstructuredGrid:
         cdef vector[DTYPE_FLOAT_t] var_nodes = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
 
         # Host element
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self.name)
 
         cdef DTYPE_INT_t i
 
         for i in xrange(N_VERTICES):
-            vertex = self._nv[i, host_element]
+            vertex = self.nv[i, host_element]
             var_nodes[i] = var_arr[vertex]
 
-        return interp.interpolate_within_element(var_nodes, particle.get_phi(self._name))
+        return interp.interpolate_within_element(var_nodes, particle.get_phi(self.name))
 
     cdef DTYPE_FLOAT_t interpolate_in_time_and_space(self, DTYPE_FLOAT_t[:] var_last_arr, DTYPE_FLOAT_t[:] var_next_arr,
             DTYPE_FLOAT_t time_fraction, Particle* particle) except FLOAT_ERR:
@@ -715,12 +715,12 @@ cdef class UnstructuredGrid:
         cdef vector[DTYPE_FLOAT_t] var_nodes = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
 
         # Host element
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self.name)
 
         cdef DTYPE_INT_t i
 
         for i in xrange(N_VERTICES):
-            vertex = self._nv[i, host_element]
+            vertex = self.nv[i, host_element]
             var_last = var_last_arr[vertex]
             var_next = var_next_arr[vertex]
 
@@ -729,7 +729,7 @@ cdef class UnstructuredGrid:
             else:
                 var_nodes[i] = var_last
 
-        return interp.interpolate_within_element(var_nodes, particle.get_phi(self._name))
+        return interp.interpolate_within_element(var_nodes, particle.get_phi(self.name))
 
     cdef void interpolate_grad_in_time_and_space(self, DTYPE_FLOAT_t[:] var_last_arr, DTYPE_FLOAT_t[:] var_next_arr,
             DTYPE_FLOAT_t time_fraction, Particle* particle, DTYPE_FLOAT_t var_prime[2]) except +:
@@ -765,7 +765,7 @@ cdef class UnstructuredGrid:
         cdef vector[DTYPE_FLOAT_t] var_nodes = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
 
         # Host element
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self.name)
 
         cdef DTYPE_INT_t i
 
@@ -773,7 +773,7 @@ cdef class UnstructuredGrid:
         self.get_grad_phi(host_element, dphi_dx, dphi_dy)
 
         for i in xrange(N_VERTICES):
-            vertex = self._nv[i, host_element]
+            vertex = self.nv[i, host_element]
             var_last = var_last_arr[vertex]
             var_next = var_next_arr[vertex]
 
