@@ -546,13 +546,13 @@ cdef class ROMSDataReader(DataReader):
         cdef DTYPE_INT_t k
 
         # Loop over all sigma levels to find the host z layer
-        depth_upper_level_grid_w = self._unstructured_grid_rho.interpolate_in_time_and_space(self._depth_levels_grid_w_last[0, :],
+        depth_lower_level_grid_w = self._unstructured_grid_rho.interpolate_in_time_and_space(self._depth_levels_grid_w_last[0, :],
                                                                                              self._depth_levels_grid_w_next[0, :],
                                                                                              time_fraction,
                                                                                              particle)
         for k in xrange(self._n_s_w - 1):
-            depth_lower_level_grid_w = depth_upper_level_grid_w
-            depth_upper_level_grid_w = self._unstructured_grid_rho.interpolate_in_time_and_space(self._depth_levels_grid_w_last[k+1, :],
+            depth_upper_level_grid_w = depth_lower_level_grid_w
+            depth_lower_level_grid_w = self._unstructured_grid_rho.interpolate_in_time_and_space(self._depth_levels_grid_w_last[k+1, :],
                                                                                                  self._depth_levels_grid_w_next[k+1, :],
                                                                                                  time_fraction,
                                                                                                  particle)
