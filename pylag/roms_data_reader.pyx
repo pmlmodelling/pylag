@@ -1206,13 +1206,13 @@ cdef class ROMSDataReader(DataReader):
 
         # Read in depth vars
         self._s_rho = xr.DataArray(self.mediator.get_grid_variable('s_rho', (self._n_s_rho), DTYPE_FLOAT),
-                                   dims=self.mediator.get_variable_dimensions('s_rho'))
+                                   dims=self.mediator.get_grid_variable_dimensions('s_rho'))
         self._s_w = xr.DataArray(self.mediator.get_grid_variable('s_w', (self._n_s_w), DTYPE_FLOAT),
-                                 dims=self.mediator.get_variable_dimensions('s_w'))
+                                 dims=self.mediator.get_grid_variable_dimensions('s_w'))
         self._cs_r = xr.DataArray(self.mediator.get_grid_variable('cs_r', (self._n_s_rho), DTYPE_FLOAT),
-                                  dims=self.mediator.get_variable_dimensions('cs_r'))
+                                  dims=self.mediator.get_grid_variable_dimensions('cs_r'))
         self._cs_w = xr.DataArray(self.mediator.get_grid_variable('cs_w', (self._n_s_w), DTYPE_FLOAT),
-                                  dims=self.mediator.get_variable_dimensions('cs_w'))
+                                  dims=self.mediator.get_grid_variable_dimensions('cs_w'))
         self._hc = self.mediator.get_grid_variable('hc', (1), DTYPE_FLOAT)
 
         # Vertical transform used when constructing depth grid
