@@ -182,6 +182,27 @@ class MPIMediator(Mediator):
         
         return time
 
+    def get_grid_variable_dimensions(self, var_name):
+        # MPI objects and variables
+        comm = MPI.COMM_WORLD
+        rank = comm.Get_rank()
+
+        if rank == 0:
+            try:
+                dimensions = self.file_reader.get_grid_variable_dimensions(var_name)
+            except Exception as e:
+                logger = logging.getLogger(__name__)
+                logger.error('Caught exception when getting variable dimensions. ' \
+                             'Terminating all tasks ...')
+                logger.error(traceback.format_exc())
+                comm.Abort()
+        else:
+            dimensions = None
+
+        dimensions = comm.bcast(dimensions, root=0)
+
+        return dimensions
+
     def get_variable_dimensions(self, var_name):
         # MPI objects and variables
         comm = MPI.COMM_WORLD

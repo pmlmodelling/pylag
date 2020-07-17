@@ -98,6 +98,21 @@ class Mediator:
          """
         raise NotImplementedError
 
+    def get_grid_variable_dimensions(self, var_name):
+        """ Wrapper for FileReader's get_grid_variable_dimensions
+
+        Parameters
+        ----------
+        var_name : str
+            The name of the variable.
+
+        Returns
+        -------
+         : tuple(str)
+             The variable's dimensions
+        """
+        raise NotImplementedError
+
     def get_variable_dimensions(self, var_name):
         """ Wrapper for FileReader's get_variable_dimension
 
@@ -261,6 +276,9 @@ class SerialMediator(Mediator):
 
     def get_time_at_next_time_index(self):
         return self.file_reader.get_time_at_next_time_index()
+
+    def get_grid_variable_dimensions(self, var_name):
+        return self.file_reader.get_grid_variable_dimensions(var_name)
 
     def get_variable_dimensions(self, var_name):
         return self.file_reader.get_variable_dimensions(var_name)

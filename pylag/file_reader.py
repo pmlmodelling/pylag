@@ -448,6 +448,21 @@ class FileReader:
         """
         return self.second_time[self.tidx_second]
 
+    def get_grid_variable_dimensions(self, var_name):
+        """ Get the variable dimensions
+
+        Parameters
+        ----------
+        var_name : str
+            The name of the variable.
+
+        Returns
+        -------
+         : tuple(str)
+             The variable's dimensions
+        """
+        return self.grid_file.variables[var_name].dimensions
+
     def get_variable_dimensions(self, var_name):
         """ Get the variable dimensions
 
