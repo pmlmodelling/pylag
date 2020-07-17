@@ -57,7 +57,8 @@ cdef class ROMSDataReader(DataReader):
     On an Arakawa C-grid, u, v, w and rho points are offset. PyLag's approach to
     dealing with such grids is to create separate unstructured grids for each of
     the three different horizontal grids (for u, v and rho points), with the w
-    horizontal grid being the same as the rho grid.
+    horizontal grid being the same as the rho grid. With respect to grid boundary
+    crossings, the `rho` grid is treated as the edge of the model domain.
     
     Parameters
     ----------
@@ -66,7 +67,6 @@ cdef class ROMSDataReader(DataReader):
     
     mediator : Mediator
         Mediator object for managing access to data read from file.
-
 
     """
     
@@ -106,8 +106,8 @@ cdef class ROMSDataReader(DataReader):
     cdef DTYPE_INT_t[:,:] _nbe_grid_rho
     
     # Minimum nodal x/y values
-    cdef DTYPE_FLOAT_t _xmin_grid_u, _xmin_grid_v, _xmin_grid_rho
-    cdef DTYPE_FLOAT_t _ymin_grid_u, _ymin_grid_v, _ymin_grid_rho
+    cdef DTYPE_FLOAT_t _xmin
+    cdef DTYPE_FLOAT_t _ymin
 
     # Vertical transform function
     cdef DTYPE_INT_t _vtransform
@@ -1338,10 +1338,10 @@ cdef class ROMSDataReader(DataReader):
             self._zeta_next = np.zeros((self._n_nodes_grid_rho), dtype=DTYPE_FLOAT)
 
         # Update depth levels
-        self._depth_levels_grid_rho_last = self._compute_depths('grid_rho', self._h, self._zeta_last)
-        self._depth_levels_grid_rho_next = self._compute_depths('grid_rho', self._h, self._zeta_next)
-        self._depth_levels_grid_w_last = self._compute_depths('grid_w', self._h, self._zeta_last)
-        self._depth_levels_grid_w_next = self._compute_depths('grid_w', self._h, self._zeta_next)
+        self._depth_levels_grid_rho_last = self.compute_depths('grid_rho', self._h, self._zeta_last)
+        self._depth_levels_grid_rho_next = self.compute_depths('grid_rho', self._h, self._zeta_next)
+        self._depth_levels_grid_w_last = self.compute_depths('grid_w', self._h, self._zeta_last)
+        self._depth_levels_grid_w_next = self.compute_depths('grid_w', self._h, self._zeta_next)
 
         # Update memory views for u
         u_var_name = self._variable_names['uo']
@@ -1508,7 +1508,7 @@ cdef class ROMSDataReader(DataReader):
         else:
             raise ValueError('Unsupported number of dimensions {}.'.format(n_dimensions))
 
-    def _get_dimension_name(dimension, grid_dimension_names):
+    def _get_dimension_name(self, dimension, grid_dimension_names):
         """ Helper function for finding dimension names
 
         The function searches the list of grid dimension names in order to find
