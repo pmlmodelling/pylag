@@ -501,7 +501,7 @@ def create_roms_grid_metrics_file(file_name,
                                   xi_dim_name_grid_u='xi_u', eta_dim_name_grid_u='eta_rho',
                                   xi_dim_name_grid_v='xi_rho', eta_dim_name_grid_v='eta_v',
                                   xi_dim_name_grid_rho='xi_rho', eta_dim_name_grid_rho='eta_rho',
-                                  mask_name_grid_u='mask_u', mask_name_grid_v='mask_v', mask_name_grid_rho='mask_rho',
+                                  mask_name_grid_u=None, mask_name_grid_v=None, mask_name_grid_rho='mask_rho',
                                   bathymetry_var_name='h', grid_metrics_file_name='./grid_metrics.nc', **kwargs):
     """ Create a ROMS metrics file
 
@@ -712,27 +712,32 @@ def create_roms_grid_metrics_file(file_name,
             raise RuntimeError('Unrecognised lon var shape')
 
         # Save mask
-        mask_var, _ = _get_variable(input_dataset, [mask_var_names[grid_name]])
+        if mask_var_names[grid_name] is not None:
+            mask_var, _ = _get_variable(input_dataset, [mask_var_names[grid_name]])
 
-        # Generate land-sea mask at nodes
-        land_sea_mask_nodes[grid_name] = sort_axes(mask_var, lat_name=eta_grid_names[grid_name],
-                                                   lon_name=xi_grid_names[grid_name]).squeeze()
-        if len(land_sea_mask_nodes[grid_name].shape) < 2 or len(land_sea_mask_nodes[grid_name].shape) > 3:
-            raise ValueError('Unsupported land sea mask with shape {}'.format(land_sea_mask_nodes[grid_name].shape))
+            # Generate land-sea mask at nodes
+            land_sea_mask_nodes[grid_name] = sort_axes(mask_var, lat_name=eta_grid_names[grid_name],
+                                                       lon_name=xi_grid_names[grid_name]).squeeze()
+            if len(land_sea_mask_nodes[grid_name].shape) < 2 or len(land_sea_mask_nodes[grid_name].shape) > 3:
+                raise ValueError('Unsupported land sea mask with shape {}'.format(land_sea_mask_nodes[grid_name].shape))
 
-        # Flip meaning yielding: 1 - masked land point, and 0 sea point.
-        land_sea_mask_nodes[grid_name] = 1 - land_sea_mask_nodes[grid_name]
+            # Flip meaning yielding: 1 - masked land point, and 0 sea point.
+            land_sea_mask_nodes[grid_name] = 1 - land_sea_mask_nodes[grid_name]
 
-        # Use surface mask only if shape is 3D
-        if len(land_sea_mask_nodes[grid_name].shape) == 3:
-            land_sea_mask_nodes[grid_name] = land_sea_mask_nodes[grid_name][0, :, :]
+            # Use surface mask only if shape is 3D
+            if len(land_sea_mask_nodes[grid_name].shape) == 3:
+                land_sea_mask_nodes[grid_name] = land_sea_mask_nodes[grid_name][0, :, :]
 
-        # Fix up long name to reflect flipping of mask
-        mask_attrs[grid_name] = {'standard_name': '{} mask'.format(grid_name),
-                                 'units': 1,
-                                 'long_name': "Land-sea mask: sea = 0 ; land = 1"}
+            # Fix up long name to reflect flipping of mask
+            mask_attrs[grid_name] = {'standard_name': '{} mask'.format(grid_name),
+                                     'units': 1,
+                                     'long_name': "Land-sea mask: sea = 0 ; land = 1"}
 
-        land_sea_mask_nodes[grid_name] = land_sea_mask_nodes[grid_name].reshape(np.prod(land_sea_mask_nodes[grid_name].shape), order='C')
+            land_sea_mask_nodes[grid_name] = land_sea_mask_nodes[grid_name].reshape(np.prod(land_sea_mask_nodes[grid_name].shape), order='C')
+
+        else:
+            mask_attrs[grid_name] = None
+            land_sea_mask_nodes[grid_name] = None
 
         # Save lon and lat points at nodes
         lon_nodes[grid_name] = lon2d.flatten(order='C')
@@ -770,10 +775,13 @@ def create_roms_grid_metrics_file(file_name,
         nbes[grid_name] = sort_adjacency_array(nvs[grid_name], nbes[grid_name])
 
         # Generate the land-sea mask at elements
-        land_sea_mask_elements[grid_name] = np.empty(elements[grid_name], dtype=int)
-        for i in range(elements[grid_name]):
-            element_nodes = nvs[grid_name][:, i]
-            land_sea_mask_elements[grid_name][i] = 1 if np.any(land_sea_mask_nodes[grid_name][element_nodes] == 1) else 0
+        if mask_var_names[grid_name] is not None:
+            land_sea_mask_elements[grid_name] = np.empty(elements[grid_name], dtype=int)
+            for i in range(elements[grid_name]):
+                element_nodes = nvs[grid_name][:, i]
+                land_sea_mask_elements[grid_name][i] = 1 if np.any(land_sea_mask_nodes[grid_name][element_nodes] == 1) else 0
+        else:
+            land_sea_mask_elements[grid_name] = None
 
         # Flag open boundaries with -2 flag
         nbes[grid_name][np.where(nbes[grid_name] == -1)] = -2
@@ -832,12 +840,13 @@ def create_roms_grid_metrics_file(file_name,
                                         attrs={'long_name': 'elements surrounding each element'})
 
         # Add land sea mask - nodes
-        gm_file_creator.create_variable('mask_{}'.format(grid_name), land_sea_mask_nodes[grid_name],
-                                        ('node_{}'.format(grid_name),), int, attrs=mask_attrs[grid_name])
+        if mask_var_names[grid_name] is not None:
+            gm_file_creator.create_variable('mask_{}'.format(grid_name), land_sea_mask_nodes[grid_name],
+                                            ('node_{}'.format(grid_name),), int, attrs=mask_attrs[grid_name])
 
-        # Add land sea mask - elements
-        gm_file_creator.create_variable('mask_c_{}'.format(grid_name), land_sea_mask_elements[grid_name],
-                                        ('element_{}'.format(grid_name),), int, attrs=mask_attrs[grid_name])
+            # Add land sea mask - elements
+            gm_file_creator.create_variable('mask_c_{}'.format(grid_name), land_sea_mask_elements[grid_name],
+                                            ('element_{}'.format(grid_name),), int, attrs=mask_attrs[grid_name])
 
     # Bathymetry
     gm_file_creator.create_variable('h', bathy, ('node_grid_rho',), float, attrs=bathy_attrs)
