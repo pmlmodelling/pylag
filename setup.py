@@ -211,6 +211,7 @@ setup(name="PyLag",
           "ipykernel",
           "nose2",
           "PyFVCOM",
-          "PyQT-fit"
+          "PyQT-fit",
+          "seapy"
       ],
 )

@@ -49,6 +49,7 @@ requirements:
     - PyFVCOM
     - PyQt-fit
     - nose2
+    - seapy
 
 test:
   import:

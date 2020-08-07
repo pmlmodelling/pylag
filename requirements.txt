@@ -31,3 +31,4 @@ jupyter_client
 ipykernel
 ffmpeg-python
 PyQT-fit
+seapy
