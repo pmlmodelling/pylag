@@ -76,6 +76,9 @@ cdef class ROMSDataReader(DataReader):
     # Mediator for accessing model data read in from file
     cdef object mediator
 
+    # Variable string specifying whether the underlying grid is rectilinear or curvilinear
+    cdef object _grid_type
+
     # List of environmental variables to read and save
     cdef object env_var_names
 
@@ -104,7 +107,10 @@ cdef class ROMSDataReader(DataReader):
     cdef DTYPE_INT_t[:,:] _nbe_grid_u
     cdef DTYPE_INT_t[:,:] _nbe_grid_v
     cdef DTYPE_INT_t[:,:] _nbe_grid_rho
-    
+
+    # Grid angles
+    cdef DTYPE_FLOAT_t[:] _rho_angles
+
     # Minimum nodal x/y values
     cdef DTYPE_FLOAT_t _xmin
     cdef DTYPE_FLOAT_t _ymin
@@ -196,6 +202,11 @@ cdef class ROMSDataReader(DataReader):
 
         # Time direction
         self._time_direction = <int>get_time_direction(config)
+
+        # Grid type - rectilinear or curvilinear
+        self._grid_type = self.config.get("OCEAN_CIRCULATION_MODEL", "grid_type").strip().lower()
+        if self._grid_type not in ['rectilinear', 'curvilinear']:
+            raise RuntimeError('Invalid grid type {}. Valid choices are `rectilinear` or `curvilinear`.'.format(self._grid_type))
 
         # Setup dimension name mappings
         self._dimension_names = {}
@@ -1150,6 +1161,15 @@ cdef class ROMSDataReader(DataReader):
         self._nbe_grid_v = self.mediator.get_grid_variable('nbe_grid_v', (3, self._n_elems_grid_v), DTYPE_INT)
         self._nbe_grid_rho = self.mediator.get_grid_variable('nbe_grid_rho', (3, self._n_elems_grid_rho), DTYPE_INT)
 
+        # Grid angles
+        if self._grid_type == 'curvilinear':
+            try:
+                self._rho_angles =  self.mediator.get_grid_variable('angles_grid_rho', (self._n_nodes_grid_rho), DTYPE_FLOAT)
+            except KeyError:
+                print('For curvilinear grids, grid angles at rho points must be provided via the grid metrics file.')
+                raise
+
+
         # Raw grid x/y or lat/lon coordinates
         coordinate_system = self.config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system").strip().lower()
 
@@ -1191,18 +1211,29 @@ cdef class ROMSDataReader(DataReader):
         xc_grid_rho = xc_grid_rho - self._xmin
         yc_grid_rho = yc_grid_rho - self._ymin
 
-        # Initialise the unstructured grids
-        self._unstructured_grid_u = UnstructuredGrid(self.config, self._name_grid_u, self._n_nodes_grid_u,
-                                                     self._n_elems_grid_u, self._nv_grid_u, self._nbe_grid_u,
-                                                     x_grid_u, y_grid_u, xc_grid_u, yc_grid_u)
+        # Initialise the unstructured grids objects
+        if self._grid_type == 'rectilinear':
+            # Use native U and V grids
+            self._unstructured_grid_u = UnstructuredGrid(self.config, self._name_grid_u, self._n_nodes_grid_u,
+                                                         self._n_elems_grid_u, self._nv_grid_u, self._nbe_grid_u,
+                                                         x_grid_u, y_grid_u, xc_grid_u, yc_grid_u)
 
-        self._unstructured_grid_v = UnstructuredGrid(self.config, self._name_grid_v, self._n_nodes_grid_v,
-                                                     self._n_elems_grid_v, self._nv_grid_v, self._nbe_grid_v,
-                                                     x_grid_v, y_grid_v, xc_grid_v, yc_grid_v)
+            self._unstructured_grid_v = UnstructuredGrid(self.config, self._name_grid_v, self._n_nodes_grid_v,
+                                                         self._n_elems_grid_v, self._nv_grid_v, self._nbe_grid_v,
+                                                         x_grid_v, y_grid_v, xc_grid_v, yc_grid_v)
+        elif  self._grid_type == 'curvilinear':
+            # Use rho grid for u/v velocity components. These will be remapped onto the rho grid as they are read in.
+            self._unstructured_grid_u = UnstructuredGrid(self.config, self._name_grid_u, self._n_nodes_grid_rho,
+                                                         self._n_elems_grid_rho, self._nv_grid_rho, self._nbe_grid_rho,
+                                                         x_grid_rho, y_grid_rho, xc_grid_rho, yc_grid_rho)
+
+            self._unstructured_grid_v = UnstructuredGrid(self.config, self._name_grid_v, self._n_nodes_grid_rho,
+                                                         self._n_elems_grid_rho, self._nv_grid_rho, self._nbe_grid_rho,
+                                                         x_grid_rho, y_grid_rho, xc_grid_rho, yc_grid_rho)
 
         self._unstructured_grid_rho = UnstructuredGrid(self.config, self._name_grid_rho, self._n_nodes_grid_rho,
-                                                     self._n_elems_grid_rho, self._nv_grid_rho, self._nbe_grid_rho,
-                                                     x_grid_rho, y_grid_rho, xc_grid_rho, yc_grid_rho)
+                                                       self._n_elems_grid_rho, self._nv_grid_rho, self._nbe_grid_rho,
+                                                       x_grid_rho, y_grid_rho, xc_grid_rho, yc_grid_rho)
 
         # Read in depth vars
         self._s_rho = xr.DataArray(self.mediator.get_grid_variable('s_rho', (self._n_s_rho), DTYPE_FLOAT),
@@ -1347,21 +1378,41 @@ cdef class ROMSDataReader(DataReader):
         u_var_name = self._variable_names['uo']
         u_last = self.mediator.get_time_dependent_variable_at_last_time_index(u_var_name,
                 self._variable_shapes['uo'], DTYPE_FLOAT)
-        self._u_last = self._reshape_var(u_last, self._variable_dimension_indices['uo'])
 
         u_next = self.mediator.get_time_dependent_variable_at_next_time_index(u_var_name,
                 self._variable_shapes['uo'], DTYPE_FLOAT)
-        self._u_next = self._reshape_var(u_next, self._variable_dimension_indices['uo'])
 
         # Update memory views for v
         v_var_name = self._variable_names['vo']
         v_last = self.mediator.get_time_dependent_variable_at_last_time_index(v_var_name,
                 self._variable_shapes['vo'], DTYPE_FLOAT)
-        self._v_last = self._reshape_var(v_last, self._variable_dimension_indices['vo'])
 
         v_next = self.mediator.get_time_dependent_variable_at_next_time_index(v_var_name,
                 self._variable_shapes['vo'], DTYPE_FLOAT)
-        self._v_next = self._reshape_var(v_next, self._variable_dimension_indices['vo'])
+
+        if self._grid_type == 'rectilinear':
+            self._u_last = self._reshape_var(u_last, self._variable_dimension_indices['uo'])
+            self._u_next = self._reshape_var(u_next, self._variable_dimension_indices['uo'])
+            self._v_last = self._reshape_var(v_last, self._variable_dimension_indices['vo'])
+            self._v_next = self._reshape_var(v_last, self._variable_dimension_indices['vo'])
+        if self._grid_type == 'curvilinear':
+            # Shift the velocity components to rho points
+            # TODO assumes standard ROMS variable ordering (t, k. j, i)
+            u_last = self.u_to_rho(u_last)
+            u_next = self.u_to_rho(u_next)
+            v_last = self.v_to_rho(v_last)
+            v_next = self.v_to_rho(v_next)
+
+            # Reshape and store
+            dimension_indices = {'depth': 0, 'latitude': 1, 'longitude': 2}
+            u_last = self._reshape_var(u_last, dimension_indices)
+            u_next = self._reshape_var(u_next, dimension_indices)
+            v_last = self._reshape_var(v_last, dimension_indices)
+            v_next = self._reshape_var(v_next, dimension_indices)
+
+            # Rotate vector
+            self._u_last, self._v_last = self.rotate_vector(u_last, v_last, self._rho_angles)
+            self._u_next, self._v_next = self.rotate_vector(u_next, v_next, self._rho_angles)
 
         # Update memory views for w
         if self._has_w:
@@ -1528,6 +1579,101 @@ cdef class ROMSDataReader(DataReader):
                return grid_dimension_name
 
         raise RuntimeError('Dimension {} not found in list of dimension names'.format(dimension))
+
+    def u_to_rho(self, u):
+        """  Put the u field onto the rho field for the c-grid
+
+        Function adapted from the seapy library (https://github.com/powellb/seapy/blob/master/seapy).
+
+        Parameters
+        ----------
+        u : masked array like
+            Input u field
+
+        Returns
+        -------
+        rho : masked array
+        """
+        # Mask the array (mask values are now zeros)
+        u = np.ma.masked_where(u==0.0, u)
+        shp = np.array(u.shape)
+        nshp = shp.copy()
+        nshp[-1] = nshp[-1] + 1
+        fore = np.product([shp[i] for i in np.arange(0, u.ndim - 1)]).astype(int)
+        nfld = np.ones([fore, nshp[-1]])
+        nfld[:, 1:-1] = 0.5 * \
+            (u.reshape([fore, shp[-1]])[:, 0:-1].filled(np.nan) +
+             u.reshape([fore, shp[-1]])[:, 1:].filled(np.nan))
+        nfld[:, 0] = nfld[:, 1] + (nfld[:, 2] - nfld[:, 3])
+        nfld[:, -1] = nfld[:, -2] + (nfld[:, -2] - nfld[:, -3])
+        u = np.ma.fix_invalid(nfld.reshape(nshp), copy=False, fill_value=1e+37)
+        return u.filled(0.0)
+
+    def v_to_rho(self, v):
+        """  Put the v field onto the rho field for the c-grid
+
+        Function adapted from the seapy library (https://github.com/powellb/seapy/blob/master/seapy).
+
+        Parameters
+        ----------
+        v : masked array like
+            Input v field
+
+        Returns
+        -------
+        rho : masked array
+        """
+        # Mask the array (mask values are now zeros)
+        v = np.ma.masked_where(v==0.0, v)
+        shp = np.array(v.shape)
+        nshp = shp.copy()
+        nshp[-2] = nshp[-2] + 1
+        fore = np.product([shp[i] for i in np.arange(0, v.ndim - 2)]).astype(int)
+        nfld = np.ones([fore, nshp[-2], nshp[-1]])
+        nfld[:, 1:-1, :] = 0.5 * \
+            (v.reshape([fore, shp[-2], shp[-1]])[:, 0:-1, :].filled(np.nan) +
+             v.reshape([fore, shp[-2], shp[-1]])[:, 1:, :].filled(np.nan))
+        nfld[:, 0, :] = nfld[:, 1, :] + (nfld[:, 2, :] - nfld[:, 3, :])
+        nfld[:, -1, :] = nfld[:, -2, :] + (nfld[:, -2, :] - nfld[:, -3, :])
+        v = np.ma.fix_invalid(nfld.reshape(nshp), copy=False, fill_value=1e+37)
+        return v.filled(0.0)
+
+    def rotate_vector(self, u, v, angle):
+        """ Rotate a vector field by the given angle
+
+        Function adapted from the seapy library (https://github.com/powellb/seapy/blob/master/seapy).
+
+        Parameters
+        ----------
+        u : array like
+            Input u component
+
+        v : array like
+            Input v component
+
+        angle : array like
+            Input angle of rotation in radians
+
+        Returns
+        -------
+        rotated_u, rotated_v : array
+        """
+        u = np.asanyarray(u)
+        v = np.asanyarray(v)
+        angle = np.asanyarray(angle)
+
+        # Check array shapes
+        assert u.shape == v.shape
+        assert len(u.shape) == 2
+        assert len(angle.shape) == 1
+
+        # Tile angles in depth
+        angle = np.tile(angle[np.newaxis, :], (u.shape[0], 1))
+
+        sa = np.sin(angle)
+        ca = np.cos(angle)
+
+        return u * ca - v * sa, u * sa + v * ca
 
     def compute_depths(self, depth_grid, h, zeta):
         """ Compute depth levels
