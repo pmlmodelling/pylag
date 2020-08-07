@@ -505,7 +505,7 @@ class ArakawaCPlotter:
 
             # Try to read the element mask
             try:
-                self.maskc[grid_name] = ds.variables['mask_{}'.format(grid_name)][:]
+                self.maskc[grid_name] = ds.variables['mask_c_{}'.format(grid_name)][:]
             except KeyError:
                 self.maskc[grid_name] = None
 
@@ -524,7 +524,8 @@ class ArakawaCPlotter:
             self.triangles[grid_name] = self.nv[grid_name].transpose()
 
             # Store triangulation
-            self.tri[grid_name] = Triangulation(self.x[grid_name], self.y[grid_name], self.triangles[grid_name], mask=self.maskc[grid_name])
+            self.tri[grid_name] = Triangulation(self.x[grid_name], self.y[grid_name], self.triangles[grid_name],
+                                                mask=self.maskc[grid_name])
 
     def _get_default_extents(self, grid_name):
         return np.array([self.x[grid_name].min(),
@@ -786,7 +787,7 @@ class ArakawaCPlotter:
 
         return ax, scatter_plot
 
-    def draw_grid(self, ax, grid_name, draw_masked_elements=False, **kwargs):
+    def draw_grid(self, ax, grid_name, draw_masked_elements=False, zorder=2, **kwargs):
         """ Draw the underlying grid or mesh
 
         Parameters
@@ -800,6 +801,9 @@ class ArakawaCPlotter:
         draw_masked_elements : bool
             Include masked elements. Default False.
 
+        zorder : int
+            The zorder.
+
         Returns
         --------
         ax : matplotlib.axes.Axes
@@ -810,7 +814,7 @@ class ArakawaCPlotter:
             reinstate_mask = True
             self.tri[grid_name].set_mask(None)
 
-        ax.triplot(self.tri[grid_name], zorder=2, **kwargs)
+        ax.triplot(self.tri[grid_name], zorder=zorder, **kwargs)
 
         # Reinstate the mask if needed
         if reinstate_mask:
