@@ -212,6 +212,7 @@ setup(name="PyLag",
           "nose2",
           "PyFVCOM",
           "PyQT-fit",
-          "seapy"
+          "seapy",
+          "xarray"
       ],
 )

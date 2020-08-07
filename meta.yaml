@@ -50,6 +50,7 @@ requirements:
     - PyQt-fit
     - nose2
     - seapy
+    - xarray
 
 test:
   import:
