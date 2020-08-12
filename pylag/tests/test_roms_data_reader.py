@@ -126,6 +126,12 @@ class MockROMSMediator(Mediator):
         self._grid_vars['cs_r'] = cs_r
         self._grid_vars['vtransform'] = vtransform
 
+        # Grid var dimensions
+        self._grid_var_dimensions = {'s_w': ('s_w'),
+                                     'cs_w': ('s_w'),
+                                     's_rho': ('s_rho'),
+                                     'cs_r': ('s_rho')}
+
         # Zeta at rho points [lat, lon]
         zos_dimensions = ('time', 'latitude_grid_rho', 'longitude_grid_rho')
         zos = np.array([[1., 1.], [1., 1.]], dtype=float)
@@ -197,6 +203,9 @@ class MockROMSMediator(Mediator):
     def get_grid_variable(self, var_name, var_dims, var_type):
         return self._grid_vars[var_name][:].astype(var_type)
 
+    def get_grid_variable_dimensions(self, var_name):
+        return self._grid_var_dimensions[var_name]
+
     def get_variable_dimensions(self, var_name):
         return self._time_dep_var_dimensions[var_name]
 
@@ -246,6 +255,7 @@ class ROMSReader_test(TestCase):
         config.add_section("SIMULATION")
         config.set('SIMULATION', 'time_direction', 'forward')
         config.add_section("OCEAN_CIRCULATION_MODEL")
+        config.set('OCEAN_CIRCULATION_MODEL', 'grid_type', 'rectilinear')
         config.set('OCEAN_CIRCULATION_MODEL', 'time_dim_name', 'time')
         config.set('OCEAN_CIRCULATION_MODEL', 'depth_dim_name_grid_rho', 's_rho')
         config.set('OCEAN_CIRCULATION_MODEL', 'depth_dim_name_grid_w', 's_w')
