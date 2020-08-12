@@ -40,6 +40,7 @@ Submodules
    pylag.position_modifier
    pylag.random
    pylag.restart
+   pylag.roms_data_reader
    pylag.simulator
    pylag.spline_cpp_wrapper
    pylag.time_manager
