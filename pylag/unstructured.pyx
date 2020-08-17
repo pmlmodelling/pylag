@@ -32,6 +32,7 @@ from pylag.particle cimport Particle
 from pylag.particle_cpp_wrapper cimport to_string
 from pylag.data_reader cimport DataReader
 cimport pylag.interpolation as interp
+from pylag.math cimport geographic_to_cartesian_coords, det_third_order
 from pylag.math cimport int_min, float_min, get_intersection_point
 from pylag.math cimport Intersection
 
@@ -1430,47 +1431,79 @@ cdef class UnstructuredGeographicGrid(Grid):
 
     cdef void get_phi(self, DTYPE_FLOAT_t x1, DTYPE_FLOAT_t x2,
             DTYPE_INT_t host, vector[DTYPE_FLOAT_t] &phi) except *:
-        """ Get barycentric coordinates.
+        """ Get spherical barycentric coordinates
 
-        Parameters:
-        -----------
+        The method uses the approach described by Lawson (1984).
+
+        Parameters
+        ----------
         x1 : float
-            x-position in cartesian coordinates.
+            Particle longitude in deg E.
 
         x2 : float
-            y-position in cartesian coordinates.
+            Particle latitude in deg N.
 
         host : int
             Host element.
 
-        Returns:
-        --------
-        phi : C array, float
-            Barycentric coordinates.
+        phi : vector[float]
+            Vector container in which barycentric coords will be saved.
+
+        Returns
+        -------
+        N/A
+
+        References
+        ----------
+        1) Lawson, C. 1984, C1 Surface interpolation for scattered data on the surface
+        of a sphere. Rocky mountain journal of mathematics. 14:1.
         """
 
         cdef int i # Loop counters
         cdef int vertex # Vertex identifier
 
-        # Intermediate arrays
+        # Element vertex coordinates in geographic coordinates
         cdef vector[DTYPE_FLOAT_t] x_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
         cdef vector[DTYPE_FLOAT_t] y_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+
+        # Element vertex coordinates in cartesian coordinates
+        cdef vector[DTYPE_FLOAT_t] p, p0, p1, p2
+
+        # Tetrahedral coordinates
+        cdef DTYPE_FLOAT_t s0, s1, s2
+        cdef DTYPE_FLOAT_t s_sum
 
         for i in xrange(N_VERTICES):
             vertex = self.nv[i,host]
             x_tri[i] = self.x[vertex]
             y_tri[i] = self.y[vertex]
 
-        # Calculate barycentric coordinates
-        interp.get_barycentric_coords(x1, x2, x_tri, y_tri, phi)
+        # Convert to cartesian coordinates
+        p = geographic_to_cartesian_coords(x1, x2, 1.0)
+        p0 = geographic_to_cartesian_coords(x_tri[0], y_tri[0], 1.0)
+        p1 = geographic_to_cartesian_coords(x_tri[1], y_tri[1], 1.0)
+        p2 = geographic_to_cartesian_coords(x_tri[2], y_tri[2], 1.0)
+
+        # Compute tetrahedral coordinates
+        s0 = det_third_order(p, p1, p2)
+        s1 = det_third_order(p0, p, p2)
+        s2 = det_third_order(p0, p1, p)
+        s_sum = s0 + s1 + s2
+
+        # Compute normalised tetrahedral coordinates
+        phi[0] = s0 / s_sum
+        phi[1] = s1 / s_sum
+        phi[2] = s2 / s_sum
+
+        return
 
     cdef void get_grad_phi(self, DTYPE_INT_t host,
             vector[DTYPE_FLOAT_t] &dphi_dx,
             vector[DTYPE_FLOAT_t] &dphi_dy) except *:
         """ Get gradient in phi with respect to x and y
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         host : int
             Host element
 

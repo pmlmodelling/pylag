@@ -6,6 +6,12 @@ Note
 math is implemented in Cython. Only a small portion of the
 API is exposed in Python with accompanying documentation.
 """
+import numpy as np
+
+from libc.math cimport sin, cos
+
+# Degrees -> radians conversion factor
+deg_to_radians = np.radians(1)
 
 cdef class Intersection:
     """ Simple class describing the intersection point of two lines
@@ -118,3 +124,38 @@ cdef get_intersection_point(DTYPE_FLOAT_t x1[2], DTYPE_FLOAT_t x2[2],
             xi[i] = x1[i] + t * r[i]
     else:
         raise ValueError('Line segments do not intersect.')
+
+
+cdef vector[DTYPE_FLOAT_t] geographic_to_cartesian_coords(DTYPE_FLOAT_t longitude,
+                                                          DTYPE_FLOAT_t latitude,
+                                                          DTYPE_FLOAT_t r):
+    """ Convert geographic to cartesian coordinates
+
+    Parameters
+    ----------
+    longitude : float
+        Longitude in deg E
+
+    latitude : float
+        Latitude in deg N
+
+    r : float
+        Radius
+
+    Returns
+    -------
+     coords: vector[float]
+         Vector of cartesian coordinates (x, y, z)
+    """
+    cdef DTYPE_FLOAT_t lon_rad, lat_rad
+
+    cdef vector[DTYPE_FLOAT_t] coords = vector[DTYPE_FLOAT_t](3, -999.)
+
+    lon_rad = longitude * deg_to_radians
+    lat_rad = latitude * deg_to_radians
+
+    coords[0] = r * cos(lon_rad) * cos(lat_rad)
+    coords[1] = r * sin(lon_rad) * cos(lat_rad)
+    coords[2] = r * sin(lat_rad)
+
+    return coords

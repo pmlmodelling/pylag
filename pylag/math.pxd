@@ -1,4 +1,8 @@
+from libcpp.vector cimport vector
+
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
+
+cdef DTYPE_FLOAT_t deg_to_rad
 
 cdef class Intersection:
     cdef DTYPE_FLOAT_t x1, y1, x2, y2, xi, yi
@@ -11,10 +15,19 @@ cdef inline DTYPE_INT_t int_max(DTYPE_INT_t a, DTYPE_INT_t b): return a if a >= 
 
 cdef inline  DTYPE_FLOAT_t det(DTYPE_FLOAT_t a[2], DTYPE_FLOAT_t b[2]): return a[0]*b[1] - a[1]*b[0]
 
+cdef inline DTYPE_FLOAT_t det_third_order(const vector[DTYPE_FLOAT_t] &p1,
+                                          const vector[DTYPE_FLOAT_t] &p2,
+                                          const vector[DTYPE_FLOAT_t] &p3):
+        return p1[0]*(p2[1]*p3[2] - p3[1]*p2[2]) - p1[1]*(p2[0]*p3[2] - p3[0]*p2[2]) + p1[2]*(p2[0]*p3[1] - p3[0]*p2[1])
+
 cdef inline DTYPE_FLOAT_t inner_product(DTYPE_FLOAT_t a[2], DTYPE_FLOAT_t b[2]): return a[0]*b[0] + a[1]*b[1]
 
 cdef get_intersection_point(DTYPE_FLOAT_t x1[2], DTYPE_FLOAT_t x2[2],
         DTYPE_FLOAT_t x3[2], DTYPE_FLOAT_t x4[2], DTYPE_FLOAT_t xi[2])
+
+cdef vector[DTYPE_FLOAT_t] geographic_to_cartesian_coords(DTYPE_FLOAT_t longitude,
+                                                          DTYPE_FLOAT_t latitude,
+                                                          DTYPE_FLOAT_t r)
 
 cpdef inline DTYPE_FLOAT_t sigma_to_cartesian_coords(DTYPE_FLOAT_t sigma, DTYPE_FLOAT_t h,
         DTYPE_FLOAT_t zeta):
