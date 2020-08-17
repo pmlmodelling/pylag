@@ -35,7 +35,7 @@ from libcpp.vector cimport vector
 from pylag.particle cimport Particle
 from pylag.particle_cpp_wrapper cimport to_string
 from pylag.data_reader cimport DataReader
-from pylag.unstructured cimport UnstructuredGrid
+from pylag.unstructured cimport Grid
 cimport pylag.interpolation as interp
 from pylag.math cimport int_min, float_min, get_intersection_point
 from pylag.math cimport Intersection
@@ -43,6 +43,7 @@ from pylag.math cimport Intersection
 # PyLag python imports
 from pylag import variable_library
 from pylag.numerics import get_time_direction
+from pylag.unstructured import get_unstructured_grid
 
 
 cdef class ROMSDataReader(DataReader):
@@ -83,9 +84,9 @@ cdef class ROMSDataReader(DataReader):
     cdef object env_var_names
 
     # Unstructured grid objects for performing grid searching etc
-    cdef UnstructuredGrid _unstructured_grid_u
-    cdef UnstructuredGrid _unstructured_grid_v
-    cdef UnstructuredGrid _unstructured_grid_rho
+    cdef Grid _unstructured_grid_u
+    cdef Grid _unstructured_grid_v
+    cdef Grid _unstructured_grid_rho
 
     # The name of the grid
     cdef string _name_grid_u
@@ -1214,26 +1215,26 @@ cdef class ROMSDataReader(DataReader):
         # Initialise the unstructured grids objects
         if self._grid_type == 'rectilinear':
             # Use native U and V grids
-            self._unstructured_grid_u = UnstructuredGrid(self.config, self._name_grid_u, self._n_nodes_grid_u,
-                                                         self._n_elems_grid_u, self._nv_grid_u, self._nbe_grid_u,
-                                                         x_grid_u, y_grid_u, xc_grid_u, yc_grid_u)
+            self._unstructured_grid_u = get_unstructured_grid(self.config, self._name_grid_u, self._n_nodes_grid_u,
+                                                              self._n_elems_grid_u, self._nv_grid_u, self._nbe_grid_u,
+                                                              x_grid_u, y_grid_u, xc_grid_u, yc_grid_u)
 
-            self._unstructured_grid_v = UnstructuredGrid(self.config, self._name_grid_v, self._n_nodes_grid_v,
-                                                         self._n_elems_grid_v, self._nv_grid_v, self._nbe_grid_v,
-                                                         x_grid_v, y_grid_v, xc_grid_v, yc_grid_v)
+            self._unstructured_grid_v = get_unstructured_grid(self.config, self._name_grid_v, self._n_nodes_grid_v,
+                                                              self._n_elems_grid_v, self._nv_grid_v, self._nbe_grid_v,
+                                                              x_grid_v, y_grid_v, xc_grid_v, yc_grid_v)
         elif  self._grid_type == 'curvilinear':
             # Use rho grid for u/v velocity components. These will be remapped onto the rho grid as they are read in.
-            self._unstructured_grid_u = UnstructuredGrid(self.config, self._name_grid_u, self._n_nodes_grid_rho,
-                                                         self._n_elems_grid_rho, self._nv_grid_rho, self._nbe_grid_rho,
-                                                         x_grid_rho, y_grid_rho, xc_grid_rho, yc_grid_rho)
+            self._unstructured_grid_u = get_unstructured_grid(self.config, self._name_grid_u, self._n_nodes_grid_rho,
+                                                              self._n_elems_grid_rho, self._nv_grid_rho, self._nbe_grid_rho,
+                                                              x_grid_rho, y_grid_rho, xc_grid_rho, yc_grid_rho)
 
-            self._unstructured_grid_v = UnstructuredGrid(self.config, self._name_grid_v, self._n_nodes_grid_rho,
-                                                         self._n_elems_grid_rho, self._nv_grid_rho, self._nbe_grid_rho,
-                                                         x_grid_rho, y_grid_rho, xc_grid_rho, yc_grid_rho)
+            self._unstructured_grid_v = get_unstructured_grid(self.config, self._name_grid_v, self._n_nodes_grid_rho,
+                                                              self._n_elems_grid_rho, self._nv_grid_rho, self._nbe_grid_rho,
+                                                              x_grid_rho, y_grid_rho, xc_grid_rho, yc_grid_rho)
 
-        self._unstructured_grid_rho = UnstructuredGrid(self.config, self._name_grid_rho, self._n_nodes_grid_rho,
-                                                       self._n_elems_grid_rho, self._nv_grid_rho, self._nbe_grid_rho,
-                                                       x_grid_rho, y_grid_rho, xc_grid_rho, yc_grid_rho)
+        self._unstructured_grid_rho = get_unstructured_grid(self.config, self._name_grid_rho, self._n_nodes_grid_rho,
+                                                            self._n_elems_grid_rho, self._nv_grid_rho, self._nbe_grid_rho,
+                                                            x_grid_rho, y_grid_rho, xc_grid_rho, yc_grid_rho)
 
         # Read in depth vars
         self._s_rho = xr.DataArray(self.mediator.get_grid_variable('s_rho', (self._n_s_rho), DTYPE_FLOAT),

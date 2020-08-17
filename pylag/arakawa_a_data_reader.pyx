@@ -34,13 +34,14 @@ from libcpp.vector cimport vector
 from pylag.particle cimport Particle
 from pylag.particle_cpp_wrapper cimport to_string
 from pylag.data_reader cimport DataReader
-from pylag.unstructured cimport UnstructuredGrid
+from pylag.unstructured cimport Grid
 cimport pylag.interpolation as interp
 from pylag.math cimport int_min, float_min, get_intersection_point
 from pylag.math cimport Intersection
 
 # PyLag python imports
 from pylag import variable_library
+from pylag.unstructured import get_unstructured_grid
 from pylag.numerics import get_time_direction
 
 
@@ -74,7 +75,7 @@ cdef class ArakawaADataReader(DataReader):
     cdef object env_var_names
 
     # Unstructured grid object for performing grid searching etc
-    cdef UnstructuredGrid _unstructured_grid
+    cdef Grid _unstructured_grid
 
     # The name of the grid
     cdef string _name
@@ -1130,7 +1131,8 @@ cdef class ArakawaADataReader(DataReader):
         yc = yc - self._ymin
 
         # Initialise unstructured grid
-        self._unstructured_grid = UnstructuredGrid(self.config, self._name, self._n_nodes, self._n_elems, self._nv, self._nbe, x, y, xc, yc)
+        self._unstructured_grid = get_unstructured_grid(self.config, self._name, self._n_nodes, self._n_elems,
+                                                        self._nv, self._nbe, x, y, xc, yc)
 
         # Depth levels at nodal coordinates. Assumes and requires that depth is positive down. The -1 multiplier
         # flips this so that depth is positive up from the zero geoid.

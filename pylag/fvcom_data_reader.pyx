@@ -33,7 +33,7 @@ from libcpp.vector cimport vector
 from pylag.particle cimport Particle
 from pylag.particle_cpp_wrapper cimport to_string
 from pylag.data_reader cimport DataReader
-from pylag.unstructured cimport UnstructuredGrid
+from pylag.unstructured cimport Grid
 cimport pylag.interpolation as interp
 from pylag.math cimport int_min, float_min, get_intersection_point
 from pylag.math cimport cartesian_to_sigma_coords, sigma_to_cartesian_coords
@@ -42,6 +42,7 @@ from pylag.math cimport Intersection
 # PyLag python imports
 from pylag import variable_library
 from pylag.numerics import get_time_direction
+from pylag.unstructured import get_unstructured_grid
 
 cdef class FVCOMDataReader(DataReader):
     """ DataReader for FVCOM input data
@@ -68,7 +69,7 @@ cdef class FVCOMDataReader(DataReader):
     cdef object mediator
 
     # Unstructured grid object for performing grid searching etc
-    cdef UnstructuredGrid _unstructured_grid
+    cdef Grid _unstructured_grid
 
     # List of environmental variables to read and save
     cdef object env_var_names
@@ -1272,8 +1273,8 @@ cdef class FVCOMDataReader(DataReader):
         self._yc = yc - self._ymin
 
         # Initialise unstructured grid
-        self._unstructured_grid = UnstructuredGrid(self.config, self._name, self._n_nodes, self._n_elems, self._nv,
-                                                   self._nbe, self._x, self._y, self._xc, self._yc)
+        self._unstructured_grid = get_unstructured_grid(self.config, self._name, self._n_nodes, self._n_elems, self._nv,
+                                                        self._nbe, self._x, self._y, self._xc, self._yc)
 
         # Sigma levels at nodal coordinates
         self._siglev = self.mediator.get_grid_variable('siglev', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)

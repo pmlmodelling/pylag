@@ -36,7 +36,59 @@ from pylag.math cimport int_min, float_min, get_intersection_point
 from pylag.math cimport Intersection
 
 
-cdef class UnstructuredGrid:
+cdef class Grid:
+    """ Base class for grid objects
+
+    Objects of type Grid can perform grid searches, compute local coordinates to assist
+    with interpolation and help identify grid boundary crossings. Derived classes must
+    implement functionality that is specific to a given grid type (e.g. an unstructured
+    grid in cartesian coordinates vs an unstructured grid in geographic coordinates.
+    """
+    cdef DTYPE_INT_t find_host_using_global_search(self,
+                                                   Particle *particle) except INT_ERR:
+        raise NotImplementedError
+
+    cdef DTYPE_INT_t find_host_using_local_search(self,
+                                                  Particle *particle) except INT_ERR:
+        raise NotImplementedError
+
+    cdef DTYPE_INT_t find_host_using_particle_tracing(self, Particle *particle_old,
+                                                      Particle *particle_new) except INT_ERR:
+        raise NotImplementedError
+
+    cdef Intersection get_boundary_intersection(self, Particle *particle_old,
+                                                Particle *particle_new):
+        raise NotImplementedError
+
+    cdef set_default_location(self, Particle *particle):
+        raise NotImplementedError
+
+    cdef set_local_coordinates(self, Particle *particle):
+        raise NotImplementedError
+
+    cdef void get_phi(self, DTYPE_FLOAT_t x1, DTYPE_FLOAT_t x2,
+                      DTYPE_INT_t host, vector[DTYPE_FLOAT_t] &phi) except *:
+        raise NotImplementedError
+
+    cdef void get_grad_phi(self, DTYPE_INT_t host,
+                           vector[DTYPE_FLOAT_t] &dphi_dx,
+                           vector[DTYPE_FLOAT_t] &dphi_dy) except *:
+        raise NotImplementedError
+
+    cdef DTYPE_FLOAT_t interpolate_in_space(self, DTYPE_FLOAT_t[:] var_arr, Particle *particle) except FLOAT_ERR:
+        raise NotImplementedError
+
+    cdef DTYPE_FLOAT_t interpolate_in_time_and_space(self, DTYPE_FLOAT_t[:] var_last_arr, DTYPE_FLOAT_t[:] var_next_arr,
+                                                     DTYPE_FLOAT_t time_fraction, Particle *particle) except FLOAT_ERR:
+        raise NotImplementedError
+
+    cdef void interpolate_grad_in_time_and_space(self, DTYPE_FLOAT_t[:] var_last_arr, DTYPE_FLOAT_t[:] var_next_arr,
+                                                 DTYPE_FLOAT_t time_fraction, Particle *particle,
+                                                 DTYPE_FLOAT_t var_prime[2]) except *:
+        raise NotImplementedError
+
+
+cdef class UnstructuredCartesianGrid(Grid):
     """ Unstructured grid
 
     Objects of type UnstructuredGrid can perform grid searches, compute local
@@ -76,6 +128,28 @@ cdef class UnstructuredGrid:
     yc : 1D memory view
         y-coordinates of element centres
     """
+    # Configurtion object
+    cdef object config
+
+    # The grid name
+    cdef string name
+
+    # Grid dimensions
+    cdef DTYPE_INT_t n_elems, n_nodes
+
+    # Element connectivity
+    cdef DTYPE_INT_t[:,:] nv
+
+    # Element adjacency
+    cdef DTYPE_INT_t[:,:] nbe
+
+    # Nodal coordinates
+    cdef DTYPE_FLOAT_t[:] x
+    cdef DTYPE_FLOAT_t[:] y
+
+    # Element centre coordinates
+    cdef DTYPE_FLOAT_t[:] xc
+    cdef DTYPE_FLOAT_t[:] yc
 
     def __init__(self, config, name, n_nodes, n_elems, nv, nbe, x, y, xc, yc):
         self.config = config
@@ -732,7 +806,7 @@ cdef class UnstructuredGrid:
         return interp.interpolate_within_element(var_nodes, particle.get_phi(self.name))
 
     cdef void interpolate_grad_in_time_and_space(self, DTYPE_FLOAT_t[:] var_last_arr, DTYPE_FLOAT_t[:] var_next_arr,
-            DTYPE_FLOAT_t time_fraction, Particle* particle, DTYPE_FLOAT_t var_prime[2]) except +:
+            DTYPE_FLOAT_t time_fraction, Particle* particle, DTYPE_FLOAT_t var_prime[2]) except *:
         """ Interpolate the gradient in the given field in time and space
 
         Interpolate the gradient in the given field in time and space on the horizontal grid. The supplied fields
@@ -787,3 +861,23 @@ cdef class UnstructuredGrid:
         var_prime[1] = interp.interpolate_within_element(var_nodes, dphi_dy)
 
         return
+
+def get_unstructured_grid(config, *args):
+    """ Factory method for unstructured grid types
+
+    The factory method is used to distinguish between geographic and cartesian
+    unstructured grid types. Required arguments are documented in the respective
+    class docs.
+
+    Parameters
+    ----------
+    config : ConfigParser
+        Object of type ConfigParser.
+    """
+    coordinate_system = config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system")
+    if coordinate_system == "cartesian":
+        return UnstructuredCartesianGrid(config, *args)
+    elif coordinate_system == "geographic":
+        raise NotImplementedError
+    else:
+        raise ValueError("Unsupported coordinate_system `{}` specified".format(coordinate_system))

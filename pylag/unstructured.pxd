@@ -10,30 +10,9 @@ from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 from pylag.particle cimport Particle
 from pylag.math cimport Intersection
 
-cdef class UnstructuredGrid:
+cdef class Grid:
 
-    # Configurtion object
-    cdef object config
 
-    # The grid name
-    cdef string name
-
-    # Grid dimensions
-    cdef DTYPE_INT_t n_elems, n_nodes
-
-    # Element connectivity
-    cdef DTYPE_INT_t[:,:] nv
-
-    # Element adjacency
-    cdef DTYPE_INT_t[:,:] nbe
-
-    # Nodal coordinates
-    cdef DTYPE_FLOAT_t[:] x
-    cdef DTYPE_FLOAT_t[:] y
-
-    # Element centre coordinates
-    cdef DTYPE_FLOAT_t[:] xc
-    cdef DTYPE_FLOAT_t[:] yc
 
     cdef DTYPE_INT_t find_host_using_global_search(self,
                                                    Particle *particle) except INT_ERR
@@ -65,4 +44,4 @@ cdef class UnstructuredGrid:
 
     cdef void interpolate_grad_in_time_and_space(self, DTYPE_FLOAT_t[:] var_last_arr, DTYPE_FLOAT_t[:] var_next_arr,
                                                  DTYPE_FLOAT_t time_fraction, Particle *particle,
-                                                 DTYPE_FLOAT_t var_prime[2]) except +
+                                                 DTYPE_FLOAT_t var_prime[2]) except *
