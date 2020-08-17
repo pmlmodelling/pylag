@@ -1254,13 +1254,13 @@ cdef class FVCOMDataReader(DataReader):
             self._xmin = np.min(x)
             self._ymin = np.min(y)
 
-        elif coordinate_system == "spherical":
+        elif coordinate_system == "geographic":
             x = self.mediator.get_grid_variable('longitude', (self._n_nodes), DTYPE_FLOAT)
             y = self.mediator.get_grid_variable('latitude', (self._n_nodes), DTYPE_FLOAT)
             xc = self.mediator.get_grid_variable('longitude_c', (self._n_elems), DTYPE_FLOAT)
             yc = self.mediator.get_grid_variable('latitude_c', (self._n_elems), DTYPE_FLOAT)
 
-            # Don't apply offsets in spherical case - set them to 0.0!
+            # Don't apply offsets in geographic case - set them to 0.0!
             self._xmin = 0.0
             self._ymin = 0.0
         else:

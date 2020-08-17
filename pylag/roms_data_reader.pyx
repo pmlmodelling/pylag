@@ -1174,7 +1174,7 @@ cdef class ROMSDataReader(DataReader):
         # Raw grid x/y or lat/lon coordinates
         coordinate_system = self.config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system").strip().lower()
 
-        if coordinate_system == "spherical":
+        if coordinate_system == "geographic":
             x_grid_u = self.mediator.get_grid_variable('longitude_grid_u', (self._n_nodes_grid_u), DTYPE_FLOAT)
             y_grid_u = self.mediator.get_grid_variable('latitude_grid_u', (self._n_nodes_grid_u), DTYPE_FLOAT)
             xc_grid_u = self.mediator.get_grid_variable('longitude_c_grid_u', (self._n_elems_grid_u), DTYPE_FLOAT)
@@ -1190,7 +1190,7 @@ cdef class ROMSDataReader(DataReader):
             xc_grid_rho = self.mediator.get_grid_variable('longitude_c_grid_rho', (self._n_elems_grid_rho), DTYPE_FLOAT)
             yc_grid_rho = self.mediator.get_grid_variable('latitude_c_grid_u', (self._n_elems_grid_u), DTYPE_FLOAT)
 
-            # Don't apply offsets in spherical case - set them to 0.0!
+            # Don't apply offsets in geographic case - set them to 0.0!
             self._xmin = 0.0
             self._ymin = 0.0
         else:

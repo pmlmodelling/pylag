@@ -87,7 +87,7 @@ def get_coordinate_variable_name(coordinate_system, variable_name):
     Parameters
     ----------
     coordinate_system : str
-        The coordinate system (i.e. `cartesian` or `spherical`)
+        The coordinate system (i.e. `cartesian` or `geographic`)
 
     variable_name : str
         The variable name (i.e. `x1`, `x2` or `x3`)
@@ -100,8 +100,8 @@ def get_coordinate_variable_name(coordinate_system, variable_name):
     """
     if coordinate_system == "cartesian":
         return cartesian_coordinate_variable_names[variable_name]
-    elif coordinate_system == "spherical":
-        return spherical_coordinate_variable_names[variable_name]
+    elif coordinate_system == "geographic":
+        return geographic_coordinate_variable_names[variable_name]
     else:
         raise ValueError("Unsupported model coordinate system `{}'".format(coordinate_system))
 
@@ -140,11 +140,11 @@ _variable_units['z'] = 'm'
 _variable_long_names['z'] = 'z'
 
 
-# Spherical spatial coordinates
+# Geographic spatial coordinates
 # -----------------------------
-spherical_coordinate_variable_names = {'x1': 'longitude',
-                                       'x2': 'latitude',
-                                       'x3': 'depth'}
+geographic_coordinate_variable_names = {'x1': 'longitude',
+                                        'x2': 'latitude',
+                                        'x3': 'depth'}
 
 # Particle longitude
 _variable_data_types['longitude'] = DTYPE_FLOAT

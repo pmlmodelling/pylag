@@ -1112,13 +1112,13 @@ cdef class ArakawaADataReader(DataReader):
         # Raw grid x/y or lat/lon coordinates
         coordinate_system = self.config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system").strip().lower()
 
-        if coordinate_system == "spherical":
+        if coordinate_system == "geographic":
             x = self.mediator.get_grid_variable('longitude', (self._n_nodes), DTYPE_FLOAT)
             y = self.mediator.get_grid_variable('latitude', (self._n_nodes), DTYPE_FLOAT)
             xc = self.mediator.get_grid_variable('longitude_c', (self._n_elems), DTYPE_FLOAT)
             yc = self.mediator.get_grid_variable('latitude_c', (self._n_elems), DTYPE_FLOAT)
 
-            # Don't apply offsets in spherical case - set them to 0.0!
+            # Don't apply offsets in geographic case - set them to 0.0!
             self._xmin = 0.0
             self._ymin = 0.0
         else:

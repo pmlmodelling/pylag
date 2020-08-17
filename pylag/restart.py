@@ -36,7 +36,7 @@ class RestartFileCreator(object):
 
         # Read in the coordinate system
         coordinate_system = self._config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system").strip().lower()
-        if coordinate_system in ["cartesian", "spherical"]:
+        if coordinate_system in ["cartesian", "geographic"]:
             self.coordinate_system = coordinate_system
         else:
             raise ValueError("Unsupported model coordinate system `{}'".format(coordinate_system))

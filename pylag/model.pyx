@@ -82,7 +82,7 @@ cdef class OPTModel:
 
         # Read in the coordinate system
         coordinate_system = self.config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system").strip().lower()
-        if coordinate_system in ["cartesian", "spherical"]:
+        if coordinate_system in ["cartesian", "geographic"]:
             self.coordinate_system = coordinate_system
         else:
             raise ValueError("Unsupported model coordinate system `{}'".format(coordinate_system))
@@ -265,7 +265,7 @@ cdef class OPTModel:
         if self.coordinate_system == "cartesian":
             xmin = self.data_reader.get_xmin()
             ymin = self.data_reader.get_ymin()
-        elif self.coordinate_system == "spherical":
+        elif self.coordinate_system == "geographic":
             xmin = 0.0
             ymin = 0.0
 
@@ -374,7 +374,7 @@ cdef class OPTModel:
         if self.coordinate_system == "cartesian":
             xmin = self.data_reader.get_xmin()
             ymin = self.data_reader.get_ymin()
-        elif self.coordinate_system == "spherical":
+        elif self.coordinate_system == "geographic":
             xmin = 0.0
             ymin = 0.0
 
@@ -454,7 +454,7 @@ cdef class OPTModel:
         if self.coordinate_system == "cartesian":
             xmin = self.data_reader.get_xmin()
             ymin = self.data_reader.get_ymin()
-        elif self.coordinate_system == "spherical":
+        elif self.coordinate_system == "geographic":
             xmin = 0.0
             ymin = 0.0
 

@@ -55,8 +55,8 @@ cdef class CartesianPositionModifier(PositionModifier):
         particle.set_x3(x3)
 
 
-cdef class SphericalPositionModifier(PositionModifier):
-    """ Update particle positions within a spherical polar coordinate system
+cdef class GeographicPositionModifier(PositionModifier):
+    """ Update particle positions within a geographic coordinate system
 
     """
     cdef DTYPE_FLOAT_t deg_to_rad
@@ -103,8 +103,8 @@ def get_position_modifier(config):
     # Return the specified numerical integrator.
     if config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system") == "cartesian":
         return CartesianPositionModifier()
-    elif config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system") == "spherical":
-        return SphericalPositionModifier()
+    elif config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system") == "geographic":
+        return GeographicPositionModifier()
     else:
         raise ValueError("Unsupported coordinate system specified")
 
