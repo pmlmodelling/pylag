@@ -4,13 +4,14 @@ import numpy.testing as test
 
 from pylag.data_types_python import DTYPE_FLOAT
 
+from pylag import math
 from pylag.math import cartesian_to_sigma_coords, sigma_to_cartesian_coords
-from pylag.cwrappers import det_wrapper, inner_product_wrapper, get_intersection_point_wrapper
+from pylag.cwrappers import inner_product_wrapper, get_intersection_point_wrapper
 
 def test_det():
     a = [1.0, 2.0]
     b = [3.0, 4.0]
-    c = det_wrapper(a, b)
+    c = math.det_second_order_wrapper(a, b)
     test.assert_array_almost_equal(c, -2.0)
 
 def test_inner_product():
