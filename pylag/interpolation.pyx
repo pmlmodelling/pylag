@@ -206,47 +206,6 @@ def get_interpolator(config, n_elems):
         raise ValueError('Unsupported vertical interpolation scheme.')
 
 
-cdef get_barycentric_gradients(const vector[DTYPE_FLOAT_t] &x_tri, const vector[DTYPE_FLOAT_t] &y_tri,
-        vector[DTYPE_FLOAT_t] &dphi_dx, vector[DTYPE_FLOAT_t] &dphi_dy):
-    """ Compute barycentric coordinate gradients with respect to x and y
-
-    Compute and return dphi_i/dx and dphi_i/dy - the gradient in the element's
-    barycentric coordinates. In all cases phi_i is linear in both x and y 
-    meaning the gradient is constant within the element.
-
-    Parameters
-    ----------
-    x_tri : vector, float
-        Triangle x coordinates.
-
-    y_tri : vector, float
-        Triangle y coordinates.
-
-    dphi_dx : vector, float
-        The gradient in phi_i with respect to x.
-
-    dphi_dy : vector, float
-        The gradient in phi_i with respect to y.
-    """
-
-    cdef DTYPE_FLOAT_t a1, a2, a3, a4, den
-
-    a1 = x_tri[1] - x_tri[0]
-    a2 = y_tri[2] - y_tri[0]
-    a3 = y_tri[1] - y_tri[0]
-    a4 = x_tri[2] - x_tri[0]
-
-    # Denominator
-    den = a1 * a2 - a3 * a4
-
-    dphi_dx[0] = (y_tri[1] - y_tri[2])/den
-    dphi_dx[1] = (y_tri[2] - y_tri[0])/den
-    dphi_dx[2] = (y_tri[0] - y_tri[1])/den
-
-    dphi_dy[0] = (x_tri[2] - x_tri[1])/den
-    dphi_dy[1] = (x_tri[0] - x_tri[2])/den
-    dphi_dy[2] = (x_tri[1] - x_tri[0])/den
-
 cdef DTYPE_FLOAT_t shepard_interpolation(DTYPE_FLOAT_t x,
         DTYPE_FLOAT_t y, vector[DTYPE_FLOAT_t] xpts, vector[DTYPE_FLOAT_t] ypts,
         vector[DTYPE_FLOAT_t] vals) except FLOAT_ERR:

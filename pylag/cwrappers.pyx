@@ -34,29 +34,6 @@ def inner_product_wrapper(a, b):
     b_c[:] = b[:]
     return math.inner_product(a_c, b_c)
 
-cpdef get_barycentric_gradients(x_tri, y_tri):
-    cdef vector[DTYPE_FLOAT_t] x_tri_c = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-    cdef vector[DTYPE_FLOAT_t] y_tri_c = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-    cdef vector[DTYPE_FLOAT_t] dphi_dx_c = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-    cdef vector[DTYPE_FLOAT_t] dphi_dy_c = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-    cdef DTYPE_INT_t i
-
-    if x_tri.shape[0] != N_VERTICES or y_tri.shape[0] != N_VERTICES:
-        raise ValueError('1D array must be have a length of {}.'.format(N_VERTICES))
-    
-    for i in xrange(N_VERTICES):
-        x_tri_c[i] = x_tri[i]
-        y_tri_c[i] = y_tri[i]
-    
-    interp.get_barycentric_gradients(x_tri_c, y_tri_c, dphi_dx_c, dphi_dy_c)
-    
-    # Generate and pass back an array type python can understand
-    dphi_dx_out = np.empty(N_VERTICES, dtype=DTYPE_FLOAT)
-    dphi_dy_out = np.empty(N_VERTICES, dtype=DTYPE_FLOAT)
-    for i in xrange(N_VERTICES):
-        dphi_dx_out[i] = dphi_dx_c[i]
-        dphi_dy_out[i] = dphi_dy_c[i]
-    return dphi_dx_out, dphi_dy_out
 
 cpdef shepard_interpolation(x, y, xpts, ypts, vals):
     cdef vector[DTYPE_FLOAT_t] xpts_c, ypts_c, vals_c
