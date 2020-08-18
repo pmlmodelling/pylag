@@ -27,13 +27,6 @@ cimport pylag.interpolation as interp
 from pylag.data_reader cimport DataReader
 from pylag.particle_cpp_wrapper cimport ParticleSmartPtr
 
-def det_wrapper(a, b):
-    cdef DTYPE_FLOAT_t a_c[2]
-    cdef DTYPE_FLOAT_t b_c[2]
-    a_c[:] = a[:]
-    b_c[:] = b[:]
-    return math.det(a_c, b_c)
-
 def inner_product_wrapper(a, b):
     cdef DTYPE_FLOAT_t a_c[2]
     cdef DTYPE_FLOAT_t b_c[2]

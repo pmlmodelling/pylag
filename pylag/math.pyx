@@ -13,6 +13,17 @@ from libc.math cimport sin, cos
 # Degrees -> radians conversion factor
 deg_to_radians = np.radians(1)
 
+
+def det_second_order_wrapper(p1, p2):
+    cdef vector[DTYPE_FLOAT_t] _p1 = vector[DTYPE_FLOAT_t](2, -999)
+    cdef vector[DTYPE_FLOAT_t] _p2 = vector[DTYPE_FLOAT_t](2, -999)
+
+    _p1 = p1[:]
+    _p2 = p2[:]
+
+    return det_second_order(_p1, _p2)
+
+
 cdef class Intersection:
     """ Simple class describing the intersection point of two lines
 
@@ -99,9 +110,9 @@ cdef get_intersection_point(DTYPE_FLOAT_t x1[2], DTYPE_FLOAT_t x2[2],
     -----------
     Press et al. 2007. Numerical Recipes (Third Edition).
     """
-    cdef DTYPE_FLOAT_t r[2]
-    cdef DTYPE_FLOAT_t s[2]
-    cdef DTYPE_FLOAT_t x13[2]
+    cdef vector[DTYPE_FLOAT_t] r = vector[DTYPE_FLOAT_t](2, -999.)
+    cdef vector[DTYPE_FLOAT_t] s = vector[DTYPE_FLOAT_t](2, -999.)
+    cdef vector[DTYPE_FLOAT_t] x13 = vector[DTYPE_FLOAT_t](2, -999.)
 
     cdef DTYPE_FLOAT_t denom, t, u
     cdef DTYPE_INT_t i
@@ -111,13 +122,13 @@ cdef get_intersection_point(DTYPE_FLOAT_t x1[2], DTYPE_FLOAT_t x2[2],
         s[i] = x4[i] - x3[i]
         x13[i] = x3[i] - x1[i]
 
-    denom = det(r,s)
+    denom = det_second_order(r,s)
 
     if denom == 0.0:
         raise ValueError('Lines do not interesct')
 
-    t = det(x13, s) / denom
-    u = det(x13, r) / denom
+    t = det_second_order(x13, s) / denom
+    u = det_second_order(x13, r) / denom
     
     if (0.0 <= u <= 1.0) and (0.0 <= t <= 1.0):
         for i in xrange(2):
