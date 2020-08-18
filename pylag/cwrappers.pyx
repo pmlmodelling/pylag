@@ -34,27 +34,6 @@ def inner_product_wrapper(a, b):
     b_c[:] = b[:]
     return math.inner_product(a_c, b_c)
 
-cpdef get_barycentric_coords(x, y, x_tri, y_tri):
-    cdef vector[DTYPE_FLOAT_t] x_tri_c = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-    cdef vector[DTYPE_FLOAT_t] y_tri_c = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-    cdef vector[DTYPE_FLOAT_t] phi_c = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-    cdef DTYPE_INT_t i
-
-    if x_tri.shape[0] != N_VERTICES or y_tri.shape[0] != N_VERTICES:
-        raise ValueError('1D array must be have a length of {}.'.format(N_VERTICES))
-    
-    for i in xrange(N_VERTICES):
-        x_tri_c[i] = x_tri[i]
-        y_tri_c[i] = y_tri[i]
-    
-    interp.get_barycentric_coords(x, y, x_tri_c, y_tri_c, phi_c)
-    
-    # Generate and pass back an array type python can understand
-    phi_out = np.empty(N_VERTICES, dtype=DTYPE_FLOAT)
-    for i in xrange(N_VERTICES):
-        phi_out[i] = phi_c[i]
-    return phi_out
-
 cpdef get_barycentric_gradients(x_tri, y_tri):
     cdef vector[DTYPE_FLOAT_t] x_tri_c = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
     cdef vector[DTYPE_FLOAT_t] y_tri_c = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)

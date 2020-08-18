@@ -6,13 +6,6 @@ from pylag.data_types_python import DTYPE_FLOAT
 from pylag import interpolation as interp
 from pylag import cwrappers
 
-def test_get_barycentric_coords():
-    x1 = 1.0
-    x2 = 1.0
-    x_tri = np.array([0.0, 0.0, 2.0], dtype=DTYPE_FLOAT)
-    y_tri = np.array([0.0, 2.0, 0.0], dtype=DTYPE_FLOAT)
-    phi = cwrappers.get_barycentric_coords(x1, x2, x_tri, y_tri)
-    test.assert_array_almost_equal(phi, [0.0, 0.5, 0.5])
 
 def test_get_barycentric_gradients():
     x_tri = np.array([0.0, 2.0, 0.0], dtype=DTYPE_FLOAT)

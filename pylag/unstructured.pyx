@@ -659,6 +659,26 @@ cdef class UnstructuredCartesianGrid(Grid):
             DTYPE_INT_t host, vector[DTYPE_FLOAT_t] &phi) except *:
         """ Get barycentric coordinates.
 
+        Compute and return barycentric coordinates for the point (x,y) within the
+        2D triangle defined by x/y coordinates stored in the vectors x_tri and y_tri.
+
+        Barycentric coordinates are calculated using the formula:
+
+        phi_i(x,y) = A_i(x,y)/A
+
+        where A is the area of the element and A_i is the area of the sub triangle
+        that is formed using the particle's position coordinates within the element
+        and the two element vertices that lie opposite the `i` vertex. Signed areas
+        are calculated using the vector cross product:
+
+        2A(abc) = (x1 - x0)(y2 - y0) - (y1 - y0)(x2 - x0)
+
+        A_i terms are computed by substituting in x and y for x_i and y_i for i=0:2.
+
+        In PyLag, nodes are clockwise ordered, meaning the signed area given by the
+        above formula is negative. However the negative sign and the factor of two
+        cancel when the ratio is formed. For this reason, they are both ignored.
+
         Parameters:
         -----------
         x1 : float
@@ -683,13 +703,26 @@ cdef class UnstructuredCartesianGrid(Grid):
         cdef vector[DTYPE_FLOAT_t] x_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
         cdef vector[DTYPE_FLOAT_t] y_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
 
+        cdef DTYPE_FLOAT_t a1, a2, a3, a4, twice_signed_element_area
+
         for i in xrange(N_VERTICES):
             vertex = self.nv[i,host]
             x_tri[i] = self.x[vertex]
             y_tri[i] = self.y[vertex]
 
-        # Calculate barycentric coordinates
-        interp.get_barycentric_coords(x1, x2, x_tri, y_tri, phi)
+        # Intermediate terms
+        a1 = x_tri[1] - x_tri[0]
+        a2 = y_tri[2] - y_tri[0]
+        a3 = y_tri[1] - y_tri[0]
+        a4 = x_tri[2] - x_tri[0]
+
+        # Evaluate the vector cross product
+        twice_signed_element_area = a1 * a2 - a3 * a4
+
+        # Transformation to barycentric coordinates
+        phi[2] = (a1*(x2 - y_tri[0]) - a3*(x1 - x_tri[0]))/twice_signed_element_area
+        phi[1] = (a2*(x1 - x_tri[2]) - a4*(x2 - y_tri[2]))/twice_signed_element_area
+        phi[0] = 1.0 - phi[1] - phi[2]
 
     cdef void get_grad_phi(self, DTYPE_INT_t host,
             vector[DTYPE_FLOAT_t] &dphi_dx,

@@ -42,9 +42,6 @@ cdef class CubicSpline1DInterpolator(Interpolator):
 
     cdef DTYPE_FLOAT_t get_first_derivative(self, Particle* particle) except FLOAT_ERR
 
-cdef get_barycentric_coords(DTYPE_FLOAT_t x, DTYPE_FLOAT_t y,
-        const vector[DTYPE_FLOAT_t] &x_tri, const vector[DTYPE_FLOAT_t] &y_tri, vector[DTYPE_FLOAT_t] &phi)
-
 cdef get_barycentric_gradients(const vector[DTYPE_FLOAT_t] &x_tri, const vector[DTYPE_FLOAT_t] &y_tri,
         vector[DTYPE_FLOAT_t] &dphi_dx, vector[DTYPE_FLOAT_t] &dphi_dy)
 
