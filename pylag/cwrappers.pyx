@@ -28,20 +28,6 @@ from pylag.data_reader cimport DataReader
 from pylag.particle_cpp_wrapper cimport ParticleSmartPtr
 
 
-cpdef shepard_interpolation(x, y, xpts, ypts, vals):
-    cdef vector[DTYPE_FLOAT_t] xpts_c, ypts_c, vals_c
-    
-    if xpts.shape[0] != N_NEIGH_ELEMS or ypts.shape[0] != N_NEIGH_ELEMS or vals.shape[0] != N_NEIGH_ELEMS:
-        raise ValueError('1D arrays should be {} elements in length.'.format(N_NEIGH_ELEMS))
-
-    for i in xrange(N_NEIGH_ELEMS):
-        xpts_c.push_back(xpts[i])
-        ypts_c.push_back(ypts[i])  
-        vals_c.push_back(vals[i])
-    
-    return interp.shepard_interpolation(x, y, xpts_c, ypts_c, vals_c)
-
-
 def get_intersection_point_wrapper(x1, x2, x3, x4, xi):
     cdef DTYPE_FLOAT_t x1_c[2]
     cdef DTYPE_FLOAT_t x2_c[2]

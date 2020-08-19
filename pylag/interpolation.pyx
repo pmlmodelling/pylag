@@ -206,9 +206,9 @@ def get_interpolator(config, n_elems):
         raise ValueError('Unsupported vertical interpolation scheme.')
 
 
-cdef DTYPE_FLOAT_t shepard_interpolation(DTYPE_FLOAT_t x,
-        DTYPE_FLOAT_t y, vector[DTYPE_FLOAT_t] xpts, vector[DTYPE_FLOAT_t] ypts,
-        vector[DTYPE_FLOAT_t] vals) except FLOAT_ERR:
+cpdef DTYPE_FLOAT_t shepard_interpolation(const DTYPE_FLOAT_t &x,
+        const DTYPE_FLOAT_t &y, const vector[DTYPE_FLOAT_t] &xpts, const vector[DTYPE_FLOAT_t] &ypts,
+        const vector[DTYPE_FLOAT_t] &vals) except FLOAT_ERR:
     """ Shepard interpolation
 
     """

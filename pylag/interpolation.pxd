@@ -42,8 +42,8 @@ cdef class CubicSpline1DInterpolator(Interpolator):
 
     cdef DTYPE_FLOAT_t get_first_derivative(self, Particle* particle) except FLOAT_ERR
 
-cdef DTYPE_FLOAT_t shepard_interpolation(DTYPE_FLOAT_t x,
-        DTYPE_FLOAT_t y, const vector[DTYPE_FLOAT_t] &xpts, const vector[DTYPE_FLOAT_t] &ypts,
+cpdef DTYPE_FLOAT_t shepard_interpolation(const DTYPE_FLOAT_t &x,
+        const DTYPE_FLOAT_t &y, const vector[DTYPE_FLOAT_t] &xpts, const vector[DTYPE_FLOAT_t] &ypts,
         const vector[DTYPE_FLOAT_t] &vals) except FLOAT_ERR
 
 cdef DTYPE_FLOAT_t get_linear_fraction_safe(DTYPE_FLOAT_t var, 

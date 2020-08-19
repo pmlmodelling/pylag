@@ -1,10 +1,8 @@
 import numpy as np
 import numpy.testing as test
 
-#import pylag.interpolation as interp
 from pylag.data_types_python import DTYPE_FLOAT
 from pylag import interpolation as interp
-from pylag import cwrappers
 
 
 def test_shephard_interpolation():
@@ -12,10 +10,10 @@ def test_shephard_interpolation():
     ypts = np.array([-2.0, -1.0, 1.0, 2.0], dtype=DTYPE_FLOAT)
     vals = np.array([0.0, 0.0, 1.0, 0.0], dtype=DTYPE_FLOAT)
 
-    val = cwrappers.shepard_interpolation(1.0, 1.0, xpts, ypts, vals)
+    val = interp.shepard_interpolation(1.0, 1.0, xpts, ypts, vals)
     test.assert_almost_equal(val, 1.0)
     
-    val = cwrappers.shepard_interpolation(0.0, 0.0, xpts, ypts, vals)
+    val = interp.shepard_interpolation(0.0, 0.0, xpts, ypts, vals)
     test.assert_almost_equal(val, 0.4)
 
 def test_get_euclidian_distance():
