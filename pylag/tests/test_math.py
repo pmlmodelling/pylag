@@ -5,8 +5,6 @@ import numpy.testing as test
 from pylag.data_types_python import DTYPE_FLOAT
 
 from pylag import math
-from pylag.math import cartesian_to_sigma_coords, sigma_to_cartesian_coords
-from pylag.cwrappers import get_intersection_point_wrapper
 
 
 def test_det_second_order():
@@ -74,8 +72,7 @@ def test_get_intersection_point_for_perpendicular_lines():
     x2 = np.array([0.0, 0.0], dtype=DTYPE_FLOAT)
     x3 = np.array([2.0, 1.0], dtype=DTYPE_FLOAT)
     x4 = np.array([-1.0, 1.0], dtype=DTYPE_FLOAT)
-    xi = np.empty([2], dtype=DTYPE_FLOAT)    
-    get_intersection_point_wrapper(x1, x2, x3, x4, xi)
+    xi = math.get_intersection_point(x1, x2, x3, x4)
     test.assert_array_almost_equal(xi, [0.0, 1.0])
 
 
@@ -84,8 +81,7 @@ def test_get_intersection_point_for_angled_lines():
     x2 = np.array([1.0, 1.0], dtype=DTYPE_FLOAT)
     x3 = np.array([0.0, -1.0], dtype=DTYPE_FLOAT)
     x4 = np.array([0.0, 1.0], dtype=DTYPE_FLOAT)
-    xi = np.empty([2], dtype=DTYPE_FLOAT)    
-    get_intersection_point_wrapper(x1, x2, x3, x4, xi)
+    xi = math.get_intersection_point(x1, x2, x3, x4)
     test.assert_array_almost_equal(xi, [0.0, 0.0])
 
 
@@ -94,14 +90,14 @@ def test_cartesian_to_sigma_coords():
     zeta = 2.0
 
     z = 2.0
-    sigma = cartesian_to_sigma_coords(z, h, zeta)
+    sigma = math.cartesian_to_sigma_coords(z, h, zeta)
     test.assert_almost_equal(sigma, 0.0)
 
     z = -24.0
-    sigma = cartesian_to_sigma_coords(z, h, zeta)
+    sigma = math.cartesian_to_sigma_coords(z, h, zeta)
     test.assert_almost_equal(sigma, -0.5)
 
     z = -50.0
-    sigma = cartesian_to_sigma_coords(z, h, zeta)
+    sigma = math.cartesian_to_sigma_coords(z, h, zeta)
     test.assert_almost_equal(sigma, -1.0)   
 

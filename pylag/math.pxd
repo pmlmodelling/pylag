@@ -38,8 +38,10 @@ cpdef vector[DTYPE_FLOAT_t] geographic_to_cartesian_coords(const DTYPE_FLOAT_t &
                                                            const DTYPE_FLOAT_t &lat_rad,
                                                            const DTYPE_FLOAT_t &r)
 
-cdef get_intersection_point(DTYPE_FLOAT_t x1[2], DTYPE_FLOAT_t x2[2],
-        DTYPE_FLOAT_t x3[2], DTYPE_FLOAT_t x4[2], DTYPE_FLOAT_t xi[2])
+cpdef vector[DTYPE_FLOAT_t] get_intersection_point(const vector[DTYPE_FLOAT_t] &x1,
+                                                   const vector[DTYPE_FLOAT_t] &x2,
+                                                   const vector[DTYPE_FLOAT_t] &x3,
+                                                   const vector[DTYPE_FLOAT_t] &x4)
 
 cpdef inline DTYPE_FLOAT_t sigma_to_cartesian_coords(DTYPE_FLOAT_t sigma, DTYPE_FLOAT_t h,
         DTYPE_FLOAT_t zeta):

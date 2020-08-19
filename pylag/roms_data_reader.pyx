@@ -37,7 +37,7 @@ from pylag.particle_cpp_wrapper cimport to_string
 from pylag.data_reader cimport DataReader
 from pylag.unstructured cimport Grid
 cimport pylag.interpolation as interp
-from pylag.math cimport int_min, float_min, get_intersection_point
+from pylag.math cimport int_min, float_min
 from pylag.math cimport Intersection
 
 # PyLag python imports

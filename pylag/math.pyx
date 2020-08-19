@@ -76,8 +76,10 @@ cdef class Intersection:
     def yi_py(self, value):
         self.yi = value
 
-cdef get_intersection_point(DTYPE_FLOAT_t x1[2], DTYPE_FLOAT_t x2[2],
-        DTYPE_FLOAT_t x3[2], DTYPE_FLOAT_t x4[2], DTYPE_FLOAT_t xi[2]):
+cpdef vector[DTYPE_FLOAT_t] get_intersection_point(const vector[DTYPE_FLOAT_t] &x1,
+                                                   const vector[DTYPE_FLOAT_t] &x2,
+                                                   const vector[DTYPE_FLOAT_t] &x3,
+                                                   const vector[DTYPE_FLOAT_t] &x4):
     """ Determine the intersection point of two line segments
     
     Determine the intersection point of two line segments. The first is defined
@@ -87,12 +89,12 @@ cdef get_intersection_point(DTYPE_FLOAT_t x1[2], DTYPE_FLOAT_t x2[2],
     
     Parameters:
     -----------
-    x1, x2, x3, x4 : [float, float]
+    x1, x2, x3, x4 : vector[float, float]
         Position vectors for the end points of the two lines x1x2 and x3x4.
     
     Returns:
     --------
-    xi : list [float, float]
+    xi : vector[float, float]
         x and y coordinates of the intersection point.
     
     References:
@@ -102,6 +104,7 @@ cdef get_intersection_point(DTYPE_FLOAT_t x1[2], DTYPE_FLOAT_t x2[2],
     cdef vector[DTYPE_FLOAT_t] r = vector[DTYPE_FLOAT_t](2, -999.)
     cdef vector[DTYPE_FLOAT_t] s = vector[DTYPE_FLOAT_t](2, -999.)
     cdef vector[DTYPE_FLOAT_t] x13 = vector[DTYPE_FLOAT_t](2, -999.)
+    cdef vector[DTYPE_FLOAT_t] xi = vector[DTYPE_FLOAT_t](2, -999.)
 
     cdef DTYPE_FLOAT_t denom, t, u
     cdef DTYPE_INT_t i
@@ -124,6 +127,8 @@ cdef get_intersection_point(DTYPE_FLOAT_t x1[2], DTYPE_FLOAT_t x2[2],
             xi[i] = x1[i] + t * r[i]
     else:
         raise ValueError('Line segments do not intersect.')
+
+    return xi
 
 
 cpdef vector[DTYPE_FLOAT_t] rotate_x(const vector[DTYPE_FLOAT_t] &p, const DTYPE_FLOAT_t &angle):

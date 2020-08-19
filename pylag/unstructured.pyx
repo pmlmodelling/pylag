@@ -319,28 +319,28 @@ cdef class UnstructuredCartesianGrid(Grid):
         cdef DTYPE_INT_t flag, host
 
         # Intermediate arrays/variables
-        cdef DTYPE_FLOAT_t x_tri[N_VERTICES]
-        cdef DTYPE_FLOAT_t y_tri[N_VERTICES]
+        cdef vector[DTYPE_FLOAT_t] x_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef vector[DTYPE_FLOAT_t] y_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
 
         # 2D position vectors for the end points of the element's side
-        cdef DTYPE_FLOAT_t x1[2]
-        cdef DTYPE_FLOAT_t x2[2]
+        cdef vector[DTYPE_FLOAT_t] x1 = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef vector[DTYPE_FLOAT_t] x2 = vector[DTYPE_FLOAT_t](2, -999.)
 
         # 2D position vectors for the particle's previous and new position
-        cdef DTYPE_FLOAT_t x3[2]
-        cdef DTYPE_FLOAT_t x4[2]
+        cdef vector[DTYPE_FLOAT_t] x3 = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef vector[DTYPE_FLOAT_t] x4 = vector[DTYPE_FLOAT_t](2, -999.)
 
         # 2D position vector for the intersection point
-        cdef DTYPE_FLOAT_t xi[2]
+        cdef vector[DTYPE_FLOAT_t] xi = vector[DTYPE_FLOAT_t](2, -999.)
 
         # Intermediate arrays
-        cdef DTYPE_INT_t x1_indices[3]
-        cdef DTYPE_INT_t x2_indices[3]
-        cdef DTYPE_INT_t nbe_indices[3]
+        cdef vector[DTYPE_INT_t] x1_indices = vector[DTYPE_INT_t](3, -999)
+        cdef vector[DTYPE_INT_t] x2_indices = vector[DTYPE_INT_t](3, -999)
+        cdef vector[DTYPE_INT_t] nbe_indices = vector[DTYPE_INT_t](3, -999)
 
-        x1_indices = [0,1,2]
-        x2_indices = [1,2,0]
-        nbe_indices = [2,0,1]
+        x1_indices[:] = [0,1,2]
+        x2_indices[:] = [1,2,0]
+        nbe_indices[:] = [2,0,1]
 
         # Array indices
         cdef int x1_idx
@@ -383,7 +383,7 @@ cdef class UnstructuredCartesianGrid(Grid):
                 x2[0] = x_tri[x2_idx]; x2[1] = y_tri[x2_idx]
 
                 try:
-                    get_intersection_point(x1, x2, x3, x4, xi)
+                    xi = get_intersection_point(x1, x2, x3, x4)
                 except ValueError:
                     # Lines do not intersect - check the next one
                     continue
@@ -522,24 +522,24 @@ cdef class UnstructuredCartesianGrid(Grid):
         cdef int vertex # Vertex identifier
 
         # Intermediate arrays/variables
-        cdef DTYPE_FLOAT_t x_tri[3]
-        cdef DTYPE_FLOAT_t y_tri[3]
+        cdef vector[DTYPE_FLOAT_t] x_tri = vector[DTYPE_FLOAT_t](3, -999.)
+        cdef vector[DTYPE_FLOAT_t] y_tri = vector[DTYPE_FLOAT_t](3, -999.)
 
         # 2D position vectors for the end points of the element's side
-        cdef DTYPE_FLOAT_t x1[2]
-        cdef DTYPE_FLOAT_t x2[2]
+        cdef vector[DTYPE_FLOAT_t] x1 = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef vector[DTYPE_FLOAT_t] x2 = vector[DTYPE_FLOAT_t](2, -999.)
 
         # 2D position vectors for the particle's previous and new position
-        cdef DTYPE_FLOAT_t x3[2]
-        cdef DTYPE_FLOAT_t x4[2]
+        cdef vector[DTYPE_FLOAT_t] x3 = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef vector[DTYPE_FLOAT_t] x4 = vector[DTYPE_FLOAT_t](2, -999.)
 
         # 2D position vector for the intersection point
-        cdef DTYPE_FLOAT_t xi[2]
+        cdef vector[DTYPE_FLOAT_t] xi = vector[DTYPE_FLOAT_t](2, -999.)
 
         # Intermediate arrays
-        cdef DTYPE_INT_t x1_indices[3]
-        cdef DTYPE_INT_t x2_indices[3]
-        cdef DTYPE_INT_t nbe_indices[3]
+        cdef vector[DTYPE_INT_t] x1_indices = vector[DTYPE_INT_t](3, -999)
+        cdef vector[DTYPE_INT_t] x2_indices = vector[DTYPE_INT_t](3, -999)
+        cdef vector[DTYPE_INT_t] nbe_indices = vector[DTYPE_INT_t](3, -999)
 
         # Array indices
         cdef int x1_idx
@@ -594,7 +594,7 @@ cdef class UnstructuredCartesianGrid(Grid):
             x2[0] = x_tri[x2_idx]; x2[1] = y_tri[x2_idx]
 
             try:
-                get_intersection_point(x1, x2, x3, x4, xi)
+                xi = get_intersection_point(x1, x2, x3, x4)
                 intersection.x1 = x1[0]
                 intersection.y1 = x1[1]
                 intersection.x2 = x2[0]
@@ -1172,28 +1172,28 @@ cdef class UnstructuredGeographicGrid(Grid):
         cdef DTYPE_INT_t flag, host
 
         # Intermediate arrays/variables
-        cdef DTYPE_FLOAT_t x_tri[N_VERTICES]
-        cdef DTYPE_FLOAT_t y_tri[N_VERTICES]
+        cdef vector[DTYPE_FLOAT_t] x_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef vector[DTYPE_FLOAT_t] y_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
 
         # 2D position vectors for the end points of the element's side
-        cdef DTYPE_FLOAT_t x1[2]
-        cdef DTYPE_FLOAT_t x2[2]
+        cdef vector[DTYPE_FLOAT_t] x1 = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef vector[DTYPE_FLOAT_t] x2 = vector[DTYPE_FLOAT_t](2, -999.)
 
         # 2D position vectors for the particle's previous and new position
-        cdef DTYPE_FLOAT_t x3[2]
-        cdef DTYPE_FLOAT_t x4[2]
+        cdef vector[DTYPE_FLOAT_t] x3 = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef vector[DTYPE_FLOAT_t] x4 = vector[DTYPE_FLOAT_t](2, -999.)
 
         # 2D position vector for the intersection point
-        cdef DTYPE_FLOAT_t xi[2]
+        cdef vector[DTYPE_FLOAT_t] xi = vector[DTYPE_FLOAT_t](2, -999.)
 
         # Intermediate arrays
-        cdef DTYPE_INT_t x1_indices[3]
-        cdef DTYPE_INT_t x2_indices[3]
-        cdef DTYPE_INT_t nbe_indices[3]
+        cdef vector[DTYPE_INT_t] x1_indices = vector[DTYPE_INT_t](3, -999)
+        cdef vector[DTYPE_INT_t] x2_indices = vector[DTYPE_INT_t](3, -999)
+        cdef vector[DTYPE_INT_t] nbe_indices = vector[DTYPE_INT_t](3, -999)
 
-        x1_indices = [0,1,2]
-        x2_indices = [1,2,0]
-        nbe_indices = [2,0,1]
+        x1_indices[:] = [0,1,2]
+        x2_indices[:] = [1,2,0]
+        nbe_indices[:] = [2,0,1]
 
         # Array indices
         cdef int x1_idx
@@ -1236,7 +1236,7 @@ cdef class UnstructuredGeographicGrid(Grid):
                 x2[0] = x_tri[x2_idx]; x2[1] = y_tri[x2_idx]
 
                 try:
-                    get_intersection_point(x1, x2, x3, x4, xi)
+                    xi = get_intersection_point(x1, x2, x3, x4)
                 except ValueError:
                     # Lines do not intersect - check the next one
                     continue
@@ -1375,24 +1375,24 @@ cdef class UnstructuredGeographicGrid(Grid):
         cdef int vertex # Vertex identifier
 
         # Intermediate arrays/variables
-        cdef DTYPE_FLOAT_t x_tri[3]
-        cdef DTYPE_FLOAT_t y_tri[3]
+        cdef vector[DTYPE_FLOAT_t] x_tri = vector[DTYPE_FLOAT_t](3, -999.)
+        cdef vector[DTYPE_FLOAT_t] y_tri = vector[DTYPE_FLOAT_t](3, -999.)
 
         # 2D position vectors for the end points of the element's side
-        cdef DTYPE_FLOAT_t x1[2]
-        cdef DTYPE_FLOAT_t x2[2]
+        cdef vector[DTYPE_FLOAT_t] x1 = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef vector[DTYPE_FLOAT_t] x2 = vector[DTYPE_FLOAT_t](2, -999.)
 
         # 2D position vectors for the particle's previous and new position
-        cdef DTYPE_FLOAT_t x3[2]
-        cdef DTYPE_FLOAT_t x4[2]
+        cdef vector[DTYPE_FLOAT_t] x3 = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef vector[DTYPE_FLOAT_t] x4 = vector[DTYPE_FLOAT_t](2, -999.)
 
         # 2D position vector for the intersection point
-        cdef DTYPE_FLOAT_t xi[2]
+        cdef vector[DTYPE_FLOAT_t] xi = vector[DTYPE_FLOAT_t](2, -999.)
 
         # Intermediate arrays
-        cdef DTYPE_INT_t x1_indices[3]
-        cdef DTYPE_INT_t x2_indices[3]
-        cdef DTYPE_INT_t nbe_indices[3]
+        cdef vector[DTYPE_INT_t] x1_indices = vector[DTYPE_INT_t](3, -999)
+        cdef vector[DTYPE_INT_t] x2_indices = vector[DTYPE_INT_t](3, -999)
+        cdef vector[DTYPE_INT_t] nbe_indices = vector[DTYPE_INT_t](3, -999)
 
         # Array indices
         cdef int x1_idx
@@ -1447,7 +1447,7 @@ cdef class UnstructuredGeographicGrid(Grid):
             x2[0] = x_tri[x2_idx]; x2[1] = y_tri[x2_idx]
 
             try:
-                get_intersection_point(x1, x2, x3, x4, xi)
+                xi = get_intersection_point(x1, x2, x3, x4)
                 intersection.x1 = x1[0]
                 intersection.y1 = x1[1]
                 intersection.x2 = x2[0]
