@@ -15,7 +15,6 @@ from pylag.fvcom_data_reader import FVCOMDataReader
 from pylag.boundary_conditions import RefHorizBoundaryConditionCalculator
 from pylag.boundary_conditions import RefVertBoundaryConditionCalculator
 from pylag.particle_cpp_wrapper import ParticleSmartPtr
-from pylag import cwrappers
 
 from pylag.mediator import Mediator
 
