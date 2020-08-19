@@ -8,11 +8,21 @@ from pylag import math
 from pylag.math import cartesian_to_sigma_coords, sigma_to_cartesian_coords
 from pylag.cwrappers import inner_product_wrapper, get_intersection_point_wrapper
 
-def test_det():
+
+def test_det_second_order():
     a = [1.0, 2.0]
     b = [3.0, 4.0]
-    c = math.det_second_order_wrapper(a, b)
-    test.assert_array_almost_equal(c, -2.0)
+    det = math.det_second_order(a, b)
+    test.assert_array_almost_equal(det, -2.0)
+
+
+def test_det_third_order():
+    a = [1.0, 2.0, -1.0]
+    b = [3.0, 6.0, 0.0]
+    c = [0.0, 4.0, 2.0]
+    det = math.det_third_order(a, b, c)
+    test.assert_array_almost_equal(det, -12.0)
+
 
 def test_inner_product():
     a = [1.0, 2.0]

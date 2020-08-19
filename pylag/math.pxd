@@ -11,11 +11,11 @@ cdef inline DTYPE_FLOAT_t float_max(DTYPE_FLOAT_t a, DTYPE_FLOAT_t b): return a 
 cdef inline DTYPE_INT_t int_min(DTYPE_INT_t a, DTYPE_INT_t b): return a if a <= b else b
 cdef inline DTYPE_INT_t int_max(DTYPE_INT_t a, DTYPE_INT_t b): return a if a >= b else b
 
-cdef inline  DTYPE_FLOAT_t det_second_order(const vector[DTYPE_FLOAT_t] &p1,
+cpdef inline  DTYPE_FLOAT_t det_second_order(const vector[DTYPE_FLOAT_t] &p1,
                                             const vector[DTYPE_FLOAT_t] &p2):
     return p1[0]*p2[1] - p1[1]*p2[0]
 
-cdef inline DTYPE_FLOAT_t det_third_order(const vector[DTYPE_FLOAT_t] &p1,
+cpdef inline DTYPE_FLOAT_t det_third_order(const vector[DTYPE_FLOAT_t] &p1,
                                           const vector[DTYPE_FLOAT_t] &p2,
                                           const vector[DTYPE_FLOAT_t] &p3):
     return p1[0]*(p2[1]*p3[2] - p3[1]*p2[2]) - p1[1]*(p2[0]*p3[2] - p3[0]*p2[2]) + p1[2]*(p2[0]*p3[1] - p3[0]*p2[1])

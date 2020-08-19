@@ -13,16 +13,6 @@ from libc.math cimport sin, cos
 from pylag.parameters cimport pi
 
 
-def det_second_order_wrapper(p1, p2):
-    cdef vector[DTYPE_FLOAT_t] _p1 = vector[DTYPE_FLOAT_t](2, -999)
-    cdef vector[DTYPE_FLOAT_t] _p2 = vector[DTYPE_FLOAT_t](2, -999)
-
-    _p1 = p1[:]
-    _p2 = p2[:]
-
-    return det_second_order(_p1, _p2)
-
-
 cdef class Intersection:
     """ Simple class describing the intersection point of two lines
 
