@@ -178,8 +178,7 @@ cdef class Grid:
     cdef set_local_coordinates(self, Particle *particle):
         raise NotImplementedError
 
-    cdef void get_phi(self, DTYPE_FLOAT_t x1, DTYPE_FLOAT_t x2,
-                      DTYPE_INT_t host, vector[DTYPE_FLOAT_t] &phi) except *:
+    cpdef vector[DTYPE_FLOAT_t] get_phi(self, DTYPE_FLOAT_t x1, DTYPE_FLOAT_t x2, DTYPE_INT_t host):
         raise NotImplementedError
 
     cdef void get_grad_phi(self, DTYPE_INT_t host,
@@ -334,7 +333,7 @@ cdef class UnstructuredCartesianGrid(Grid):
 
         while True:
             # Barycentric coordinates
-            self.get_phi(particle.get_x1(), particle.get_x2(), guess, phi)
+            phi = self.get_phi(particle.get_x1(), particle.get_x2(), guess)
 
             # Check to see if the particle is in the current element
             phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
@@ -573,7 +572,7 @@ cdef class UnstructuredCartesianGrid(Grid):
 
         for guess in xrange(self.n_elems):
             # Barycentric coordinates
-            self.get_phi(particle.get_x1(), particle.get_x2(), guess, phi)
+            phi = self.get_phi(particle.get_x1(), particle.get_x2(), guess)
 
             # Check to see if the particle is in the current element
             phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
@@ -745,7 +744,7 @@ cdef class UnstructuredCartesianGrid(Grid):
 
         cdef DTYPE_INT_t i
 
-        self.get_phi(particle.get_x1(), particle.get_x2(), host_element, phi)
+        phi = self.get_phi(particle.get_x1(), particle.get_x2(), host_element)
 
         # Check for negative values.
         for i in xrange(3):
@@ -766,8 +765,7 @@ cdef class UnstructuredCartesianGrid(Grid):
         # Set phi
         particle.set_phi(self.name, phi)
 
-    cdef void get_phi(self, DTYPE_FLOAT_t x1, DTYPE_FLOAT_t x2,
-            DTYPE_INT_t host, vector[DTYPE_FLOAT_t] &phi) except *:
+    cpdef vector[DTYPE_FLOAT_t] get_phi(self, DTYPE_FLOAT_t x1, DTYPE_FLOAT_t x2, DTYPE_INT_t host):
         """ Get barycentric coordinates.
 
         Compute and return barycentric coordinates for the point (x,y) within the
@@ -814,6 +812,8 @@ cdef class UnstructuredCartesianGrid(Grid):
         cdef vector[DTYPE_FLOAT_t] x_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
         cdef vector[DTYPE_FLOAT_t] y_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
 
+        cdef vector[DTYPE_FLOAT_t] phi = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+
         cdef DTYPE_FLOAT_t a1, a2, a3, a4, twice_signed_element_area
 
         for i in xrange(N_VERTICES):
@@ -834,6 +834,8 @@ cdef class UnstructuredCartesianGrid(Grid):
         phi[2] = (a1*(x2 - y_tri[0]) - a3*(x1 - x_tri[0]))/twice_signed_element_area
         phi[1] = (a2*(x1 - x_tri[2]) - a4*(x2 - y_tri[2]))/twice_signed_element_area
         phi[0] = 1.0 - phi[1] - phi[2]
+
+        return phi
 
     cdef void get_grad_phi(self, DTYPE_INT_t host,
             vector[DTYPE_FLOAT_t] &dphi_dx,
@@ -1187,7 +1189,7 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         while True:
             # Barycentric coordinates
-            self.get_phi(particle.get_x1(), particle.get_x2(), guess, phi)
+            phi = self.get_phi(particle.get_x1(), particle.get_x2(), guess)
 
             # Check to see if the particle is in the current element
             phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
@@ -1426,7 +1428,7 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         for guess in xrange(self.n_elems):
             # Barycentric coordinates
-            self.get_phi(particle.get_x1(), particle.get_x2(), guess, phi)
+            phi = self.get_phi(particle.get_x1(), particle.get_x2(), guess)
 
             # Check to see if the particle is in the current element
             phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
@@ -1598,7 +1600,7 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         cdef DTYPE_INT_t i
 
-        self.get_phi(particle.get_x1(), particle.get_x2(), host_element, phi)
+        phi = self.get_phi(particle.get_x1(), particle.get_x2(), host_element)
 
         # Check for negative values.
         for i in xrange(3):
@@ -1619,8 +1621,7 @@ cdef class UnstructuredGeographicGrid(Grid):
         # Set phi
         particle.set_phi(self.name, phi)
 
-    cdef void get_phi(self, DTYPE_FLOAT_t x1, DTYPE_FLOAT_t x2,
-            DTYPE_INT_t host, vector[DTYPE_FLOAT_t] &phi) except *:
+    cpdef vector[DTYPE_FLOAT_t] get_phi(self, DTYPE_FLOAT_t x1, DTYPE_FLOAT_t x2, DTYPE_INT_t host):
         """ Get spherical barycentric coordinates
 
         The method uses the approach described by Lawson (1984).
@@ -1655,6 +1656,8 @@ cdef class UnstructuredGeographicGrid(Grid):
         # Element vertex coordinates in geographic coordinates
         cdef vector[DTYPE_FLOAT_t] x_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
         cdef vector[DTYPE_FLOAT_t] y_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+
+        cdef vector[DTYPE_FLOAT_t] phi = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
 
         # x1 and x2 in radians
         cdef DTYPE_FLOAT_t x1_rad, x2_rad
@@ -1693,7 +1696,7 @@ cdef class UnstructuredGeographicGrid(Grid):
         phi[1] = s1 / s_sum
         phi[2] = s2 / s_sum
 
-        return
+        return phi
 
     cdef void get_grad_phi(self, DTYPE_INT_t host,
             vector[DTYPE_FLOAT_t] &dphi_dx,

@@ -94,11 +94,10 @@ class UnstructuredCartesianGrid_test(TestCase):
         phi_min = np.min(np.array(particle.get_phi('test_grid'), dtype=float))
         test.assert_equal(np.abs(phi_min), 0.0)
 
-    #def test_get_phi_when_particle_is_at_an_elements_centre(self):
-    #    x1 = 1.666666667
-    #    x2 = 1.333333333
-    #    host = 1
-    #    phi = np.array([-999., -999., -999.])
-    #    self.unstructured_grid.get_phi(x1, x2, host, phi)
-    #    test.assert_array_almost_equal(phi, [0.5, 0.5, 0.5])
+    def test_get_phi_when_particle_is_at_an_elements_centre(self):
+        x1 = 1.666666667
+        x2 = 1.333333333
+        host = 1
+        phi = self.unstructured_grid.get_phi(x1, x2, host)
+        test.assert_array_almost_equal(phi, [1./3., 1./3., 1./3.])
 

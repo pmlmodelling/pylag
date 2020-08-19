@@ -28,8 +28,7 @@ cdef class Grid:
 
     cdef set_local_coordinates(self, Particle *particle)
 
-    cdef void get_phi(self, DTYPE_FLOAT_t x1, DTYPE_FLOAT_t x2,
-                      DTYPE_INT_t host, vector[DTYPE_FLOAT_t] &phi) except *
+    cpdef vector[DTYPE_FLOAT_t] get_phi(self, DTYPE_FLOAT_t x1, DTYPE_FLOAT_t x2, DTYPE_INT_t host)
 
     cdef void get_grad_phi(self, DTYPE_INT_t host,
                            vector[DTYPE_FLOAT_t] &dphi_dx,
