@@ -52,6 +52,14 @@ def test_rotate_z():
     test.assert_array_almost_equal(p_rot, [10., 0., 0.])
 
 
+def test_rotate_axes():
+    p = [0., 10., 0.]
+    lon_rad = np.pi/2
+    lat_rad = 0.0
+    p_rot = math.rotate_axes(p, lon_rad, lat_rad)
+    test.assert_array_almost_equal(p_rot, [0., 0., 10.])
+
+
 def test_get_intersection_point_for_perpendicular_lines():
     x1 = np.array([0.0, 2.0], dtype=DTYPE_FLOAT)
     x2 = np.array([0.0, 0.0], dtype=DTYPE_FLOAT)

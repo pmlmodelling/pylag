@@ -135,7 +135,7 @@ cpdef vector[DTYPE_FLOAT_t] rotate_x(const vector[DTYPE_FLOAT_t] &p, const DTYPE
         Three vector giving the point's position in cartesian coordinates.
 
     angle : float
-        The angle in radians through which to rotate the point about the x-axis.
+        The angle in radians through which to rotate the point anticlockwise about the x-axis.
 
     Returns
     -------
@@ -164,7 +164,7 @@ cpdef vector[DTYPE_FLOAT_t] rotate_y(const vector[DTYPE_FLOAT_t] &p, const DTYPE
         Three vector giving the point's position in cartesian coordinates.
 
     angle : float
-        The angle in radians through which to rotate the point about the y-axis.
+        The angle in radians through which to rotate the point anticlockwise about the y-axis.
 
     Returns
     -------
@@ -193,7 +193,7 @@ cpdef vector[DTYPE_FLOAT_t] rotate_z(const vector[DTYPE_FLOAT_t] &p, const DTYPE
         Three vector giving the point's position in cartesian coordinates.
 
     angle : float
-        The angle in radians through which to rotate the point about the z-axis.
+        The angle in radians through which to rotate the point anticlockwise about the z-axis.
 
     Returns
     -------
@@ -236,7 +236,7 @@ cpdef vector[DTYPE_FLOAT_t] rotate_axes(const vector[DTYPE_FLOAT_t] &p,
     """
     cdef vector[DTYPE_FLOAT_t] p_new
 
-    # First perform three rotations which correctly align the x-, y- and z-axes at (0, 0)
+    # First perform two rotations which correctly align the x-, y- and z-axes at (0, 0)
     p_new = rotate_z(p, pi/2.0)
     p_new = rotate_x(p_new, pi/2.0)
 
