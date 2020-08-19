@@ -20,7 +20,9 @@ cpdef inline DTYPE_FLOAT_t det_third_order(const vector[DTYPE_FLOAT_t] &p1,
                                           const vector[DTYPE_FLOAT_t] &p3):
     return p1[0]*(p2[1]*p3[2] - p3[1]*p2[2]) - p1[1]*(p2[0]*p3[2] - p3[0]*p2[2]) + p1[2]*(p2[0]*p3[1] - p3[0]*p2[1])
 
-cdef inline DTYPE_FLOAT_t inner_product(DTYPE_FLOAT_t a[2], DTYPE_FLOAT_t b[2]): return a[0]*b[0] + a[1]*b[1]
+cpdef inline DTYPE_FLOAT_t inner_product(const vector[DTYPE_FLOAT_t] &a,
+                                        const vector[DTYPE_FLOAT_t] &b):
+    return a[0]*b[0] + a[1]*b[1]
 
 cpdef vector[DTYPE_FLOAT_t] rotate_x(const vector[DTYPE_FLOAT_t] &p, const DTYPE_FLOAT_t &angle)
 

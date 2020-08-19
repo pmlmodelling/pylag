@@ -6,7 +6,7 @@ from pylag.data_types_python import DTYPE_FLOAT
 
 from pylag import math
 from pylag.math import cartesian_to_sigma_coords, sigma_to_cartesian_coords
-from pylag.cwrappers import inner_product_wrapper, get_intersection_point_wrapper
+from pylag.cwrappers import get_intersection_point_wrapper
 
 
 def test_det_second_order():
@@ -27,7 +27,7 @@ def test_det_third_order():
 def test_inner_product():
     a = [1.0, 2.0]
     b = [3.0, 4.0]
-    c = inner_product_wrapper(a, b)
+    c = math.inner_product(a, b)
     test.assert_array_almost_equal(c, 11.0)
 
 
@@ -78,6 +78,7 @@ def test_get_intersection_point_for_perpendicular_lines():
     get_intersection_point_wrapper(x1, x2, x3, x4, xi)
     test.assert_array_almost_equal(xi, [0.0, 1.0])
 
+
 def test_get_intersection_point_for_angled_lines():
     x1 = np.array([-1.0, -1.0], dtype=DTYPE_FLOAT)
     x2 = np.array([1.0, 1.0], dtype=DTYPE_FLOAT)
@@ -86,6 +87,7 @@ def test_get_intersection_point_for_angled_lines():
     xi = np.empty([2], dtype=DTYPE_FLOAT)    
     get_intersection_point_wrapper(x1, x2, x3, x4, xi)
     test.assert_array_almost_equal(xi, [0.0, 0.0])
+
 
 def test_cartesian_to_sigma_coords():
     h = -50.0

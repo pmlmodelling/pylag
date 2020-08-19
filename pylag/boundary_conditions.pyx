@@ -9,6 +9,8 @@ API is exposed in Python with accompanying documentation.
 """
 include "constants.pxi"
 
+from libcpp.vector cimport vector
+
 import logging
 
 try:
@@ -89,22 +91,22 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
         returned and the particle's position is not updated.
         """
         # 2D position vector for the reflected position
-        cdef DTYPE_FLOAT_t x4_prime[2]
-        
+        cdef vector[DTYPE_FLOAT_t] x4_prime = vector[DTYPE_FLOAT_t](2, -999.)
+
         # 2D position and directon vectors used for locating lost particles
-        cdef DTYPE_FLOAT_t x_test[2]
-        cdef DTYPE_FLOAT_t r_test[2]
+        cdef vector[DTYPE_FLOAT_t] x_test = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef vector[DTYPE_FLOAT_t] r_test = vector[DTYPE_FLOAT_t](2, -999.)
         
         # 2D directoion vector normal to the element side, pointing into the
         # element
-        cdef DTYPE_FLOAT_t n[2]     
+        cdef vector[DTYPE_FLOAT_t] n = vector[DTYPE_FLOAT_t](2, -999.)
         
         # 2D direction vector pointing from xi to the new position
-        cdef DTYPE_FLOAT_t d[2]
+        cdef vector[DTYPE_FLOAT_t] d = vector[DTYPE_FLOAT_t](2, -999.)
         
         # 2D direction vector pointing from xi to x4', where x4' is the
         # reflected point that we ultimately trying to find
-        cdef DTYPE_FLOAT_t r[2]
+        cdef vector[DTYPE_FLOAT_t] r = vector[DTYPE_FLOAT_t](2, -999.)
         
         # Intermediate variable
         cdef DTYPE_FLOAT_t mult

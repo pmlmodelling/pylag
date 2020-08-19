@@ -27,13 +27,6 @@ cimport pylag.interpolation as interp
 from pylag.data_reader cimport DataReader
 from pylag.particle_cpp_wrapper cimport ParticleSmartPtr
 
-def inner_product_wrapper(a, b):
-    cdef DTYPE_FLOAT_t a_c[2]
-    cdef DTYPE_FLOAT_t b_c[2]
-    a_c[:] = a[:]
-    b_c[:] = b[:]
-    return math.inner_product(a_c, b_c)
-
 
 cpdef shepard_interpolation(x, y, xpts, ypts, vals):
     cdef vector[DTYPE_FLOAT_t] xpts_c, ypts_c, vals_c
