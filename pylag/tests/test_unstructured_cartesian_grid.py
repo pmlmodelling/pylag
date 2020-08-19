@@ -101,3 +101,11 @@ class UnstructuredCartesianGrid_test(TestCase):
         phi = self.unstructured_grid.get_phi(x1, x2, host)
         test.assert_array_almost_equal(phi, [1./3., 1./3., 1./3.])
 
+    def test_get_phi_when_particle_is_at_an_elements_vertex(self):
+        x1 = 2.0
+        x2 = 1.0
+        host = 1
+        phi = self.unstructured_grid.get_phi(x1, x2, host)
+        test.assert_array_almost_equal(phi, [1., 0., 0.])
+
+
