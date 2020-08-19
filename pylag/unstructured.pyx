@@ -27,12 +27,15 @@ from cpython cimport bool
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
+# PyLag python imports
+from pylag.parameters cimport deg_to_radians, earth_radius, pi
+
 # PyLag cython imports
 from pylag.particle cimport Particle
 from pylag.particle_cpp_wrapper cimport to_string
 from pylag.data_reader cimport DataReader
 cimport pylag.interpolation as interp
-from pylag.math cimport geographic_to_cartesian_coords, det_third_order
+from pylag.math cimport geographic_to_cartesian_coords, rotate_axes, det_third_order
 from pylag.math cimport int_min, float_min, get_intersection_point
 from pylag.math cimport Intersection
 
@@ -729,6 +732,24 @@ cdef class UnstructuredCartesianGrid(Grid):
             vector[DTYPE_FLOAT_t] &dphi_dy) except *:
         """ Get gradient in phi with respect to x and y
 
+        Gradients in phi are calculated as described in Lynch (2015), p. 232. As
+        phi is linear within the element, the gradient is a constant. The terms
+        are calculated using the formulas:
+
+        dphi_i/dx = Delta(y_i) / 2A
+
+        dphi_i/dy = -Delta(x_i) / 2A
+
+        where A is the element area and the Delta terms are given by:
+
+        Delta(x1) = x2 - x3, etc
+        Delta(y1) = y2 - y3, etc
+
+        Note the formulas presented in Lynch assume an anticlockwise ordering of
+        elements whereas PyLag adopts clockwise ordering. However, as the two
+        terms are computed using ratios, the minus signs cancel making it
+        possible to use the same formulas.
+
         Parameters:
         -----------
         host : int
@@ -748,13 +769,29 @@ cdef class UnstructuredCartesianGrid(Grid):
         cdef vector[DTYPE_FLOAT_t] x_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
         cdef vector[DTYPE_FLOAT_t] y_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
 
+        cdef DTYPE_FLOAT_t a1, a2, a3, a4, twice_signed_element_area
+
         for i in xrange(N_VERTICES):
             vertex = self.nv[i,host]
             x_tri[i] = self.x[vertex]
             y_tri[i] = self.y[vertex]
 
-        # Calculate gradient in barycentric coordinates
-        interp.get_barycentric_gradients(x_tri, y_tri, dphi_dx, dphi_dy)
+        # Intermediate terms
+        a1 = x_tri[1] - x_tri[0]
+        a2 = y_tri[2] - y_tri[0]
+        a3 = y_tri[1] - y_tri[0]
+        a4 = x_tri[2] - x_tri[0]
+
+        # Evaluate the vector cross product
+        twice_signed_element_area = a1 * a2 - a3 * a4
+
+        dphi_dx[0] = (y_tri[1] - y_tri[2])/twice_signed_element_area
+        dphi_dx[1] = (y_tri[2] - y_tri[0])/twice_signed_element_area
+        dphi_dx[2] = (y_tri[0] - y_tri[1])/twice_signed_element_area
+
+        dphi_dy[0] = (x_tri[2] - x_tri[1])/twice_signed_element_area
+        dphi_dy[1] = (x_tri[0] - x_tri[2])/twice_signed_element_area
+        dphi_dy[2] = (x_tri[1] - x_tri[0])/twice_signed_element_area
 
     cdef DTYPE_FLOAT_t interpolate_in_space(self, DTYPE_FLOAT_t[:] var_arr,  Particle* particle) except FLOAT_ERR:
         """ Interpolate the given field in space
@@ -959,7 +996,13 @@ cdef class UnstructuredGeographicGrid(Grid):
     cdef DTYPE_FLOAT_t[:] xc
     cdef DTYPE_FLOAT_t[:] yc
 
+    # Barycentric gradients
+    cdef vector[DTYPE_INT_t] barycentric_gradients_have_been_cached
+    cdef vector[vector[DTYPE_FLOAT_t]] dphi_dx
+    cdef vector[vector[DTYPE_FLOAT_t]] dphi_dy
+
     def __init__(self, config, name, n_nodes, n_elems, nv, nbe, x, y, xc, yc):
+
         self.config = config
 
         self.name = name
@@ -971,6 +1014,12 @@ cdef class UnstructuredGeographicGrid(Grid):
         self.y = y[:]
         self.xc = xc[:]
         self.yc = yc[:]
+
+        # Containers for preserving the value of gradient calculations
+        cdef vector[DTYPE_FLOAT_t] gradients = vector[DTYPE_FLOAT_t](3, -999.)
+        self.barycentric_gradients_have_been_cached = vector[DTYPE_INT_t](self._n_elems, 0)
+        self.dphi_dx = vector[vector[DTYPE_FLOAT_t]](self._n_elems, gradients)
+        self.dphi_dy = vector[vector[DTYPE_FLOAT_t]](self._n_elems, gradients)
 
     cdef DTYPE_INT_t find_host_using_local_search(self, Particle *particle) except INT_ERR:
         """ Returns the host horizontal element through local searching.
@@ -1499,6 +1548,9 @@ cdef class UnstructuredGeographicGrid(Grid):
         cdef vector[DTYPE_FLOAT_t] x_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
         cdef vector[DTYPE_FLOAT_t] y_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
 
+        # x1 and x2 in radians
+        cdef DTYPE_FLOAT_t x1_rad, x2_rad
+
         # Element vertex coordinates in cartesian coordinates
         cdef vector[DTYPE_FLOAT_t] p, p0, p1, p2
 
@@ -1506,13 +1558,18 @@ cdef class UnstructuredGeographicGrid(Grid):
         cdef DTYPE_FLOAT_t s0, s1, s2
         cdef DTYPE_FLOAT_t s_sum
 
+        # Extract element vertices
         for i in xrange(N_VERTICES):
             vertex = self.nv[i,host]
-            x_tri[i] = self.x[vertex]
-            y_tri[i] = self.y[vertex]
+            x_tri[i] = self.x[vertex] * deg_to_radians
+            y_tri[i] = self.y[vertex] * deg_to_radians
 
-        # Convert to cartesian coordinates
-        p = geographic_to_cartesian_coords(x1, x2, 1.0)
+        # Convert point coordinates to radians
+        x1_rad = x1*deg_to_radians
+        x2_rad = x2*deg_to_radians
+
+        # Convert to cartesian coordinates on the unit sphere
+        p = geographic_to_cartesian_coords(x1_rad, x2_rad, 1.0)
         p0 = geographic_to_cartesian_coords(x_tri[0], y_tri[0], 1.0)
         p1 = geographic_to_cartesian_coords(x_tri[1], y_tri[1], 1.0)
         p2 = geographic_to_cartesian_coords(x_tri[2], y_tri[2], 1.0)
@@ -1535,6 +1592,29 @@ cdef class UnstructuredGeographicGrid(Grid):
             vector[DTYPE_FLOAT_t] &dphi_dy) except *:
         """ Get gradient in phi with respect to x and y
 
+        The gradient in phi is calculated by first converting to cartesian
+        coordinates, then rotating the cartesian axes so that the positive
+        z-axis forms an outward normal through the element's centroid, while
+        the x- and y- axes are locally aligned with lines of constant longitude
+        and latitude respectively. The element is then projected onto the plane
+        that lies tangential to the surface of the sphere at the element's
+        centroid. The gradients dphi/dx and dphi/dy are then computed
+        using the formulas:
+
+        dphi_i/dx = \Delta y_i / 2A
+        dphi_i/dy = - \Delta_x_i / 2A
+
+        Where A is the element's area, given by the equation:
+
+        A = sum(i=1,3) x_i * \Delta y_i
+
+        The Delta terms are simply the difference between the x or y coordinates of the
+        element vertices other than that referred to by i (see Lynch 2015, p233).
+        As dpi_i/dx and dphi_i/dy are constant over the element, they are the same
+        for all particles in the element. To save repeated calculations, gradient
+        terms are cached as the simulation proceeds with cached values returned after
+        the first request.
+
         Parameters
         ----------
         host : int
@@ -1545,22 +1625,69 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         dphi_dy : vector, float
             Gradient with respect to y
-        """
 
+        """
         cdef int i # Loop counters
         cdef int vertex # Vertex identifier
 
         # Intermediate arrays
         cdef vector[DTYPE_FLOAT_t] x_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
         cdef vector[DTYPE_FLOAT_t] y_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef DTYPE_FLOAT_t xc, yc
 
+        # Return cached values if they have been pre-computed
+        if self.barycentric_gradients_have_been_cached[host] == 1:
+            dphi_dx[:] = self.dphi_dx[host][:]
+            dphi_dy[:] = self.dphi_dy[host][:]
+            return
+
+        # Element vertices
         for i in xrange(N_VERTICES):
             vertex = self.nv[i,host]
-            x_tri[i] = self.x[vertex]
-            y_tri[i] = self.y[vertex]
+            x_tri[i] = self.x[vertex] * deg_to_radians
+            y_tri[i] = self.y[vertex] * deg_to_radians
 
-        # Calculate gradient in barycentric coordinates
-        interp.get_barycentric_gradients(x_tri, y_tri, dphi_dx, dphi_dy)
+        # The element centroid in radians
+        xc = self.xc[host] * deg_to_radians
+        yc = self.yc[host] * deg_to_radians
+
+        # Convert to cartesian coordinates
+        pc = geographic_to_cartesian_coords(xc, yc, earth_radius)
+        p0 = geographic_to_cartesian_coords(x_tri[0], y_tri[0], earth_radius)
+        p1 = geographic_to_cartesian_coords(x_tri[1], y_tri[1], earth_radius)
+        p2 = geographic_to_cartesian_coords(x_tri[2], y_tri[2], earth_radius)
+
+        # Rotate axes to get the desired orientation as described above
+        pc = rotate_axes(pc, xc, yc)
+        p0 = rotate_axes(p0, xc, yc)
+        p1 = rotate_axes(p1, xc, yc)
+        p2 = rotate_axes(p2, xc, yc)
+
+        # Now calculate gradients within the projected planar triangle
+
+        # Intermediate terms
+        a1 = p1[0] - p0[0]
+        a2 = p2[1] - p0[1]
+        a3 = p1[1] - p0[1]
+        a4 = p2[0] - p0[0]
+
+        # Evaluate the vector cross product
+        twice_signed_element_area = a1 * a2 - a3 * a4
+
+        dphi_dx[0] = (p1[1] - p2[1])/twice_signed_element_area
+        dphi_dx[1] = (p2[1] - p0[1])/twice_signed_element_area
+        dphi_dx[2] = (p0[1] - p1[1])/twice_signed_element_area
+
+        dphi_dy[0] = (p2[0] - p1[0])/twice_signed_element_area
+        dphi_dy[1] = (p0[0] - p2[0])/twice_signed_element_area
+        dphi_dy[2] = (p1[0] - p0[0])/twice_signed_element_area
+
+        # Cache values
+        self.barycentric_gradients_have_been_cached[host] = 1
+        self.dphi_dx[host][:] = dphi_dx[:]
+        self.dphi_dy[host][:] = dphi_dy[:]
+
+        return
 
     cdef DTYPE_FLOAT_t interpolate_in_space(self, DTYPE_FLOAT_t[:] var_arr,  Particle* particle) except FLOAT_ERR:
         """ Interpolate the given field in space
