@@ -12,8 +12,6 @@ from pylag.math cimport Intersection
 
 cdef class Grid:
 
-
-
     cdef DTYPE_INT_t find_host_using_global_search(self,
                                                    Particle *particle) except INT_ERR
 

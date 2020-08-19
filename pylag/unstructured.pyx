@@ -28,9 +28,10 @@ from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 # PyLag python imports
-from pylag.parameters cimport deg_to_radians, earth_radius, pi
+from pylag.particle_cpp_wrapper cimport ParticleSmartPtr
 
 # PyLag cython imports
+from pylag.parameters cimport deg_to_radians, earth_radius, pi
 from pylag.particle cimport Particle
 from pylag.particle_cpp_wrapper cimport to_string
 from pylag.data_reader cimport DataReader
@@ -48,24 +49,131 @@ cdef class Grid:
     implement functionality that is specific to a given grid type (e.g. an unstructured
     grid in cartesian coordinates vs an unstructured grid in geographic coordinates.
     """
+    def find_host_using_global_search_wrapper(self,
+                                              ParticleSmartPtr particle):
+        """ Python wrapper for finding and setting the host element using a global search
+
+        Parameters
+        ----------
+        particle : pylag.particle_cpp_wrapper.ParticleSmartPtr
+            The particle at its current position.
+
+        Returns
+        -------
+         : int
+             Flag signifying whether the host element was found successfully.
+        """
+        return self.find_host_using_global_search(particle.get_ptr())
+
     cdef DTYPE_INT_t find_host_using_global_search(self,
                                                    Particle *particle) except INT_ERR:
         raise NotImplementedError
+
+    def find_host_using_local_search_wrapper(self,
+                                             ParticleSmartPtr particle):
+        """ Python wrapper for finding and setting the host element using a local search
+
+        Parameters
+        ----------
+        particle : pylag.particle_cpp_wrapper.ParticleSmartPtr
+            The particle at its current position.
+
+        Returns
+        -------
+         : int
+             Flag signifying whether the host element was found successfully.
+        """
+        return self.find_host_using_local_search(particle.get_ptr())
 
     cdef DTYPE_INT_t find_host_using_local_search(self,
                                                   Particle *particle) except INT_ERR:
         raise NotImplementedError
 
+    def find_host_using_particle_tracing_wrapper(self, ParticleSmartPtr particle_old,
+                                  ParticleSmartPtr particle_new):
+        """ Python wrapper for finding and setting the host element using particle tracing
+
+        Parameters
+        ----------
+        particle_old : pylag.particle_cpp_wrapper.ParticleSmartPtr
+            The particle at its last known position.
+
+        particle_new : pylag.particle_cpp_wrapper.ParticleSmartPtr
+            The particle at its new position.
+
+        Returns
+        -------
+         : int
+             Flag signifying whether the host element was found successfully.
+        """
+        return self.find_host_using_particle_tracing(particle_old.get_ptr(), particle_new.get_ptr())
+
     cdef DTYPE_INT_t find_host_using_particle_tracing(self, Particle *particle_old,
                                                       Particle *particle_new) except INT_ERR:
         raise NotImplementedError
+
+    def get_boundary_intersection_wrapper(self, ParticleSmartPtr particle_old,
+                                  ParticleSmartPtr particle_new):
+        """ Python wrapper for finding the point no the boundary the particle intersected
+
+        This can be used when imposing horizontal boundary conditions.
+
+        Parameters
+        ----------
+        particle_old : pylag.particle_cpp_wrapper.ParticleSmartPtr
+            The particle at its last known position.
+
+        particle_new : pylag.particle_cpp_wrapper.ParticleSmartPtr
+            The particle at its new position.
+
+        Returns
+        -------
+         : pylag.math.Intersection
+             Object describing the boundary intersection
+        """
+        return self.get_boundary_intersection(particle_old.get_ptr(), particle_new.get_ptr())
 
     cdef Intersection get_boundary_intersection(self, Particle *particle_old,
                                                 Particle *particle_new):
         raise NotImplementedError
 
+    def set_default_location_wrapper(self, ParticleSmartPtr particle):
+        """ Python wrapper for setting the default location of a particle
+
+        Can be used to set a particle's position to a default location
+        within an element (for example, should it not be possible to
+        strictly apply the horizontal boundary condition).
+
+        Parameters
+        ----------
+        particle : pylag.particle_cpp_wrapper.ParticleSmartPtr
+            The particle at its current position.
+
+        Returns
+        -------
+         : None
+        """
+        return self.set_default_location(particle.get_ptr())
+
     cdef set_default_location(self, Particle *particle):
         raise NotImplementedError
+
+    def set_local_coordinates_wrapper(self, ParticleSmartPtr particle):
+        """ Python wrapper for setting particle local coordinates
+
+        Used to set particle local horizontal coordinates (e.g. within its host
+        element).
+
+        Parameters
+        ----------
+        particle : pylag.particle_cpp_wrapper.ParticleSmartPtr
+            The particle at its current position.
+
+        Returns
+        -------
+         : None
+        """
+        return self.set_local_coordinates(particle.get_ptr())
 
     cdef set_local_coordinates(self, Particle *particle):
         raise NotImplementedError
