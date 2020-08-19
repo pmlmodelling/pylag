@@ -32,9 +32,9 @@ cpdef vector[DTYPE_FLOAT_t] rotate_axes(const vector[DTYPE_FLOAT_t] &p,
                                         const DTYPE_FLOAT_t &lon_rad,
                                         const DTYPE_FLOAT_t &lat_rad)
 
-cdef vector[DTYPE_FLOAT_t] geographic_to_cartesian_coords(const DTYPE_FLOAT_t lon_rad,
-                                                          const DTYPE_FLOAT_t lat_rad,
-                                                          const DTYPE_FLOAT_t r)
+cpdef vector[DTYPE_FLOAT_t] geographic_to_cartesian_coords(const DTYPE_FLOAT_t &lon_rad,
+                                                           const DTYPE_FLOAT_t &lat_rad,
+                                                           const DTYPE_FLOAT_t &r)
 
 cdef get_intersection_point(DTYPE_FLOAT_t x1[2], DTYPE_FLOAT_t x2[2],
         DTYPE_FLOAT_t x3[2], DTYPE_FLOAT_t x4[2], DTYPE_FLOAT_t xi[2])

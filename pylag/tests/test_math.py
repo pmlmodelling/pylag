@@ -60,6 +60,15 @@ def test_rotate_axes():
     test.assert_array_almost_equal(p_rot, [0., 0., 10.])
 
 
+def test_geographic_to_cartesian_coords():
+    lon = np.pi/2
+    lat = 0.0
+    r = 10.0
+
+    coords = math.geographic_to_cartesian_coords(lon, lat, r)
+    test.assert_array_almost_equal(coords, [0., 10., 0.])
+
+
 def test_get_intersection_point_for_perpendicular_lines():
     x1 = np.array([0.0, 2.0], dtype=DTYPE_FLOAT)
     x2 = np.array([0.0, 0.0], dtype=DTYPE_FLOAT)
