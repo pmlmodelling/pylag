@@ -10,8 +10,7 @@ import numpy as np
 
 from libc.math cimport sin, cos
 
-# Degrees -> radians conversion factor
-deg_to_radians = np.radians(1)
+from pylag.parameters cimport pi
 
 
 def det_second_order_wrapper(p1, p2):
@@ -137,18 +136,138 @@ cdef get_intersection_point(DTYPE_FLOAT_t x1[2], DTYPE_FLOAT_t x2[2],
         raise ValueError('Line segments do not intersect.')
 
 
-cdef vector[DTYPE_FLOAT_t] geographic_to_cartesian_coords(DTYPE_FLOAT_t longitude,
-                                                          DTYPE_FLOAT_t latitude,
-                                                          DTYPE_FLOAT_t r):
+cpdef vector[DTYPE_FLOAT_t] rotate_x(const vector[DTYPE_FLOAT_t] &p, const DTYPE_FLOAT_t &angle):
+    """ Rotate the given point about the x-axis
+
+    Parameters
+    ----------
+    p : vector[float]
+        Three vector giving the point's position in cartesian coordinates.
+
+    angle : float
+        The angle in radians through which to rotate the point about the x-axis.
+
+    Returns
+    -------
+     : vector[float]
+         The rotated position vector.
+    """
+    cdef DTYPE_FLOAT_t cos_angle, sin_angle
+    cdef vector[DTYPE_FLOAT_t] p_rot = vector[DTYPE_FLOAT_t](3, -999.)
+
+    cos_angle = cos(angle)
+    sin_angle = sin(angle)
+
+    p_rot[0] = p[0]
+    p_rot[1] = cos_angle * p[1] + sin_angle * p[2]
+    p_rot[2] = -sin_angle * p[1] + cos_angle * p[2]
+
+    return p_rot
+
+
+cpdef vector[DTYPE_FLOAT_t] rotate_y(const vector[DTYPE_FLOAT_t] &p, const DTYPE_FLOAT_t &angle):
+    """ Rotate the given point about the y-axis
+
+    Parameters
+    ----------
+    p : vector[float]
+        Three vector giving the point's position in cartesian coordinates.
+
+    angle : float
+        The angle in radians through which to rotate the point about the y-axis.
+
+    Returns
+    -------
+     : vector[float]
+         The rotated position vector.
+    """
+    cdef DTYPE_FLOAT_t cos_angle, sin_angle
+    cdef vector[DTYPE_FLOAT_t] p_rot = vector[DTYPE_FLOAT_t](3, -999.)
+
+    cos_angle = cos(angle)
+    sin_angle = sin(angle)
+
+    p_rot[0] = cos_angle * p[0] - sin_angle * p[2]
+    p_rot[1] = p[1]
+    p_rot[2] = sin_angle * p[0] + cos_angle * p[2]
+
+    return p_rot
+
+
+cpdef vector[DTYPE_FLOAT_t] rotate_z(const vector[DTYPE_FLOAT_t] &p, const DTYPE_FLOAT_t &angle):
+    """ Rotate the given point about the z-axis
+
+    Parameters
+    ----------
+    p : vector[float]
+        Three vector giving the point's position in cartesian coordinates.
+
+    angle : float
+        The angle in radians through which to rotate the point about the z-axis.
+
+    Returns
+    -------
+     : vector[float]
+         The rotated position vector.
+    """
+    cdef DTYPE_FLOAT_t cos_angle, sin_angle
+    cdef vector[DTYPE_FLOAT_t] p_rot = vector[DTYPE_FLOAT_t](3, -999.)
+
+    cos_angle = cos(angle)
+    sin_angle = sin(angle)
+
+    p_rot[0] = cos_angle * p[0] + sin_angle * p[1]
+    p_rot[1] = -sin_angle * p[0] + cos_angle * p[1]
+    p_rot[2] = p[2]
+
+    return p_rot
+
+
+cpdef vector[DTYPE_FLOAT_t] rotate_axes(const vector[DTYPE_FLOAT_t] &p,
+                                        const DTYPE_FLOAT_t &lon_rad,
+                                        const DTYPE_FLOAT_t &lat_rad):
+    """ Rotate coordinates axes
+
+    Perform a series of coordinate rotations that rotate the cartesian axes
+    so that the positive z-axis forms an outward normal through the given
+    geographic coordinates, while the x- and y- axes are locally aligned with
+    lines of constant longitude and latitude respectively.
+
+    Parameters
+    ----------
+    p : vector[float]
+        Three vector giving the point's position in cartesian coordinates.
+
+    lon_rad : float
+        Longitude in radians through which the axes will be rotated.
+
+    lat_rad : float
+        Latitude in radians through which the axes will be rotates.
+    """
+    cdef vector[DTYPE_FLOAT_t] p_new
+
+    # First perform three rotations which correctly align the x-, y- and z-axes at (0, 0)
+    p_new = rotate_z(p, pi/2.0)
+    p_new = rotate_x(p_new, pi/2.0)
+
+    # Now rotate so that the z-axis forms an outward normal through the specified coordinates
+    p_new = rotate_y(p_new, lon_rad)
+    p_new = rotate_x(p_new, -lat_rad)
+
+    return p_new
+
+cdef vector[DTYPE_FLOAT_t] geographic_to_cartesian_coords(const DTYPE_FLOAT_t &lon_rad,
+                                                          const DTYPE_FLOAT_t &lat_rad,
+                                                          const DTYPE_FLOAT_t &r):
     """ Convert geographic to cartesian coordinates
 
     Parameters
     ----------
-    longitude : float
-        Longitude in deg E
+    lon_rad : float
+        Longitude radians
 
-    latitude : float
-        Latitude in deg N
+    lat_rad : float
+        Latitude in radians
 
     r : float
         Radius
@@ -158,12 +277,7 @@ cdef vector[DTYPE_FLOAT_t] geographic_to_cartesian_coords(DTYPE_FLOAT_t longitud
      coords: vector[float]
          Vector of cartesian coordinates (x, y, z)
     """
-    cdef DTYPE_FLOAT_t lon_rad, lat_rad
-
     cdef vector[DTYPE_FLOAT_t] coords = vector[DTYPE_FLOAT_t](3, -999.)
-
-    lon_rad = longitude * deg_to_radians
-    lat_rad = latitude * deg_to_radians
 
     coords[0] = r * cos(lon_rad) * cos(lat_rad)
     coords[1] = r * sin(lon_rad) * cos(lat_rad)

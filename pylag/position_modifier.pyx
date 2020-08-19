@@ -12,7 +12,7 @@ include "constants.pxi"
 
 from libc.math cimport cos
 
-from pylag import parameters
+from pylag.parameters cimport deg_to_radians, earth_radius
 
 
 cdef class PositionModifier:
@@ -63,8 +63,7 @@ cdef class GeographicPositionModifier(PositionModifier):
     cdef DTYPE_FLOAT_t multiplier
 
     def __init__(self):
-        self.deg_to_rad = parameters.deg_to_rad
-        self.multiplier = self.deg_to_rad * parameters.earths_radius
+        self.multiplier = deg_to_radians * earth_radius
 
     cdef void update_position(self, Particle *particle, Delta *delta_X) except *:
         """ Update the particle's position
@@ -79,7 +78,7 @@ cdef class GeographicPositionModifier(PositionModifier):
         """
         cdef DTYPE_FLOAT_t x1, x2, x3
 
-        x1 = particle.get_x1() + delta_X.x1 / (self.multiplier * cos(self.deg_to_rad * particle.get_x2()))
+        x1 = particle.get_x1() + delta_X.x1 / (self.multiplier * cos(deg_to_radians * particle.get_x2()))
         x2 = particle.get_x2() + delta_X.x2 / self.multiplier
         x3 = particle.get_x3() + delta_X.x3
 
