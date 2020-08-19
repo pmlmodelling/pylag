@@ -48,19 +48,6 @@ cpdef shepard_interpolation(x, y, xpts, ypts, vals):
     
     return interp.shepard_interpolation(x, y, xpts_c, ypts_c, vals_c)
 
-cpdef interpolate_within_element(var, phi):
-    cdef vector[DTYPE_FLOAT_t] var_c = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-    cdef vector[DTYPE_FLOAT_t] phi_c = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-    cdef DTYPE_INT_t i
-    
-    if var.shape[0] != N_VERTICES or phi.shape[0] != N_VERTICES:
-        raise ValueError('1D array must be have a length of {}.'.format(N_VERTICES))
-    
-    for i in xrange(N_VERTICES):
-        var_c[i] = var[i]
-        phi_c[i] = phi[i]
-    
-    return interp.interpolate_within_element(var_c, phi_c)
 
 def get_intersection_point_wrapper(x1, x2, x3, x4, xi):
     cdef DTYPE_FLOAT_t x1_c[2]

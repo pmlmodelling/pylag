@@ -57,7 +57,7 @@ cpdef inline DTYPE_FLOAT_t linear_interp(DTYPE_FLOAT_t fraction,
         DTYPE_FLOAT_t val_last, DTYPE_FLOAT_t val_next):
     return (1.0 - fraction) * val_last + fraction * val_next
 
-cdef inline DTYPE_FLOAT_t interpolate_within_element(const vector[DTYPE_FLOAT_t] &var,
+cpdef inline DTYPE_FLOAT_t interpolate_within_element(const vector[DTYPE_FLOAT_t] &var,
         const vector[DTYPE_FLOAT_t] &phi):
     return var[0] * phi[0] +  var[1] * phi[1] + var[2] * phi[2]
 

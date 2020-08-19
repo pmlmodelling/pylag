@@ -7,13 +7,6 @@ from pylag import interpolation as interp
 from pylag import cwrappers
 
 
-def test_get_barycentric_gradients():
-    x_tri = np.array([0.0, 2.0, 0.0], dtype=DTYPE_FLOAT)
-    y_tri = np.array([0.0, 0.0, 2.0], dtype=DTYPE_FLOAT)
-    dphi_dx, dphi_dy = cwrappers.get_barycentric_gradients(x_tri, y_tri)
-    test.assert_array_almost_equal(dphi_dx, [-0.5, 0.5, 0.0])
-    test.assert_array_almost_equal(dphi_dy, [-0.5, 0.0, 0.5])
-
 def test_shephard_interpolation():
     xpts = np.array([-2.0, -1.0, 1.0, 2.0], dtype=DTYPE_FLOAT)
     ypts = np.array([-2.0, -1.0, 1.0, 2.0], dtype=DTYPE_FLOAT)
@@ -69,13 +62,14 @@ def test_linear_interpolation():
     val = interp.linear_interp(fraction, val_last, val_next)
     test.assert_almost_equal(val, 2.0)
 
+
 def test_interpolate_within_element():
     var = np.array([0.0, 1.0, 2.0])
 
     phi = np.array([0.0, 0.5, 0.5])
-    val = cwrappers.interpolate_within_element(var, phi)
+    val = interp.interpolate_within_element(var, phi)
     test.assert_almost_equal(val, 1.5)
 
     phi = np.array([0., 0., 1.])
-    val = cwrappers.interpolate_within_element(var, phi)
+    val = interp.interpolate_within_element(var, phi)
     test.assert_almost_equal(val, 2.0)
