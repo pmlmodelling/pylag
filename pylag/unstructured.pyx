@@ -181,6 +181,26 @@ cdef class Grid:
     cpdef vector[DTYPE_FLOAT_t] get_phi(self, DTYPE_FLOAT_t x1, DTYPE_FLOAT_t x2, DTYPE_INT_t host):
         raise NotImplementedError
 
+    def get_grad_phi_wrapper(self, host):
+        """ Python wrapper for computing gradients in phi
+
+        Parameters
+        ----------
+        host : int
+            The host element.
+
+        Returns
+        -------
+        dphi_dx, dphi_dy : NDArray
+             Phi gradients in x and y.
+        """
+        cdef vector[DTYPE_FLOAT_t] dphi_dx = vector[DTYPE_FLOAT_t](3, -999.)
+        cdef vector[DTYPE_FLOAT_t] dphi_dy = vector[DTYPE_FLOAT_t](3, -999.)
+
+        self.get_grad_phi(host, dphi_dx, dphi_dy)
+
+        return dphi_dx, dphi_dy
+
     cdef void get_grad_phi(self, DTYPE_INT_t host,
                            vector[DTYPE_FLOAT_t] &dphi_dx,
                            vector[DTYPE_FLOAT_t] &dphi_dy) except *:

@@ -108,4 +108,9 @@ class UnstructuredCartesianGrid_test(TestCase):
         phi = self.unstructured_grid.get_phi(x1, x2, host)
         test.assert_array_almost_equal(phi, [1., 0., 0.])
 
+    def test_get_grad_phi(self):
+        host = 1
+        dphi_dx, dphi_dy = self.unstructured_grid.get_grad_phi_wrapper(host)
+        test.assert_array_almost_equal(dphi_dx, [1., -1., 0.])
+        test.assert_array_almost_equal(dphi_dy, [-1., 0., 1.])
 
