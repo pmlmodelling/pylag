@@ -1321,9 +1321,9 @@ cdef class UnstructuredGeographicGrid(Grid):
         cdef vector[DTYPE_INT_t] x2_indices = vector[DTYPE_INT_t](3, -999)
         cdef vector[DTYPE_INT_t] nbe_indices = vector[DTYPE_INT_t](3, -999)
 
-        x1_indices[:] = [0,1,2]
-        x2_indices[:] = [1,2,0]
-        nbe_indices[:] = [2,0,1]
+        x1_indices = [0,1,2]
+        x2_indices = [1,2,0]
+        nbe_indices = [2,0,1]
 
         # Array indices
         cdef int x1_idx
