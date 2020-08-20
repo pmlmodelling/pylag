@@ -1,17 +1,25 @@
 from unittest import TestCase
 import numpy.testing as test
 import numpy as np
+from scipy.spatial import Delaunay
 
 try:
     import configparser
 except ImportError:
     import ConfigParser as configparser
 
-from pylag.particle_cpp_wrapper import ParticleSmartPtr
-from pylag.unstructured import UnstructuredCartesianGrid
+from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 
+from pylag.particle_cpp_wrapper import ParticleSmartPtr
+from pylag.unstructured import UnstructuredCartesianGrid, UnstructuredGeographicGrid
+from pylag.grid_metrics import sort_adjacency_array
 
 class UnstructuredCartesianGrid_test(TestCase):
+    """ Unit tests for unstructured Cartesian grids
+
+    The tests use the same grid as is used with the FVCOM data reader tests. Some
+    of the tests are also the same, but here they don't go through FVCOM data reader.
+    """
 
     def setUp(self):
         self.name = b'test_grid'
@@ -29,7 +37,7 @@ class UnstructuredCartesianGrid_test(TestCase):
         config.add_section("GENERAL")
         config.set('GENERAL', 'log_level', 'info')
 
-        # Create data reader
+        # Create unstructured grid
         self.unstructured_grid = UnstructuredCartesianGrid(config, self.name, self.n_nodes, self.n_elems,
                                                            self.nv, self.nbe, self.x, self.y, self.xc,
                                                            self.yc)
@@ -113,4 +121,138 @@ class UnstructuredCartesianGrid_test(TestCase):
         dphi_dx, dphi_dy = self.unstructured_grid.get_grad_phi_wrapper(host)
         test.assert_array_almost_equal(dphi_dx, [1., -1., 0.])
         test.assert_array_almost_equal(dphi_dy, [-1., 0., 1.])
+
+
+class UnstructuredGeographicGrid_test(TestCase):
+    """ Unit tests for unstructured Geographic grids
+
+    The tests use the same grid as is used with the Arakawa A data reader tests. Some
+    of the tests are also the same, but here they don't go through Arakawa A data reader.
+    """
+
+    def setUp(self):
+        # Basic grid (3 x 3 x 4).
+        latitude = np.array([11., 12., 13.], dtype=float)
+        longitude = np.array([1., 2., 3.], dtype=float)
+
+        # Mask [depth, lat, lon]. 1 is sea, 0 land. Note the last depth level is masked everywhere.
+        mask = np.array([[[1, 1, 1], [1, 1, 1], [0, 0, 0]],
+                         [[1, 1, 1], [1, 1, 1], [0, 0, 0]],
+                         [[1, 1, 1], [0, 0, 0], [0, 0, 0]],
+                         [[0, 0, 0], [0, 0, 0], [0, 0, 0]]], dtype=int)
+
+        # Switch the mask convention to that which PyLag anticipates. i.e. 1 is a masked point, 0 a non-masked point.
+        mask = 1 - mask
+
+        # Separately save the surface mask at nodes. This is taken as the land sea mask.
+        land_sea_mask = mask[0, :, :]
+        land_sea_mask_nodes = np.moveaxis(land_sea_mask, 0, 1)  # Move to [lon, lat]
+        land_sea_mask_nodes = land_sea_mask_nodes.reshape(np.prod(land_sea_mask_nodes.shape), order='C')
+
+        # Mask one extra point (node 1) to help with testing wet dry status calls
+        mask[:, 1, 0] = 1
+
+        # Form the unstructured grid
+        lon2d, lat2d = np.meshgrid(longitude[:], latitude[:], indexing='ij')
+        points = np.array([lon2d.flatten(order='C'), lat2d.flatten(order='C')]).T
+
+        # Save lon and lat points at nodes
+        lon_nodes = points[:, 0]
+        lat_nodes = points[:, 1]
+        n_nodes = points.shape[0]
+
+        # Create the Triangulation
+        tri = Delaunay(points)
+
+        # Save simplices
+        #   - Flip to reverse ordering, as expected by PyLag
+        #   - Transpose to give it the dimension ordering expected by PyLag
+        nv = np.flip(tri.simplices.copy(), axis=1).T
+        n_elements = nv.shape[1]
+
+        # Save neighbours
+        #   - Transpose to give it the dimension ordering expected by PyLag
+        #   - Sort to ensure match with nv
+        nbe = tri.neighbors.T
+        nbe = sort_adjacency_array(nv, nbe)
+
+        # Save lon and lat points at element centres
+        lon_elements = np.empty(n_elements, dtype=float)
+        lat_elements = np.empty(n_elements, dtype=float)
+        for i, element in enumerate(range(n_elements)):
+            lon_elements[i] = lon_nodes[(nv[:, element])].mean()
+            lat_elements[i] = lat_nodes[(nv[:, element])].mean()
+
+        # Generate the land-sea mask for elements
+        land_sea_mask_elements = np.empty(n_elements, dtype=int)
+        for i in range(n_elements):
+            element_nodes = nv[:, i]
+            land_sea_mask_elements[i] = 1 if np.any(land_sea_mask_nodes[(element_nodes)] == 1) else 0
+
+        # Flag open boundaries with -2 flag
+        nbe[np.where(nbe == -1)] = -2
+
+        # Flag land boundaries with -1 flag
+        for i, msk in enumerate(land_sea_mask_elements):
+            if msk == 1:
+                nbe[np.where(nbe == i)] = -1
+
+        # Save grid variables
+        self.name = b'test_grid'
+        self.n_elems = n_elements
+        self.n_nodes = n_nodes
+        self.nv = nv.astype(DTYPE_INT)
+        self.nbe = nbe.astype(DTYPE_INT)
+        self.x = lon_nodes.astype(DTYPE_FLOAT)
+        self.y = lat_nodes.astype(DTYPE_FLOAT)
+        self.xc = lon_elements.astype(DTYPE_FLOAT)
+        self.yc = lat_elements.astype(DTYPE_FLOAT)
+
+        # Create config
+        config = configparser.ConfigParser()
+        config.add_section("GENERAL")
+        config.set('GENERAL', 'log_level', 'info')
+
+        # Create unstructured grid
+        self.unstructured_grid = UnstructuredGeographicGrid(config, self.name, self.n_nodes, self.n_elems,
+                                                            self.nv, self.nbe, self.x, self.y, self.xc,
+                                                            self.yc)
+
+    def tearDown(self):
+        del self.unstructured_grid
+
+    def test_find_host_using_global_search(self):
+        particle = ParticleSmartPtr(x1=1.666666667, x2=11.666666667)
+        flag = self.unstructured_grid.find_host_using_global_search_wrapper(particle)
+        test.assert_equal(particle.get_host_horizontal_elem('test_grid'), 0)
+        test.assert_equal(flag, 0)
+
+    def test_find_host_when_particle_is_in_the_domain(self):
+        particle_new = ParticleSmartPtr(x1=2.333333333, x2=11.6666666667,
+                                        host_elements={'test_grid':  5})
+        flag = self.unstructured_grid.find_host_using_local_search_wrapper(particle_new)
+        test.assert_equal(flag, 0)
+        test.assert_equal(particle_new.get_host_horizontal_elem('test_grid'), 4)
+
+    def test_get_phi_when_particle_is_at_an_elements_vertex(self):
+        # Vertex 0
+        x1 = 2.0
+        x2 = 12.0
+        host = 0
+        phi = self.unstructured_grid.get_phi(x1, x2, host)
+        test.assert_array_almost_equal(phi, [1., 0., 0.])
+
+        # Vertex 1
+        x1 = 2.0
+        x2 = 11.0
+        host = 0
+        phi = self.unstructured_grid.get_phi(x1, x2, host)
+        test.assert_array_almost_equal(phi, [0., 1., 0.])
+
+        # Vertex 2
+        x1 = 1.0
+        x2 = 12.0
+        host = 0
+        phi = self.unstructured_grid.get_phi(x1, x2, host)
+        test.assert_array_almost_equal(phi, [0., 0., 1.])
 
