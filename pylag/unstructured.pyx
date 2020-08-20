@@ -509,9 +509,7 @@ cdef class UnstructuredCartesianGrid(Grid):
                 x1[0] = x_tri[x1_idx]; x1[1] = y_tri[x1_idx]
                 x2[0] = x_tri[x2_idx]; x2[1] = y_tri[x2_idx]
 
-                try:
-                    xi = get_intersection_point(x1, x2, x3, x4)
-                except ValueError:
+                if get_intersection_point(x1, x2, x3, x4, xi) == 0:
                     # Lines do not intersect - check the next one
                     continue
 
@@ -720,8 +718,7 @@ cdef class UnstructuredCartesianGrid(Grid):
             x1[0] = x_tri[x1_idx]; x1[1] = y_tri[x1_idx]
             x2[0] = x_tri[x2_idx]; x2[1] = y_tri[x2_idx]
 
-            try:
-                xi = get_intersection_point(x1, x2, x3, x4)
+            if get_intersection_point(x1, x2, x3, x4, xi) == 1:
                 intersection.x1 = x1[0]
                 intersection.y1 = x1[1]
                 intersection.x2 = x2[0]
@@ -729,7 +726,7 @@ cdef class UnstructuredCartesianGrid(Grid):
                 intersection.xi = xi[0]
                 intersection.yi = xi[1]
                 return intersection
-            except ValueError:
+            else:
                 continue
 
         raise RuntimeError('Failed to calculate boundary intersection.')
@@ -1365,9 +1362,7 @@ cdef class UnstructuredGeographicGrid(Grid):
                 x1[0] = x_tri[x1_idx]; x1[1] = y_tri[x1_idx]
                 x2[0] = x_tri[x2_idx]; x2[1] = y_tri[x2_idx]
 
-                try:
-                    xi = get_intersection_point(x1, x2, x3, x4)
-                except ValueError:
+                if get_intersection_point(x1, x2, x3, x4, xi) == 0:
                     # Lines do not intersect - check the next one
                     continue
 
@@ -1576,8 +1571,7 @@ cdef class UnstructuredGeographicGrid(Grid):
             x1[0] = x_tri[x1_idx]; x1[1] = y_tri[x1_idx]
             x2[0] = x_tri[x2_idx]; x2[1] = y_tri[x2_idx]
 
-            try:
-                xi = get_intersection_point(x1, x2, x3, x4)
+            if get_intersection_point(x1, x2, x3, x4, xi) == 1:
                 intersection.x1 = x1[0]
                 intersection.y1 = x1[1]
                 intersection.x2 = x2[0]
@@ -1585,7 +1579,7 @@ cdef class UnstructuredGeographicGrid(Grid):
                 intersection.xi = xi[0]
                 intersection.yi = xi[1]
                 return intersection
-            except ValueError:
+            else:
                 continue
 
         raise RuntimeError('Failed to calculate boundary intersection.')

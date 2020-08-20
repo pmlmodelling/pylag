@@ -6,6 +6,8 @@ Note
 math is implemented in Cython. Only a small portion of the
 API is exposed in Python with accompanying documentation.
 """
+include "constants.pxi"
+
 import numpy as np
 
 from libc.math cimport sin, cos
@@ -76,10 +78,23 @@ cdef class Intersection:
     def yi_py(self, value):
         self.yi = value
 
-cpdef vector[DTYPE_FLOAT_t] get_intersection_point(const vector[DTYPE_FLOAT_t] &x1,
-                                                   const vector[DTYPE_FLOAT_t] &x2,
-                                                   const vector[DTYPE_FLOAT_t] &x3,
-                                                   const vector[DTYPE_FLOAT_t] &x4):
+def get_intersection_point_wrapper(const vector[DTYPE_FLOAT_t] &x1,
+                                    const vector[DTYPE_FLOAT_t] &x2,
+                                    const vector[DTYPE_FLOAT_t] &x3,
+                                    const vector[DTYPE_FLOAT_t] &x4):
+    cdef vector[DTYPE_FLOAT_t] xi = vector[DTYPE_FLOAT_t](2, -999.)
+
+    if get_intersection_point(x1, x2, x3, x4, xi) == 1:
+        return xi
+    else:
+        raise ValueError('Lines do not intersect')
+
+
+cdef DTYPE_INT_t get_intersection_point(const vector[DTYPE_FLOAT_t] &x1,
+                                    const vector[DTYPE_FLOAT_t] &x2,
+                                    const vector[DTYPE_FLOAT_t] &x3,
+                                    const vector[DTYPE_FLOAT_t] &x4,
+                                    vector[DTYPE_FLOAT_t] &xi) except INT_ERR:
     """ Determine the intersection point of two line segments
     
     Determine the intersection point of two line segments. The first is defined
@@ -104,7 +119,6 @@ cpdef vector[DTYPE_FLOAT_t] get_intersection_point(const vector[DTYPE_FLOAT_t] &
     cdef vector[DTYPE_FLOAT_t] r = vector[DTYPE_FLOAT_t](2, -999.)
     cdef vector[DTYPE_FLOAT_t] s = vector[DTYPE_FLOAT_t](2, -999.)
     cdef vector[DTYPE_FLOAT_t] x13 = vector[DTYPE_FLOAT_t](2, -999.)
-    cdef vector[DTYPE_FLOAT_t] xi = vector[DTYPE_FLOAT_t](2, -999.)
 
     cdef DTYPE_FLOAT_t denom, t, u
     cdef DTYPE_INT_t i
@@ -117,7 +131,7 @@ cpdef vector[DTYPE_FLOAT_t] get_intersection_point(const vector[DTYPE_FLOAT_t] &
     denom = det_second_order(r,s)
 
     if denom == 0.0:
-        raise ValueError('Lines do not interesct')
+        return 0
 
     t = det_second_order(x13, s) / denom
     u = det_second_order(x13, r) / denom
@@ -126,9 +140,9 @@ cpdef vector[DTYPE_FLOAT_t] get_intersection_point(const vector[DTYPE_FLOAT_t] &
         for i in xrange(2):
             xi[i] = x1[i] + t * r[i]
     else:
-        raise ValueError('Line segments do not intersect.')
+        return 0
 
-    return xi
+    return 1
 
 
 cpdef vector[DTYPE_FLOAT_t] rotate_x(const vector[DTYPE_FLOAT_t] &p, const DTYPE_FLOAT_t &angle):
