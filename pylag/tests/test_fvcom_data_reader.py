@@ -18,6 +18,7 @@ from pylag.particle_cpp_wrapper import ParticleSmartPtr
 
 from pylag.mediator import Mediator
 
+
 class MockFVCOMMediator(Mediator):
     """ Test mediator for FVCOM
 
