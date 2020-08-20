@@ -10,9 +10,9 @@ include "constants.pxi"
 
 import numpy as np
 
-from libc.math cimport sin, cos
+from libc.math cimport sin, cos, asin, sqrt
 
-from pylag.parameters cimport pi
+from pylag.parameters cimport pi, earth_radius
 
 
 cdef class Intersection:
@@ -264,6 +264,37 @@ cpdef vector[DTYPE_FLOAT_t] rotate_axes(const vector[DTYPE_FLOAT_t] &p,
     p_new = rotate_x(p_new, -lat_rad)
 
     return p_new
+
+
+cpdef DTYPE_FLOAT_t haversine(const DTYPE_FLOAT_t &lon1_rad,
+                              const DTYPE_FLOAT_t &lat1_rad,
+                              const DTYPE_FLOAT_t &lon2_rad,
+                              const DTYPE_FLOAT_t &lat2_rad) except FLOAT_ERR:
+    """ Calculate the great circle distance between two points on the unit sphere
+
+    Parameters
+    ----------
+    lon1_rad, lat1_rad : float
+        Longitude and latitude of point 1 in radians
+
+    lon2_rad, lat2_rad : float
+        Longitude and latitude of point 2 in radians
+
+    Returns
+    -------
+     : float
+        The distance in meters
+    """
+    cdef DTYPE_FLOAT_t dlon, dlat
+    cdef DTYPE_FLOAT_t a
+
+    dlon = lon2_rad - lon1_rad
+    dlat = lat2_rad - lat1_rad
+
+    a = sin(dlat/2.)**2 + cos(lat1_rad) * cos(lat2_rad) * sin(dlon/2.)**2
+
+    return 2.0 * asin(sqrt(a))
+
 
 cpdef vector[DTYPE_FLOAT_t] geographic_to_cartesian_coords(const DTYPE_FLOAT_t &lon_rad,
                                                           const DTYPE_FLOAT_t &lat_rad,

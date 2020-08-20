@@ -58,6 +58,17 @@ def test_rotate_axes():
     test.assert_array_almost_equal(p_rot, [0., 0., 10.])
 
 
+def test_haversine():
+    lon1 = np.radians(0)
+    lat1 = np.radians(0)
+    lon2 = np.radians(180)
+    lat2 = np.radians(0)
+
+    distance = math.haversine(lon1, lat1, lon2, lat2)
+
+    test.assert_almost_equal(distance, np.pi)
+
+
 def test_geographic_to_cartesian_coords():
     lon = np.pi/2
     lat = 0.0

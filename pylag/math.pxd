@@ -36,6 +36,11 @@ cpdef vector[DTYPE_FLOAT_t] rotate_axes(const vector[DTYPE_FLOAT_t] &p,
                                         const DTYPE_FLOAT_t &lon_rad,
                                         const DTYPE_FLOAT_t &lat_rad)
 
+cpdef DTYPE_FLOAT_t haversine(const DTYPE_FLOAT_t &lon1_rad,
+                              const DTYPE_FLOAT_t &lat1_rad,
+                              const DTYPE_FLOAT_t &lat2_rad,
+                              const DTYPE_FLOAT_t &lat2_rad) except FLOAT_ERR
+
 cpdef vector[DTYPE_FLOAT_t] geographic_to_cartesian_coords(const DTYPE_FLOAT_t &lon_rad,
                                                            const DTYPE_FLOAT_t &lat_rad,
                                                            const DTYPE_FLOAT_t &r)
