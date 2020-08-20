@@ -72,7 +72,7 @@ def test_get_intersection_point_for_perpendicular_lines():
     x2 = np.array([0.0, 0.0], dtype=DTYPE_FLOAT)
     x3 = np.array([2.0, 1.0], dtype=DTYPE_FLOAT)
     x4 = np.array([-1.0, 1.0], dtype=DTYPE_FLOAT)
-    xi = math.get_intersection_point(x1, x2, x3, x4)
+    xi = math.get_intersection_point_wrapper(x1, x2, x3, x4)
     test.assert_array_almost_equal(xi, [0.0, 1.0])
 
 
@@ -81,7 +81,7 @@ def test_get_intersection_point_for_angled_lines():
     x2 = np.array([1.0, 1.0], dtype=DTYPE_FLOAT)
     x3 = np.array([0.0, -1.0], dtype=DTYPE_FLOAT)
     x4 = np.array([0.0, 1.0], dtype=DTYPE_FLOAT)
-    xi = math.get_intersection_point(x1, x2, x3, x4)
+    xi = math.get_intersection_point_wrapper(x1, x2, x3, x4)
     test.assert_array_almost_equal(xi, [0.0, 0.0])
 
 
