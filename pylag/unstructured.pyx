@@ -1144,9 +1144,9 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         # Containers for preserving the value of gradient calculations
         cdef vector[DTYPE_FLOAT_t] gradients = vector[DTYPE_FLOAT_t](3, -999.)
-        self.barycentric_gradients_have_been_cached = vector[DTYPE_INT_t](self._n_elems, 0)
-        self.dphi_dx = vector[vector[DTYPE_FLOAT_t]](self._n_elems, gradients)
-        self.dphi_dy = vector[vector[DTYPE_FLOAT_t]](self._n_elems, gradients)
+        self.barycentric_gradients_have_been_cached = vector[DTYPE_INT_t](self.n_elems, 0)
+        self.dphi_dx = vector[vector[DTYPE_FLOAT_t]](self.n_elems, gradients)
+        self.dphi_dy = vector[vector[DTYPE_FLOAT_t]](self.n_elems, gradients)
 
     cdef DTYPE_INT_t find_host_using_local_search(self, Particle *particle) except INT_ERR:
         """ Returns the host horizontal element through local searching.
