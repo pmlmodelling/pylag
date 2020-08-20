@@ -37,6 +37,7 @@ from pylag.particle_cpp_wrapper cimport to_string
 from pylag.data_reader cimport DataReader
 cimport pylag.interpolation as interp
 from pylag.math cimport geographic_to_cartesian_coords, rotate_axes, det_third_order
+from pylag.math cimport haversine
 from pylag.math cimport int_min, float_min, get_intersection_point
 from pylag.math cimport Intersection
 
@@ -216,6 +217,11 @@ cdef class Grid:
     cdef void interpolate_grad_in_time_and_space(self, DTYPE_FLOAT_t[:] var_last_arr, DTYPE_FLOAT_t[:] var_next_arr,
                                                  DTYPE_FLOAT_t time_fraction, Particle *particle,
                                                  DTYPE_FLOAT_t var_prime[2]) except *:
+        raise NotImplementedError
+
+    cpdef DTYPE_FLOAT_t shepard_interpolation(self, const DTYPE_FLOAT_t &x,
+            const DTYPE_FLOAT_t &y, const vector[DTYPE_FLOAT_t] &xpts, const vector[DTYPE_FLOAT_t] &ypts,
+            const vector[DTYPE_FLOAT_t] &vals) except FLOAT_ERR:
         raise NotImplementedError
 
 
@@ -1059,6 +1065,68 @@ cdef class UnstructuredCartesianGrid(Grid):
         var_prime[1] = interp.interpolate_within_element(var_nodes, dphi_dy)
 
         return
+
+    cpdef DTYPE_FLOAT_t shepard_interpolation(self, const DTYPE_FLOAT_t &x,
+            const DTYPE_FLOAT_t &y, const vector[DTYPE_FLOAT_t] &xpts, const vector[DTYPE_FLOAT_t] &ypts,
+            const vector[DTYPE_FLOAT_t] &vals) except FLOAT_ERR:
+        """ Shepard interpolation in cartesian coordinates
+
+        Distances are euclidian distances in the plane
+
+        Parameters
+        ----------
+        x : float
+            x-coordinate of the point at which data will be interpolated in m
+
+        y : float
+            y-coordinate of the point at which data will be interpolated in m
+
+        xpts : vector[float]
+            x-coordinates of the points at which we have data (in m)
+
+        ypts : vector[float]
+            y-coordinates of the points at which we have data (in m)
+
+        vals : vector[float]
+            Values at the points where data is specified
+
+        Returns
+        -------
+         : float
+             The interpolated value.
+        """
+        # Euclidian distance between the point and a reference point
+        cdef DTYPE_FLOAT_t r
+
+        # Weighting applied to a given point
+        cdef DTYPE_FLOAT_t w
+
+        # Summed quantities
+        cdef DTYPE_FLOAT_t sum
+        cdef DTYPE_FLOAT_t sumw
+
+        # For looping
+        cdef DTYPE_INT_t i, npts
+
+        # Don't like this much. Would be better to use a cython equivalent to
+        # `zip'. The boost C++ libraries provide something like this, but using
+        # it would build in a new dependency.
+        if xpts.size() == ypts.size() == vals.size():
+            n_pts = xpts.size()
+        else:
+            raise ValueError('Array lengths do not match.')
+
+        # Loop over all reference points
+        sum = 0.0
+        sumw = 0.0
+        for i in xrange(n_pts):
+            r = interp.get_euclidian_distance(x, y, xpts[i], ypts[i])
+            if r == 0.0: return vals[i]
+            w = 1.0/(r*r) # hardoced p value of -2
+            sum = sum + w
+            sumw = sumw + w*vals[i]
+
+        return sumw/sum
 
 cdef class UnstructuredGeographicGrid(Grid):
     """ Unstructured geographic grid
@@ -1953,6 +2021,78 @@ cdef class UnstructuredGeographicGrid(Grid):
         var_prime[1] = interp.interpolate_within_element(var_nodes, dphi_dy)
 
         return
+
+    cpdef DTYPE_FLOAT_t shepard_interpolation(self, const DTYPE_FLOAT_t &x,
+            const DTYPE_FLOAT_t &y, const vector[DTYPE_FLOAT_t] &xpts, const vector[DTYPE_FLOAT_t] &ypts,
+            const vector[DTYPE_FLOAT_t] &vals) except FLOAT_ERR:
+        """ Shepard interpolation in geographic coordinates
+
+        Distances are here calculated as segments of great circles joining two points
+        on the sphere.
+
+        Parameters
+        ----------
+        x : float
+            Longitude of the point at which data will be interpolated in deg E.
+
+        y : float
+            Latitude of the point at which data will be interpolated in deg N.
+
+        xpts : vector[float]
+            Longitudes of the points at which we have data (in deg E.)
+
+        ypts : vector[float]
+            Latitude of the points at which we have data (in deg N.)
+
+        vals : vector[float]
+            Values at the points where data is specified
+
+        Returns
+        -------
+         : float
+             The interpolated value.
+        """
+        # Point points in radians
+        cdef DTYPE_FLOAT_t x_rad, y_rad, xref_rad, yref_rad
+
+        # Great circle distance between the point and a reference point
+        cdef DTYPE_FLOAT_t r
+
+        # Weighting applied to a given point
+        cdef DTYPE_FLOAT_t w
+
+        # Summed quantities
+        cdef DTYPE_FLOAT_t sum
+        cdef DTYPE_FLOAT_t sumw
+
+        # For looping
+        cdef DTYPE_INT_t i, npts
+
+        # Don't like this much. Would be better to use a cython equivalent to
+        # `zip'. The boost C++ libraries provide something like this, but using
+        # it would build in a new dependency.
+        if xpts.size() == ypts.size() == vals.size():
+            n_pts = xpts.size()
+        else:
+            raise ValueError('Array lengths do not match.')
+
+        # Convert x/y to radians from degrees
+        x_rad = x * deg_to_radians
+        y_rad = y * deg_to_radians
+
+        # Loop over all reference points
+        sum = 0.0
+        sumw = 0.0
+        for i in xrange(n_pts):
+            xref_rad = xpts[i] * deg_to_radians
+            yref_rad = ypts[i] * deg_to_radians
+            r = haversine(x_rad, y_rad, xref_rad, yref_rad)
+            if r == 0.0: return vals[i]
+            w = 1.0/(r*r) # hardoced p value of -2
+            sum = sum + w
+            sumw = sumw + w*vals[i]
+
+        return sumw / sum
 
 def get_unstructured_grid(config, *args):
     """ Factory method for unstructured grid types

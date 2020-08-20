@@ -42,3 +42,7 @@ cdef class Grid:
     cdef void interpolate_grad_in_time_and_space(self, DTYPE_FLOAT_t[:] var_last_arr, DTYPE_FLOAT_t[:] var_next_arr,
                                                  DTYPE_FLOAT_t time_fraction, Particle *particle,
                                                  DTYPE_FLOAT_t var_prime[2]) except *
+
+    cpdef DTYPE_FLOAT_t shepard_interpolation(self, const DTYPE_FLOAT_t &x,
+            const DTYPE_FLOAT_t &y, const vector[DTYPE_FLOAT_t] &xpts, const vector[DTYPE_FLOAT_t] &ypts,
+            const vector[DTYPE_FLOAT_t] &vals) except FLOAT_ERR

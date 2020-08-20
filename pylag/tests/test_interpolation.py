@@ -5,17 +5,6 @@ from pylag.data_types_python import DTYPE_FLOAT
 from pylag import interpolation as interp
 
 
-def test_shephard_interpolation():
-    xpts = np.array([-2.0, -1.0, 1.0, 2.0], dtype=DTYPE_FLOAT)
-    ypts = np.array([-2.0, -1.0, 1.0, 2.0], dtype=DTYPE_FLOAT)
-    vals = np.array([0.0, 0.0, 1.0, 0.0], dtype=DTYPE_FLOAT)
-
-    val = interp.shepard_interpolation(1.0, 1.0, xpts, ypts, vals)
-    test.assert_almost_equal(val, 1.0)
-    
-    val = interp.shepard_interpolation(0.0, 0.0, xpts, ypts, vals)
-    test.assert_almost_equal(val, 0.4)
-
 def test_get_euclidian_distance():
     r1 = interp.get_euclidian_distance(0.0, 0.0, 3.0, 4.0)
     r2 = interp.get_euclidian_distance(0.0, 0.0, -3.0, -4.0)

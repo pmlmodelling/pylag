@@ -122,6 +122,17 @@ class UnstructuredCartesianGrid_test(TestCase):
         test.assert_array_almost_equal(dphi_dx, [1., -1., 0.])
         test.assert_array_almost_equal(dphi_dy, [-1., 0., 1.])
 
+    def test_shephard_interpolation(self):
+        xpts = np.array([-2.0, -1.0, 1.0, 2.0], dtype=DTYPE_FLOAT)
+        ypts = np.array([-2.0, -1.0, 1.0, 2.0], dtype=DTYPE_FLOAT)
+        vals = np.array([0.0, 0.0, 1.0, 0.0], dtype=DTYPE_FLOAT)
+
+        val = self.unstructured_grid.shepard_interpolation(1.0, 1.0, xpts, ypts, vals)
+        test.assert_almost_equal(val, 1.0)
+
+        val = self.unstructured_grid.shepard_interpolation(0.0, 0.0, xpts, ypts, vals)
+        test.assert_almost_equal(val, 0.4)
+
 
 class UnstructuredGeographicGrid_test(TestCase):
     """ Unit tests for unstructured Geographic grids

@@ -206,45 +206,6 @@ def get_interpolator(config, n_elems):
         raise ValueError('Unsupported vertical interpolation scheme.')
 
 
-cpdef DTYPE_FLOAT_t shepard_interpolation(const DTYPE_FLOAT_t &x,
-        const DTYPE_FLOAT_t &y, const vector[DTYPE_FLOAT_t] &xpts, const vector[DTYPE_FLOAT_t] &ypts,
-        const vector[DTYPE_FLOAT_t] &vals) except FLOAT_ERR:
-    """ Shepard interpolation
-
-    """
-    # Euclidian distance between the point and a reference point
-    cdef DTYPE_FLOAT_t r
-
-    # Weighting applied to a given point
-    cdef DTYPE_FLOAT_t w
-
-    # Summed quantities
-    cdef DTYPE_FLOAT_t sum
-    cdef DTYPE_FLOAT_t sumw
-
-    # For looping
-    cdef DTYPE_INT_t i, npts
-
-    # Don't like this much. Would be better to use a cython equivalent to 
-    # `zip'. The boost C++ libraries provide something like this, but using
-    # it would build in a new dependency.
-    if xpts.size() == ypts.size() == vals.size():
-        n_pts = xpts.size()
-    else:
-        raise ValueError('Array lengths do not match.')
-
-    # Loop over all reference points
-    sum = 0.0
-    sumw = 0.0
-    for i in xrange(n_pts):
-        r = get_euclidian_distance(x, y, xpts[i], ypts[i])
-        if r == 0.0: return vals[i]
-        w = 1.0/(r*r) # hardoced p value of -2
-        sum = sum + w
-        sumw = sumw + w*vals[i]
-
-    return sumw/sum
-
 cdef DTYPE_FLOAT_t get_linear_fraction_safe(DTYPE_FLOAT_t var, DTYPE_FLOAT_t var1,
         DTYPE_FLOAT_t var2) except FLOAT_ERR:
     """ Compute the fractional linear distance of a point between two numbers
