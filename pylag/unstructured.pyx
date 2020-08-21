@@ -37,6 +37,7 @@ from pylag.particle_cpp_wrapper cimport to_string
 from pylag.data_reader cimport DataReader
 cimport pylag.interpolation as interp
 from pylag.math cimport geographic_to_cartesian_coords, rotate_axes, det_third_order
+from pylag.math cimport great_circle_arc_segments_intersect
 from pylag.math cimport haversine
 from pylag.math cimport int_min, float_min, get_intersection_point
 from pylag.math cimport Intersection
@@ -1378,9 +1379,6 @@ cdef class UnstructuredGeographicGrid(Grid):
         cdef vector[DTYPE_FLOAT_t] x3 = vector[DTYPE_FLOAT_t](2, -999.)
         cdef vector[DTYPE_FLOAT_t] x4 = vector[DTYPE_FLOAT_t](2, -999.)
 
-        # 2D position vector for the intersection point
-        cdef vector[DTYPE_FLOAT_t] xi = vector[DTYPE_FLOAT_t](2, -999.)
-
         # Intermediate arrays
         cdef vector[DTYPE_INT_t] x1_indices = vector[DTYPE_INT_t](3, -999)
         cdef vector[DTYPE_INT_t] x2_indices = vector[DTYPE_INT_t](3, -999)
@@ -1397,8 +1395,8 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         # Construct arrays to hold the coordinates of the particle's previous
         # position vector and its new position vector
-        x3[0] = particle_old.get_x1(); x3[1] = particle_old.get_x2()
-        x4[0] = particle_new.get_x1(); x4[1] = particle_new.get_x2()
+        x3[0] = particle_old.get_x1() * deg_to_radians; x3[1] = particle_old.get_x2() * deg_to_radians
+        x4[0] = particle_new.get_x1() * deg_to_radians; x4[1] = particle_new.get_x2() * deg_to_radians
 
         # Start the search using the host known to contain (x1_old, x2_old)
         elem = particle_old.get_host_horizontal_elem(self.name)
@@ -1427,10 +1425,10 @@ cdef class UnstructuredGeographicGrid(Grid):
                     continue
 
                 # End coordinates for the side
-                x1[0] = x_tri[x1_idx]; x1[1] = y_tri[x1_idx]
-                x2[0] = x_tri[x2_idx]; x2[1] = y_tri[x2_idx]
+                x1[0] = x_tri[x1_idx] * deg_to_radians; x1[1] = y_tri[x1_idx] * deg_to_radians
+                x2[0] = x_tri[x2_idx] * deg_to_radians; x2[1] = y_tri[x2_idx] * deg_to_radians
 
-                if get_intersection_point(x1, x2, x3, x4, xi) == 0:
+                if great_circle_arc_segments_intersect(x1, x2, x3, x4) == 0:
                     # Lines do not intersect - check the next one
                     continue
 
@@ -1542,115 +1540,6 @@ cdef class UnstructuredGeographicGrid(Grid):
                             'are flagged as lying outside of the model domain.')
                     return BDY_ERROR
         return BDY_ERROR
-
-    cdef Intersection get_boundary_intersection(self, Particle *particle_old, Particle *particle_new):
-        """ Find the boundary intersection point
-
-        This function is primarily intended to assist in the application of
-        horizontal boundary conditions where it is often necessary to establish
-        the point on a side of an element at which particle crossed before
-        exiting the model domain.
-
-        Parameters:
-        -----------
-        particle_old: *Particle
-            The particle at its old position.
-
-        particle_new: *Particle
-            The particle at its new position.
-
-        Returns:
-        --------
-        intersection: Intersection
-            Object describing the boundary intersection.
-        """
-        cdef int i # Loop counter
-        cdef int vertex # Vertex identifier
-
-        # Intermediate arrays/variables
-        cdef vector[DTYPE_FLOAT_t] x_tri = vector[DTYPE_FLOAT_t](3, -999.)
-        cdef vector[DTYPE_FLOAT_t] y_tri = vector[DTYPE_FLOAT_t](3, -999.)
-
-        # 2D position vectors for the end points of the element's side
-        cdef vector[DTYPE_FLOAT_t] x1 = vector[DTYPE_FLOAT_t](2, -999.)
-        cdef vector[DTYPE_FLOAT_t] x2 = vector[DTYPE_FLOAT_t](2, -999.)
-
-        # 2D position vectors for the particle's previous and new position
-        cdef vector[DTYPE_FLOAT_t] x3 = vector[DTYPE_FLOAT_t](2, -999.)
-        cdef vector[DTYPE_FLOAT_t] x4 = vector[DTYPE_FLOAT_t](2, -999.)
-
-        # 2D position vector for the intersection point
-        cdef vector[DTYPE_FLOAT_t] xi = vector[DTYPE_FLOAT_t](2, -999.)
-
-        # Intermediate arrays
-        cdef vector[DTYPE_INT_t] x1_indices = vector[DTYPE_INT_t](3, -999)
-        cdef vector[DTYPE_INT_t] x2_indices = vector[DTYPE_INT_t](3, -999)
-        cdef vector[DTYPE_INT_t] nbe_indices = vector[DTYPE_INT_t](3, -999)
-
-        # Array indices
-        cdef int x1_idx
-        cdef int x2_idx
-        cdef int nbe_idx
-
-        # Variables for computing the number of land boundaries
-        cdef DTYPE_INT_t n_land_boundaries
-        cdef DTYPE_INT_t nbe
-
-        # The intersection
-        cdef Intersection intersection
-
-        intersection = Intersection()
-
-        x1_indices = [0,1,2]
-        x2_indices = [1,2,0]
-        nbe_indices = [2,0,1]
-
-        # Construct arrays to hold the coordinates of the particle's previous
-        # position vector and its new position vector
-        x3[0] = particle_old.get_x1(); x3[1] = particle_old.get_x2()
-        x4[0] = particle_new.get_x1(); x4[1] = particle_new.get_x2()
-
-        # Extract nodal coordinates
-        for i in xrange(3):
-            vertex = self.nv[i, particle_new.get_host_horizontal_elem(self.name)]
-            x_tri[i] = self.x[vertex]
-            y_tri[i] = self.y[vertex]
-
-        # Loop over all sides of the element to find the land boundary the element crossed
-        for i in xrange(3):
-            x1_idx = x1_indices[i]
-            x2_idx = x2_indices[i]
-            nbe_idx = nbe_indices[i]
-
-            nbe = self.nbe[nbe_idx, particle_new.get_host_horizontal_elem(self.name)]
-
-            if nbe != -1:
-                # Compute the number of land boundaries the neighbour has - elements with two
-                # land boundaries are themselves treated as land
-                n_land_boundaries = 0
-                for i in xrange(3):
-                    if self.nbe[i, nbe] == -1:
-                        n_land_boundaries += 1
-
-                if n_land_boundaries < 2:
-                    continue
-
-            # End coordinates for the side
-            x1[0] = x_tri[x1_idx]; x1[1] = y_tri[x1_idx]
-            x2[0] = x_tri[x2_idx]; x2[1] = y_tri[x2_idx]
-
-            if get_intersection_point(x1, x2, x3, x4, xi) == 1:
-                intersection.x1 = x1[0]
-                intersection.y1 = x1[1]
-                intersection.x2 = x2[0]
-                intersection.y2 = x2[1]
-                intersection.xi = xi[0]
-                intersection.yi = xi[1]
-                return intersection
-            else:
-                continue
-
-        raise RuntimeError('Failed to calculate boundary intersection.')
 
     cdef set_default_location(self, Particle *particle):
         """ Set default location

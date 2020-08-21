@@ -10,7 +10,7 @@ include "constants.pxi"
 
 import numpy as np
 
-from libc.math cimport sin, cos, asin, sqrt
+from libc.math cimport sin, cos, asin, acos, sqrt, abs
 
 from pylag.parameters cimport pi, earth_radius
 
@@ -143,6 +143,170 @@ cdef DTYPE_INT_t get_intersection_point(const vector[DTYPE_FLOAT_t] &x1,
         return 0
 
     return 1
+
+cpdef DTYPE_INT_t great_circle_arc_segments_intersect(const vector[DTYPE_FLOAT_t] &x1,
+                                                      const vector[DTYPE_FLOAT_t] &x2,
+                                                      const vector[DTYPE_FLOAT_t] &x3,
+                                                      const vector[DTYPE_FLOAT_t] &x4) except INT_ERR:
+    """ Determine whether two arc segments intersect
+
+    Determine whether two arc segments on the surface of a sphere intersect. The first is
+    defined by the two dimensional position vectors x1 and x2; the second by the two
+    dimensional position vectors x3 and x4. Position vectors should be in geographic
+    coordinates converted into radians.
+
+    Parameters
+    ----------
+    x1, x2, x3, x4 : vector[float, float, float]
+        Position vectors for the end points of the arcs x1x2 and x3x4. Position vectors
+        should be given in geographic coordinates converted into radians.
+
+    Returns
+    -------
+     : int
+        Integer flag identifying whether or not the two arc segments intersect. 0 for
+        False, 1 for True.
+    """
+    cdef vector[DTYPE_FLOAT_t] x1_cart, x2_cart, x3_cart, x4_cart
+    cdef vector[DTYPE_FLOAT_t] n1, n2
+    cdef vector[DTYPE_FLOAT_t] l
+    cdef vector[DTYPE_FLOAT_t] intersection_1 = vector[DTYPE_FLOAT_t](3, 999.)
+    cdef vector[DTYPE_FLOAT_t] intersection_2 = vector[DTYPE_FLOAT_t](3, 999.)
+    cdef DTYPE_INT_t intersection_1_is_valid, intersection_2_is_valid
+
+    # Convert from geographic to cartesian coordinates
+    x1_cart = geographic_to_cartesian_coords(x1[0], x1[1], 1)
+    x2_cart = geographic_to_cartesian_coords(x2[0], x2[1], 1)
+    x3_cart = geographic_to_cartesian_coords(x3[0], x3[1], 1)
+    x4_cart = geographic_to_cartesian_coords(x4[0], x4[1], 1)
+
+    # Compute plane normals for the two arcs
+    n1 = vector_product(x1_cart, x2_cart)
+    n2 = vector_product(x3_cart, x4_cart)
+
+    # Compute vector running through the two great circle intersection points
+    l = vector_product(n1, n2)
+
+    # Get the two intersection points
+    intersection_1 = unit_vector(l)
+    for i in xrange(3):
+        intersection_2[i] = -intersection_1[i]
+
+    # Check if either of the two intersections are valid
+    intersection_1_is_valid = intersection_is_within_arc_segments(x1_cart, x2_cart, x3_cart, x4_cart, intersection_1)
+    intersection_2_is_valid = intersection_is_within_arc_segments(x1_cart, x2_cart, x3_cart, x4_cart, intersection_2)
+
+    if intersection_1_is_valid == 0 and intersection_2_is_valid == 0:
+        return 0
+
+    return 1
+
+cpdef DTYPE_INT_t intersection_is_within_arc_segments(const vector[DTYPE_FLOAT_t] &x1,
+                                                      const vector[DTYPE_FLOAT_t] &x2,
+                                                      const vector[DTYPE_FLOAT_t] &x3,
+                                                      const vector[DTYPE_FLOAT_t] &x4,
+                                                      const vector[DTYPE_FLOAT_t] &xi) except INT_ERR:
+    """ Determine whether the intersection lies on the two arc segments
+
+    Parameters
+    ----------
+    x1, x2, x3, x4 : vector[float, float, float]
+        Position vectors for the end points of the arcs x1x2 and x3x4. Position vectors
+        should be given in cartesian coordinates.
+
+    xi : vector[float, float, float]
+        Position vector of the intersection point under test
+
+    Returns
+    -------
+     : int
+        Integer flag identifying whether or not the intersection point lies within the two arc
+        sedments. 0 False, 1 True.
+    """
+    cdef DTYPE_INT_t is_within_segment_1, is_within_segment_2
+
+    is_within_segment_1 = intersection_is_within_arc_segment(x1, x2, xi)
+    is_within_segment_2 = intersection_is_within_arc_segment(x3, x4, xi)
+
+    if is_within_segment_1 == 1 and is_within_segment_2 == 1:
+        return 1
+
+    return 0
+
+cpdef DTYPE_INT_t intersection_is_within_arc_segment(const vector[DTYPE_FLOAT_t] &x1,
+                                                     const vector[DTYPE_FLOAT_t] &x2,
+                                                     const vector[DTYPE_FLOAT_t] &xi) except INT_ERR:
+    """ Determine whether the intersection lies on the arc segment
+
+    Method based an determining whether the angle formed between the two end points
+    is equal to the sum of the two angles formed between the intersection point and
+    the end points.
+
+    Parameters
+    ----------
+    x1, x2 : vector[float, float, float]
+        Position vectors for the end points of the arc x1x2. Position vectors
+        should be given in cartesian coordinates.
+
+    xi : vector[float, float, float]
+        Position vector of the intersection point under test
+
+    Returns
+    -------
+     : int
+        Integer flag identifying whether or not the intersection point lies within the arc
+    """
+    cdef DTYPE_FLOAT_t theta_arc, theta_1, theta_2
+    cdef DTYPE_FLOAT_t difference
+
+    # Determine the angle between the two arc end points
+    theta_arc = angle_between_two_vectors(x1, x2)
+
+    # Determine the angles between the arc end points and the intersection point
+    theta_1 = angle_between_two_vectors(x1, xi)
+    theta_2 = angle_between_two_vectors(x2, xi)
+
+    # Compute the difference
+    difference = abs(theta_arc - theta_1 - theta_2)
+
+    if difference > EPSILON:
+        return 0
+
+    return 1
+
+
+cpdef DTYPE_FLOAT_t angle_between_two_vectors(const vector[DTYPE_FLOAT_t] &a,
+                                              const vector[DTYPE_FLOAT_t] &b) except FLOAT_ERR:
+    """ Determine the angle between two vectors
+    """
+    return acos(inner_product_three(a, b) / (euclidian_norm(a) * euclidian_norm(b)))
+
+
+cpdef vector[DTYPE_FLOAT_t] unit_vector(const vector[DTYPE_FLOAT_t] &a) except *:
+    cdef vector[DTYPE_FLOAT_t] a_unit = vector[DTYPE_FLOAT_t](3, 999.)
+    cdef DTYPE_FLOAT_t norm
+    cdef DTYPE_INT_t i
+    """ Compute unit vector
+    """
+    norm = euclidian_norm(a)
+
+    for i in xrange(3):
+        a_unit[i] = a[i] / norm
+
+    return a_unit
+
+
+cpdef vector[DTYPE_FLOAT_t] vector_product(const vector[DTYPE_FLOAT_t] &a,
+                                           const vector[DTYPE_FLOAT_t] &b) except *:
+    """ Compute vector product
+    """
+    cdef vector[DTYPE_FLOAT_t] c = vector[DTYPE_FLOAT_t](3, 999.)
+
+    c[0] = a[1] * b[2] - b[1] * a[2]
+    c[1] = -a[0] * b[2] + b[0] * a[2]
+    c[2] = a[0] * b[1] - b[0] * a[1]
+
+    return c
 
 
 cpdef vector[DTYPE_FLOAT_t] rotate_x(const vector[DTYPE_FLOAT_t] &p, const DTYPE_FLOAT_t &angle):

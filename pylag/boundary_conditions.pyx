@@ -20,7 +20,7 @@ except ImportError:
 
 # PyLag cimports
 from pylag.particle_cpp_wrapper cimport ParticleSmartPtr
-from pylag.math cimport inner_product
+from pylag.math cimport inner_product_two as inner_product
 from pylag.math cimport Intersection
 
 cdef class HorizBoundaryConditionCalculator:

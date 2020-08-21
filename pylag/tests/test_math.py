@@ -22,11 +22,53 @@ def test_det_third_order():
     test.assert_array_almost_equal(det, -12.0)
 
 
-def test_inner_product():
+def test_euclidian_norm():
+    a = [3.0, 4.0, 0.0]
+    norm = math.euclidian_norm(a)
+    test.assert_almost_equal(norm, 5.)
+
+
+def test_angle_between_two_vectors():
+    a = [0.0, 0.0, 1.0]
+    b = [0.0, 1.0, 0.0]
+    angle = math.angle_between_two_vectors(a, b)
+    test.assert_almost_equal(angle, np.pi/2.)
+
+
+def test_unit_vector():
+    a = [1., 1., 1.]
+    a_unit = math.unit_vector(a)
+    test.assert_array_almost_equal(a_unit, [1./np.sqrt(3), 1./np.sqrt(3), 1./np.sqrt(3)])
+
+
+def test_inner_product_two():
     a = [1.0, 2.0]
     b = [3.0, 4.0]
-    c = math.inner_product(a, b)
-    test.assert_array_almost_equal(c, 11.0)
+    c = math.inner_product_two(a, b)
+    test.assert_almost_equal(c, 11.0)
+
+
+def test_inner_product_three():
+    a = [1.0, 2.0, 3.0]
+    b = [3.0, 4.0, 1.0]
+    c = math.inner_product_three(a, b)
+    test.assert_almost_equal(c, 14.0)
+
+
+def test_vector_product():
+    a = [1., 1., 0.]
+    b = [3., 0., 0.]
+    c = math.vector_product(a, b)
+    test.assert_array_almost_equal(c, [0., 0., -3.])
+
+
+def test_great_circle_arc_segments_intersect():
+    a = [np.radians(89.), np.radians(0.)]
+    b = [np.radians(91.), np.radians(0.)]
+    c = [np.radians(90.), np.radians(-1.)]
+    d = [np.radians(90.), np.radians(1.)]
+    intersection_is_valid = math.great_circle_arc_segments_intersect(a, b, c, d)
+    test.assert_equal(intersection_is_valid, 1)
 
 
 def test_rotate_x():
