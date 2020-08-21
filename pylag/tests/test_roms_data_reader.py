@@ -275,7 +275,7 @@ class ROMSReader_test(TestCase):
         config.set('OCEAN_CIRCULATION_MODEL', 'Kh_var_name', 'kh')
         config.set('OCEAN_CIRCULATION_MODEL', 'Ah_var_name', 'ah')
         config.set('OCEAN_CIRCULATION_MODEL', 'has_is_wet', 'False')
-        config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'spherical')
+        config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'geographic')
         config.add_section("OUTPUT")
         config.set('OUTPUT', 'environmental_variables', 'thetao, so')
 
