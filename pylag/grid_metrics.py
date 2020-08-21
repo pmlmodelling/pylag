@@ -267,10 +267,11 @@ def create_arakawa_a_grid_metrics_file(file_name, has_mask=True, has_bathymetry=
                                        grid_metrics_file_name='./grid_metrics.nc'):
     """Create a Arakawa A-grid metrics file
 
-    This function creates a grid metrics file for data defined on an Arakawa
-    A-grid. The function is intended to work with regularly gridded, CF
+    This function creates a grid metrics file for data defined on a regular rectilinear
+    Arakawa A-grid. The function is intended to work with regularly gridded, CF
     compliant datasets, which is usually a requirement for datasets submitted
-    to public catalogues.
+    to public catalogues. Common names for latitude, longitude and depth variables are
+    used within the script.
 
     The approach taken is to reinterpret the regular grid as a single, unstructured
     grid which can be understood by PyLag.
