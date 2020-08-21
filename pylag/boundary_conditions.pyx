@@ -225,7 +225,7 @@ cdef class RefHorizCartesianBoundaryConditionCalculator(HorizBoundaryConditionCa
         return BDY_ERROR
 
 
-cdef class RefHorizGeographicBoundaryConditionCalculator:
+cdef class RefHorizGeographicBoundaryConditionCalculator(HorizBoundaryConditionCalculator):
     """ Reflecting horizontal boundary condition calculator for geographic grids
 
     Reflecting horizontal boundary condition calculators for geographic coordinate
