@@ -11,7 +11,6 @@ except ImportError:
 from pylag.gotm_data_reader import GOTMDataReader
 from pylag.boundary_conditions import RefVertBoundaryConditionCalculator
 from pylag.particle_cpp_wrapper import ParticleSmartPtr
-from pylag import cwrappers
 
 from pylag.mediator import Mediator
 
@@ -240,12 +239,6 @@ class GOTMDataReader_test(TestCase):
         diffusivity_gradient = self.data_reader.get_vertical_eddy_diffusivity_derivative_wrapper(time, particle)
         test.assert_equal(flag, 0)
         test.assert_almost_equal(diffusivity_gradient, 0.0)
-
-        #time = 0.0
-        #x3 = -0.5
-        #self.data_reader.read_data(time)
-        #diffusivity_gradient = cwrappers.get_vertical_eddy_diffusivity_derivative(self.data_reader, time, x1, x2, x3, host)
-        #test.assert_almost_equal(diffusivity_gradient, -1.0)
 
         time = 0.0
         x3 = 0.0
