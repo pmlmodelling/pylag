@@ -23,6 +23,7 @@ from pylag.particle_cpp_wrapper cimport ParticleSmartPtr
 from pylag.math cimport inner_product_two as inner_product
 from pylag.math cimport Intersection
 
+
 cdef class HorizBoundaryConditionCalculator:
     """ Base class for horizontal boundary condition calculators
     """
@@ -62,8 +63,9 @@ cdef class HorizBoundaryConditionCalculator:
                            Particle *particle_new) except INT_ERR:
         raise NotImplementedError
 
-cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator):
-    """ Reflecting horizontal boundary condition calculator
+
+cdef class RefHorizCartesianBoundaryConditionCalculator(HorizBoundaryConditionCalculator):
+    """ Reflecting horizontal boundary condition calculator for cartesian grids
 
     Reflecting horizontal boundary condition calculators reflect particles
     back into the domain should they have crossed a model boundary. A particle
@@ -223,6 +225,27 @@ cdef class RefHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator)
         return BDY_ERROR
 
 
+cdef class RefHorizGeographicBoundaryConditionCalculator:
+    """ Reflecting horizontal boundary condition calculator for geographic grids
+
+    Reflecting horizontal boundary condition calculators for geographic coordinate
+    grids simply move the particle back to its last valid position.
+    """
+    cdef DTYPE_INT_t apply(self, DataReader data_reader, Particle *particle_old,
+                           Particle *particle_new) except INT_ERR:
+        cdef DTYPE_INT_t flag
+
+        # Move the particle back to its last known valid position
+        particle_new.set_x1(particle_old.get_x1())
+        particle_new.set_x2(particle_old.get_x2())
+        flag = data_reader.find_host(particle_old, particle_new)
+
+        if flag == IN_DOMAIN:
+            return flag
+
+        return BDY_ERROR
+
+
 cdef class VertBoundaryConditionCalculator:
 
     def apply_wrapper(self, DataReader data_reader,
@@ -329,11 +352,18 @@ def get_horiz_boundary_condition_calculator(config):
         return None
     else:
         if boundary_condition == "reflecting":
-            return RefHorizBoundaryConditionCalculator()
+            coordinate_system = config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system")
+            if coordinate_system == "cartesian":
+                return RefHorizCartesianBoundaryConditionCalculator()
+            elif coordinate_system == "geographic":
+                return RefHorizGeographicBoundaryConditionCalculator()
+            else:
+                raise ValueError('Unsupported coordinate system for use with reflecting boundary conditions.')
+
         elif boundary_condition == "None":
             return None
         else:
-            raise ValueError('Unsupported horizontal boundary condtion.')
+            raise ValueError('Unsupported horizontal boundary condition.')
 
 
 def get_vert_boundary_condition_calculator(config):

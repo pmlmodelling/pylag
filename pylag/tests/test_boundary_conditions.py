@@ -25,8 +25,10 @@ class BoundaryConditions_test(TestCase):
         config = configparser.ConfigParser()
         config.add_section('BOUNDARY_CONDITIONS')
         config.set('BOUNDARY_CONDITIONS', 'horiz_bound_cond', 'reflecting')
+        config.add_section('OCEAN_CIRCULATION_MODEL')
+        config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'cartesian')
         hbc = bc.get_horiz_boundary_condition_calculator(config)
-        assert isinstance(hbc, bc.RefHorizBoundaryConditionCalculator)
+        assert isinstance(hbc, bc.RefHorizCartesianBoundaryConditionCalculator)
 
     def test_get_invalid_horiz_boundary_condition_calculator(self):
         config = configparser.ConfigParser()
