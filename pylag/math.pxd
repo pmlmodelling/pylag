@@ -80,7 +80,6 @@ cpdef DTYPE_INT_t intersection_is_within_arc_segments(const vector[DTYPE_FLOAT_t
                                                       const vector[DTYPE_FLOAT_t] &xi) except INT_ERR
 
 
-
 cpdef inline DTYPE_FLOAT_t sigma_to_cartesian_coords(DTYPE_FLOAT_t sigma, DTYPE_FLOAT_t h,
         DTYPE_FLOAT_t zeta):
     return zeta + sigma * (zeta - h)
