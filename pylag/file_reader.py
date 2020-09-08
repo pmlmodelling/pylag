@@ -153,9 +153,6 @@ class FileReader:
         except configparser.NoOptionError:
             self._time_var_name = "time"
 
-        # Time interval between data points in input data files
-        self._rounding_interval = self.config.getint("OCEAN_CIRCULATION_MODEL", "rounding_interval")
-
         # Time direction
         self.time_direction = int(get_time_direction(config))
 
@@ -250,6 +247,24 @@ class FileReader:
         logger.info('Beginning search for the input data file spanning the '\
             'specified simulation start point.')  
 
+        # Determine the time interval between consecutive input time points (e.g., is the data hourly, daily?)
+        ds_first = self.dataset_reader.read_dataset(self.data_file_names[0])
+        datetimes_first = self.datetime_reader.get_datetime(ds_first)
+        if len(datetimes_first) > 1:
+            self._time_delta = (datetimes_first[1] - datetimes_first[0]).total_seconds()
+        elif len(datetimes_first) == 1:
+            # The first file only contains one time point. Try to read the second from a second file.
+            if len(self.data_file_names) > 1:
+                ds_second = self.dataset_reader.read_dataset(self.data_file_names[1])
+                datetimes_second = self.datetime_reader.get_datetime(ds_second)
+                self._time_delta = (datetimes_second[0] - datetimes_first[0]).total_seconds()
+            else:
+                logger.info('The single input data file found contains just a single time point '\
+                            'which is insufficient to perform a simulation.')
+                raise RuntimeError('Only one time point value found in input dataset')
+        else:
+            raise RuntimeError('Array of input times has zero length')
+
         self.first_data_file_name = None
         self.second_data_file_name = None
         for idx, data_file_name in enumerate(self.data_file_names):
@@ -261,7 +276,7 @@ class FileReader:
 
             ds.close()
 
-            if data_start_datetime <= self.sim_start_datetime < data_end_datetime + timedelta(seconds=self._rounding_interval):
+            if data_start_datetime <= self.sim_start_datetime < data_end_datetime + timedelta(seconds=self._time_delta):
                 # Set file names depending on time direction
                 if self.time_direction == 1:
 
@@ -349,12 +364,12 @@ class FileReader:
         if self.time_direction == 1:
             if (time < self.first_time[0]):
                 first_file_idx = self.data_file_names.index(self.first_data_file_name) - 1
-            elif (time >= self.first_time[-1] + self._rounding_interval):
+            elif (time >= self.first_time[-1] + self._time_delta):
                 first_file_idx = self.data_file_names.index(self.first_data_file_name) + 1
         else:
             if (time <= self.first_time[0]):
                 first_file_idx = self.data_file_names.index(self.first_data_file_name) - 1
-            elif (time > self.first_time[-1] + self._rounding_interval):
+            elif (time > self.first_time[-1] + self._time_delta):
                 first_file_idx = self.data_file_names.index(self.first_data_file_name) + 1
 
         if first_file_idx is not None:
@@ -373,12 +388,12 @@ class FileReader:
         second_file_idx = None
 
         if self.time_direction == 1:
-            if (time < self.second_time[0] - self._rounding_interval):
+            if (time < self.second_time[0] - self._time_delta):
                 second_file_idx = self.data_file_names.index(self.second_data_file_name) - 1
             elif (time >= self.second_time[-1]):
                 second_file_idx = self.data_file_names.index(self.second_data_file_name) + 1
         else:
-            if (time <= self.second_time[0] - self._rounding_interval):
+            if (time <= self.second_time[0] - self._time_delta):
                 second_file_idx = self.data_file_names.index(self.second_data_file_name) - 1
             elif (time > self.second_time[-1]):
                 second_file_idx = self.data_file_names.index(self.second_data_file_name) + 1
@@ -653,13 +668,13 @@ class FileReader:
         if self.time_direction == 1:
             for i in range(0, n_times):
                 t_delta = time - self.first_time[i]
-                if 0.0 <= t_delta < self._rounding_interval:
+                if 0.0 <= t_delta < self._time_delta:
                     tidx_first = i
                     break
         else:
             for i in range(0, n_times):
                 t_delta = time - self.first_time[i]
-                if 0.0 < t_delta <= self._rounding_interval:
+                if 0.0 < t_delta <= self._time_delta:
                     tidx_first = i
                     break
 
@@ -679,13 +694,13 @@ class FileReader:
         if self.time_direction == 1:
             for i in range(0, n_times):
                 t_delta = self.second_time[i] - time
-                if 0.0 < t_delta <= self._rounding_interval:
+                if 0.0 < t_delta <= self._time_delta:
                     tidx_second = i
                     break
         else:
             for i in range(0, n_times):
                 t_delta = self.second_time[i] - time
-                if 0.0 <= t_delta < self._rounding_interval:
+                if 0.0 <= t_delta < self._time_delta:
                     tidx_second = i
                     break
                 
