@@ -302,23 +302,23 @@ class ROMSReader_test(TestCase):
         del(self.data_reader)
 
     def test_find_host_using_global_search(self):
-        particle = ParticleSmartPtr(x1=2.666666667-self.xmin, x2=13.333333333-self.ymin)
+        particle = ParticleSmartPtr(x1=2.25-self.xmin, x2=13.75-self.ymin)
         flag = self.data_reader.find_host_using_global_search_wrapper(particle)
         test.assert_equal(flag, 0)
         test.assert_equal(particle.get_host_horizontal_elem('grid_rho'), 0)
-        test.assert_equal(particle.get_host_horizontal_elem('grid_u'), 0)
+        test.assert_equal(particle.get_host_horizontal_elem('grid_u'), 1)
         test.assert_equal(particle.get_host_horizontal_elem('grid_v'), 3)
 
     def test_find_host_when_particle_is_in_the_domain(self):
-        particle_old = ParticleSmartPtr(x1=2.666666667-self.xmin, x2=13.333333333-self.ymin,
-                                        host_elements={'grid_rho': 0, 'grid_u': 0, 'grid_v': 3})
-        particle_new = ParticleSmartPtr(x1=3.333333333-self.xmin, x2=12.6666666667-self.ymin,
+        particle_old = ParticleSmartPtr(x1=2.25-self.xmin, x2=13.75-self.ymin,
+                                        host_elements={'grid_rho': 0, 'grid_u': 1, 'grid_v': 3})
+        particle_new = ParticleSmartPtr(x1=3.75-self.xmin, x2=12.25-self.ymin,
                                         host_elements={'grid_rho': -999, 'grid_u': -999, 'grid_v': -999})
         flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
         test.assert_equal(flag, 0)
         test.assert_equal(particle_new.get_host_horizontal_elem('grid_rho'), 1)
         test.assert_equal(particle_new.get_host_horizontal_elem('grid_u'), 3)
-        test.assert_equal(particle_new.get_host_horizontal_elem('grid_v'), 0)
+        test.assert_equal(particle_new.get_host_horizontal_elem('grid_v'), 1)
 
     # def test_get_zmin(self):
     #     particle = ParticleSmartPtr(x1=2.666666667-self.xmin, x2=13.333333333-self.ymin,
