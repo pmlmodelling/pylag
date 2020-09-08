@@ -328,13 +328,13 @@ cdef class UnstructuredCartesianGrid(Grid):
         flag = BDY_ERROR:
             The host element was not found.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         particle: *Particle
             The particle.
 
-        Returns:
-        --------
+        Returns
+        -------
         flag : int
             Integer flag that indicates whether or not the seach was successful.
         """
@@ -434,16 +434,16 @@ cdef class UnstructuredCartesianGrid(Grid):
             boundary. Host is set to the last element the particle passed
             through before exiting the domain.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         particle_old: *Particle
             The particle at its old position.
 
         particle_new: *Particle
             The particle at its new position. The host element will be updated.
 
-        Returns:
-        --------
+        Returns
+        -------
         flag : int
             Integer flag that indicates whether or not the seach was successful.
         """
@@ -573,13 +573,13 @@ cdef class UnstructuredCartesianGrid(Grid):
         Sequentially search all elements for the given location. Set the particle
         host element if found.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         particle_old: *Particle
             The particle.
 
-        Returns:
-        --------
+        Returns
+        -------
         flag : int
             Integer flag that indicates whether or not the seach was successful.
         """
@@ -637,16 +637,16 @@ cdef class UnstructuredCartesianGrid(Grid):
         the point on a side of an element at which particle crossed before
         exiting the model domain.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         particle_old: *Particle
             The particle at its old position.
 
         particle_new: *Particle
             The particle at its new position.
 
-        Returns:
-        --------
+        Returns
+        -------
         intersection: Intersection
             Object describing the boundary intersection.
         """
@@ -757,8 +757,8 @@ cdef class UnstructuredCartesianGrid(Grid):
         and a set of local coordinates. Here, the global coordinates and the
         host horizontal element are used to set the local coordinates.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         particle: *Particle
             Pointer to a Particle struct
         """
@@ -812,8 +812,8 @@ cdef class UnstructuredCartesianGrid(Grid):
         above formula is negative. However the negative sign and the factor of two
         cancel when the ratio is formed. For this reason, they are both ignored.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         x1 : float
             x-position in cartesian coordinates.
 
@@ -823,8 +823,8 @@ cdef class UnstructuredCartesianGrid(Grid):
         host : int
             Host element.
 
-        Returns:
-        --------
+        Returns
+        -------
         phi : C array, float
             Barycentric coordinates.
         """
@@ -884,8 +884,8 @@ cdef class UnstructuredCartesianGrid(Grid):
         terms are computed using ratios, the minus signs cancel making it
         possible to use the same formulas.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         host : int
             Host element
 
@@ -1243,13 +1243,13 @@ cdef class UnstructuredGeographicGrid(Grid):
         flag = BDY_ERROR:
             The host element was not found.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         particle: *Particle
             The particle.
 
-        Returns:
-        --------
+        Returns
+        -------
         flag : int
             Integer flag that indicates whether or not the seach was successful.
         """
@@ -1349,16 +1349,16 @@ cdef class UnstructuredGeographicGrid(Grid):
             boundary. Host is set to the last element the particle passed
             through before exiting the domain.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         particle_old: *Particle
             The particle at its old position.
 
         particle_new: *Particle
             The particle at its new position. The host element will be updated.
 
-        Returns:
-        --------
+        Returns
+        -------
         flag : int
             Integer flag that indicates whether or not the seach was successful.
         """
@@ -1485,13 +1485,13 @@ cdef class UnstructuredGeographicGrid(Grid):
         Sequentially search all elements for the given location. Set the particle
         host element if found.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         particle_old: *Particle
             The particle.
 
-        Returns:
-        --------
+        Returns
+        -------
         flag : int
             Integer flag that indicates whether or not the seach was successful.
         """
@@ -1560,8 +1560,8 @@ cdef class UnstructuredGeographicGrid(Grid):
         and a set of local coordinates. Here, the global coordinates and the
         host horizontal element are used to set the local coordinates.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         particle: *Particle
             Pointer to a Particle struct
         """
