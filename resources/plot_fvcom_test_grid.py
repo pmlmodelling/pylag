@@ -3,7 +3,7 @@ from __future__ import print_function
 from matplotlib import pyplot as plt
 from matplotlib.tri.triangulation import Triangulation
 
-from fvcom_data_reader_test import MockFVCOMMediator
+from test_fvcom_data_reader import MockFVCOMMediator
 
 plt.ion()
 
@@ -11,7 +11,7 @@ mediator = MockFVCOMMediator()
 
 # Read in the grid's dimensions
 n_nodes = mediator.get_dimension_variable('node')
-n_elems = mediator.get_dimension_variable('nele')
+n_elems = mediator.get_dimension_variable('element')
 
 # Grid connectivity/adjacency
 nv = mediator.get_grid_variable('nv', (3, n_elems), int)
