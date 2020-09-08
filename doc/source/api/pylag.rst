@@ -17,7 +17,6 @@ Submodules
    pylag.arakawa_a_data_reader
    pylag.boundary_conditions
    pylag.configuration
-   pylag.cwrappers
    pylag.data_reader
    pylag.data_types_python
    pylag.delta
