@@ -18,7 +18,7 @@ install:
   - conda config --append channels JimClark
 
   # Build the conda recipe for this package
-  - conda build -q --no-test meta.yaml --python=$TRAVIS_PYTHON_VERSION --output-folder bld-dir
+  - conda build -q --no-test meta.yaml --python=$TRAVIS_PYTHON_VERSION --output-folder bld-dir --numpy 1.19
 
   # Add the built package as a channel with highest priority
   - conda config --add channels "file://`pwd`/bld-dir"
