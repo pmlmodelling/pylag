@@ -29,7 +29,7 @@ With *miniconda3* installed and configured, create a new environment in which to
 
 .. code-block:: bash
 
-    $ conda create -n particles python=3.7
+    $ conda create -n particles python=3.8
     $ conda activate particles
 
 Finally, install *PyLag*:
@@ -80,7 +80,7 @@ The only new step here is the installation of conda-build and conda-verify. Next
 
 .. code-block:: bash
 
-    $ conda create -n particles python=3.7
+    $ conda create -n particles python=3.8
     $ conda activate particles
 
 And finally, in the PyLag source code directory, build and install *PyLag*.

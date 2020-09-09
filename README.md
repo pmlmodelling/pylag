@@ -39,7 +39,7 @@ The above code assumes *miniconda3* has been installed in the directory `/opt/mi
 With *miniconda3* installed and configured, create a new environment in which to install *PyLag* using the following commands:
 
 ```bash
-(base) $ conda create -n particles python=3.7
+(base) $ conda create -n particles python=3.8
 (base) $ conda activate particles
 ```
 
@@ -78,7 +78,7 @@ $ source /opt/miniconda/miniconda3/bin/activate
 The only new step here is the installation of conda-build and conda-verify. Next, create a new environment as above:
 
 ```bash
-(base) $ conda create -n particles python=3.7
+(base) $ conda create -n particles python=3.8
 (base) $ conda activate particles
 ```
 
