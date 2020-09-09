@@ -86,7 +86,7 @@ And finally, in the PyLag source code directory, build and install *PyLag*.
 
 ```bash
 (particles) $ cd $HOME/code/git/PyLag/PyLag
-(particles) $ conda build .
+(particles) $ conda build . --numpy 1.19
 (particles) $ conda install -n particles --use-local pylag
 ```
 
