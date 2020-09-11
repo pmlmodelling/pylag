@@ -1,0 +1,6 @@
+name: particles
+channels:
+  - JimClark
+dependencies:
+  - python=3.8
+  - pylag
