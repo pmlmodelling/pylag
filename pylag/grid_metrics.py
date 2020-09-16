@@ -263,15 +263,16 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_
     return
 
 
-def create_arakawa_a_grid_metrics_file(file_name, has_mask=True, has_bathymetry=True,
+def create_arakawa_a_grid_metrics_file(file_name, mask_var_name=None, reference_var_name=None,
+                                       bathymetry_var_name=None,
                                        grid_metrics_file_name='./grid_metrics.nc'):
     """Create a Arakawa A-grid metrics file
 
     This function creates a grid metrics file for data defined on a regular rectilinear
     Arakawa A-grid. The function is intended to work with regularly gridded, CF
     compliant datasets, which is usually a requirement for datasets submitted
-    to public catalogues. Common names for latitude, longitude and depth variables are
-    used within the script.
+    to public catalogues. NB it is assumed the surface corresponds to the zeroth
+    depth index.
 
     The approach taken is to reinterpret the regular grid as a single, unstructured
     grid which can be understood by PyLag.
@@ -281,22 +282,28 @@ def create_arakawa_a_grid_metrics_file(file_name, has_mask=True, has_bathymetry=
     file_name : str
         The path to an file that can be read in a processed
 
-    has_mask : bool
-        Flag identifying whether the input file contains a variable mask, which will
-        be used to generate the land sea mask. If it doesn't, the land sea mask is
-        inferred from the surface mask of one of the variables. If the output files
-        contain a time varying mask due to changes in sea surface elevation, a
-        land sea mask should be provided. Optional, default True.
+    mask_var_name : str
+        The name of the mask variable which will be used to generate the
+        land sea mask. If `None`, the land sea mask is inferred from the
+        surface mask of `reference_var_name`, which becomes obligatory if
+        `mask_var_name` is None. If the output files contain a time varying
+        mask due to changes in sea surface elevation, a land sea mask should
+        be provided. Optional, default : None.
 
-    has_bathymetry : bool
-        Flag identifying whether the input file contains a variable h corresponding to the
-        grid bathymetry. If it doesn't, the bathymetry is inferred from the depth mask
-        of one of the variables. If the output files contain a time varying mask due to
-        changes in sea surface elevation, the bathymetry should be provided. Optional, default
-        True.
+    reference_var_name : str
+        The name of the reference variable from which to infer the land sea mask
+        if `mask_var_name` is None. Must be given if `mask_var_name` is None.
+        Optional, default : None.
+
+    bathymetry_var_name : bool
+        Bathymetry variable name. If None, the bathymetry is inferred from the depth mask
+        of `reference_var_name`. If the output files contain a time varying mask due to
+        changes in sea surface elevation, the bathymetry should be provided. Optional,
+        default : True.
 
     grid_metrics_file_name : str, optional
-        The name of the grid metrics file that will be created
+        The name of the grid metrics file that will be created. Optional,
+        default : `grid_metrics.nc`.
 
     Note
     ----
@@ -304,6 +311,17 @@ def create_arakawa_a_grid_metrics_file(file_name, has_mask=True, has_bathymetry=
     grid metrics file generated can be reused by all future simulations.
 
     """
+    if mask_var_name is None and reference_var_name is None:
+        raise ValueError('Either the name of the mask variable or the name of a reference '\
+                         'masked variable must be given in order to generate the land sea mask.')
+
+    if mask_var_name and reference_var_name:
+        print('Using `mask_var_name` to form the land sea mask. Supplied reference var is unused.')
+
+    if bathymetry_var_name is None and reference_var_name is None:
+        raise ValueError('Either the name of the bathymetry variable or the name of a reference ' \
+                         'masked variable must be given in order to save the bathymetry.')
+
     # Open the input file for reading
     input_dataset = Dataset(file_name, 'r')
 
@@ -332,35 +350,42 @@ def create_arakawa_a_grid_metrics_file(file_name, has_mask=True, has_bathymetry=
     depth = depth_var[:]
     n_levels = depth_var.shape[0]
 
+    # Read in the reference variable if needed
+    if mask_var_name is None or bathymetry_var_name is None:
+        ref_var, _ = _get_variable(input_dataset, [reference_var_name])
+        ref_var = sort_axes(ref_var).squeeze()
+
+        if not np.ma.isMaskedArray(ref_var):
+            raise RuntimeError('Reference variable is not a masked array. Cannot generate land-sea mask '/
+                               'and/or bathymetry.')
+
+        if len(ref_var.shape) != 4:
+            raise ValueError('Reference variable is not 4D ([t, z, y, x]).')
+
     # Save bathymetry
-    if has_bathymetry:
-        bathy_var, bathy_attrs = _get_variable(input_dataset, ['h'])
+    print('Generating bathymetry')
+    if bathymetry_var_name:
+        bathy_var, bathy_attrs = _get_variable(input_dataset, [bathymetry_var_name])
         bathy = sort_axes(bathy_var).squeeze()
         if len(bathy.shape) == 2:
             bathy = bathy.reshape(np.prod(bathy.shape), order='C')
         else:
             raise RuntimeError('Bathymetry array is not 2D.')
     else:
-        # Try to infer bathy from the depth mask for uo
-        uo_var, _ = _get_variable(input_dataset, ['uo'])
-        uo = sort_axes(uo_var)
-        if not np.ma.isMaskedArray(uo):
-            raise RuntimeError('Unable to generate bathymetry. Can you provide h?')
-
         # Read the depth mask and reshape giving (n_levels, n_nodes)
-        uo = uo[0, :, :, :]  # Expect a 4D array. Take first time point.
-        uo = uo.reshape(n_levels, np.prod(uo.shape[1:]), order='C')
+        bathy_ref_var = ref_var[0, :, :, :]  # Take first time point.
+        bathy_ref_var = bathy_ref_var.reshape(n_levels, np.prod(bathy_ref_var.shape[1:]), order='C')
 
-        bathy = np.empty((uo.shape[1]), dtype=float)
+        bathy = np.empty((bathy_ref_var.shape[1]), dtype=float)
         for i in range(bathy.shape[0]):
-            uo_tmp = uo[:, i]
-            if np.ma.count(uo_tmp) != 0:
-                index = np.ma.flatnotmasked_edges(uo_tmp)[1]
+            bathy_ref_var_tmp = bathy_ref_var[:, i]
+            if np.ma.count(bathy_ref_var_tmp) != 0:
+                index = np.ma.flatnotmasked_edges(bathy_ref_var_tmp)[1]
                 bathy[i] = depth[index]
             else:
                 bathy[i] = 0.0
 
-        # Add some standard attributes
+        # Add standard attributes
         bathy_attrs = {'standard_name': 'depth',
                        'units': 'm',
                        'long_name': 'depth, measured down from the free surface',
@@ -368,8 +393,9 @@ def create_arakawa_a_grid_metrics_file(file_name, has_mask=True, has_bathymetry=
                        'positive': 'down'}
 
     # Save mask
-    if has_mask:
-        mask_var, mask_attrs = _get_variable(input_dataset, ['mask'])
+    print('Generating land sea mask')
+    if mask_var_name:
+        mask_var, mask_attrs = _get_variable(input_dataset, [mask_var_name])
 
         # Generate land-sea mask at nodes
         land_sea_mask_nodes = sort_axes(mask_var).squeeze()
@@ -387,16 +413,9 @@ def create_arakawa_a_grid_metrics_file(file_name, has_mask=True, has_bathymetry=
         mask_attrs['long_name'] = "Land-sea mask: sea = 0 ; land = 1"
 
     else:
-        # Try to use the surface mask for uo
-        uo_var, _ = _get_variable(input_dataset, ['uo'])
-        uo = sort_axes(uo_var)
-        if not np.ma.isMaskedArray(uo):
-            raise RuntimeError('Unable to generate bathymetry. Can you provide h?')
+        land_sea_mask_nodes = ref_var.mask[0, 0, :, :]
 
-        # Expect a 4D array. Take first time point and top depth level
-        land_sea_mask_nodes = uo.mask[0, 0, :, :]
-
-        # Add some standard attributes
+        # Add standard attributes
         mask_attrs = {'standard_name': 'sea_binary_mask',
                       'units': '1',
                       'long_name': 'Land-sea mask: sea = 0, land = 1'}
@@ -886,7 +905,7 @@ def create_roms_grid_metrics_file(file_name,
     return
 
 
-def sort_axes(nc_var, time_name='depth', depth_name='depth', lat_name='latitude',
+def sort_axes(nc_var, time_name='time', depth_name='depth', lat_name='latitude',
               lon_name='longitude'):
     """ Sort variables axes
 
@@ -913,7 +932,7 @@ def sort_axes(nc_var, time_name='depth', depth_name='depth', lat_name='latitude'
         The name of the depth dimension coordinate.
 
     lat_name : str, optional
-        The name of the latiitude dimension coordinate.
+        The name of the latitude dimension coordinate.
 
     lon_name : str, optional
         The name of the longitude dimension coordinate.
