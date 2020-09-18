@@ -341,6 +341,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     input_dataset.set_auto_maskandscale(True)
 
     # Read in coordinate variables. Use common names to try and ensure a hit.
+    print('Reading the grid:')
     lon_var, lon_attrs = _get_variable(input_dataset, lon_var_name)
     lat_var, lat_attrs = _get_variable(input_dataset, lat_var_name)
     depth_var, depth_attrs = _get_variable(input_dataset, depth_var_name)
@@ -375,7 +376,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
             raise ValueError('Reference variable is not 4D ([t, z, y, x]).')
 
     # Save bathymetry
-    print('Generating bathymetry')
+    print('\nGenerating the bathymetry:')
     if bathymetry_var_name:
         bathy_var, bathy_attrs = _get_variable(input_dataset, bathymetry_var_name)
         bathy = sort_axes(bathy_var).squeeze()
@@ -405,7 +406,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
                        'positive': 'down'}
 
     # Save mask
-    print('Generating land sea mask')
+    print('\nGenerating the land sea mask at element nodes:')
     if mask_var_name:
         mask_var, mask_attrs = _get_variable(input_dataset, mask_var_name)
 
@@ -435,7 +436,9 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     land_sea_mask_nodes = land_sea_mask_nodes.reshape(np.prod(land_sea_mask_nodes.shape), order='C')
 
     # Create the Triangulation
+    print('\nCreating the triangulation ', end='... ')
     tri = Delaunay(points)
+    print('done')
 
     # Save simplices
     #   - Flip to reverse ordering, as expected by PyLag
@@ -446,9 +449,9 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     # Save lon and lat points at element centres
     lon_elements = np.empty(n_elems, dtype=float)
     lat_elements = np.empty(n_elems, dtype=float)
-    for i, element in enumerate(range(n_elems)):
-        lon_elements[i] = lon_nodes[(nv[:, element])].mean()
-        lat_elements[i] = lat_nodes[(nv[:, element])].mean()
+    for i in range(n_elems):
+        lon_elements[i] = lon_nodes[(nv[:, i])].mean()
+        lat_elements[i] = lat_nodes[(nv[:, i])].mean()
 
     # Save neighbours
     #   - Transpose to give it the dimension ordering expected by PyLag
@@ -457,22 +460,26 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     nbe = sort_adjacency_array(nv, nbe)
 
     # Generate the land-sea mask at elements
+    print('Generating land sea mask at element centres ', end='... ')
     land_sea_mask_elements = np.empty(n_elems, dtype=int)
     for i in range(n_elems):
         element_nodes = nv[:, i]
         land_sea_mask_elements[i] = 1 if np.any(land_sea_mask_nodes[(element_nodes)] == 1) else 0
+    print('done')
 
     # Flag open boundaries with -2 flag
     nbe[np.where(nbe == -1)] = -2
 
     # Flag land boundaries with -1 flag
+    print('Fixing neighbour flags ', end='... ')
     for i, mask in enumerate(land_sea_mask_elements):
         if mask == 1:
             nbe[np.where(nbe == i)] = -1
+    print('done')
 
     # Create grid metrics file
     # ------------------------
-    print('Creating grid metrics file {}'.format(grid_metrics_file_name))
+    print('Creating grid metrics file {}'.format(grid_metrics_file_name), end='... ')
 
     # Instantiate file creator
     gm_file_creator = GridMetricsFileCreator(grid_metrics_file_name)
@@ -521,6 +528,8 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
 
     # Close grid metrics file creator
     gm_file_creator.close_file()
+
+    print('done')
 
     return
 
@@ -954,7 +963,8 @@ def sort_axes(nc_var, time_name='time', depth_name='depth', lat_name='latitude',
     var : NumPy NDArray
         Variable array with sorted axes.
     """
-    print('Sorting axes for variable {}'.format(nc_var.name))
+    print('Sorting axes for variable {}'.format(nc_var.name), end='...')
+
     var = nc_var[:]
     dimensions = nc_var.dimensions
     if len(dimensions) == 2:
@@ -962,6 +972,8 @@ def sort_axes(nc_var, time_name='time', depth_name='depth', lat_name='latitude',
 
         # Shift axes to give [x, y]
         var = np.moveaxis(var, lon_index, 0)
+
+        print('done')
 
         return var
 
@@ -980,6 +992,8 @@ def sort_axes(nc_var, time_name='time', depth_name='depth', lat_name='latitude',
             lon_index += 1
 
         var = np.moveaxis(var, lon_index, 1)
+
+        print('done')
 
         return var
 
@@ -1011,6 +1025,8 @@ def sort_axes(nc_var, time_name='time', depth_name='depth', lat_name='latitude',
 
         var = np.moveaxis(var, lon_index, 2)
 
+        print('done')
+
         return var
 
     else:
@@ -1026,14 +1042,15 @@ def _get_dimension_index(dimensions, name):
         raise
 
 
-def _get_variable(dataset, var_name, verbose=True):
-    if verbose is True:
-        print("Reading variable `{}`".format(var_name))
+def _get_variable(dataset, var_name):
+    print("Reading variable `{}` ".format(var_name), end='... ')
 
     var = None
     try:
         var = dataset.variables[var_name]
+        print('done')
     except KeyError:
+        print('failed')
         pass
 
     if var is not None:
