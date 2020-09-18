@@ -472,14 +472,15 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
 
     # Flag land boundaries with -1 flag
     print('Fixing neighbour flags ', end='... ')
-    for i, mask in enumerate(land_sea_mask_elements):
-        if mask == 1:
-            nbe[np.where(nbe == i)] = -1
+    mask_indices = np.where(land_sea_mask_elements == 1)
+    for index in mask_indices:
+        nbe[np.where(nbe == index)] = -1
     print('done')
+
 
     # Create grid metrics file
     # ------------------------
-    print('Creating grid metrics file {}'.format(grid_metrics_file_name), end='... ')
+    print('Creating grid metrics file {} '.format(grid_metrics_file_name), end='... ')
 
     # Instantiate file creator
     gm_file_creator = GridMetricsFileCreator(grid_metrics_file_name)
