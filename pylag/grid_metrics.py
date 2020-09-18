@@ -323,14 +323,16 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     """
     if mask_var_name is None and reference_var_name is None:
         raise ValueError('Either the name of the mask variable or the name of a reference '\
-                         'masked variable must be given in order to generate the land sea mask.')
+                         'masked variable must be given in order to generate the land sea mask '\
+                         'as required by PyLag.')
 
     if mask_var_name and reference_var_name:
         print('Using `mask_var_name` to form the land sea mask. Supplied reference var is unused.')
 
     if bathymetry_var_name is None and reference_var_name is None:
         raise ValueError('Either the name of the bathymetry variable or the name of a reference ' \
-                         'masked variable must be given in order to save the bathymetry.')
+                         'masked variable must be given in order to compute and save the bathymetry,'\
+                         'as required by PyLag when running with input fields.')
 
     # Open the input file for reading
     input_dataset = Dataset(file_name, 'r')
@@ -339,9 +341,9 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     input_dataset.set_auto_maskandscale(True)
 
     # Read in coordinate variables. Use common names to try and ensure a hit.
-    lon_var, lon_attrs = _get_variable(input_dataset, [lon_var_name])
-    lat_var, lat_attrs = _get_variable(input_dataset, [lat_var_name])
-    depth_var, depth_attrs = _get_variable(input_dataset, [depth_var_name])
+    lon_var, lon_attrs = _get_variable(input_dataset, lon_var_name)
+    lat_var, lat_attrs = _get_variable(input_dataset, lat_var_name)
+    depth_var, depth_attrs = _get_variable(input_dataset, depth_var_name)
 
     # Create points array
     lon2d, lat2d = np.meshgrid(lon_var[:], lat_var[:], indexing='ij')
@@ -362,7 +364,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
 
     # Read in the reference variable if needed
     if mask_var_name is None or bathymetry_var_name is None:
-        ref_var, _ = _get_variable(input_dataset, [reference_var_name])
+        ref_var, _ = _get_variable(input_dataset, reference_var_name)
         ref_var = sort_axes(ref_var).squeeze()
 
         if not np.ma.isMaskedArray(ref_var):
@@ -375,7 +377,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     # Save bathymetry
     print('Generating bathymetry')
     if bathymetry_var_name:
-        bathy_var, bathy_attrs = _get_variable(input_dataset, [bathymetry_var_name])
+        bathy_var, bathy_attrs = _get_variable(input_dataset, bathymetry_var_name)
         bathy = sort_axes(bathy_var).squeeze()
         if len(bathy.shape) == 2:
             bathy = bathy.reshape(np.prod(bathy.shape), order='C')
@@ -405,7 +407,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     # Save mask
     print('Generating land sea mask')
     if mask_var_name:
-        mask_var, mask_attrs = _get_variable(input_dataset, [mask_var_name])
+        mask_var, mask_attrs = _get_variable(input_dataset, mask_var_name)
 
         # Generate land-sea mask at nodes
         land_sea_mask_nodes = sort_axes(mask_var).squeeze()
@@ -693,7 +695,7 @@ def create_roms_grid_metrics_file(file_name,
     land_sea_mask_elements = {}
 
     # Process bathymetry (defined at rho points)
-    bathy_var, bathy_attrs = _get_variable(input_dataset, [bathymetry_var_name])
+    bathy_var, bathy_attrs = _get_variable(input_dataset, bathymetry_var_name)
     if len(bathy_var.shape) == 2:
         bathy = sort_axes(bathy_var, lon_name=xi_grid_names['grid_rho'], lat_name=eta_grid_names['grid_rho']).squeeze()
         bathy = bathy.reshape(np.prod(bathy.shape), order='C')
@@ -708,7 +710,7 @@ def create_roms_grid_metrics_file(file_name,
 
     # Process angles at rho points
     if angles_var_name is not None:
-        angles_var, angles_attrs = _get_variable(input_dataset, [angles_var_name])
+        angles_var, angles_attrs = _get_variable(input_dataset, angles_var_name)
         angles = sort_axes(angles_var, lon_name=xi_grid_names['grid_rho'], lat_name=eta_grid_names['grid_rho']).squeeze()
         angles = angles.reshape(np.prod(angles.shape), order='C')
 
@@ -753,7 +755,7 @@ def create_roms_grid_metrics_file(file_name,
 
         # Save mask
         if mask_var_names[grid_name] is not None:
-            mask_var, _ = _get_variable(input_dataset, [mask_var_names[grid_name]])
+            mask_var, _ = _get_variable(input_dataset, mask_var_names[grid_name])
 
             # Generate land-sea mask at nodes
             land_sea_mask_nodes[grid_name] = sort_axes(mask_var, lat_name=eta_grid_names[grid_name],
@@ -900,7 +902,7 @@ def create_roms_grid_metrics_file(file_name,
     gm_file_creator.create_dimension('s_w', input_dataset.dimensions['s_w'].size)
 
     for key, name in vertical_grid_var_names.items():
-        var, attrs = _get_variable(input_dataset, [name])
+        var, attrs = _get_variable(input_dataset, name)
         gm_file_creator.create_variable(key, var[:], var.dimensions, float, attrs=attrs)
 
     gm_file_creator.create_variable('vtransform', vtransform, (), float,
@@ -1024,16 +1026,15 @@ def _get_dimension_index(dimensions, name):
         raise
 
 
-def _get_variable(dataset, var_names):
-    if type(var_names) == str:
-        var_names = [var_names]
+def _get_variable(dataset, var_name, verbose=True):
+    if verbose is True:
+        print("Reading variable `{}`".format(var_name))
 
     var = None
-    for var_name in var_names:
-        try:
-            var = dataset.variables[var_name]
-        except KeyError:
-            pass
+    try:
+        var = dataset.variables[var_name]
+    except KeyError:
+        pass
 
     if var is not None:
         # Form dictionary of attributes
@@ -1043,7 +1044,7 @@ def _get_variable(dataset, var_names):
 
         return var, attrs
 
-    raise RuntimeError('Variable not found in dataset')
+    raise RuntimeError("Variable `{}` not found in the supplied dataset")
 
 
 def sort_adjacency_array(nv, nbe):
