@@ -263,8 +263,9 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_
     return
 
 
-def create_arakawa_a_grid_metrics_file(file_name, mask_var_name=None, reference_var_name=None,
-                                       bathymetry_var_name=None,
+def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_var_name='latitude',
+                                       depth_var_name='depth', mask_var_name=None,
+                                       reference_var_name=None, bathymetry_var_name=None,
                                        grid_metrics_file_name='./grid_metrics.nc'):
     """Create a Arakawa A-grid metrics file
 
@@ -282,7 +283,16 @@ def create_arakawa_a_grid_metrics_file(file_name, mask_var_name=None, reference_
     file_name : str
         The path to an file that can be read in a processed
 
-    mask_var_name : str
+    lon_var_name : str, optional
+        The name of the longitude variable. Optional, default : 'longitude'
+
+    lat_var_name : str, optional
+        The name of the latitude variable. Optional, default : 'latitude'
+
+    depth_var_name : str, optional
+        The name of the depth variable. Optional, default : 'depth'
+
+    mask_var_name : str, optional
         The name of the mask variable which will be used to generate the
         land sea mask. If `None`, the land sea mask is inferred from the
         surface mask of `reference_var_name`, which becomes obligatory if
@@ -290,12 +300,12 @@ def create_arakawa_a_grid_metrics_file(file_name, mask_var_name=None, reference_
         mask due to changes in sea surface elevation, a land sea mask should
         be provided. Optional, default : None.
 
-    reference_var_name : str
+    reference_var_name : str, optional
         The name of the reference variable from which to infer the land sea mask
         if `mask_var_name` is None. Must be given if `mask_var_name` is None.
         Optional, default : None.
 
-    bathymetry_var_name : bool
+    bathymetry_var_name : bool, optional
         Bathymetry variable name. If None, the bathymetry is inferred from the depth mask
         of `reference_var_name`. If the output files contain a time varying mask due to
         changes in sea surface elevation, the bathymetry should be provided. Optional,
@@ -329,9 +339,9 @@ def create_arakawa_a_grid_metrics_file(file_name, mask_var_name=None, reference_
     input_dataset.set_auto_maskandscale(True)
 
     # Read in coordinate variables. Use common names to try and ensure a hit.
-    lon_var, lon_attrs = _get_variable(input_dataset, ['lon', 'longitude'])
-    lat_var, lat_attrs = _get_variable(input_dataset, ['lat', 'latitude'])
-    depth_var, depth_attrs = _get_variable(input_dataset, ['depth'])
+    lon_var, lon_attrs = _get_variable(input_dataset, [lon_var_name])
+    lat_var, lat_attrs = _get_variable(input_dataset, [lat_var_name])
+    depth_var, depth_attrs = _get_variable(input_dataset, [depth_var_name])
 
     # Create points array
     lon2d, lat2d = np.meshgrid(lon_var[:], lat_var[:], indexing='ij')
