@@ -447,11 +447,13 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     n_elems = nv.shape[1]
 
     # Save lon and lat points at element centres
+    print('Calculating lons and lats at element centres ', end='... ')
     lon_elements = np.empty(n_elems, dtype=float)
     lat_elements = np.empty(n_elems, dtype=float)
     for i in range(n_elems):
         lon_elements[i] = lon_nodes[(nv[:, i])].mean()
         lat_elements[i] = lat_nodes[(nv[:, i])].mean()
+    print('done')
 
     # Save neighbours
     #   - Transpose to give it the dimension ordering expected by PyLag
@@ -468,13 +470,13 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     print('done')
 
     # Flag open boundaries with -2 flag
-    nbe[np.where(nbe == -1)] = -2
+    nbe[np.asarray(nbe == -1).nonzero()] = -2
 
     # Flag land boundaries with -1 flag
     print('Fixing neighbour flags ', end='... ')
-    mask_indices = np.where(land_sea_mask_elements == 1)
+    mask_indices = np.asarray(land_sea_mask_elements == 1).nonzero()[0]
     for index in mask_indices:
-        nbe[np.where(nbe == index)] = -1
+        nbe[np.asarray(nbe == index).nonzero()] = -1
     print('done')
 
 
