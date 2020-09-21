@@ -447,7 +447,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     n_elems = nv.shape[1]
 
     # Save lon and lat points at element centres
-    print('Calculating lons and lats at element centres ', end='... ')
+    print('\nCalculating lons and lats at element centres ', end='... ')
     lon_elements = np.empty(n_elems, dtype=float)
     lat_elements = np.empty(n_elems, dtype=float)
     for i in range(n_elems):
@@ -458,11 +458,13 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     # Save neighbours
     #   - Transpose to give it the dimension ordering expected by PyLag
     #   - Sort to ensure match with nv
+    print('\nSorting the adjacency array ', end='... ')
     nbe = tri.neighbors.T
     nbe = sort_adjacency_array(nv, nbe)
+    print('done')
 
     # Generate the land-sea mask at elements
-    print('Generating land sea mask at element centres ', end='... ')
+    print('\nGenerating land sea mask at element centres ', end='... ')
     land_sea_mask_elements = np.empty(n_elems, dtype=int)
     for i in range(n_elems):
         element_nodes = nv[:, i]
@@ -470,19 +472,20 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     print('done')
 
     # Flag open boundaries with -2 flag
+    print('\nFlagging open boundaries ', end='... ')
     nbe[np.asarray(nbe == -1).nonzero()] = -2
+    print('done')
 
     # Flag land boundaries with -1 flag
-    print('Fixing neighbour flags ', end='... ')
+    print('\nFixing neighbour flags ', end='... ')
     mask_indices = np.asarray(land_sea_mask_elements == 1).nonzero()[0]
     for index in mask_indices:
         nbe[np.asarray(nbe == index).nonzero()] = -1
     print('done')
 
-
     # Create grid metrics file
     # ------------------------
-    print('Creating grid metrics file {} '.format(grid_metrics_file_name), end='... ')
+    print('\nCreating grid metrics file {} '.format(grid_metrics_file_name), end='... ')
 
     # Instantiate file creator
     gm_file_creator = GridMetricsFileCreator(grid_metrics_file_name)
