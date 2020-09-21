@@ -5,6 +5,10 @@ grid metrics files.
 
 from __future__ import print_function
 
+# Data types used for constructing C data structures
+from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
+from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
+
 import numpy as np
 from scipy.spatial import Delaunay
 from collections import OrderedDict
@@ -476,11 +480,10 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     nbe[np.asarray(nbe == -1).nonzero()] = -2
     print('done')
 
-    # Flag land boundaries with -1 flag
-    print('\nFixing neighbour flags ', end='... ')
-    mask_indices = np.asarray(land_sea_mask_elements == 1).nonzero()[0]
-    for index in mask_indices:
-        nbe[np.asarray(nbe == index).nonzero()] = -1
+    # Flag land elements with -1 flag
+    print('\nFlag land elements in neighbour array ', end='... ')
+    land_elements = np.asarray(land_sea_mask_elements == 1).nonzero()[0]
+    flag_land_elements(nbe, land_elements)
     print('done')
 
     # Create grid metrics file
@@ -1094,7 +1097,7 @@ def sort_adjacency_array(nv, nbe):
     n_elems = nv.shape[1]
 
     # Our new to-be-sorted nbe array
-    nbe_sorted = np.zeros([3, n_elems], dtype=np.int32) - 1
+    nbe_sorted = np.zeros([3, n_elems], dtype=DTYPE_INT) - 1
 
     # Loop over all elems
     for i in range(n_elems):
@@ -1129,6 +1132,19 @@ def sort_adjacency_array(nv, nbe):
 
     return nbe_sorted
 
+
+def flag_land_elements(DTYPE_INT_t [:, :] nbe, DTYPE_INT_t [:] land_elements):
+
+    cdef DTYPE_INT_t element
+    cdef DTYPE_INT_t i, j, k
+
+    for i in range(nbe.shape[0]):
+        for j in range(nbe.shape[1]):
+            for k in range(land_elements.shape[0]):
+                element = land_elements[k]
+                if nbe[i, j] == element:
+                    nbe[i, j] = -1
+                    break
 
 def get_fvcom_open_boundary_nodes(file_name):
     """Read fvcom open boundary nodes from file
