@@ -1026,7 +1026,7 @@ def sort_axes(nc_var, time_name='time', depth_name='depth', lat_name='latitude',
     var : NumPy NDArray
         Variable array with sorted axes.
     """
-    print('Sorting axes for variable {}'.format(nc_var.name), end='...')
+    print("Sorting axes for variable `{}`".format(nc_var.name), end='...')
 
     var = nc_var[:]
     dimensions = nc_var.dimensions
