@@ -579,7 +579,7 @@ def create_roms_grid_metrics_file(file_name,
                                   xi_dim_name_grid_v='xi_rho', eta_dim_name_grid_v='eta_v',
                                   xi_dim_name_grid_rho='xi_rho', eta_dim_name_grid_rho='eta_rho',
                                   mask_name_grid_u=None, mask_name_grid_v=None, mask_name_grid_rho='mask_rho',
-                                  bathymetry_var_name='h', angles_var_name=None,
+                                  bathymetry_var_name='h', angles_var_name=None, num_threads=1,
                                   grid_metrics_file_name='./grid_metrics.nc', **kwargs):
     """ Create a ROMS metrics file
 
@@ -663,6 +663,9 @@ def create_roms_grid_metrics_file(file_name,
 
     angles_var_name : str, optional
         Angles at rho points
+
+    num_threads : int, optional
+        Number of threads to use
 
     grid_metrics_file_name : str, optional
         The name of the grid metrics file that will be created
@@ -853,36 +856,51 @@ def create_roms_grid_metrics_file(file_name,
         nbes[grid_name] = np.asarray(tris[grid_name].neighbors, dtype=DTYPE_INT)
         sort_adjacency_array(nvs[grid_name], nbes[grid_name])
 
+        # Save element number
+        elements[grid_name] = nvs[grid_name].shape[0]
+
+        # Save lon and lat points at element centres
+        lon_elements[grid_name] = np.empty(elements[grid_name], dtype=DTYPE_FLOAT)
+        lat_elements[grid_name] = np.empty(elements[grid_name], dtype=DTYPE_FLOAT)
+        compute_element_centre_means(nvs[grid_name], lon_nodes[grid_name], lon_elements[grid_name])
+        compute_element_centre_means(nvs[grid_name], lat_nodes[grid_name], lat_elements[grid_name])
+
+        # Generate the land-sea mask at elements
+        if mask_var_names[grid_name] is not None:
+            land_sea_mask_elements[grid_name] = np.empty(elements[grid_name], dtype=DTYPE_INT)
+            compute_land_sea_element_mask(nvs[grid_name], land_sea_mask_nodes[grid_name], land_sea_mask_elements[grid_name])
+        else:
+            land_sea_mask_elements[grid_name] = None
+
         # Transpose to give ordering expected by PyLag
         nvs[grid_name] = nvs[grid_name].T
         nbes[grid_name] = nbes[grid_name].T
 
-        # Save element number
-        elements[grid_name] = nvs[grid_name].shape[1]
-
-        # Save lon and lat points at element centres
-        lon_elements[grid_name] = np.empty(elements[grid_name], dtype=float)
-        lat_elements[grid_name] = np.empty(elements[grid_name], dtype=float)
-        for element in range(elements[grid_name]):
-            lon_elements[grid_name][element] = lon_nodes[grid_name][(nvs[grid_name][:, element])].mean()
-            lat_elements[grid_name][element] = lat_nodes[grid_name][(nvs[grid_name][:, element])].mean()
-
-        # Generate the land-sea mask at elements
-        if mask_var_names[grid_name] is not None:
-            land_sea_mask_elements[grid_name] = np.empty(elements[grid_name], dtype=int)
-            for i in range(elements[grid_name]):
-                element_nodes = nvs[grid_name][:, i]
-                land_sea_mask_elements[grid_name][i] = 1 if np.any(land_sea_mask_nodes[grid_name][element_nodes] == 1) else 0
-        else:
-            land_sea_mask_elements[grid_name] = None
-
         # Flag open boundaries with -2 flag
-        nbes[grid_name][np.where(nbes[grid_name] == -1)] = -2
+        nbes[grid_name][np.asarray(nbes[grid_name] == -1).nonzero()] = -2
 
-        # Flag land boundaries with -1 flag
-        mask_indices = np.where(land_sea_mask_elements[grid_name] == 1)
-        for index in mask_indices:
-            nbes[grid_name][np.where(nbes[grid_name] == index)] = -1
+        print('\nFlag land elements in neighbour array ', end='... ')
+        land_elements = np.asarray(land_sea_mask_elements[grid_name] == 1).nonzero()[0]
+
+        # Save a copy of nbe's shape and flatten
+        nbe_shp = nbes[grid_name].shape
+        nbe = nbes[grid_name].flatten()
+
+        if num_threads > 1:
+            nbe_split = np.array_split(nbe, num_threads)
+
+            with Parallel(n_jobs=num_threads, backend='threading') as parallel:
+                parallel([delayed(flag_land_elements_wrapper, check_pickle=False)(nbe_split[i], land_elements) for i in range(num_threads)])
+
+            # Join the arrays
+            nbe = np.concatenate(nbe_split)
+        else:
+            for element in land_elements:
+                nbe[np.asarray(nbe == element).nonzero()] = -1
+
+        # Reshape the original array and return
+        nbes[grid_name] = np.asarray(nbe).reshape(nbe_shp)
+        print('done')
 
     # Create grid metrics file
     # ------------------------
