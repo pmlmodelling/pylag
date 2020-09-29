@@ -744,6 +744,8 @@ def create_roms_grid_metrics_file(file_name,
     mask_attrs = {}
     land_sea_mask_nodes = {}
     land_sea_mask_elements = {}
+    vertical_grid_vars = {}
+    vertical_grid_var_attrs = {}
 
     # Process bathymetry (defined at rho points)
     bathy_var, bathy_attrs = _get_variable(input_dataset, bathymetry_var_name)
@@ -770,7 +772,7 @@ def create_roms_grid_metrics_file(file_name,
         if process_grid[grid_name] is False:
             continue
 
-        print('Processing {} variables ...'.format(grid_name))
+        print('\nProcessing {} variables ...'.format(grid_name))
 
         # Read in coordinate variables.
         lon_var, lon_attrs[grid_name] = _get_variable(input_dataset, lon_var_names[grid_name])
@@ -810,7 +812,8 @@ def create_roms_grid_metrics_file(file_name,
 
             # Generate land-sea mask at nodes
             land_sea_mask_nodes[grid_name] = sort_axes(mask_var, lat_name=eta_grid_names[grid_name],
-                                                       lon_name=xi_grid_names[grid_name]).squeeze()
+                                            lon_name=xi_grid_names[grid_name]).squeeze()
+            land_sea_mask_nodes[grid_name] = np.asarray(land_sea_mask_nodes[grid_name], dtype=DTYPE_INT)
             if len(land_sea_mask_nodes[grid_name].shape) < 2 or len(land_sea_mask_nodes[grid_name].shape) > 3:
                 raise ValueError('Unsupported land sea mask with shape {}'.format(land_sea_mask_nodes[grid_name].shape))
 
@@ -863,17 +866,21 @@ def create_roms_grid_metrics_file(file_name,
         elements[grid_name] = nvs[grid_name].shape[0]
 
         # Save lon and lat points at element centres
+        print('Calculating lons and lats at element centres ', end='... ')
         lon_elements[grid_name] = np.empty(elements[grid_name], dtype=DTYPE_FLOAT)
         lat_elements[grid_name] = np.empty(elements[grid_name], dtype=DTYPE_FLOAT)
         compute_element_centre_means(nvs[grid_name], lon_nodes[grid_name], lon_elements[grid_name])
         compute_element_centre_means(nvs[grid_name], lat_nodes[grid_name], lat_elements[grid_name])
+        print('done')
 
         # Generate the land-sea mask at elements
+        print('Generating land sea mask at element centres ', end='... ')
         if mask_var_names[grid_name] is not None:
             land_sea_mask_elements[grid_name] = np.empty(elements[grid_name], dtype=DTYPE_INT)
             compute_land_sea_element_mask(nvs[grid_name], land_sea_mask_nodes[grid_name], land_sea_mask_elements[grid_name])
         else:
             land_sea_mask_elements[grid_name] = None
+        print('done')
 
         # Transpose to give ordering expected by PyLag
         nvs[grid_name] = nvs[grid_name].T
@@ -882,7 +889,7 @@ def create_roms_grid_metrics_file(file_name,
         # Flag open boundaries with -2 flag
         nbes[grid_name][np.asarray(nbes[grid_name] == -1).nonzero()] = -2
 
-        print('\nFlag land elements in neighbour array ', end='... ')
+        print('Flag land elements in neighbour array ', end='... ')
         land_elements = np.asarray(land_sea_mask_elements[grid_name] == 1).nonzero()[0]
 
         # Save a copy of nbe's shape and flatten
@@ -905,9 +912,14 @@ def create_roms_grid_metrics_file(file_name,
         nbes[grid_name] = np.asarray(nbe).reshape(nbe_shp)
         print('done')
 
+    # Vertical grid vars
+    print('\nReading vertical grid vars')
+    for key, name in vertical_grid_var_names.items():
+        vertical_grid_vars[key], vertical_grid_var_attrs[key] = _get_variable(input_dataset, name)
+
     # Create grid metrics file
     # ------------------------
-    print('Creating grid metrics file {}'.format(grid_metrics_file_name))
+    print('\nCreating grid metrics file {}'.format(grid_metrics_file_name))
 
     # Instantiate file creator
     gm_file_creator = GridMetricsFileCreator(grid_metrics_file_name)
@@ -973,8 +985,9 @@ def create_roms_grid_metrics_file(file_name,
     gm_file_creator.create_dimension('s_rho', input_dataset.dimensions['s_rho'].size)
     gm_file_creator.create_dimension('s_w', input_dataset.dimensions['s_w'].size)
 
-    for key, name in vertical_grid_var_names.items():
-        var, attrs = _get_variable(input_dataset, name)
+    for key in vertical_grid_var_names.keys():
+        var = vertical_grid_vars[key]
+        attrs = vertical_grid_var_attrs[key]
         gm_file_creator.create_variable(key, var[:], var.dimensions, float, attrs=attrs)
 
     gm_file_creator.create_variable('vtransform', vtransform, (), float,
