@@ -243,8 +243,8 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_
     # Add modified nbe array
     # ----------------------
     nbe_var = fvcom_dataset.variables['nbe']
-    nbe_data = nbe_var[:] - 1
-    nbe_data = sort_adjacency_array(nv_data, nbe_data)
+    nbe_data = np.asarray(nbe_var[:] - 1, dtype=DTYPE_INT)
+    sort_adjacency_array(nv_data, nbe_data)
 
     # Add open boundary flags
     open_boundary_nodes = get_fvcom_open_boundary_nodes(obc_file_name)
@@ -453,7 +453,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     # Save simplices
     #   - Flip to reverse ordering, as expected by PyLag
     #   - Transpose to give it the dimension ordering expected by PyLag
-    nv = np.flip(tri.simplices.copy(), axis=1).T
+    nv = np.asarray(np.flip(tri.simplices.copy(), axis=1).T, dtype=DTYPE_INT)
     n_elems = nv.shape[1]
 
     # Save lon and lat points at element centres
@@ -469,8 +469,8 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     #   - Transpose to give it the dimension ordering expected by PyLag
     #   - Sort to ensure match with nv
     print('\nSorting the adjacency array ', end='... ')
-    nbe = tri.neighbors.T
-    nbe = sort_adjacency_array(nv, nbe)
+    nbe = np.asarray(tri.neighbors.T, dtype=DTYPE_INT)
+    sort_adjacency_array(nv, nbe)
     print('done')
 
     # Generate the land-sea mask at elements
@@ -855,8 +855,8 @@ def create_roms_grid_metrics_file(file_name,
         # Save neighbours
         #   - Transpose to give it the dimension ordering expected by PyLag
         #   - Sort to ensure match with nv
-        nbes[grid_name] = tris[grid_name].neighbors.T
-        nbes[grid_name] = sort_adjacency_array(nvs[grid_name], nbes[grid_name])
+        nbes[grid_name] = np.asarray(tris[grid_name].neighbors.T, dtype=DTYPE_INT)
+        sort_adjacency_array(nvs[grid_name], nbes[grid_name])
 
         # Generate the land-sea mask at elements
         if mask_var_names[grid_name] is not None:
@@ -1097,7 +1097,7 @@ def _get_variable(dataset, var_name):
     raise RuntimeError("Variable `{}` not found in the supplied dataset")
 
 
-def sort_adjacency_array(nv, nbe):
+cpdef sort_adjacency_array(DTYPE_INT_t [:, :] nv, DTYPE_INT_t [:, :] nbe):
     """Sort the adjacency array
 
     PyLag expects the adjacency array (nbe) to be sorted in a particlular way
@@ -1112,21 +1112,23 @@ def sort_adjacency_array(nv, nbe):
 
     nbe : 2D ndarray, int
         Elements surrounding element, shape (3, n_elems)
-
-    Returns
-    -------
-    nbe_sorted: 2D ndarray, int
-        The new nbe array
     """
-    n_elems = nv.shape[1]
+    cdef DTYPE_INT_t [:] side1, side2, side3
+    cdef DTYPE_INT_t [:] nv_test
+    cdef DTYPE_INT_t index_side1, index_side2, index_side3
+    cdef DTYPE_INT_t n_vertices, n_elems
+    cdef DTYPE_INT_t elem
+    cdef DTYPE_INT_t i, j
 
-    # Our new to-be-sorted nbe array
-    nbe_sorted = np.zeros([3, n_elems], dtype=DTYPE_INT) - 1
+    # Initialise memory views with empty arrays
+    side1 = np.empty(2, dtype=DTYPE_INT)
+    side2 = np.empty(2, dtype=DTYPE_INT)
+    side3 = np.empty(2, dtype=DTYPE_INT)
 
     # Loop over all elems
+    n_vertices = nv.shape[0]
+    n_elems = nv.shape[1]
     for i in range(n_elems):
-        side1, side2, side3 = _get_empty_arrays()
-
         side1[0] = nv[1, i]
         side1[1] = nv[2, i]
         side2[0] = nv[2, i]
@@ -1137,7 +1139,7 @@ def sort_adjacency_array(nv, nbe):
         index_side1 = -1
         index_side2 = -1
         index_side3 = -1
-        for j in range(3):
+        for j in range(n_vertices):
             elem = nbe[j, i]
             if elem != -1:
                 nv_test = nv[:, elem]
@@ -1150,11 +1152,9 @@ def sort_adjacency_array(nv, nbe):
                 else:
                     raise Exception('Failed to match side to test element.')
 
-        nbe_sorted[0, i] = index_side1
-        nbe_sorted[1, i] = index_side2
-        nbe_sorted[2, i] = index_side3
-
-    return nbe_sorted
+        nbe[0, i] = index_side1
+        nbe[1, i] = index_side2
+        nbe[2, i] = index_side3
 
 
 cdef void flag_land_elements(DTYPE_INT_t* nbe, DTYPE_INT_t* land_elements, DTYPE_INT_t n, DTYPE_INT_t m) nogil:
@@ -1256,13 +1256,17 @@ def _get_empty_arrays():
     return side1, side2, side3
 
 
-def _get_number_of_matching_nodes(array1, array2):
-    match = 0
-    for a1 in array1:
-        for a2 in array2:
-            if a1 == a2: match = match + 1
+cpdef DTYPE_INT_t _get_number_of_matching_nodes(DTYPE_INT_t [:] array1, DTYPE_INT_t [:] array2):
+    cdef DTYPE_INT_t i, j
+    cdef DTYPE_INT_t matches
 
-    return match
+    matches = 0
+    for i in range(array1.shape[0]):
+        for j in range(array2.shape[0]):
+            if array1[i] == array2[j]:
+                matches = matches + 1
+
+    return matches
 
 
 __all__ = ['create_fvcom_grid_metrics_file',
