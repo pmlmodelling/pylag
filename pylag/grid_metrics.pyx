@@ -359,7 +359,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
 
     # Create points array
     lon2d, lat2d = np.meshgrid(lon_var[:], lat_var[:], indexing='ij')
-    points = np.array([lon2d.flatten(order='C'), lat2d.flatten(order='C')]).T
+    points = np.array([lon2d.flatten(order='C'), lat2d.flatten(order='C')], dtype=DTYPE_FLOAT).T
 
     # Save lon and lat points at nodes
     lon_nodes = points[:, 0]
@@ -444,7 +444,8 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
                       'units': '1',
                       'long_name': 'Land-sea mask: sea = 0, land = 1'}
 
-    land_sea_mask_nodes = land_sea_mask_nodes.reshape(np.prod(land_sea_mask_nodes.shape), order='C')
+    land_sea_mask_nodes = np.asarray(land_sea_mask_nodes.reshape(np.prod(land_sea_mask_nodes.shape), order='C'),
+                                     dtype=DTYPE_INT)
 
     # Create the Triangulation
     print('\nCreating the triangulation ', end='... ')
@@ -462,29 +463,26 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     sort_adjacency_array(nv, nbe)
     print('done')
 
-    # Transpose nv and nbe arrays to given the the dimension ordering expected by PyLag
-    nv = nv.T
-    nbe = nbe.T
-
     # Save element number
-    n_elems = nv.shape[1]
+    n_elems = nv.shape[0]
 
-    # Save lon and lat points at element centres
+    # Save lons and lats at element centres
     print('\nCalculating lons and lats at element centres ', end='... ')
-    lon_elements = np.empty(n_elems, dtype=float)
-    lat_elements = np.empty(n_elems, dtype=float)
-    for i in range(n_elems):
-        lon_elements[i] = lon_nodes[(nv[:, i])].mean()
-        lat_elements[i] = lat_nodes[(nv[:, i])].mean()
+    lon_elements = np.empty(n_elems, dtype=DTYPE_FLOAT)
+    lat_elements = np.empty(n_elems, dtype=DTYPE_FLOAT)
+    compute_element_centre_means(nv, lon_nodes, lon_elements)
+    compute_element_centre_means(nv, lat_nodes, lat_elements)
     print('done')
 
     # Generate the land-sea mask at elements
     print('\nGenerating land sea mask at element centres ', end='... ')
     land_sea_mask_elements = np.empty(n_elems, dtype=DTYPE_INT)
-    for i in range(n_elems):
-        element_nodes = nv[:, i]
-        land_sea_mask_elements[i] = 1 if np.any(land_sea_mask_nodes[(element_nodes)] == 1) else 0
+    compute_land_sea_element_mask(nv, land_sea_mask_nodes, land_sea_mask_elements)
     print('done')
+
+    # Transpose nv and nbe arrays to given the the dimension ordering expected by PyLag
+    nv = nv.T
+    nbe = nbe.T
 
     # Flag open boundaries with -2 flag
     print('\nFlagging open boundaries ', end='... ')
@@ -1166,6 +1164,41 @@ cpdef sort_adjacency_array(DTYPE_INT_t [:, :] nv, DTYPE_INT_t [:, :] nbe):
         nbe[i, 0] = index_side1
         nbe[i, 1] = index_side2
         nbe[i, 2] = index_side3
+
+
+cpdef compute_element_centre_means(const DTYPE_INT_t [:,:] nv, const DTYPE_FLOAT_t [:] nodal_values,
+                                   DTYPE_FLOAT_t [:] element_values):
+    cdef DTYPE_INT_t n_elements, n_vertices
+    cdef DTYPE_INT_t node
+    cdef DTYPE_INT_t i, j
+    cdef DTYPE_FLOAT_t sum
+
+    n_elements = nv.shape[0]
+    n_vertices = nv.shape[1]
+
+    for i in range(n_elements):
+        sum = 0.0
+        for j in range(n_vertices):
+            node = nv[i, j]
+            sum += nodal_values[node]
+        element_values[i] = sum / n_vertices
+
+
+cpdef compute_land_sea_element_mask(const DTYPE_INT_t [:,:] nv, const DTYPE_INT_t [:] nodal_mask,
+                                    DTYPE_INT_t [:] element_mask):
+    cdef DTYPE_INT_t node
+    cdef DTYPE_INT_t n_elements, n_vertices
+    cdef DTYPE_INT_t i
+
+    n_elements = nv.shape[0]
+    n_vertices = nv.shape[1]
+
+    element_mask[:] = 0
+    for i in range(n_elements):
+        for j in range(n_vertices):
+            node = nv[i, j]
+            if nodal_mask[node] == 1:
+                element_mask[i] = 1
 
 
 cdef void flag_land_elements(DTYPE_INT_t* nbe, DTYPE_INT_t* land_elements, DTYPE_INT_t n, DTYPE_INT_t m) nogil:
