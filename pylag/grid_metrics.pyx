@@ -230,8 +230,8 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_
     # Add modified nv array
     # ---------------------
     nv_var = fvcom_dataset.variables['nv']
-    nv_data = nv_var[:] - 1
-    dtype = nv_var.dtype.name
+    nv_data = np.asarray(nv_var[:] - 1, dtype=DTYPE_INT)
+    dtype = DTYPE_INT
     dimensions = list(nv_var.dimensions)
     dimensions[dimensions.index('nele')] = 'element'
     dimensions = tuple(dimensions)
@@ -243,16 +243,19 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_
     # Add modified nbe array
     # ----------------------
     nbe_var = fvcom_dataset.variables['nbe']
-    nbe_data = np.asarray(nbe_var[:] - 1, dtype=DTYPE_INT).T
-    sort_adjacency_array(nv_data.T, nbe_data)
+    nbe_data = np.asarray(nbe_var[:] - 1, dtype=DTYPE_INT)
     nbe_data = nbe_data.T
+    nv_data = nv_data.T
+    sort_adjacency_array(nv_data, nbe_data)
+    nbe_data = nbe_data.T
+    nv_data = nv_data.T
 
     # Add open boundary flags
     open_boundary_nodes = get_fvcom_open_boundary_nodes(obc_file_name)
     nbe_data = add_fvcom_open_boundary_flags(nv_data, nbe_data, open_boundary_nodes)
 
     # Add variable
-    dtype = nbe_var.dtype.name
+    dtype = DTYPE_INT
     dimensions = list(nv_var.dimensions)
     dimensions[dimensions.index('nele')] = 'element'
     dimensions = tuple(dimensions)
