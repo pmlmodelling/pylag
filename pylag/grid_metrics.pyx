@@ -3,17 +3,20 @@ The grid metrics module exists to assist with the creation of PyLag
 grid metrics files.
 """
 
-from __future__ import print_function
 
 # Data types used for constructing C data structures
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
+cimport numpy as np
+
+from joblib import Parallel, delayed
 import numpy as np
 from scipy.spatial import Delaunay
 from collections import OrderedDict
 from netCDF4 import Dataset
 import time
+
 
 class GridMetricsFileCreator(object):
     """ Grid metrics file creator
@@ -270,7 +273,7 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_
 def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_var_name='latitude',
                                        depth_var_name='depth', mask_var_name=None,
                                        reference_var_name=None, bathymetry_var_name=None,
-                                       grid_metrics_file_name='./grid_metrics.nc'):
+                                       num_threads=1, grid_metrics_file_name='./grid_metrics.nc'):
     """Create a Arakawa A-grid metrics file
 
     This function creates a grid metrics file for data defined on a regular rectilinear
@@ -314,6 +317,9 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
         of `reference_var_name`. If the output files contain a time varying mask due to
         changes in sea surface elevation, the bathymetry should be provided. Optional,
         default : True.
+
+    num_threads : int, optional
+        The number of threads to use when using threading.
 
     grid_metrics_file_name : str, optional
         The name of the grid metrics file that will be created. Optional,
@@ -370,7 +376,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     # Read in the reference variable if needed
     if mask_var_name is None or bathymetry_var_name is None:
         ref_var, _ = _get_variable(input_dataset, reference_var_name)
-        ref_var = sort_axes(ref_var).squeeze()
+        ref_var = sort_axes(ref_var)
 
         if not np.ma.isMaskedArray(ref_var):
             raise RuntimeError('Reference variable is not a masked array. Cannot generate land-sea mask '/
@@ -469,7 +475,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
 
     # Generate the land-sea mask at elements
     print('\nGenerating land sea mask at element centres ', end='... ')
-    land_sea_mask_elements = np.empty(n_elems, dtype=int)
+    land_sea_mask_elements = np.empty(n_elems, dtype=DTYPE_INT)
     for i in range(n_elems):
         element_nodes = nv[:, i]
         land_sea_mask_elements[i] = 1 if np.any(land_sea_mask_nodes[(element_nodes)] == 1) else 0
@@ -483,7 +489,25 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     # Flag land elements with -1 flag
     print('\nFlag land elements in neighbour array ', end='... ')
     land_elements = np.asarray(land_sea_mask_elements == 1).nonzero()[0]
-    flag_land_elements(nbe, land_elements)
+
+    # Save a copy of nbe's shape and flatten
+    nbe_shp = nbe.shape
+    nbe = nbe.flatten()
+
+    if num_threads > 1:
+        nbe_split = np.array_split(nbe, num_threads)
+
+        with Parallel(n_jobs=num_threads, backend='threading') as parallel:
+            parallel([delayed(flag_land_elements_wrapper, check_pickle=False)(nbe_split[i], land_elements) for i in range(num_threads)])
+
+        # Join the arrays
+        nbe = np.concatenate(nbe_split)
+    else:
+        for element in land_elements:
+            nbe[np.asarray(nbe == element).nonzero()] = -1
+
+    # Reshape the original array and return
+    nbe = np.asarray(nbe).reshape(nbe_shp)
     print('done')
 
     # Create grid metrics file
@@ -1133,18 +1157,25 @@ def sort_adjacency_array(nv, nbe):
     return nbe_sorted
 
 
-def flag_land_elements(DTYPE_INT_t [:, :] nbe, DTYPE_INT_t [:] land_elements):
+cdef void flag_land_elements(DTYPE_INT_t* nbe, DTYPE_INT_t* land_elements, DTYPE_INT_t n, DTYPE_INT_t m) nogil:
 
-    cdef DTYPE_INT_t element
-    cdef DTYPE_INT_t i, j, k
+    cdef DTYPE_INT_t i, j
 
-    for i in range(nbe.shape[0]):
-        for j in range(nbe.shape[1]):
-            for k in range(land_elements.shape[0]):
-                element = land_elements[k]
-                if nbe[i, j] == element:
-                    nbe[i, j] = -1
-                    break
+    for i in range(n):
+        for j in range(m):
+            if nbe[i] == land_elements[j]:
+                nbe[i] = -1
+
+
+cpdef flag_land_elements_wrapper(np.ndarray nbe, np.ndarray land_elements):
+    cdef DTYPE_INT_t* nbe_ptr = <DTYPE_INT_t*> nbe.data
+    cdef DTYPE_INT_t* land_elements_ptr = <DTYPE_INT_t*> land_elements.data
+    cdef DTYPE_INT_t n = nbe.shape[0]
+    cdef DTYPE_INT_t m = land_elements.shape[0]
+
+    with nogil:
+        flag_land_elements(nbe_ptr, land_elements_ptr, n, m)
+
 
 def get_fvcom_open_boundary_nodes(file_name):
     """Read fvcom open boundary nodes from file
