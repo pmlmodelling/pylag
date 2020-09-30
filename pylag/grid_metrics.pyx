@@ -275,7 +275,7 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_
 
 
 def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_var_name='latitude',
-                                       depth_var_name='depth', mask_var_name=None,
+                                       depth_var_name='depth', full_water_column=True, mask_var_name=None,
                                        reference_var_name=None, bathymetry_var_name=None,
                                        num_threads=1, grid_metrics_file_name='./grid_metrics.nc'):
     """Create a Arakawa A-grid metrics file
@@ -302,6 +302,12 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
 
     depth_var_name : str, optional
         The name of the depth variable. Optional, default : 'depth'
+
+    full_water_column : bool, optional
+        If True, process depth and bathymetry. If False, only process variables
+        specific to the horizontal grid. Set to True if you want to do 3D
+        transport modelling, and False if you want to do 2D surface only
+        transport modeling. Optional, default : True.
 
     mask_var_name : str, optional
         The name of the mask variable which will be used to generate the
@@ -343,10 +349,11 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     if mask_var_name and reference_var_name:
         print('Using `mask_var_name` to form the land sea mask. Supplied reference var is unused.')
 
-    if bathymetry_var_name is None and reference_var_name is None:
-        raise ValueError('Either the name of the bathymetry variable or the name of a reference ' \
-                         'masked variable must be given in order to compute and save the bathymetry,'\
-                         'as required by PyLag when running with input fields.')
+    if full_water_column is True:
+        if bathymetry_var_name is None and reference_var_name is None:
+            raise ValueError('Either the name of the bathymetry variable or the name of a reference ' \
+                             'masked variable must be given in order to compute and save the bathymetry,'\
+                             'as required by PyLag when running with input fields.')
 
     # Open the input file for reading
     input_dataset = Dataset(file_name, 'r')
@@ -358,7 +365,6 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     print('Reading the grid:')
     lon_var, lon_attrs = _get_variable(input_dataset, lon_var_name)
     lat_var, lat_attrs = _get_variable(input_dataset, lat_var_name)
-    depth_var, depth_attrs = _get_variable(input_dataset, depth_var_name)
 
     # Create points array
     lon2d, lat2d = np.meshgrid(lon_var[:], lat_var[:], indexing='ij')
@@ -374,11 +380,13 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     n_latitude = lat_var.shape[0]
 
     # Save depth
-    depth = depth_var[:]
-    n_levels = depth_var.shape[0]
+    if full_water_column is True:
+        depth_var, depth_attrs = _get_variable(input_dataset, depth_var_name)
+        depth = depth_var[:]
+        n_levels = depth_var.shape[0]
 
     # Read in the reference variable if needed
-    if mask_var_name is None or bathymetry_var_name is None:
+    if mask_var_name is None or (full_water_column is True and bathymetry_var_name is None):
         ref_var, _ = _get_variable(input_dataset, reference_var_name)
         ref_var = sort_axes(ref_var)
 
@@ -390,34 +398,35 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
             raise ValueError('Reference variable is not 4D ([t, z, y, x]).')
 
     # Save bathymetry
-    print('\nGenerating the bathymetry:')
-    if bathymetry_var_name:
-        bathy_var, bathy_attrs = _get_variable(input_dataset, bathymetry_var_name)
-        bathy = sort_axes(bathy_var).squeeze()
-        if len(bathy.shape) == 2:
-            bathy = bathy.reshape(np.prod(bathy.shape), order='C')
-        else:
-            raise RuntimeError('Bathymetry array is not 2D.')
-    else:
-        # Read the depth mask and reshape giving (n_levels, n_nodes)
-        bathy_ref_var = ref_var[0, :, :, :]  # Take first time point.
-        bathy_ref_var = bathy_ref_var.reshape(n_levels, np.prod(bathy_ref_var.shape[1:]), order='C')
-
-        bathy = np.empty((bathy_ref_var.shape[1]), dtype=float)
-        for i in range(bathy.shape[0]):
-            bathy_ref_var_tmp = bathy_ref_var[:, i]
-            if np.ma.count(bathy_ref_var_tmp) != 0:
-                index = np.ma.flatnotmasked_edges(bathy_ref_var_tmp)[1]
-                bathy[i] = depth[index]
+    if full_water_column is True:
+        print('\nGenerating the bathymetry:')
+        if bathymetry_var_name:
+            bathy_var, bathy_attrs = _get_variable(input_dataset, bathymetry_var_name)
+            bathy = sort_axes(bathy_var).squeeze()
+            if len(bathy.shape) == 2:
+                bathy = bathy.reshape(np.prod(bathy.shape), order='C')
             else:
-                bathy[i] = 0.0
+                raise RuntimeError('Bathymetry array is not 2D.')
+        else:
+            # Read the depth mask and reshape giving (n_levels, n_nodes)
+            bathy_ref_var = ref_var[0, :, :, :]  # Take first time point.
+            bathy_ref_var = bathy_ref_var.reshape(n_levels, np.prod(bathy_ref_var.shape[1:]), order='C')
 
-        # Add standard attributes
-        bathy_attrs = {'standard_name': 'depth',
-                       'units': 'm',
-                       'long_name': 'depth, measured down from the free surface',
-                       'axis': 'Z',
-                       'positive': 'down'}
+            bathy = np.empty((bathy_ref_var.shape[1]), dtype=float)
+            for i in range(bathy.shape[0]):
+                bathy_ref_var_tmp = bathy_ref_var[:, i]
+                if np.ma.count(bathy_ref_var_tmp) != 0:
+                    index = np.ma.flatnotmasked_edges(bathy_ref_var_tmp)[1]
+                    bathy[i] = depth[index]
+                else:
+                    bathy[i] = 0.0
+
+            # Add standard attributes
+            bathy_attrs = {'standard_name': 'depth',
+                           'units': 'm',
+                           'long_name': 'depth, measured down from the free surface',
+                           'axis': 'Z',
+                           'positive': 'down'}
 
     # Save mask
     print('\nGenerating the land sea mask at element nodes:')
@@ -529,7 +538,6 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     # Add dimension variables
     gm_file_creator.create_dimension('longitude', n_longitude)
     gm_file_creator.create_dimension('latitude', n_latitude)
-    gm_file_creator.create_dimension('depth', n_levels)
     gm_file_creator.create_dimension('node', n_nodes)
     gm_file_creator.create_dimension('element', n_elems)
 
@@ -545,11 +553,16 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     # Add latitude at element centres
     gm_file_creator.create_variable('latitude_c', lat_elements, ('element',), float, attrs=lat_attrs)
 
-    # Depth
-    gm_file_creator.create_variable('depth', depth, ('depth',), float, attrs=depth_attrs)
+    # Vars for 3D runs
+    if full_water_column is True:
+        # Depth dimension variable
+        gm_file_creator.create_dimension('depth', n_levels)
 
-    # Bathymetry
-    gm_file_creator.create_variable('h', bathy, ('node',), float, attrs=bathy_attrs)
+        # Depth
+        gm_file_creator.create_variable('depth', depth, ('depth',), float, attrs=depth_attrs)
+
+        # Bathymetry
+        gm_file_creator.create_variable('h', bathy, ('node',), float, attrs=bathy_attrs)
 
     # Add simplices
     gm_file_creator.create_variable('nv', nv, ('three', 'element',), int,
