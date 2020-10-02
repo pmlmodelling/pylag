@@ -161,6 +161,9 @@ cdef class ArakawaADataReader(DataReader):
     cdef DTYPE_FLOAT_t _time_last
     cdef DTYPE_FLOAT_t _time_next
 
+    # Flag for surface only or full 3D transport
+    cdef bint _surface_only
+
     # Flags that identify whether a given variable should be read in
     cdef bint _has_w, _has_Kh, _has_Ah, _has_is_wet,  _has_zeta
 
@@ -172,6 +175,9 @@ cdef class ArakawaADataReader(DataReader):
 
         # Time direction
         self._time_direction = <int>get_time_direction(config)
+
+        # 2-D surface only or full 3-D transport
+        self._surface_only = self.config.getboolean('SIMULATION', 'surface_only')
 
         # Setup dimension name mappings
         self._dimension_names = {}
@@ -445,6 +451,12 @@ cdef class ArakawaADataReader(DataReader):
 
         cdef DTYPE_INT_t k
 
+        # Surface only case
+        if self._surface_only is True:
+            particle.set_in_vertical_boundary_layer(True)
+            particle.set_k_layer(0)
+            return IN_DOMAIN
+
         # Loop over all levels to find the host z layer
         for k in xrange(self._n_depth - 1):
             depth_upper_level = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k)
@@ -554,6 +566,9 @@ cdef class ArakawaADataReader(DataReader):
         # Host element
         cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
 
+        if self._surface_only:
+            return 0.0
+
         for i in xrange(N_VERTICES):
             vertex = self._nv[i,host_element]
             h_tri[i] = self._h[vertex]
@@ -592,6 +607,9 @@ cdef class ArakawaADataReader(DataReader):
         cdef DTYPE_FLOAT_t zeta_last
         cdef DTYPE_FLOAT_t zeta_next
         cdef vector[DTYPE_FLOAT_t] zeta_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+
+        if self._surface_only:
+            return 0.0
 
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
@@ -632,7 +650,7 @@ cdef class ArakawaADataReader(DataReader):
         """
         vel[0] = self._get_variable(self._u_last, self._u_next, time, particle)
         vel[1] = self._get_variable(self._v_last, self._v_next, time, particle)
-        if self._has_w:
+        if not self._surface_only and self._has_w:
             vel[2] = self._get_variable(self._w_last, self._w_next, time, particle)
         else:
             vel[2] = 0.0
@@ -832,7 +850,10 @@ cdef class ArakawaADataReader(DataReader):
         """
         cdef DTYPE_FLOAT_t var  # kh at (t, x1, x2, x3)
 
-        var = self._get_variable(self._kh_last, self._kh_next, time, particle)
+        if not self._surface_only:
+            var = self._get_variable(self._kh_last, self._kh_next, time, particle)
+        else:
+            var = 0.0
 
         return var
 
@@ -880,6 +901,9 @@ cdef class ArakawaADataReader(DataReader):
 
         # Particle k_layer
         cdef DTYPE_INT_t k_layer = particle.get_k_layer()
+
+        if self._surface_only:
+            return 0.0
 
         if particle.get_in_vertical_boundary_layer() == True:
             kh_0 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, k_layer-1)
@@ -969,6 +993,10 @@ cdef class ArakawaADataReader(DataReader):
         cdef DTYPE_FLOAT_t zmin_last, zmax_last
         cdef DTYPE_FLOAT_t zmin_mext, zmax_next
         cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
+
+        # In surface only transport case don't account for wetting and drying
+        if self._surface_only:
+            return 1
 
         zmin_last = self.get_zmin(self._time_last, particle)
         zmax_last = self.get_zmax(self._time_last, particle)
@@ -1134,19 +1162,21 @@ cdef class ArakawaADataReader(DataReader):
         self._unstructured_grid = get_unstructured_grid(self.config, self._name, self._n_nodes, self._n_elems,
                                                         self._nv, self._nbe, x, y, xc, yc)
 
-        # Depth levels at nodal coordinates. Assumes and requires that depth is positive down. The -1 multiplier
-        # flips this so that depth is positive up from the zero geoid.
-        self._reference_depth_levels = -1.0 * self.mediator.get_grid_variable('depth', (self._n_depth), DTYPE_FLOAT)
+        # Read in depth vars if doing a 3D run
+        if not self._surface_only:
+            # Depth levels at nodal coordinates. Assumes and requires that depth is positive down. The -1 multiplier
+            # flips this so that depth is positive up from the zero geoid.
+            self._reference_depth_levels = -1.0 * self.mediator.get_grid_variable('depth', (self._n_depth), DTYPE_FLOAT)
 
-        # Bathymetry
-        self._h = self.mediator.get_grid_variable('h', (self._n_nodes), DTYPE_FLOAT)
+            # Bathymetry
+            self._h = self.mediator.get_grid_variable('h', (self._n_nodes), DTYPE_FLOAT)
+
+            # Initialise depth level arrays (but don't fill for now)
+            self._depth_levels_last = np.empty((self._n_depth, self._n_nodes), dtype=DTYPE_FLOAT)
+            self._depth_levels_next = np.empty((self._n_depth, self._n_nodes), dtype=DTYPE_FLOAT)
 
         # Land sea mask
         self._land_sea_mask = self.mediator.get_grid_variable('mask', (self._n_elems), DTYPE_INT)
-
-        # Initialise depth level arrays (but don't fill for now)
-        self._depth_levels_last = np.empty((self._n_depth, self._n_nodes), dtype=DTYPE_FLOAT)
-        self._depth_levels_next = np.empty((self._n_depth, self._n_nodes), dtype=DTYPE_FLOAT)
 
         # Initialise is wet arrays (but don't fill for now)
         self._wet_cells_last = np.empty((self._n_elems), dtype=DTYPE_INT)
@@ -1249,19 +1279,20 @@ cdef class ArakawaADataReader(DataReader):
             self._w_next = self._reshape_var(w_next, self._variable_dimension_indices['wo'])
 
         # Update depth mask
-        depth_mask_last = self.mediator.get_mask_at_last_time_index(u_var_name,
-                self._variable_shapes['uo'])
-        self._depth_mask_last = self._reshape_var(depth_mask_last, self._variable_dimension_indices['uo'])
+        if not self._surface_only:
+            depth_mask_last = self.mediator.get_mask_at_last_time_index(u_var_name,
+                    self._variable_shapes['uo'])
+            self._depth_mask_last = self._reshape_var(depth_mask_last, self._variable_dimension_indices['uo'])
 
-        depth_mask_next = self.mediator.get_mask_at_next_time_index(u_var_name,
-                self._variable_shapes['uo'])
-        self._depth_mask_next = self._reshape_var(depth_mask_next, self._variable_dimension_indices['uo'])
+            depth_mask_next = self.mediator.get_mask_at_next_time_index(u_var_name,
+                    self._variable_shapes['uo'])
+            self._depth_mask_next = self._reshape_var(depth_mask_next, self._variable_dimension_indices['uo'])
 
-        # Compute actual depth levels using reference values and zeta
-        for k in xrange(self._n_depth):
-            for i in xrange(self._n_nodes):
-                self._depth_levels_last[k, i] = self._reference_depth_levels[k] + self._zeta_last[i]
-                self._depth_levels_next[k, i] = self._reference_depth_levels[k] + self._zeta_next[i]
+            # Compute actual depth levels using reference values and zeta
+            for k in xrange(self._n_depth):
+                for i in xrange(self._n_nodes):
+                    self._depth_levels_last[k, i] = self._reference_depth_levels[k] + self._zeta_last[i]
+                    self._depth_levels_next[k, i] = self._reference_depth_levels[k] + self._zeta_next[i]
 
         # Update memory views for kh
         if self._has_Kh:
@@ -1288,18 +1319,19 @@ cdef class ArakawaADataReader(DataReader):
         # Set is wet status
         # NB the status of cells is inferred from the depth mask and the land-sea element mask. If a surface cell is
         # masked but it is not a land cell, then it is assumed to be dry.
-        for i in xrange(self._n_elems):
-            if self._land_sea_mask[i] == 0:
-                is_wet_last = 1
-                is_wet_next = 1
-                for j in xrange(3):
-                    node = self._nv[j, i]
-                    if self._depth_mask_last[0, node] == 1:
-                        is_wet_last = 0
-                    if self._depth_mask_next[0, node] == 1:
-                        is_wet_next = 0
-                self._wet_cells_last[i] = is_wet_last
-                self._wet_cells_next[i] = is_wet_next
+        if not self._surface_only:
+            for i in xrange(self._n_elems):
+                if self._land_sea_mask[i] == 0:
+                    is_wet_last = 1
+                    is_wet_next = 1
+                    for j in xrange(3):
+                        node = self._nv[j, i]
+                        if self._depth_mask_last[0, node] == 1:
+                            is_wet_last = 0
+                        if self._depth_mask_next[0, node] == 1:
+                            is_wet_next = 0
+                    self._wet_cells_last[i] = is_wet_last
+                    self._wet_cells_next[i] = is_wet_next
 
         # Read in data as requested
         if 'thetao' in self.env_var_names:
