@@ -275,7 +275,7 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_
 
 
 def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_var_name='latitude',
-                                       depth_var_name='depth', full_water_column=True, mask_var_name=None,
+                                       depth_var_name='depth', surface_only=False, mask_var_name=None,
                                        reference_var_name=None, bathymetry_var_name=None,
                                        num_threads=1, grid_metrics_file_name='./grid_metrics.nc'):
     """Create a Arakawa A-grid metrics file
@@ -303,11 +303,11 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     depth_var_name : str, optional
         The name of the depth variable. Optional, default : 'depth'
 
-    full_water_column : bool, optional
-        If True, process depth and bathymetry. If False, only process variables
-        specific to the horizontal grid. Set to True if you want to do 3D
-        transport modelling, and False if you want to do 2D surface only
-        transport modeling. Optional, default : True.
+    surface_only : bool, optional
+        If False, process depth and bathymetry. If True, only process variables
+        specific to the horizontal grid. Set to False if you want to do 3D
+        transport modelling, and True if you want to do 2D surface only
+        transport modeling. Optional, default : False.
 
     mask_var_name : str, optional
         The name of the mask variable which will be used to generate the
@@ -349,7 +349,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     if mask_var_name and reference_var_name:
         print('Using `mask_var_name` to form the land sea mask. Supplied reference var is unused.')
 
-    if full_water_column is True:
+    if surface_only is False:
         if bathymetry_var_name is None and reference_var_name is None:
             raise ValueError('Either the name of the bathymetry variable or the name of a reference ' \
                              'masked variable must be given in order to compute and save the bathymetry,'\
@@ -380,13 +380,13 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     n_latitude = lat_var.shape[0]
 
     # Save depth
-    if full_water_column is True:
+    if surface_only is False:
         depth_var, depth_attrs = _get_variable(input_dataset, depth_var_name)
         depth = depth_var[:]
         n_levels = depth_var.shape[0]
 
     # Read in the reference variable if needed
-    if mask_var_name is None or (full_water_column is True and bathymetry_var_name is None):
+    if mask_var_name is None or (surface_only is False and bathymetry_var_name is None):
         ref_var, _ = _get_variable(input_dataset, reference_var_name)
         ref_var = sort_axes(ref_var)
 
@@ -398,7 +398,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
             raise ValueError('Reference variable is not 4D ([t, z, y, x]).')
 
     # Save bathymetry
-    if full_water_column is True:
+    if surface_only is False:
         print('\nGenerating the bathymetry:')
         if bathymetry_var_name:
             bathy_var, bathy_attrs = _get_variable(input_dataset, bathymetry_var_name)
@@ -554,7 +554,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     gm_file_creator.create_variable('latitude_c', lat_elements, ('element',), float, attrs=lat_attrs)
 
     # Vars for 3D runs
-    if full_water_column is True:
+    if surface_only is False:
         # Depth dimension variable
         gm_file_creator.create_dimension('depth', n_levels)
 
