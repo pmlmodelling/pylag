@@ -6,10 +6,14 @@ from __future__ import division, print_function
 
 import numpy as np
 from scipy import interp
+import stripy as stripy
 import collections
-import matplotlib as mpl
+from matplotlib import cbook
 from matplotlib import pyplot as plt
 from matplotlib.tri.triangulation import Triangulation
+from matplotlib.collections import PolyCollection
+from matplotlib.colors import Normalize
+from matplotlib import cm as mplcm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import cartopy.crs as ccrs
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
@@ -25,27 +29,16 @@ from pylag.processing.ensemble import get_probability_density_1D
 
 
 class PyLagPlotter:
-    """ Create PyLag plot objects
+    """ Base class for PyLag plotters
     
-    Class to assist in the creation of plots and animations. This is the
-    default PyLag plotter, designed to work with PyLag simulation output
-    that has been generated using input data that is defined on a single
-    horizontal mesh. The mesh is read from the run's grid metrics file,
-    which must be passed to PyLagPlotter during class initialisation.
-
-    Specifically, PyLagPlotter will work with:
-
-    1) Arakawa A-grid derived data
-    2) FVCOM derived data
+    Class to assist in the creation of plots and animations. The class can
+    be used to create a set of basic plot objects. Plots that overlay
+    particle trajectories on top of underlying field data should be created
+    using the appropriate derived class.
 
     Parameters
     ----------
-    grid_metrics_file : Dataset or str
-        This is either the path to a PyLag grid metrics file or a
-        NetCDF Dataset object. If the former, PyLagPlotter will try to
-        instantiate a new Dataset using the supplied file name.
-
-    geospatial_coords : boolean, optional
+    geographic_coords : boolean, optional
         Boolean specifying whether or not to use cartopy to create a 2D map
         on top of which the data will be plotted. The default option is
         `True`. If `False`, a simple Cartesian grid is drawn instead.
@@ -57,171 +50,13 @@ class PyLagPlotter:
         Default line width to use when plotting
 
     """
-    def __init__(self, grid_metrics_file, geospatial_coords=True, font_size=10, line_width=0.2):
-        if isinstance(grid_metrics_file, Dataset):
-            ds = grid_metrics_file
-        elif isinstance(grid_metrics_file, str):
-            ds = Dataset(grid_metrics_file, 'r')
-        else:
-            raise ValueError("`grid_metrics_file` should be either a pre-constructed netCDF.Dataset or a srting "\
-                             "giving the path to a PyLag grid metrics file.")
+    def __init__(self, geographic_coords=True, font_size=10, line_width=0.2):
 
-        self.geospatial_coords = geospatial_coords
+        self.geographic_coords = geographic_coords
 
         self.font_size = font_size
 
         self.line_width = line_width
-
-        # Initialise the figure
-        self.__init_figure(ds)
-
-        # Close the NetCDF file for reading
-        ds.close()
-        del ds
-
-    def __init_figure(self, ds):
-        # Read in the required grid variables
-        self.n_nodes = len(ds.dimensions['node'])
-        self.n_elems = len(ds.dimensions['element'])
-        self.nv = ds.variables['nv'][:]
-
-        # Try to read the element mask
-        try:
-            self.maskc = ds.variables['mask'][:]
-        except KeyError:
-            self.maskc = None
-
-        if self.geospatial_coords:
-            self.x = ds.variables['longitude'][:]
-            self.y = ds.variables['latitude'][:]
-            self.xc = ds.variables['longitude_c'][:]
-            self.yc = ds.variables['latitude_c'][:]
-        else:
-            self.x = ds.variables['x'][:]
-            self.y = ds.variables['y'][:]
-            self.xc = ds.variables['xc'][:]
-            self.yc = ds.variables['yc'][:]
-
-        # Triangles
-        self.triangles = self.nv.transpose()
-
-        # Store triangulation
-        self.tri = Triangulation(self.x, self.y, self.triangles, mask=self.maskc)
-
-    def _get_default_extents(self):
-        return np.array([self.x.min(),
-                         self.x.max(),
-                         self.y.min(),
-                         self.y.max()])
-
-    def plot_field(self, ax, field, update=False, configure=True, add_colour_bar=True, cb_label=None, tick_inc=True,
-                   extents=None, transform=ccrs.PlateCarree(), draw_coastlines=False, resolution='10m',
-                   **kwargs):
-        """ Map the supplied field
-
-        The field must be defined on the same triangular mesh that is defined in the grid metrics
-        file (either nodes or element centres). Included here to make it possible to overlay
-        particle tracks on different fields (e.g. bathymetry, temperature). If `geospatial_coords` is
-        True, Cartopy will be used to graph the supplied field.
-
-        Additional plotting options are passed to `matplotlib.pyplot.pcolormesh`. See the matplotlib documentation
-        for a full list of supported options.
-
-        Parameters
-        ----------
-        ax : matplotlib.axes.Axes
-            Axes object
-
-        field : 1D NumPy array
-            The field to plot.
-
-        update : bool, optional
-            If true, update the existing plot. Specifically, the axes will be checked to see if it contains a
-            PolyCollection object, as generated by tripcolor. If found, the associated data array will be
-            updated with the supplied field data. This is faster than drawing a new map
-
-        configure : bool, optional
-            If true, configure the plot by setting plot extents, drawing coastlines etc. This can be
-            useful when overlaying plots, and you only want to incur the cost of configuring the plot
-            once. The default is True, with the expectation that in most circumstances users will
-            draw any underlying field data before overlaying particle tracks. Default: True.
-
-        add_colour_bar : bool, optional
-            If true, draw a colour bar.
-
-        cb_label : str, optional
-            The colour bar label.
-
-        tick_inc : bool, optional
-            Add coordinate axes (i.e. lat/long).
-
-        extents : 1D array, optional
-            Four element numpy array giving lon/lat limits (e.g. [-4.56, -3.76,
-            49.96, 50.44])
-
-        transform : cartopy.crs.Projection
-            Type of projection.
-
-        draw_coastlines : boolean, optional
-            Draw coastlines. Default False.
-
-        resolution : str, optional
-            Resolution to use when plotting the coastline. Only used when draw_coastline=True. Default: '10m'.
-
-        Returns
-        -------
-        axes : matplotlib.axes.Axes
-            Axes object
-
-        plot : matplotlib.collections.PolyCollection
-            The plot object
-        """
-        if update is True:
-            for collection in ax.collections:
-                if type(collection) == mpl.collections.PolyCollection:
-                    collection.set_array(field)
-                    return ax
-            raise RuntimeError('Received update is True, but the current axis does not contain a PolyCollection object.')
-
-        # If not configuring the plot, simply plot the field and return
-        if not configure:
-            if self.geospatial_coords:
-                plot = ax.tripcolor(self.tri, field, transform=transform, **kwargs)
-            else:
-                plot = ax.tripcolor(self.tri, field, **kwargs)
-
-            return ax
-
-        # Set extents
-        if extents is None:
-            extents = self._get_default_extents()
-
-        # Create plot
-        if self.geospatial_coords:
-            plot = ax.tripcolor(self.tri, field, transform=transform, **kwargs)
-            ax.set_extent(extents, transform)
-
-            if draw_coastlines:
-                ax.coastlines(resolution=resolution, linewidth=self.line_width)
-
-            if tick_inc:
-                self._add_ticks(ax)
-
-            ax.set_xlabel('Longitude (E)', fontsize=self.font_size)
-            ax.set_ylabel('Longitude (N)', fontsize=self.font_size)
-        else:
-            plot = ax.tripcolor(self.tri, field, **kwargs)
-            ax.set_extent(extents)
-
-            ax.set_xlabel('x (m)', fontsize=self.font_size)
-            ax.set_ylabel('y (m)', fontsize=self.font_size)
-
-        # Add colour bar
-        if add_colour_bar:
-            figure = ax.get_figure()
-            self._add_colour_bar(figure, ax, plot, cb_label)
-
-        return ax, plot
 
     def _add_colour_bar(self, figure, axes, plot, cb_label=None):
         # Add colobar scaled to axis width
@@ -286,7 +121,7 @@ class PyLagPlotter:
                 extents=None, draw_coastlines=False, resolution='10m', tick_inc=False, **kwargs):
         """ Create a scatter plot using the provided x and y values
 
-        If geospatial_coords is True, x and y should be geospatial (lat, lon) coordinates. If not, x any y should
+        If geographic_coords is True, x and y should be geographic (lat, lon) coordinates. If not, x any y should
         be given as cartesian coordinates.
 
         See Matplotlib's scatter documentation for a list of additional key
@@ -298,25 +133,25 @@ class PyLagPlotter:
             Axes object
 
         x : 1D array
-            Array of 'x' positions. If plotting in geospatial coords, these should be longitudes.
+            Array of 'x' positions. If plotting in geographic coords, these should be longitudes.
 
         y : 1D array
-            Array of 'y' positions. If plotting in geospatial coords, these should be latitudes.
+            Array of 'y' positions. If plotting in geographic coords, these should be latitudes.
 
         configure : bool, optional
             If true, configure the plot by setting plot extents, drawing coastlines etc. Default: False.
 
         transform : cartopy.crs.Projection
-            The type of transform to perform if geospatial_coords is True. Optional.
+            The type of transform to perform if geographic_coords is True. Optional.
 
         draw_coastlines : bool
-            Draw coastlines? Only used if geospatial_coords is True. Optional.
+            Draw coastlines? Only used if geographic_coords is True. Optional.
 
         resolution : str, optional
             Resolution to use when plotting the coastline. Only used when draw_coastline=True. Default: '10m'.
 
         tick_inc : bool
-            Draw ticks? Only used if geospatial_coords is True. Optional.
+            Draw ticks? Only used if geographic_coords is True. Optional.
 
         Returns
         -------
@@ -329,7 +164,7 @@ class PyLagPlotter:
         # Check to see if a field has already been plotted, indicating we can simply overlay
         # particle positions without setting up the plot in full.
         if not configure:
-            if self.geospatial_coords:
+            if self.geographic_coords:
                 scatter_plot = ax.scatter(x, y, transform=transform, zorder=zorder, **kwargs)
             else:
                 scatter_plot = ax.scatter(x, y, zorder=zorder, **kwargs)
@@ -343,7 +178,7 @@ class PyLagPlotter:
             extents = self._get_default_extents()
 
         # Create plot
-        if self.geospatial_coords:
+        if self.geographic_coords:
             scatter_plot = ax.scatter(x, y, transform=transform, zorder=zorder, **kwargs)
             ax.set_extent(extents, transform)
 
@@ -360,6 +195,216 @@ class PyLagPlotter:
             ax.set_ylabel('y (m)', fontsize=self.font_size)
 
         return ax, scatter_plot
+
+    def set_title(self, ax, title):
+        """ Set the title
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes
+            Axes object
+
+        title : str
+            Plot title
+        """
+        ax.set_title(title, fontsize=self.font_size)
+
+    def _add_ticks(self, ax):
+        gl = ax.gridlines(linewidth=self.line_width, draw_labels=True, linestyle='--', color='k')
+
+        gl.xlabel_style = {'fontsize': self.font_size}
+        gl.ylabel_style = {'fontsize': self.font_size}
+
+        gl.xlabels_top=False
+        gl.ylabels_right=False
+        gl.xlabels_bottom=True
+        gl.ylabels_left=True
+
+        gl.xformatter = LONGITUDE_FORMATTER
+        gl.yformatter = LATITUDE_FORMATTER
+
+
+class FVCOMPlotter(PyLagPlotter):
+    """ Create PyLag plot objects based on FVCOM model outputs
+
+    Class to assist in the creation of plots and animations based on FVCOM
+    inputs. The mesh is read from the run's grid metrics file which is
+    passed to PyLagPlotter during class initialisation. It is assumed the
+    mesh can be faithfully reconstructed from the nodal coordinates and
+    simplices using an instance of `matplotlib.tri.Triangulation`. In turn, this
+    assumes the mesh has been constructed in Cartesian coordinates. Note -
+    this does not preclude plotting in geographic coordinates.
+
+    Parameters
+    ----------
+    grid_metrics_file : Dataset or str
+        This is either the path to a PyLag grid metrics file or a
+        NetCDF Dataset object. If the former, PyLagPlotter will try to
+        instantiate a new Dataset using the supplied file name.
+    """
+    def __init__(self, grid_metrics_file, **kwargs):
+        # Initialise base class
+        super().__init__(**kwargs)
+
+        # Open dataset for reading
+        if isinstance(grid_metrics_file, Dataset):
+            ds = grid_metrics_file
+        elif isinstance(grid_metrics_file, str):
+            ds = Dataset(grid_metrics_file, 'r')
+        else:
+            raise ValueError("`grid_metrics_file` should be either a pre-constructed netCDF.Dataset or a srting "\
+                             "giving the path to a PyLag grid metrics file.")
+
+        # Initialise the figure
+        self._read_grid_information(ds)
+
+        # Close the NetCDF file for reading
+        ds.close()
+        del ds
+
+    def _read_grid_information(self, ds):
+        # Read in the required grid variables
+        self.n_nodes = len(ds.dimensions['node'])
+        self.n_elems = len(ds.dimensions['element'])
+        self.nv = ds.variables['nv'][:]
+
+        # Try to read the element mask
+        try:
+            self.maskc = ds.variables['mask'][:]
+        except KeyError:
+            self.maskc = None
+
+        if self.geographic_coords:
+            self.x = ds.variables['longitude'][:]
+            self.y = ds.variables['latitude'][:]
+            self.xc = ds.variables['longitude_c'][:]
+            self.yc = ds.variables['latitude_c'][:]
+        else:
+            self.x = ds.variables['x'][:]
+            self.y = ds.variables['y'][:]
+            self.xc = ds.variables['xc'][:]
+            self.yc = ds.variables['yc'][:]
+
+        # Triangles
+        self.triangles = self.nv.transpose()
+
+        # Store triangulation
+        self.tri = Triangulation(self.x, self.y, self.triangles, mask=self.maskc)
+
+    def _get_default_extents(self):
+        return np.array([self.x.min(),
+                         self.x.max(),
+                         self.y.min(),
+                         self.y.max()])
+
+    def plot_field(self, ax, field, update=False, configure=True, add_colour_bar=True, cb_label=None, tick_inc=True,
+                   extents=None, transform=ccrs.PlateCarree(), draw_coastlines=False, resolution='10m',
+                   **kwargs):
+        """ Map the supplied field
+
+        The field must be defined on the same triangular mesh that is defined in the grid metrics
+        file (either nodes or element centres). Included here to make it possible to overlay
+        particle tracks on different fields (e.g. bathymetry, temperature). If `geographic_coords` is
+        True, Cartopy will be used to graph the supplied field.
+
+        Additional plotting options are passed to `matplotlib.pyplot.pcolormesh`. See the matplotlib documentation
+        for a full list of supported options.
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes
+            Axes object
+
+        field : 1D NumPy array
+            The field to plot.
+
+        update : bool, optional
+            If true, update the existing plot. Specifically, the axes will be checked to see if it contains a
+            PolyCollection object, as generated by tripcolor. If found, the associated data array will be
+            updated with the supplied field data. This is faster than drawing a new map
+
+        configure : bool, optional
+            If true, configure the plot by setting plot extents, drawing coastlines etc. This can be
+            useful when overlaying plots, and you only want to incur the cost of configuring the plot
+            once. The default is True, with the expectation that in most circumstances users will
+            draw any underlying field data before overlaying particle tracks. Default: True.
+
+        add_colour_bar : bool, optional
+            If true, draw a colour bar.
+
+        cb_label : str, optional
+            The colour bar label.
+
+        tick_inc : bool, optional
+            Add coordinate axes (i.e. lat/long).
+
+        extents : 1D array, optional
+            Four element numpy array giving lon/lat limits (e.g. [-4.56, -3.76,
+            49.96, 50.44])
+
+        transform : cartopy.crs.Projection
+            Type of projection.
+
+        draw_coastlines : boolean, optional
+            Draw coastlines. Default False.
+
+        resolution : str, optional
+            Resolution to use when plotting the coastline. Only used when draw_coastline=True. Default: '10m'.
+
+        Returns
+        -------
+        axes : matplotlib.axes.Axes
+            Axes object
+
+        plot : matplotlib.collections.PolyCollection
+            The plot object
+        """
+        if update is True:
+            for collection in ax.collections:
+                if type(collection) == PolyCollection:
+                    collection.set_array(field)
+                    return ax
+            raise RuntimeError('Received update is True, but the current axis does not contain a PolyCollection object.')
+
+        # If not configuring the plot, simply plot the field and return
+        if not configure:
+            if self.geographic_coords:
+                plot = ax.tripcolor(self.tri, field, transform=transform, **kwargs)
+            else:
+                plot = ax.tripcolor(self.tri, field, **kwargs)
+
+            return ax
+
+        # Set extents
+        if extents is None:
+            extents = self._get_default_extents()
+
+        # Create plot
+        if self.geographic_coords:
+            plot = ax.tripcolor(self.tri, field, transform=transform, **kwargs)
+            ax.set_extent(extents, transform)
+
+            if draw_coastlines:
+                ax.coastlines(resolution=resolution, linewidth=self.line_width)
+
+            if tick_inc:
+                self._add_ticks(ax)
+
+            ax.set_xlabel('Longitude (E)', fontsize=self.font_size)
+            ax.set_ylabel('Longitude (N)', fontsize=self.font_size)
+        else:
+            plot = ax.tripcolor(self.tri, field, **kwargs)
+            ax.set_extent(extents)
+
+            ax.set_xlabel('x (m)', fontsize=self.font_size)
+            ax.set_ylabel('y (m)', fontsize=self.font_size)
+
+        # Add colour bar
+        if add_colour_bar:
+            figure = ax.get_figure()
+            self._add_colour_bar(figure, ax, plot, cb_label)
+
+        return ax, plot
 
     def draw_grid(self, ax, draw_masked_elements=False, **kwargs):
         """ Draw the underlying grid or mesh
@@ -388,35 +433,256 @@ class PyLagPlotter:
         if reinstate_mask:
             self.tri.set_mask(self.maskc)
 
-    def set_title(self, ax, title):
-        """ Set the title
+
+class ArakawaAPlotter(PyLagPlotter):
+    """ Create PyLag plot objects based on Arakawa A-Grid model outputs
+
+    Class to assist in the creation of plots and animations based on Arakawa
+    A-Grid inputs. The mesh is read from the run's grid metrics file which is
+    passed to PyLagPlotter during class initialisation. `stripy` is used to
+    create a spherical triangulation from the underlying data.
+
+    Parameters
+    ----------
+    grid_metrics_file : Dataset or str
+        This is either the path to a PyLag grid metrics file or a
+        NetCDF Dataset object. If the former, PyLagPlotter will try to
+        instantiate a new Dataset using the supplied file name.
+    """
+    def __init__(self, grid_metrics_file, **kwargs):
+        # Initialise base class
+        super().__init__(**kwargs)
+
+        # Open dataset for reading
+        if isinstance(grid_metrics_file, Dataset):
+            ds = grid_metrics_file
+        elif isinstance(grid_metrics_file, str):
+            ds = Dataset(grid_metrics_file, 'r')
+        else:
+            raise ValueError("`grid_metrics_file` should be either a pre-constructed netCDF.Dataset or a srting "\
+                             "giving the path to a PyLag grid metrics file.")
+
+        # Initialise the figure
+        self._read_grid_information(ds)
+
+        # Close the NetCDF file for reading
+        ds.close()
+        del ds
+
+    def _read_grid_information(self, ds):
+        # Read in the required grid variables
+        self.n_nodes = len(ds.dimensions['node'])
+        self.n_elems = len(ds.dimensions['element'])
+
+        # Try to read the element mask
+        try:
+            self.maskc = ds.variables['mask'][:]
+        except KeyError:
+            self.maskc = None
+
+        if self.geographic_coords:
+            self.x = ds.variables['longitude'][:]
+            self.y = ds.variables['latitude'][:]
+            self.xc = ds.variables['longitude_c'][:]
+            self.yc = ds.variables['latitude_c'][:]
+        else:
+            raise ValueError('Arakawa A-grid plotter includes support for geographic coordinates only')
+
+        # Node index permutation
+        self.permutation = ds.variables['permutation'][:]
+
+        # Create a new spherical triangulation
+        self.tri = stripy.sTriangulation(lons=np.radians(self.x), lats=np.radians(self.y), permute=False)
+
+        # Simplices
+        self.simplices = self.tri.simplices
+
+        # Indices for ocean elements
+        self.ocean_elements = np.asarray(self.maskc == 0).nonzero()[0]
+
+        # Ocean only simplices
+        self.ocean_simplices = self.simplices[self.ocean_elements, :]
+
+    def _get_default_extents(self):
+        return np.array([self.x.min(),
+                         self.x.max(),
+                         self.y.min(),
+                         self.y.max()])
+
+    def reshape(self, field):
+        if len(field.shape) != 2:
+            raise ValueError('Expected 2D array')
+
+        _field = field.flatten(order='C')[self.permutation]
+
+        if _field.shape[0] != self.n_nodes:
+            raise ValueError('The size of the flattened `field` array does not match the number of nodes')
+
+        return _field
+
+    def plot_field(self, ax, field, reshape=False, update=False, configure=True, add_colour_bar=True, cb_label=None,
+                   tick_inc=True, extents=None, transform=ccrs.Geodetic(), draw_coastlines=False, resolution='10m',
+                   **kwargs):
+        """ Map the supplied field
+
+        The field must be defined on either a) the same triangular mesh that is defined in the grid metrics
+        file, or b) on the original structured grid. In the case of (b), `reshape` must be set to True. The
+        field array will then be automatically mapped onto the unstructured triangular mesh. Typically, option
+        (a) applies when plotting values saved in the grid metrics file (e.g. `h`) while option (b) applies
+        when plotting time dependent variables from the original output file (e.g. current speed).
+
+        Cartopy is used to create projections on which to plot. Additional plotting options are passed to
+        `matplotlib.pyplot.pcolormesh`. See the matplotlib documentation for a full list of supported options.
 
         Parameters
         ----------
         ax : matplotlib.axes.Axes
             Axes object
 
-        title : str
-            Plot title
+        field : NumPy NDArray
+            The field to plot.
+
+        reshape : bool, optional
+            Flag signifying whether the `field` variable should be first mapped onto grid nodal coordinates.
+            Default : False.
+
+        update : bool, optional
+            If true, update the existing plot. Specifically, the axes will be checked to see if it contains a
+            PolyCollection object. If found, the associated data array will be updated with the supplied field
+            data. This is faster than drawing a new map.
+
+        configure : bool, optional
+            If true, configure the plot by setting plot extents, drawing coastlines etc. This can be
+            useful when overlaying plots and you only want to incur the cost of configuring the plot
+            once. The default is True, with the expectation that in most circumstances users will
+            draw any underlying field data before overlaying particle tracks. Default : True.
+
+        add_colour_bar : bool, optional
+            If true, draw a colour bar.
+
+        cb_label : str, optional
+            The colour bar label.
+
+        tick_inc : bool, optional
+            Add coordinate axes (i.e. lat/long).
+
+        extents : 1D array, optional
+            Four element numpy array giving lon/lat limits (e.g. [-4.56, -3.76,
+            49.96, 50.44])
+
+        transform : cartopy.crs.Projection
+            Type of projection.
+
+        draw_coastlines : boolean, optional
+            Draw coastlines. Default False.
+
+        resolution : str, optional
+            Resolution to use when plotting the coastline. Only used when draw_coastline=True. Default: '10m'.
+
+        Returns
+        -------
+        axes : matplotlib.axes.Axes
+            Axes object
+
+        plot : matplotlib.collections.PolyCollection
+            The plot object
         """
-        ax.set_title(title, fontsize=self.font_size)
+        # Check array shapes
+        if reshape is False:
+            if len(field.shape) != 1:
+                raise ValueError('Expected 1D array')
 
-#    def get_nodal_coords(self):
-#        return np.copy(self.x), np.copy(self.y)
+            if field.shape[0] != self.n_nodes:
+                raise ValueError('The size of the `field` array does not match the number of nodes')
 
-    def _add_ticks(self, ax):
-        gl = ax.gridlines(linewidth=self.line_width, draw_labels=True, linestyle='--', color='k')
+            _field = field
+        else:
+            _field = reshape(field)
 
-        gl.xlabel_style = {'fontsize': self.font_size}
-        gl.ylabel_style = {'fontsize': self.font_size}
+        # Compute field value at face centre of ocean triangles
+        _field = _field[self.ocean_simplices].mean(axis=1)
 
-        gl.xlabels_top=False
-        gl.ylabels_right=False
-        gl.xlabels_bottom=True
-        gl.ylabels_left=True
+        if update is True:
+            for collection in ax.collections:
+                if type(collection) == PolyCollection:
+                    collection.set_array(_field)
+                    return ax
+            raise RuntimeError('Received update is True, but the current axis does not contain a PolyCollection object.')
 
-        gl.xformatter = LONGITUDE_FORMATTER
-        gl.yformatter = LATITUDE_FORMATTER
+        # Collection plotting kwargs
+        linewidth = kwargs.pop('linewidth', 0.25)
+        alpha = kwargs.pop('alpha', 1.0)
+        cmap = kwargs.pop('cmap', None)
+        norm = kwargs.pop('norm', None)
+        vmin = kwargs.pop('vmin', None)
+        vmax = kwargs.pop('vmax', None)
+
+        # Create the plot
+        verts = np.stack((self.x[self.ocean_simplices], self.y[self.ocean_simplices]), axis=-1)
+        collection = PolyCollection(verts, linewidth=linewidth, transform=transform)
+        collection.set_alpha(alpha)
+        collection.set_array(_field)
+        cbook._check_isinstance((Normalize, None), norm=norm)
+        collection.set_cmap(cmap)
+        collection.set_norm(norm)
+        collection._scale_norm(norm, vmin, vmax)
+        ax.add_collection(collection)
+
+        # If not configuring the rest of the plot return to caller
+        if not configure:
+            return ax
+
+        # Set extents
+        if extents is None:
+            extents = self._get_default_extents()
+
+        ax.set_extent(extents, transform)
+
+        if draw_coastlines:
+            ax.coastlines(resolution=resolution, linewidth=self.line_width)
+
+        if tick_inc:
+            self._add_ticks(ax)
+
+        ax.set_xlabel('Longitude (E)', fontsize=self.font_size)
+        ax.set_ylabel('Longitude (N)', fontsize=self.font_size)
+
+        # Add colour bar
+        if add_colour_bar:
+            figure = ax.get_figure()
+            self._add_colour_bar(figure, ax, collection, cb_label)
+
+        return ax, collection
+
+    def draw_grid(self, ax, draw_masked_elements=False, linewidth=0.25, edgecolor='k', facecolor='none',
+                  transform=ccrs.Geodetic()):
+        """ Draw the underlying grid or mesh
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes
+            Axes object
+
+        Returns
+        -------
+        ax : matplotlib.axes.Axes
+            Axes object
+        """
+        if draw_masked_elements is True:
+            x = self.x[self.simplices]
+            y = self.y[self.simplices]
+        else:
+            x = self.x[self.ocean_simplices]
+            y = self.y[self.ocean_simplices]
+
+        verts = np.stack((x, y), axis=-1)
+        collection = PolyCollection(verts, edgecolor=edgecolor, linewidth=linewidth, facecolor=facecolor,
+                                    transform=transform)
+        ax.add_collection(collection)
+        ax.grid(False)
+        ax.autoscale_view()
+
+        return ax
 
 
 class ArakawaCPlotter:
@@ -437,7 +703,7 @@ class ArakawaCPlotter:
         This is the path to the PyLag grid metrics file or a NetCDF4 dataset
         object that has been created from the grid metrics file.
 
-    geospatial_coords : boolean, optional
+    geographic_coords : boolean, optional
         Boolean specifying whether or not to use cartopy to create a 2D map
         on top of which the data will be plotted. The default option is
         `True`. If `False`, a simple Cartesian grid is drawn instead.
@@ -450,7 +716,7 @@ class ArakawaCPlotter:
 
     """
 
-    def __init__(self, grid_metrics_file, geospatial_coords=True, font_size=10, line_width=0.2):
+    def __init__(self, grid_metrics_file, geographic_coords=True, font_size=10, line_width=0.2):
         if isinstance(grid_metrics_file, Dataset):
             ds = grid_metrics_file
         elif isinstance(grid_metrics_file, str):
@@ -459,7 +725,7 @@ class ArakawaCPlotter:
             raise ValueError("`grid_metrics_file` should be either a pre-constructed netCDF.Dataset or a srting " \
                              "giving the path to a PyLag grid metrics file.")
 
-        self.geospatial_coords = geospatial_coords
+        self.geographic_coords = geographic_coords
 
         self.font_size = font_size
 
@@ -509,7 +775,7 @@ class ArakawaCPlotter:
             except KeyError:
                 self.maskc[grid_name] = None
 
-            if self.geospatial_coords:
+            if self.geographic_coords:
                 self.x[grid_name] = ds.variables['longitude_{}'.format(grid_name)][:]
                 self.y[grid_name] = ds.variables['latitude_{}'.format(grid_name)][:]
                 self.xc[grid_name] = ds.variables['longitude_c_{}'.format(grid_name)][:]
@@ -540,7 +806,7 @@ class ArakawaCPlotter:
 
         The field must be defined on the same triangular mesh that is defined in the grid metrics
         file (either nodes or element centres). Included here to make it possible to overlay
-        particle tracks on different fields (e.g. bathymetry, temperature). If `geospatial_coords` is
+        particle tracks on different fields (e.g. bathymetry, temperature). If `geographic_coords` is
         True, Cartopy will be used to graph the supplied field.
 
         Additional plotting options are passed to `matplotlib.pyplot.pcolormesh`. See the matplotlib documentation
@@ -600,7 +866,7 @@ class ArakawaCPlotter:
         """
         if update is True:
             for collection in ax.collections:
-                if type(collection) == mpl.collections.PolyCollection:
+                if type(collection) == PolyCollection:
                     collection.set_array(field)
                     return ax
             raise RuntimeError(
@@ -608,7 +874,7 @@ class ArakawaCPlotter:
 
         # If not configuring the plot, simply plot the field and return
         if not configure:
-            if self.geospatial_coords:
+            if self.geographic_coords:
                 plot = ax.tripcolor(self.tri[grid_name], field, transform=transform, **kwargs)
             else:
                 plot = ax.tripcolor(self.tri[grid_name], field, **kwargs)
@@ -620,7 +886,7 @@ class ArakawaCPlotter:
             extents = self._get_default_extents(grid_name)
 
         # Create plot
-        if self.geospatial_coords:
+        if self.geographic_coords:
             plot = ax.tripcolor(self.tri[grid_name], field, transform=transform, **kwargs)
             ax.set_extent(extents, transform)
 
@@ -709,7 +975,7 @@ class ArakawaCPlotter:
                 extents=None, draw_coastlines=False, resolution='10m', tick_inc=False, **kwargs):
         """ Create a scatter plot using the provided x and y values
 
-        If geospatial_coords is True, x and y should be geospatial (lat, lon) coordinates. If not, x any y should
+        If geographic_coords is True, x and y should be geographic (lat, lon) coordinates. If not, x any y should
         be given as cartesian coordinates.
 
         See Matplotlib's scatter documentation for a list of additional key
@@ -724,25 +990,25 @@ class ArakawaCPlotter:
             The name of the grid on which the field data is defined
 
         x : 1D array
-            Array of 'x' positions. If plotting in geospatial coords, these should be longitudes.
+            Array of 'x' positions. If plotting in geographic coords, these should be longitudes.
 
         y : 1D array
-            Array of 'y' positions. If plotting in geospatial coords, these should be latitudes.
+            Array of 'y' positions. If plotting in geographic coords, these should be latitudes.
 
         configure : bool, optional
             If true, configure the plot by setting plot extents, drawing coastlines etc. Default: False.
 
         transform : cartopy.crs.Projection
-            The type of transform to perform if geospatial_coords is True. Optional.
+            The type of transform to perform if geographic_coords is True. Optional.
 
         draw_coastlines : bool
-            Draw coastlines? Only used if geospatial_coords is True. Optional.
+            Draw coastlines? Only used if geographic_coords is True. Optional.
 
         resolution : str, optional
             Resolution to use when plotting the coastline. Only used when draw_coastline=True. Default: '10m'.
 
         tick_inc : bool
-            Draw ticks? Only used if geospatial_coords is True. Optional.
+            Draw ticks? Only used if geographic_coords is True. Optional.
 
         Returns
         -------
@@ -755,7 +1021,7 @@ class ArakawaCPlotter:
         # Check to see if a field has already been plotted, indicating we can simply overlay
         # particle positions without setting up the plot in full.
         if not configure:
-            if self.geospatial_coords:
+            if self.geographic_coords:
                 scatter_plot = ax.scatter(x, y, transform=transform, zorder=zorder, **kwargs)
             else:
                 scatter_plot = ax.scatter(x, y, zorder=zorder, **kwargs)
@@ -769,7 +1035,7 @@ class ArakawaCPlotter:
             extents = self._get_default_extents(grid_name)
 
         # Create plot
-        if self.geospatial_coords:
+        if self.geographic_coords:
             scatter_plot = ax.scatter(x, y, transform=transform, zorder=zorder, **kwargs)
             ax.set_extent(extents, transform)
 
@@ -1302,7 +1568,7 @@ def colourmap(variable):
 
     """
 
-    default_cmap = mpl.cm.get_cmap('viridis')
+    default_cmap = mplcm.get_cmap('viridis')
 
     cmaps = {'q2': cm.dense,
              'l': cm.dense,
