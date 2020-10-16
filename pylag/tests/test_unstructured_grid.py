@@ -12,7 +12,8 @@ from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 
 from pylag.particle_cpp_wrapper import ParticleSmartPtr
 from pylag.unstructured import UnstructuredCartesianGrid, UnstructuredGeographicGrid
-from pylag.grid_metrics import sort_adjacency_array
+from pylag import grid_metrics as gm
+
 
 class UnstructuredCartesianGrid_test(TestCase):
     """ Unit tests for unstructured Cartesian grids
@@ -25,12 +26,12 @@ class UnstructuredCartesianGrid_test(TestCase):
         self.name = b'test_grid'
         self.n_elems = 5
         self.n_nodes = 7
-        self.nv = np.array([[4, 0, 2, 4, 3], [3, 1, 4, 5, 6], [1, 3, 1, 3, 0]], dtype=int)
-        self.nbe = np.array([[1, 0, 0, -1, -1], [2, 4, -1, 0, 1], [3, -1, -1, -1, -1]], dtype=int)
-        self.x = np.array([2.0, 1.0, 0.0, 2.0, 1.0, 1.5, 3.0], dtype=float)
-        self.y = np.array([1.0, 1.0, 1.0, 2.0, 2.0, 3.0, 1.0], dtype=float)
-        self.xc = np.array([1.3333333333, 1.6666666667, 0.6666666667, 1.5000000000, 2.3333333333], dtype=float)
-        self.yc = np.array([1.6666666667, 1.3333333333, 1.3333333333, 2.3333333333, 1.3333333333], dtype=float)
+        self.nv = np.array([[4, 0, 2, 4, 3], [3, 1, 4, 5, 6], [1, 3, 1, 3, 0]], dtype=DTYPE_INT)
+        self.nbe = np.array([[1, 0, 0, -1, -1], [2, 4, -1, 0, 1], [3, -1, -1, -1, -1]], dtype=DTYPE_INT)
+        self.x = np.array([2.0, 1.0, 0.0, 2.0, 1.0, 1.5, 3.0], dtype=DTYPE_FLOAT)
+        self.y = np.array([1.0, 1.0, 1.0, 2.0, 2.0, 3.0, 1.0], dtype=DTYPE_FLOAT)
+        self.xc = np.array([1.3333333333, 1.6666666667, 0.6666666667, 1.5000000000, 2.3333333333], dtype=DTYPE_FLOAT)
+        self.yc = np.array([1.6666666667, 1.3333333333, 1.3333333333, 2.3333333333, 1.3333333333], dtype=DTYPE_FLOAT)
 
         # Create config
         config = configparser.ConfigParser()
@@ -99,7 +100,7 @@ class UnstructuredCartesianGrid_test(TestCase):
     def test_set_local_coordinates_when_a_particle_is_on_an_external_elements_side(self):
         particle = ParticleSmartPtr(x1=1.5, x2=1.0, host_elements={'test_grid': 1})
         self.unstructured_grid.set_local_coordinates_wrapper(particle)
-        phi_min = np.min(np.array(particle.get_phi('test_grid'), dtype=float))
+        phi_min = np.min(np.array(particle.get_phi('test_grid'), dtype=DTYPE_FLOAT))
         test.assert_equal(np.abs(phi_min), 0.0)
 
     def test_get_phi_when_particle_is_at_an_elements_centre(self):
@@ -143,14 +144,14 @@ class UnstructuredGeographicGrid_test(TestCase):
 
     def setUp(self):
         # Basic grid (3 x 3 x 4).
-        latitude = np.array([11., 12., 13.], dtype=float)
-        longitude = np.array([1., 2., 3.], dtype=float)
+        latitude = np.array([11., 12., 13.], dtype=DTYPE_FLOAT)
+        longitude = np.array([1., 2., 3.], dtype=DTYPE_FLOAT)
 
         # Mask [depth, lat, lon]. 1 is sea, 0 land. Note the last depth level is masked everywhere.
         mask = np.array([[[1, 1, 1], [1, 1, 1], [0, 0, 0]],
                          [[1, 1, 1], [1, 1, 1], [0, 0, 0]],
                          [[1, 1, 1], [0, 0, 0], [0, 0, 0]],
-                         [[0, 0, 0], [0, 0, 0], [0, 0, 0]]], dtype=int)
+                         [[0, 0, 0], [0, 0, 0], [0, 0, 0]]], dtype=DTYPE_INT)
 
         # Switch the mask convention to that which PyLag anticipates. i.e. 1 is a masked point, 0 a non-masked point.
         mask = 1 - mask
@@ -177,36 +178,37 @@ class UnstructuredGeographicGrid_test(TestCase):
 
         # Save simplices
         #   - Flip to reverse ordering, as expected by PyLag
-        #   - Transpose to give it the dimension ordering expected by PyLag
-        nv = np.flip(tri.simplices.copy(), axis=1).T
-        n_elements = nv.shape[1]
+        nv = np.asarray(np.flip(tri.simplices.copy(), axis=1), dtype=DTYPE_INT)
+        n_elements = nv.shape[0]
 
         # Save neighbours
         #   - Transpose to give it the dimension ordering expected by PyLag
         #   - Sort to ensure match with nv
-        nbe = tri.neighbors.T
-        nbe = sort_adjacency_array(nv, nbe)
+        nbe = np.asarray(tri.neighbors, dtype=DTYPE_INT)
+        gm.sort_adjacency_array(nv, nbe)
 
         # Save lon and lat points at element centres
-        lon_elements = np.empty(n_elements, dtype=float)
-        lat_elements = np.empty(n_elements, dtype=float)
+        lon_elements = np.empty(n_elements, dtype=DTYPE_FLOAT)
+        lat_elements = np.empty(n_elements, dtype=DTYPE_FLOAT)
         for i, element in enumerate(range(n_elements)):
-            lon_elements[i] = lon_nodes[(nv[:, element])].mean()
-            lat_elements[i] = lat_nodes[(nv[:, element])].mean()
+            lon_elements[i] = lon_nodes[(nv[element, :])].mean()
+            lat_elements[i] = lat_nodes[(nv[element, :])].mean()
 
         # Generate the land-sea mask for elements
-        land_sea_mask_elements = np.empty(n_elements, dtype=int)
-        for i in range(n_elements):
-            element_nodes = nv[:, i]
-            land_sea_mask_elements[i] = 1 if np.any(land_sea_mask_nodes[(element_nodes)] == 1) else 0
+        land_sea_mask_elements = np.empty(n_elements, dtype=DTYPE_INT)
+        gm.compute_land_sea_element_mask(nv, land_sea_mask_nodes, land_sea_mask_elements)
+
+        # Transpose arrays
+        nv = nv.T
+        nbe = nbe.T
 
         # Flag open boundaries with -2 flag
-        nbe[np.where(nbe == -1)] = -2
+        nbe[np.asarray(nbe == -1).nonzero()] = -2
 
         # Flag land boundaries with -1 flag
-        for i, msk in enumerate(land_sea_mask_elements):
-            if msk == 1:
-                nbe[np.where(nbe == i)] = -1
+        land_elements = np.asarray(land_sea_mask_elements == 1).nonzero()[0]
+        for element in land_elements:
+            nbe[np.asarray(nbe == element).nonzero()] = -1
 
         # Save grid variables
         self.name = b'test_grid'

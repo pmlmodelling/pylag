@@ -20,7 +20,7 @@ from pylag.roms_data_reader import ROMSDataReader
 from pylag.particle_cpp_wrapper import ParticleSmartPtr
 
 from pylag.mediator import Mediator
-from pylag.grid_metrics import sort_adjacency_array
+from pylag import grid_metrics as gm
 
 
 class MockROMSMediator(Mediator):
@@ -35,15 +35,15 @@ class MockROMSMediator(Mediator):
         self._time_dep_vars_next = {}
 
         # Basic grid (2 x 2 x 3) in rho
-        latitude_rho = np.array([12.0, 14.0], dtype=float)
-        longitude_rho = np.array([2., 4.], dtype=float)
+        latitude_rho = np.array([12.0, 14.0], dtype=DTYPE_FLOAT)
+        longitude_rho = np.array([2., 4.], dtype=DTYPE_FLOAT)
 
         # Basic grid (2 x 2 x 3) in u
-        latitude_u = np.array([12.0, 14.0], dtype=float)
-        longitude_u = np.array([1., 3., 5.], dtype=float)
+        latitude_u = np.array([12.0, 14.0], dtype=DTYPE_FLOAT)
+        longitude_u = np.array([1., 3., 5.], dtype=DTYPE_FLOAT)
 
-        latitude_v = np.array([11.0, 13.0, 15.], dtype=float)
-        longitude_v = np.array([2., 4.], dtype=float)
+        latitude_v = np.array([11.0, 13.0, 15.], dtype=DTYPE_FLOAT)
+        longitude_v = np.array([2., 4.], dtype=DTYPE_FLOAT)
 
         # Save horizontal grid vars for each grid
         for grid_name, lon, lat in zip(['grid_rho', 'grid_u', 'grid_v'],
@@ -68,23 +68,28 @@ class MockROMSMediator(Mediator):
 
             # Save simplices
             #   - Flip to reverse ordering, as expected by PyLag
-            #   - Transpose to give it the dimension ordering expected by PyLag
-            nv = np.flip(tri.simplices.copy(), axis=1).T
-            n_elements = nv.shape[1]
+            nv = np.asarray(np.flip(tri.simplices.copy(), axis=1), dtype=DTYPE_INT)
+            n_elements = nv.shape[0]
 
             # Save neighbours
             #   - Transpose to give it the dimension ordering expected by PyLag
             #   - Sort to ensure match with nv
-            nbe = tri.neighbors.T
-            nbe = sort_adjacency_array(nv, nbe)
-            nbe[np.where(nbe == -1)] = -2 # Flag open boundaries with -2 flag
+            nbe = np.asarray(tri.neighbors, dtype=DTYPE_INT)
+            gm.sort_adjacency_array(nv, nbe)
 
             # Save lon and lat points at element centres
-            lon_elements = np.empty(n_elements, dtype=float)
-            lat_elements = np.empty(n_elements, dtype=float)
+            lon_elements = np.empty(n_elements, dtype=DTYPE_FLOAT)
+            lat_elements = np.empty(n_elements, dtype=DTYPE_FLOAT)
             for i, element in enumerate(range(n_elements)):
-                lon_elements[i] = lon_nodes[(nv[:, element])].mean()
-                lat_elements[i] = lat_nodes[(nv[:, element])].mean()
+                lon_elements[i] = lon_nodes[(nv[element, :])].mean()
+                lat_elements[i] = lat_nodes[(nv[element, :])].mean()
+
+            # Transpose arrays
+            nv = nv.T
+            nbe = nbe.T
+
+            # Flag open boundaries with -2 flag
+            nbe[np.asarray(nbe == -1).nonzero()] = -2
 
             self._dim_vars['longitude_{}'.format(grid_name)] = n_longitude
             self._dim_vars['latitude_{}'.format(grid_name)] = n_latitude
@@ -113,12 +118,12 @@ class MockROMSMediator(Mediator):
         s_rho_dimensions = ('s_rho')
         cs_w_dimensions = ('s_w')
         cs_r_dimensions = ('s_rho')
-        s_w = np.array([-1., -0.5, 0.], dtype=float)
-        cs_w = np.array([-1., -0.5, 0.], dtype=float)
-        s_rho = np.array([-0.75, -0.25], dtype=float)
-        cs_r = np.array([-0.75, -0.25], dtype=float)
-        hc = np.array([20.], dtype=float)
-        vtransform = np.array([2.], dtype=float)
+        s_w = np.array([-1., -0.5, 0.], dtype=DTYPE_FLOAT)
+        cs_w = np.array([-1., -0.5, 0.], dtype=DTYPE_FLOAT)
+        s_rho = np.array([-0.75, -0.25], dtype=DTYPE_FLOAT)
+        cs_r = np.array([-0.75, -0.25], dtype=DTYPE_FLOAT)
+        hc = np.array([20.], dtype=DTYPE_FLOAT)
+        vtransform = np.array([2.], dtype=DTYPE_FLOAT)
 
         # Depth vars
         self._dim_vars['s_w'] = len(s_w)
@@ -138,39 +143,39 @@ class MockROMSMediator(Mediator):
 
         # Zeta at rho points [lat, lon]
         zos_dimensions = ('time', 'latitude_grid_rho', 'longitude_grid_rho')
-        zos = np.array([[1., 1.], [1., 1.]], dtype=float)
+        zos = np.array([[1., 1.], [1., 1.]], dtype=DTYPE_FLOAT)
 
         # u at u points
         u_dimensions = ('time', 's_rho', 'latitude_grid_u', 'longitude_grid_u')
         u = np.array([[[0, 1, 0], [0, 1, 0]],
-                      [[0, 1, 0], [0, 1, 0]]], dtype=float)
+                      [[0, 1, 0], [0, 1, 0]]], dtype=DTYPE_FLOAT)
 
         # v at v points
         v_dimensions = ('time', 's_rho', 'latitude_grid_v', 'longitude_grid_v')
         v = np.array([[[0, 0], [2, 2], [0, 0]],
-                      [[0, 0], [2, 2], [0, 0]]], dtype=float)
+                      [[0, 0], [2, 2], [0, 0]]], dtype=DTYPE_FLOAT)
 
         # w at w points
         w_dimensions = ('time', 's_w', 'latitude_grid_rho', 'longitude_grid_rho')
         w = np.array([[[3, 3], [3, 3]],
                       [[3, 3], [3, 3]],
-                      [[3, 3], [3, 3]]], dtype=float)
+                      [[3, 3], [3, 3]]], dtype=DTYPE_FLOAT)
 
         # ts at rho points
         ts_dimensions = ('time', 's_rho', 'latitude_grid_rho', 'longitude_grid_rho')
         ts = np.array([[[4, 4], [4, 4]],
-                      [[4, 4], [4, 4]]], dtype=float)
+                      [[4, 4], [4, 4]]], dtype=DTYPE_FLOAT)
 
         # kh at w points
         kh_dimensions = ('time', 's_w', 'latitude_grid_rho', 'longitude_grid_rho')
         kh = np.array([[[5, 5], [5, 5]],
                       [[5, 5], [5, 5]],
-                      [[5, 5], [5, 5]]], dtype=float)
+                      [[5, 5], [5, 5]]], dtype=DTYPE_FLOAT)
 
         # Ah at w points
         ah_dimensions = ('time', 's_rho', 'latitude_grid_rho', 'longitude_grid_rho')
         ah = np.array([[[6, 6], [6, 6]],
-                      [[6, 6], [6, 6]]], dtype=float)
+                      [[6, 6], [6, 6]]], dtype=DTYPE_FLOAT)
 
         # Set dimensions
         self._time_dep_var_dimensions = {'s_w': s_w_dimensions, 's_rho': s_rho_dimensions,

@@ -16,7 +16,7 @@ from pylag.arakawa_a_data_reader import ArakawaADataReader
 from pylag.particle_cpp_wrapper import ParticleSmartPtr
 
 from pylag.mediator import Mediator
-from pylag.grid_metrics import sort_adjacency_array
+from pylag import grid_metrics as gm
 
 
 class MockArakawaAMediator(Mediator):
@@ -32,9 +32,9 @@ class MockArakawaAMediator(Mediator):
     """
     def __init__(self):
         # Basic grid (3 x 3 x 4).
-        latitude = np.array([11., 12., 13.], dtype=float)
-        longitude = np.array([1., 2., 3.], dtype=float)
-        depth = np.array([0., 10., 20., 30.], dtype=float)
+        latitude = np.array([11., 12., 13.], dtype=DTYPE_FLOAT)
+        longitude = np.array([1., 2., 3.], dtype=DTYPE_FLOAT)
+        depth = np.array([0., 10., 20., 30.], dtype=DTYPE_FLOAT)
 
         # Save original grid dimensions
         n_latitude = latitude.shape[0]
@@ -42,7 +42,7 @@ class MockArakawaAMediator(Mediator):
         n_depth = depth.shape[0]
 
         # Bathymetry [lat, lon]
-        h = np.array([[25., 25., 25.], [10., 10., 10.], [999., 999., 999.]])
+        h = np.array([[25., 25., 25.], [10., 10., 10.], [999., 999., 999.]], dtype=DTYPE_FLOAT)
         h = np.moveaxis(h, 1, 0)  # Move to [lon, lat]
         h = h.reshape(np.prod(h.shape), order='C')
 
@@ -50,7 +50,7 @@ class MockArakawaAMediator(Mediator):
         mask = np.array([[[1, 1, 1], [1, 1, 1], [0, 0, 0]],
                          [[1, 1, 1], [1, 1, 1], [0, 0, 0]],
                          [[1, 1, 1], [0, 0, 0], [0, 0, 0]],
-                         [[0, 0, 0], [0, 0, 0], [0, 0, 0]]], dtype=int)
+                         [[0, 0, 0], [0, 0, 0], [0, 0, 0]]], dtype=DTYPE_INT)
 
         # Switch the mask convention to that which PyLag anticipates. i.e. 1 is a masked point, 0 a non-masked point.
         mask = 1 - mask
@@ -61,7 +61,7 @@ class MockArakawaAMediator(Mediator):
         land_sea_mask_nodes = land_sea_mask_nodes.reshape(np.prod(land_sea_mask_nodes.shape), order='C')
 
         # Zeta (time = 0) [lat, lon]
-        zeta_t0 = np.ma.masked_array([[1., 1., 1.], [0., 0., 0.], [999., 999., 999.]], mask=land_sea_mask, dtype=float)
+        zeta_t0 = np.ma.masked_array([[1., 1., 1.], [0., 0., 0.], [999., 999., 999.]], mask=land_sea_mask, dtype=DTYPE_FLOAT)
         zeta_t1 = np.ma.copy(zeta_t0)
 
         # Mask one extra point (node 1) to help with testing wet dry status calls
@@ -72,7 +72,7 @@ class MockArakawaAMediator(Mediator):
                                      [[1., 1., 1.], [0., 0., 0.], [999., 999., 999.]],
                                      [[0., 0., 0.], [999., 999., 999.], [999., 999., 999.]],
                                      [[999., 999., 999.], [999., 999., 999.], [999., 999., 999.]]],
-                                    mask=mask, dtype=float)
+                                    mask=mask, dtype=DTYPE_FLOAT)
         uvw_t1 = np.ma.copy(uvw_t0)
 
         # t/s (time = 0) [depth, lat, lon]. Include mask.
@@ -80,7 +80,7 @@ class MockArakawaAMediator(Mediator):
                                    [[1., 1., 1.], [0., 0., 0.], [999., 999., 999.]],
                                    [[0., 0., 0.], [999., 999., 999.], [999., 999., 999.]],
                                    [[999., 999., 999.], [999., 999., 999.], [999., 999., 999.]]],
-                                   mask=mask, dtype=float)
+                                   mask=mask, dtype=DTYPE_FLOAT)
         ts_t1 = np.ma.copy(ts_t0)
 
         # Form the unstructured grid
@@ -92,48 +92,52 @@ class MockArakawaAMediator(Mediator):
         lat_nodes = points[:, 1]
         n_nodes = points.shape[0]
 
+        # Record the node permutation
+        permutation = np.arange(n_nodes, dtype=DTYPE_INT)
+
         # Create the Triangulation
         tri = Delaunay(points)
 
         # Save simplices
         #   - Flip to reverse ordering, as expected by PyLag
-        #   - Transpose to give it the dimension ordering expected by PyLag
-        nv = np.flip(tri.simplices.copy(), axis=1).T
-        n_elements = nv.shape[1]
+        nv = np.asarray(np.flip(tri.simplices.copy(), axis=1), dtype=DTYPE_INT)
+        n_elements = nv.shape[0]
 
         # Save neighbours
         #   - Transpose to give it the dimension ordering expected by PyLag
         #   - Sort to ensure match with nv
-        nbe = tri.neighbors.T
-        nbe = sort_adjacency_array(nv, nbe)
+        nbe = np.asarray(tri.neighbors, dtype=DTYPE_INT)
+        gm.sort_adjacency_array(nv, nbe)
 
         # Save lon and lat points at element centres
-        lon_elements = np.empty(n_elements, dtype=float)
-        lat_elements = np.empty(n_elements, dtype=float)
+        lon_elements = np.empty(n_elements, dtype=DTYPE_FLOAT)
+        lat_elements = np.empty(n_elements, dtype=DTYPE_FLOAT)
         for i, element in enumerate(range(n_elements)):
-            lon_elements[i] = lon_nodes[(nv[:, element])].mean()
-            lat_elements[i] = lat_nodes[(nv[:, element])].mean()
+            lon_elements[i] = lon_nodes[(nv[element, :])].mean()
+            lat_elements[i] = lat_nodes[(nv[element, :])].mean()
 
         # Generate the land-sea mask for elements
-        land_sea_mask_elements = np.empty(n_elements, dtype=int)
-        for i in range(n_elements):
-            element_nodes = nv[:, i]
-            land_sea_mask_elements[i] = 1 if np.any(land_sea_mask_nodes[(element_nodes)] == 1) else 0
+        land_sea_mask_elements = np.empty(n_elements, dtype=DTYPE_INT)
+        gm.compute_land_sea_element_mask(nv, land_sea_mask_nodes, land_sea_mask_elements)
+
+        # Transpose arrays
+        nv = nv.T
+        nbe = nbe.T
 
         # Flag open boundaries with -2 flag
-        nbe[np.where(nbe == -1)] = -2
+        nbe[np.asarray(nbe == -1).nonzero()] = -2
 
         # Flag land boundaries with -1 flag
-        for i, msk in enumerate(land_sea_mask_elements):
-            if msk == 1:
-                nbe[np.where(nbe == i)] = -1
+        land_elements = np.asarray(land_sea_mask_elements == 1).nonzero()[0]
+        for element in land_elements:
+            nbe[np.asarray(nbe == element).nonzero()] = -1
 
         # Add to grid dimensions and variables
         self._dim_vars = {'latitude': n_latitude, 'longitude': n_longitude, 'depth': n_depth,
                           'node': n_nodes, 'element': n_elements}
         self._grid_vars = {'nv': nv, 'nbe': nbe, 'longitude': lon_nodes, 'longitude_c': lon_elements,
                            'latitude': lat_nodes, 'latitude_c': lat_elements, 'depth': depth, 'h': h,
-                           'mask': land_sea_mask_elements}
+                           'mask': land_sea_mask_elements, 'permutation': permutation}
 
         # Set dimensions
         zos_dimensions = ('time', 'latitude', 'longitude')
@@ -218,6 +222,7 @@ class ArawawaADataReader_test(TestCase):
         config.set('GENERAL', 'log_level', 'info')
         config.add_section("SIMULATION")
         config.set('SIMULATION', 'time_direction', 'forward')
+        config.set('SIMULATION', 'surface_only', 'False')
         config.add_section("OCEAN_CIRCULATION_MODEL")
         config.set('OCEAN_CIRCULATION_MODEL', 'time_dim_name', 'time')
         config.set('OCEAN_CIRCULATION_MODEL', 'depth_dim_name', 'depth')
