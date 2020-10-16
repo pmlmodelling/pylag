@@ -33,3 +33,5 @@ ipykernel
 ffmpeg-python
 PyQT-fit
 seapy
+joblib
+stripy

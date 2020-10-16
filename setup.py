@@ -213,6 +213,8 @@ setup(name="PyLag",
           "PyFVCOM",
           "PyQT-fit",
           "seapy",
+          "stripy",
+          "joblib",
           "xarray"
       ],
 )

@@ -51,6 +51,8 @@ requirements:
     - nose2
     - seapy
     - xarray
+    - stripy
+    - joblib
 
 test:
   import:
