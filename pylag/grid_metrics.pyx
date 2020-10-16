@@ -13,6 +13,7 @@ cimport numpy as np
 from joblib import Parallel, delayed
 import numpy as np
 from scipy.spatial import Delaunay
+import stripy as stripy
 from collections import OrderedDict
 from netCDF4 import Dataset
 import time
@@ -125,7 +126,7 @@ class GridMetricsFileCreator(object):
         if attrs is not None:
             self.vars[var_name].setncatts(attrs)
 
-        self.vars[var_name][:] = var_data
+        self.vars[var_name][:] = var_data.astype(dtype, casting='same_kind')
 
     def _set_global_attributes(self):
         """ Set global attributes
@@ -274,20 +275,39 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_
     return
 
 
-def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_var_name='latitude',
+def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_var_name='latitude',
                                        depth_var_name='depth', surface_only=False, mask_var_name=None,
-                                       reference_var_name=None, bathymetry_var_name=None,
-                                       num_threads=1, grid_metrics_file_name='./grid_metrics.nc'):
+                                       reference_var_name=None, bathymetry_var_name=None, num_threads=1,
+                                       prng_seed=10, grid_metrics_file_name='./grid_metrics.nc'):
     """Create a Arakawa A-grid metrics file
 
     This function creates a grid metrics file for data defined on a regular rectilinear
-    Arakawa A-grid. The function is intended to work with regularly gridded, CF
-    compliant datasets, which is usually a requirement for datasets submitted
-    to public catalogues. NB it is assumed the surface corresponds to the zeroth
-    depth index.
-
+    Arakawa A-grid. The function is intended to work with regularly gridded datasets.
     The approach taken is to reinterpret the regular grid as a single, unstructured
     grid which can be understood by PyLag.
+
+    We use stripy to create spherical triangulation on the surface of the Earth. This
+    may be a full global triangulation or a regional triangulation depending on the grid.
+    In the version tested (stripy 2.02), stripy requires that the first three
+    lat/lon points don't lie on a Great Circle. As this will typically be the case with
+    regularly gridded data, we must permute the lat and lon arrays. Stripy takes an argument
+    `permute` which does this for us. However, it doesn't provide a straightforward way of
+    obtaining the mapping which was used to permute the data. This is required, since we
+    must permute the time dependent variables in the same way so that they can be consistently
+    mapped onto the triangular mesh by PyLag. For this reason, we use NumPy's random module
+    to shuffle array indices. These shuffled indices are then used to permute all data arrays.
+    Furthermore, the shuffled indices are saved as an extra variable in the grid metrics file
+    so that the same shuffling can be applied to the time dependent variable arrays when PyLag
+    is used to perform a particle tracking simulation. To make the operation reproducible, a
+    fixed seed is used for the PRNG. The seed can be specified using the optional argument
+    `prng`.
+
+    If `surface_only` is set to `True`, only 2D surface grid data is extracted and saved.
+    Currently, it is assumed the 0 index corresponds to the ocean's surface.
+
+    Certain operations can be computationally expensive on large grids, and the option to
+    use threading to speed things up exists. The number of threads to be set via the
+    `num_threads` option.
 
     Parameters
     ----------
@@ -331,6 +351,9 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     num_threads : int, optional
         The number of threads to use when using threading.
 
+    prng_seed : int, optional
+        Seed for the pseudo random number generator.
+
     grid_metrics_file_name : str, optional
         The name of the grid metrics file that will be created. Optional,
         default : `grid_metrics.nc`.
@@ -341,6 +364,9 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     grid metrics file generated can be reused by all future simulations.
 
     """
+    # Seed the PRNG to make indexing permutations reproducible
+    np.random.seed(prng_seed)
+
     if mask_var_name is None and reference_var_name is None:
         raise ValueError('Either the name of the mask variable or the name of a reference '\
                          'masked variable must be given in order to generate the land sea mask '\
@@ -397,6 +423,26 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
         if len(ref_var.shape) != 4:
             raise ValueError('Reference variable is not 4D ([t, z, y, x]).')
 
+    # Create the Triangulation
+    print('\nCreating the triangulation ', end='... ')
+    node_indices = np.arange(n_nodes, dtype=DTYPE_INT)
+
+    # Permute arrays
+    np.random.shuffle(node_indices)
+    lon_nodes = lon_nodes[node_indices]
+    lat_nodes = lat_nodes[node_indices]
+
+    # Create the triangulation
+    tri = stripy.sTriangulation(lons=np.radians(lon_nodes), lats=np.radians(lat_nodes), permute=False)
+
+    # Save simplices
+    #   - Flip to reverse ordering, as expected by PyLag
+    nv = np.asarray(np.flip(tri.simplices.copy(), axis=1), dtype=DTYPE_INT)
+
+    # Neighbour array
+    nbe = np.asarray(tri.neighbour_simplices(), dtype=DTYPE_INT)
+    print('done')
+
     # Save bathymetry
     if surface_only is False:
         print('\nGenerating the bathymetry:')
@@ -412,7 +458,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
             bathy_ref_var = ref_var[0, :, :, :]  # Take first time point.
             bathy_ref_var = bathy_ref_var.reshape(n_levels, np.prod(bathy_ref_var.shape[1:]), order='C')
 
-            bathy = np.empty((bathy_ref_var.shape[1]), dtype=float)
+            bathy = np.empty((bathy_ref_var.shape[1]), dtype=DTYPE_FLOAT)
             for i in range(bathy.shape[0]):
                 bathy_ref_var_tmp = bathy_ref_var[:, i]
                 if np.ma.count(bathy_ref_var_tmp) != 0:
@@ -427,6 +473,9 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
                            'long_name': 'depth, measured down from the free surface',
                            'axis': 'Z',
                            'positive': 'down'}
+
+        # Permute the bathymetry array
+        bathy = bathy[node_indices]
 
     # Save mask
     print('\nGenerating the land sea mask at element nodes:')
@@ -459,19 +508,12 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     land_sea_mask_nodes = np.asarray(land_sea_mask_nodes.reshape(np.prod(land_sea_mask_nodes.shape), order='C'),
                                      dtype=DTYPE_INT)
 
-    # Create the Triangulation
-    print('\nCreating the triangulation ', end='... ')
-    tri = Delaunay(points)
-    print('done')
-
-    # Save simplices
-    #   - Flip to reverse ordering, as expected by PyLag
-    nv = np.asarray(np.flip(tri.simplices.copy(), axis=1), dtype=DTYPE_INT)
+    # Permute the land sea mask indices
+    land_sea_mask_nodes = land_sea_mask_nodes[node_indices]
 
     # Save neighbours
     #   - Sort to ensure match with nv
     print('\nSorting the adjacency array ', end='... ')
-    nbe = np.asarray(tri.neighbors, dtype=DTYPE_INT)
     sort_adjacency_array(nv, nbe)
     print('done')
 
@@ -480,10 +522,9 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
 
     # Save lons and lats at element centres
     print('\nCalculating lons and lats at element centres ', end='... ')
-    lon_elements = np.empty(n_elems, dtype=DTYPE_FLOAT)
-    lat_elements = np.empty(n_elems, dtype=DTYPE_FLOAT)
-    compute_element_centre_means(nv, lon_nodes, lon_elements)
-    compute_element_centre_means(nv, lat_nodes, lat_elements)
+    xc, yc = tri.face_midpoints()
+    lon_elements = np.degrees(xc)
+    lat_elements = np.degrees(yc)
     print('done')
 
     # Generate the land-sea mask at elements
@@ -492,7 +533,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     compute_land_sea_element_mask(nv, land_sea_mask_nodes, land_sea_mask_elements)
     print('done')
 
-    # Transpose nv and nbe arrays to given the the dimension ordering expected by PyLag
+    # Transpose nv and nbe arrays to give the dimension ordering expected by PyLag
     nv = nv.T
     nbe = nbe.T
 
@@ -542,16 +583,16 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
     gm_file_creator.create_dimension('element', n_elems)
 
     # Add longitude at nodes
-    gm_file_creator.create_variable('longitude', lon_nodes, ('node',), float, attrs=lon_attrs)
+    gm_file_creator.create_variable('longitude', lon_nodes, ('node',), DTYPE_FLOAT, attrs=lon_attrs)
 
     # Add longitude at element centres
-    gm_file_creator.create_variable('longitude_c', lon_elements, ('element',), float, attrs=lon_attrs)
+    gm_file_creator.create_variable('longitude_c', lon_elements, ('element',), DTYPE_FLOAT, attrs=lon_attrs)
 
     # Add latitude at nodes
-    gm_file_creator.create_variable('latitude', lat_nodes, ('node',), float, attrs=lat_attrs)
+    gm_file_creator.create_variable('latitude', lat_nodes, ('node',), DTYPE_FLOAT, attrs=lat_attrs)
 
     # Add latitude at element centres
-    gm_file_creator.create_variable('latitude_c', lat_elements, ('element',), float, attrs=lat_attrs)
+    gm_file_creator.create_variable('latitude_c', lat_elements, ('element',), DTYPE_FLOAT, attrs=lat_attrs)
 
     # Vars for 3D runs
     if surface_only is False:
@@ -559,21 +600,28 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude', lat_
         gm_file_creator.create_dimension('depth', n_levels)
 
         # Depth
-        gm_file_creator.create_variable('depth', depth, ('depth',), float, attrs=depth_attrs)
+        gm_file_creator.create_variable('depth', depth, ('depth',), DTYPE_FLOAT, attrs=depth_attrs)
 
         # Bathymetry
-        gm_file_creator.create_variable('h', bathy, ('node',), float, attrs=bathy_attrs)
+        gm_file_creator.create_variable('h', bathy, ('node',), DTYPE_FLOAT, attrs=bathy_attrs)
+
+    # Add node index map
+    gm_file_creator.create_variable('permutation', node_indices, ('node',), DTYPE_INT,
+                                    attrs={'long_name': 'node permutation'})
 
     # Add simplices
-    gm_file_creator.create_variable('nv', nv, ('three', 'element',), int,
+    gm_file_creator.create_variable('nv', nv, ('three', 'element',), DTYPE_INT,
                                     attrs={'long_name': 'nodes surrounding each element'})
 
     # Add neighbours
-    gm_file_creator.create_variable('nbe', nbe, ('three', 'element',), int,
+    gm_file_creator.create_variable('nbe', nbe, ('three', 'element',), DTYPE_INT,
                                     attrs={'long_name': 'elements surrounding each element'})
 
+    # Add land sea mask - elements
+    gm_file_creator.create_variable('mask', land_sea_mask_elements, ('element',), DTYPE_INT, attrs=mask_attrs)
+
     # Add land sea mask
-    gm_file_creator.create_variable('mask', land_sea_mask_elements, ('element',), int, attrs=mask_attrs)
+    gm_file_creator.create_variable('mask_nodes', land_sea_mask_nodes, ('node',), DTYPE_INT, attrs=mask_attrs)
 
     # Close input dataset
     input_dataset.close()
@@ -922,8 +970,8 @@ def create_roms_grid_metrics_file(file_name,
                 for element in land_elements:
                     nbe[np.asarray(nbe == element).nonzero()] = -1
 
-        # Reshape the original array and return
-        nbes[grid_name] = np.asarray(nbe).reshape(nbe_shp)
+            # Reshape the original array and return
+            nbes[grid_name] = np.asarray(nbe).reshape(nbe_shp)
         print('done')
 
     # Vertical grid vars
@@ -1001,10 +1049,11 @@ def create_roms_grid_metrics_file(file_name,
 
     for key in vertical_grid_var_names.keys():
         var = vertical_grid_vars[key]
+        var_data = np.asarray(var[:])
         attrs = vertical_grid_var_attrs[key]
-        gm_file_creator.create_variable(key, var[:], var.dimensions, float, attrs=attrs)
+        gm_file_creator.create_variable(key, var_data, var.dimensions, float, attrs=attrs)
 
-    gm_file_creator.create_variable('vtransform', vtransform, (), float,
+    gm_file_creator.create_variable('vtransform', np.asarray(vtransform, dtype=float), (), float,
                                     attrs={'long_name': 'vertical terrain following transformation equation'})
 
     # Close input dataset

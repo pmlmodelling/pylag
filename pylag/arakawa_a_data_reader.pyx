@@ -88,7 +88,10 @@ cdef class ArakawaADataReader(DataReader):
     
     # Element adjacency
     cdef DTYPE_INT_t[:,:] _nbe
-    
+
+    # Node permutation
+    cdef DTYPE_INT_t[:] _permutation
+
     # Minimum nodal x/y values
     cdef DTYPE_FLOAT_t _xmin
     cdef DTYPE_FLOAT_t _ymin
@@ -1137,6 +1140,9 @@ cdef class ArakawaADataReader(DataReader):
         self._nv = self.mediator.get_grid_variable('nv', (3, self._n_elems), DTYPE_INT)
         self._nbe = self.mediator.get_grid_variable('nbe', (3, self._n_elems), DTYPE_INT)
 
+        # Node permutation
+        self._permutation = self.mediator.get_grid_variable('permutation', (self._n_nodes), DTYPE_INT)
+
         # Raw grid x/y or lat/lon coordinates
         coordinate_system = self.config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system").strip().lower()
 
@@ -1387,7 +1393,7 @@ cdef class ArakawaADataReader(DataReader):
             # Shift axes to give [x, y]
             var = np.moveaxis(var, lon_index, 0)
 
-            return var.reshape(np.prod(var.shape), order='C')[:]
+            return var.reshape(np.prod(var.shape), order='C')[self._permutation]
 
         elif n_dimensions == 3:
             depth_index = dimension_indices['depth']
@@ -1405,7 +1411,7 @@ cdef class ArakawaADataReader(DataReader):
 
             var = np.moveaxis(var, lon_index, 1)
 
-            return var.reshape(var.shape[0], np.prod(var.shape[1:]), order='C')[:]
+            return var.reshape(var.shape[0], np.prod(var.shape[1:]), order='C')[:, self._permutation]
         else:
             raise ValueError('Unsupported number of dimensions {}.'.format(n_dimensions))
 
