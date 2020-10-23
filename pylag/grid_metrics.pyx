@@ -279,35 +279,32 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
                                        depth_var_name='depth', surface_only=False, mask_var_name=None,
                                        reference_var_name=None, bathymetry_var_name=None, num_threads=1,
                                        prng_seed=10, grid_metrics_file_name='./grid_metrics.nc'):
-    """Create a Arakawa A-grid metrics file
+    """ Create a Arakawa A-grid metrics file
 
     This function creates a grid metrics file for data defined on a regular rectilinear
-    Arakawa A-grid. The function is intended to work with regularly gridded datasets.
-    The approach taken is to reinterpret the regular grid as a single, unstructured
-    grid which can be understood by PyLag.
+    Arakawa A-grid. The approach taken is to reinterpret the regular grid as a single,
+    unstructured grid which can be understood by PyLag.
 
-    We use stripy to create spherical triangulation on the surface of the Earth. This
-    may be a full global triangulation or a regional triangulation depending on the grid.
-    In the version tested (stripy 2.02), stripy requires that the first three
+    We use stripy to create a spherical triangulation on the surface of the Earth. This
+    may be a full global triangulation or a regional triangulation, depending on the
+    input grid. In the version tested (stripy 2.02), stripy requires that the first three
     lat/lon points don't lie on a Great Circle. As this will typically be the case with
-    regularly gridded data, we must permute the lat and lon arrays. Stripy takes an argument
-    `permute` which does this for us. However, it doesn't provide a straightforward way of
-    obtaining the mapping which was used to permute the data. This is required, since we
-    must permute the time dependent variables in the same way so that they can be consistently
-    mapped onto the triangular mesh by PyLag. For this reason, we use NumPy's random module
-    to shuffle array indices. These shuffled indices are then used to permute all data arrays.
-    Furthermore, the shuffled indices are saved as an extra variable in the grid metrics file
+    regularly gridded data, we must permute the lat and lon arrays. To achieve this we
+    use NumPy to shuffle array indices. These shuffled indices are used to permute data arrays.
+    The shuffled indices are also saved as an extra variable in the grid metrics file
     so that the same shuffling can be applied to the time dependent variable arrays when PyLag
-    is used to perform a particle tracking simulation. To make the operation reproducible, a
-    fixed seed is used for the PRNG. The seed can be specified using the optional argument
-    `prng`.
+    is running. To make the operation reproducible, a fixed seed is used for the PRNG. The seed
+    can be specified using the optional argument `prng`.
 
     If `surface_only` is set to `True`, only 2D surface grid data is extracted and saved.
     Currently, it is assumed the 0 index corresponds to the ocean's surface.
 
-    Certain operations can be computationally expensive on large grids, and the option to
-    use threading to speed things up exists. The number of threads to be set via the
-    `num_threads` option.
+    Certain operations can be computationally expensive on large grids. Threading can be
+    used to achieve some speed ups. The number of threads is set via the`num_threads`
+    option. However, this will not help with the determination of elements neighbours,
+    which is computed internally by stripy. In experiments with large grids (including a
+    global 1/12 deg. grid) this operation took several hours to complete. The problem is
+    observed to grow with the square of the number of elements.
 
     Parameters
     ----------
