@@ -1244,7 +1244,8 @@ cpdef identify_neighbour_simplices(stri, iterations=10, verbose=True):
         Array of unsorted neighbour indices with shape (n_simplices, 3).
     """
     # Number of simplices
-    n_simplices = stri.simplices.shape[0]
+    simplices = stri.simplices
+    n_simplices = simplices.shape[0]
 
     # Array of k values, where each entry corresponds to the number of nearest
     # neighbours that will be returned through calls to cKDTree.query(). The final
@@ -1253,7 +1254,7 @@ cpdef identify_neighbour_simplices(stri, iterations=10, verbose=True):
     k_values.append(n_simplices)
 
     # Compute element centroids in (x, y, z)
-    mids = stri.points[stri.simplices].mean(axis=1)
+    mids = stri.points[simplices].mean(axis=1)
     mids /= np.linalg.norm(mids, axis=1).reshape(-1,1)
 
     # Form KDTree
@@ -1266,7 +1267,7 @@ cpdef identify_neighbour_simplices(stri, iterations=10, verbose=True):
 
     # Neighbour array, initialised to -1. This ensures simplices lying along an
     # open boundary are handled correctly.
-    nbe = -1 * np.ones_like(stri.simplices)
+    nbe = -1 * np.ones_like(simplices)
 
     # Iteratively find all neighbours for all elements.
     for k in k_values:
@@ -1287,7 +1288,7 @@ cpdef identify_neighbour_simplices(stri, iterations=10, verbose=True):
             counter = 0
             for j in range(k):
                 neighbour_idx = nbe_tree[i, j]
-                if np.in1d(stri.simplices[simplex_idx, :], stri.simplices[neighbour_idx, :]).sum() == 2:
+                if np.in1d(simplices[simplex_idx, :], simplices[neighbour_idx, :]).sum() == 2:
                     nbe[simplex_idx, counter] = neighbour_idx
                     counter += 1
 
