@@ -12,7 +12,7 @@ cimport numpy as np
 
 from joblib import Parallel, delayed
 import numpy as np
-from scipy.spatial import Delaunay
+from scipy.spatial import Delaunay, cKDTree
 import stripy as stripy
 from collections import OrderedDict
 from netCDF4 import Dataset
@@ -277,8 +277,8 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_
 
 def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_var_name='latitude',
                                        depth_var_name='depth', surface_only=False, mask_var_name=None,
-                                       reference_var_name=None, bathymetry_var_name=None, num_threads=1,
-                                       prng_seed=10, grid_metrics_file_name='./grid_metrics.nc'):
+                                       reference_var_name=None, bathymetry_var_name=None, stripy_nbe=False,
+                                       num_threads=1, prng_seed=10, grid_metrics_file_name='./grid_metrics.nc'):
     """ Create a Arakawa A-grid metrics file
 
     This function creates a grid metrics file for data defined on a regular rectilinear
@@ -344,6 +344,12 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
         of `reference_var_name`. If the output files contain a time varying mask due to
         changes in sea surface elevation, the bathymetry should be provided. Optional,
         default : True.
+
+    stripy_nbe : bool, optional
+        Use `stripy` to compute neighbour simplices if True. If False, create a K-D Tree
+        of nearest neighbours and use it to compute neighbour simplices. The former method
+        is generally faster for smaller meshes, but suffers from scaling problems with
+        larger meshes. Optional, default : False.
 
     num_threads : int, optional
         The number of threads to use when using threading.
@@ -431,13 +437,18 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
 
     # Create the triangulation
     tri = stripy.sTriangulation(lons=np.radians(lon_nodes), lats=np.radians(lat_nodes), permute=False)
+    print('done')
 
     # Save simplices
     #   - Flip to reverse ordering, as expected by PyLag
     nv = np.asarray(np.flip(tri.simplices.copy(), axis=1), dtype=DTYPE_INT)
 
     # Neighbour array
-    nbe = np.asarray(tri.neighbour_simplices(), dtype=DTYPE_INT)
+    print('\nIdentifying neighbour simplices ...')
+    if stripy_nbe:
+        nbe = np.asarray(tri.neighbour_simplices(), dtype=DTYPE_INT)
+    else:
+        nbe = identify_neighbour_simplices(tri)
     print('done')
 
     # Save bathymetry
@@ -1199,6 +1210,99 @@ def _get_variable(dataset, var_name):
 
     raise RuntimeError("Variable `{}` not found in the supplied dataset")
 
+
+cpdef identify_neighbour_simplices(stri, iterations=10, verbose=True):
+    """ Identify neighbour simplices for all elements in the triangulation
+
+    `stripy.spherical.sTriangulation` includes its own method for identifying
+    neighbour simplices. However, while it is fast for small meshes, execution
+    time scales with the square of the mesh node number, meaning it becomes
+    prohibitively slow to use with large meshes.
+
+    Here we use a K-D Tree to identify nearest neighbours and ultimately the
+    desired adjoining neighbours for each element in the element array. It has
+    better scaling properties and is the preferred method for large grids.
+
+    Parameters
+    ----------
+    stri : stripy.spherical.sTriangulation
+        Triangulation object.
+
+    iterations : int, optional
+        Number of iterations to use when searching for nearest neighbours. The
+        number of neighbours picked out on each iteration increases in powers of
+        four. On the final iteration, the full element set is checked.  If the
+        search is taking a long time, try increasing or decreasing this number
+        with `verbose = True`, which will provide progress updates.
+
+    verbose : bool
+        Print search progress to screen. Optional, default : True.
+
+    Returns
+    -------
+    nbe : ndarray
+        Array of unsorted neighbour indices with shape (n_simplices, 3).
+    """
+    # Number of simplices
+    n_simplices = stri.simplices.shape[0]
+
+    # Array of k values, where each entry corresponds to the number of nearest
+    # neighbours that will be returned through calls to cKDTree.query(). The final
+    # entry is the full simplex array which ensures a result is found.
+    k_values = [4**n for n in range(1, iterations) if 4**n < n_simplices]
+    k_values.append(n_simplices)
+
+    # Compute element centroids in (x, y, z)
+    mids = stri.points[stri.simplices].mean(axis=1)
+    mids /= np.linalg.norm(mids, axis=1).reshape(-1,1)
+
+    # Form KDTree
+    tree = cKDTree(mids)
+
+    # Flag identifying whether all neighbours have been found. One entry per simplex.
+    # Initialised to zero which indicates the simplex's neighbours have not yet been
+    # found.
+    found = np.zeros(n_simplices)
+
+    # Neighbour array, initialised to -1. This ensures simplices lying along an
+    # open boundary are handled correctly.
+    nbe = -1 * np.ones_like(stri.simplices)
+
+    # Iteratively find all neighbours for all elements.
+    for k in k_values:
+        if verbose:
+            print('Searching for adjoining neighbours with k = {}'.format(k))
+
+        simplex_indices = np.asarray(found==0).nonzero()[0]
+
+        mids_subset = mids[simplex_indices]
+
+        _, nbe_tree = tree.query(mids_subset, k=k, distance_upper_bound=2.0)
+
+        n_simplices_subset = simplex_indices.shape[0]
+        for i in range(n_simplices_subset):
+
+            simplex_idx = simplex_indices[i]
+
+            counter = 0
+            for j in range(k):
+                neighbour_idx = nbe_tree[i, j]
+                if np.in1d(stri.simplices[simplex_idx, :], stri.simplices[neighbour_idx, :]).sum() == 2:
+                    nbe[simplex_idx, counter] = neighbour_idx
+                    counter += 1
+
+                # Check if all neighbours were found
+                if counter == 3:
+                    found[simplex_idx] = 1
+                    break
+
+        if verbose:
+            print('Found {} %'.format(100*np.count_nonzero(found)/n_simplices))
+
+        if np.count_nonzero(found) == n_simplices:
+            return nbe
+
+    return nbe
 
 cpdef sort_adjacency_array(DTYPE_INT_t [:, :] nv, DTYPE_INT_t [:, :] nbe):
     """Sort the adjacency array
