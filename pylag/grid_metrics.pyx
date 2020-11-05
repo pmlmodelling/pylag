@@ -392,8 +392,21 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
 
     # Read in coordinate variables. Use common names to try and ensure a hit.
     print('Reading the grid:')
-    lon_var, lon_attrs = _get_variable(input_dataset, lon_var_name)
-    lat_var, lat_attrs = _get_variable(input_dataset, lat_var_name)
+    lon_var, lon_attrs_orig = _get_variable(input_dataset, lon_var_name)
+    lat_var, lat_attrs_orig = _get_variable(input_dataset, lat_var_name)
+
+    # Filter attributes so that we include just the main ones
+    lon_attrs = {}
+    lat_attrs = {}
+    for attr in ['units', 'standard_name', 'long_name']:
+        try:
+            lon_attrs[attr] = lon_attrs_orig[attr]
+        except KeyError:
+            pass
+        try:
+            lat_attrs[attr] = lat_attrs_orig[attr]
+        except KeyError:
+            pass
 
     # Create points array
     lon2d, lat2d = np.meshgrid(lon_var[:], lat_var[:], indexing='ij')
