@@ -408,6 +408,21 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
         except KeyError:
             pass
 
+    # Trim the poles if they have been included (we don't want duplicate points). Assumes
+    # the poles are the first or last points and that they are given in geographic coordinates.
+    lat_alpha = float(lat_var[0])
+    lat_omega = float(lat_var[-1])
+    trim_first_latitude = 0
+    trim_last_latitude = 0
+    if lat_alpha == float(-90.0) or lat_alpha == float(90.0):
+        print('Trimming first latitude which sits over a pole ({} deg.)'.format(lat_alpha))
+        lat_var = lat_var[1:]
+        trim_first_latitude = 1
+    if lat_omega == float(-90.0) or lat_omega == float(90.0):
+        print('Trimming last latitude which sits over a pole ({} deg.)'.format(lat_omega))
+        lat_var = lat_var[:-1]
+        trim_last_latitude = 1
+
     # Create points array
     lon2d, lat2d = np.meshgrid(lon_var[:], lat_var[:], indexing='ij')
     points = np.array([lon2d.flatten(order='C'), lat2d.flatten(order='C')], dtype=DTYPE_FLOAT).T
@@ -438,6 +453,12 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
 
         if len(ref_var.shape) != 4:
             raise ValueError('Reference variable is not 4D ([t, z, y, x]).')
+
+        # Trim latitudes
+        if trim_first_latitude == 1:
+            ref_var = ref_var[:, :, 1:, :]
+        if trim_last_latitude == 1:
+            ref_var = ref_var[:, :, :-1, :]
 
     # Create the Triangulation
     print('\nCreating the triangulation ', end='... ')
@@ -470,13 +491,24 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
         if bathymetry_var_name:
             bathy_var, bathy_attrs = _get_variable(input_dataset, bathymetry_var_name)
             bathy = sort_axes(bathy_var).squeeze()
-            if len(bathy.shape) == 2:
-                bathy = bathy.reshape(np.prod(bathy.shape), order='C')
-            else:
+
+            if len(bathy.shape) != 2:
                 raise RuntimeError('Bathymetry array is not 2D.')
+
+            # Trim latitudes
+            if trim_first_latitude == 1:
+                bathy = bathy[1:, :]
+            if trim_last_latitude == 1:
+                bathy = bathy[:-1, :]
+
+            # Reshape array
+            bathy = bathy.reshape(np.prod(bathy.shape), order='C')
+
         else:
-            # Read the depth mask and reshape giving (n_levels, n_nodes)
-            bathy_ref_var = ref_var[0, :, :, :]  # Take first time point.
+            # Take first time point
+            bathy_ref_var = ref_var[0, :, :, :]
+
+            # Reshape giving (n_levels, n_nodes)
             bathy_ref_var = bathy_ref_var.reshape(n_levels, np.prod(bathy_ref_var.shape[1:]), order='C')
 
             bathy = np.empty((bathy_ref_var.shape[1]), dtype=DTYPE_FLOAT)
@@ -514,6 +546,12 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
         # Use surface mask only if shape is 3D
         if len(land_sea_mask_nodes.shape) == 3:
             land_sea_mask_nodes = land_sea_mask_nodes[0, :, :]
+
+        # Trim latitudes
+        if trim_first_latitude == 1:
+            land_sea_mask_nodes = land_sea_mask_nodes[1:, :]
+        if trim_last_latitude == 1:
+            land_sea_mask_nodes = land_sea_mask_nodes[:-1, :]
 
         # Fix up long name to reflect flipping of mask
         mask_attrs['long_name'] = "Land-sea mask: sea = 0 ; land = 1"
@@ -614,6 +652,11 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
 
     # Add latitude at element centres
     gm_file_creator.create_variable('latitude_c', lat_elements, ('element',), DTYPE_FLOAT, attrs=lat_attrs)
+
+    # Flag signifying whether the first latitude point should be trimmed
+    trim_attrs = {'long_name': '0 - no, 1 - yes'}
+    gm_file_creator.create_variable('trim_first_latitude', np.asarray(trim_first_latitude, dtype=DTYPE_INT), (), DTYPE_INT, attrs=trim_attrs)
+    gm_file_creator.create_variable('trim_last_latitude', np.asarray(trim_last_latitude, dtype=DTYPE_INT), (),  DTYPE_INT, attrs=trim_attrs)
 
     # Vars for 3D runs
     if surface_only is False:

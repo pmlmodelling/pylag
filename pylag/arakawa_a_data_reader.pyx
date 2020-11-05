@@ -82,7 +82,10 @@ cdef class ArakawaADataReader(DataReader):
 
     # Grid dimensions
     cdef DTYPE_INT_t _n_longitude, _n_latitude, _n_depth, _n_elems, _n_nodes
-    
+
+    # Flags signifying whether latitude dimension should be clipped
+    cdef DTYPE_INT_t _trim_first_latitude, _trim_last_latitude
+
     # Element connectivity
     cdef DTYPE_INT_t[:,:] _nv
     
@@ -1140,6 +1143,11 @@ cdef class ArakawaADataReader(DataReader):
         else:
             self._n_depth = 1
 
+        # Read in flags signifying whether time dependent variable arrays should be trimmed
+        # in order to eliminate gridded data at -90 deg. or 90 deg. N.
+        self._trim_first_latitude = self.mediator.get_grid_variable('trim_first_latitude', (1), DTYPE_INT)
+        self._trim_last_latitude = self.mediator.get_grid_variable('trim_last_latitude', (1), DTYPE_INT)
+
         # Grid connectivity/adjacency
         self._nv = self.mediator.get_grid_variable('nv', (3, self._n_elems), DTYPE_INT)
         self._nbe = self.mediator.get_grid_variable('nbe', (3, self._n_elems), DTYPE_INT)
@@ -1375,6 +1383,8 @@ cdef class ArakawaADataReader(DataReader):
 
         3D - [depth, lat, lon] in any order
 
+        Latitude trimming is applied as required.
+
         Parameters
         ----------
         var : NDArray
@@ -1397,6 +1407,12 @@ cdef class ArakawaADataReader(DataReader):
             # Shift axes to give [x, y]
             var = np.moveaxis(var, lon_index, 0)
 
+            # Trim latitudes
+            if self._trim_first_latitude == 1:
+                var = var[:, 1:]
+            if self._trim_last_latitude == 1:
+                var = var[:, :-1]
+
             return var.reshape(np.prod(var.shape), order='C')[self._permutation]
 
         elif n_dimensions == 3:
@@ -1414,6 +1430,12 @@ cdef class ArakawaADataReader(DataReader):
                 lon_index += 1
 
             var = np.moveaxis(var, lon_index, 1)
+
+            # Trim latitudes
+            if self._trim_first_latitude == 1:
+                var = var[:, :, 1:]
+            if self._trim_last_latitude == 1:
+                var = var[:, :, :-1]
 
             return var.reshape(var.shape[0], np.prod(var.shape[1:]), order='C')[:, self._permutation]
         else:
