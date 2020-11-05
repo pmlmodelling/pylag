@@ -1132,9 +1132,13 @@ cdef class ArakawaADataReader(DataReader):
         # Read in the grid's dimensions
         self._n_longitude = self.mediator.get_dimension_variable('longitude')
         self._n_latitude = self.mediator.get_dimension_variable('latitude')
-        self._n_depth = self.mediator.get_dimension_variable('depth')
         self._n_nodes = self.mediator.get_dimension_variable('node')
         self._n_elems = self.mediator.get_dimension_variable('element')
+
+        if not self._surface_only:
+            self._n_depth = self.mediator.get_dimension_variable('depth')
+        else:
+            self._n_depth = 1
 
         # Grid connectivity/adjacency
         self._nv = self.mediator.get_grid_variable('nv', (3, self._n_elems), DTYPE_INT)
