@@ -1255,7 +1255,8 @@ cdef class UnstructuredGeographicGrid(Grid):
         """
         # Intermediate arrays/variables
         cdef vector[DTYPE_FLOAT_t] phi = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-        cdef DTYPE_FLOAT_t phi_test
+        cdef vector[DTYPE_FLOAT_t] s = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef DTYPE_FLOAT_t s_test
 
         cdef bint host_found
 
@@ -1274,12 +1275,12 @@ cdef class UnstructuredGeographicGrid(Grid):
         second_to_last_guess = -1
 
         while True:
-            # Barycentric coordinates
-            phi = self.get_phi(particle.get_x1(), particle.get_x2(), guess)
+            # Tetrahedral coordinates
+            s = self.get_tetrahedral_coords(particle.get_x1(), particle.get_x2(), guess)
 
             # Check to see if the particle is in the current element
-            phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
-            if phi_test >= 0.0:
+            s_test = float_min(float_min(s[0], s[1]), s[2])
+            if s_test >= 0.0:
                 host_found = True
 
             # If the particle has walked into an element with two land
@@ -1294,6 +1295,8 @@ cdef class UnstructuredGeographicGrid(Grid):
                     # Normal element
                     particle.set_host_horizontal_elem(self.name, guess)
 
+                    phi = self.get_normalised_tetrahedral_coords(s)
+
                     particle.set_phi(self.name, phi)
 
                     return IN_DOMAIN
@@ -1304,9 +1307,9 @@ cdef class UnstructuredGeographicGrid(Grid):
             # If not, use phi to select the next element to be searched
             second_to_last_guess = last_guess
             last_guess = guess
-            if phi[0] == phi_test:
+            if s[0] == s_test:
                 guess = self.nbe[0,last_guess]
-            elif phi[1] == phi_test:
+            elif s[1] == s_test:
                 guess = self.nbe[1,last_guess]
             else:
                 guess = self.nbe[2,last_guess]
@@ -1497,7 +1500,8 @@ cdef class UnstructuredGeographicGrid(Grid):
         """
         # Intermediate arrays/variables
         cdef vector[DTYPE_FLOAT_t] phi = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-        cdef DTYPE_FLOAT_t phi_test
+        cdef vector[DTYPE_FLOAT_t] s = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef DTYPE_FLOAT_t s_test
 
         cdef bint host_found
 
@@ -1509,11 +1513,11 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         for guess in xrange(self.n_elems):
             # Barycentric coordinates
-            phi = self.get_phi(particle.get_x1(), particle.get_x2(), guess)
+            s = self.get_tetrahedral_coords(particle.get_x1(), particle.get_x2(), guess)
 
             # Check to see if the particle is in the current element
-            phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
-            if phi_test >= 0.0:
+            s_test = float_min(float_min(s[0], s[1]), s[2])
+            if s_test >= 0.0:
                 host_found = True
 
             if host_found is True:
@@ -1526,6 +1530,8 @@ cdef class UnstructuredGeographicGrid(Grid):
 
                 if n_host_land_boundaries < 2:
                     particle.set_host_horizontal_elem(self.name, guess)
+
+                    phi = self.get_normalised_tetrahedral_coords(s)
 
                     particle.set_phi(self.name, phi)
 
@@ -1593,7 +1599,51 @@ cdef class UnstructuredGeographicGrid(Grid):
         particle.set_phi(self.name, phi)
 
     cpdef vector[DTYPE_FLOAT_t] get_phi(self, DTYPE_FLOAT_t x1, DTYPE_FLOAT_t x2, DTYPE_INT_t host):
-        """ Get spherical barycentric coordinates
+        """ Get normalised tetrahedral coordinates given a point's position and the host element
+
+        Parameters
+        ----------
+
+
+        Returns
+        -------
+        phi : vector[FLOAT]
+            Three vector giving a point's normalised tetrahedral coordinates within a spherical triangle.
+        """
+        cdef vector[DTYPE_FLOAT_t] phi = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef vector[DTYPE_FLOAT_t] s = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+
+        s = self.get_tetrahedral_coords(x1, x2, host)
+        phi = self.get_normalised_tetrahedral_coords(s)
+
+        return phi
+
+    cpdef vector[DTYPE_FLOAT_t] get_normalised_tetrahedral_coords(self, vector[DTYPE_FLOAT_t] s):
+        """ Get normalised tetrahedral coordinates given the tetrahedral coordinates
+
+        Parameters
+        ----------
+        s : vector[FLOAT]
+            Three vector giving a point's tetrahedral coordinates within a spherical triangle.
+
+        Returns
+        -------
+        phi : vector[FLOAT]
+            Three vector giving a point's normalised tetrahedral coordinates within a spherical triangle.
+        """
+        cdef vector[DTYPE_FLOAT_t] phi = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef DTYPE_FLOAT_t s_sum
+
+        s_sum = s[0] + s[1] + s[2]
+
+        phi[0] = s[0] / s_sum
+        phi[1] = s[1] / s_sum
+        phi[2] = s[2] / s_sum
+
+        return phi
+
+    cpdef vector[DTYPE_FLOAT_t] get_tetrahedral_coords(self, DTYPE_FLOAT_t x1, DTYPE_FLOAT_t x2, DTYPE_INT_t host):
+        """ Get tetrahedral coordinates given a point's position and the host element
 
         The method uses the approach described by Lawson (1984).
 
@@ -1608,12 +1658,10 @@ cdef class UnstructuredGeographicGrid(Grid):
         host : int
             Host element.
 
-        phi : vector[float]
-            Vector container in which barycentric coords will be saved.
-
         Returns
         -------
-        N/A
+        s : vector[float]
+            Vector container in which the tetrahedral coordinates are saved.
 
         References
         ----------
@@ -1628,17 +1676,13 @@ cdef class UnstructuredGeographicGrid(Grid):
         cdef vector[DTYPE_FLOAT_t] x_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
         cdef vector[DTYPE_FLOAT_t] y_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
 
-        cdef vector[DTYPE_FLOAT_t] phi = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef vector[DTYPE_FLOAT_t] s = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
 
         # x1 and x2 in radians
         cdef DTYPE_FLOAT_t x1_rad, x2_rad
 
         # Element vertex coordinates in cartesian coordinates
         cdef vector[DTYPE_FLOAT_t] p, p0, p1, p2
-
-        # Tetrahedral coordinates
-        cdef DTYPE_FLOAT_t s0, s1, s2
-        cdef DTYPE_FLOAT_t s_sum
 
         # Extract element vertices
         for i in xrange(N_VERTICES):
@@ -1656,18 +1700,12 @@ cdef class UnstructuredGeographicGrid(Grid):
         p1 = geographic_to_cartesian_coords(x_tri[1], y_tri[1], 1.0)
         p2 = geographic_to_cartesian_coords(x_tri[2], y_tri[2], 1.0)
 
-        # Compute tetrahedral coordinates
-        s0 = det_third_order(p, p1, p2)
-        s1 = det_third_order(p0, p, p2)
-        s2 = det_third_order(p0, p1, p)
-        s_sum = s0 + s1 + s2
+        # Compute tetrahedral coordinates (NB clockwise point ordering)
+        s[0] = det_third_order(p, p2, p1)
+        s[1] = det_third_order(p2, p, p0)
+        s[2] = det_third_order(p1, p0, p)
 
-        # Compute normalised tetrahedral coordinates
-        phi[0] = s0 / s_sum
-        phi[1] = s1 / s_sum
-        phi[2] = s2 / s_sum
-
-        return phi
+        return s
 
     cdef void get_grad_phi(self, DTYPE_INT_t host,
             vector[DTYPE_FLOAT_t] &dphi_dx,
