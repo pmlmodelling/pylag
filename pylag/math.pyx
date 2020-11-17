@@ -157,7 +157,7 @@ cpdef DTYPE_INT_t great_circle_arc_segments_intersect(const vector[DTYPE_FLOAT_t
 
     Parameters
     ----------
-    x1, x2, x3, x4 : vector[float, float, float]
+    x1, x2, x3, x4 : vector[float, float]
         Position vectors for the end points of the arcs x1x2 and x3x4. Position vectors
         should be given in geographic coordinates converted into radians.
 
@@ -269,7 +269,7 @@ cpdef DTYPE_INT_t intersection_is_within_arc_segment(const vector[DTYPE_FLOAT_t]
     # Compute the difference
     difference = abs(theta_arc - theta_1 - theta_2)
 
-    if difference > EPSILON:
+    if difference > 1.e-6:
         return 0
 
     return 1
@@ -461,8 +461,8 @@ cpdef DTYPE_FLOAT_t haversine(const DTYPE_FLOAT_t &lon1_rad,
 
 
 cpdef vector[DTYPE_FLOAT_t] geographic_to_cartesian_coords(const DTYPE_FLOAT_t &lon_rad,
-                                                          const DTYPE_FLOAT_t &lat_rad,
-                                                          const DTYPE_FLOAT_t &r):
+                                                           const DTYPE_FLOAT_t &lat_rad,
+                                                           const DTYPE_FLOAT_t &r):
     """ Convert geographic to cartesian coordinates
 
     Parameters
