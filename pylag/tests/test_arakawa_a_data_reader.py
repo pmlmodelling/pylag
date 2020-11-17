@@ -83,6 +83,10 @@ class MockArakawaAMediator(Mediator):
                                    mask=mask, dtype=DTYPE_FLOAT)
         ts_t1 = np.ma.copy(ts_t0)
 
+        # Trim latitudes
+        trim_first_latitude = np.array([False])
+        trim_last_latitude = np.array([False])
+
         # Form the unstructured grid
         lon2d, lat2d = np.meshgrid(longitude[:], latitude[:], indexing='ij')
         points = np.array([lon2d.flatten(order='C'), lat2d.flatten(order='C')]).T
@@ -137,7 +141,8 @@ class MockArakawaAMediator(Mediator):
                           'node': n_nodes, 'element': n_elements}
         self._grid_vars = {'nv': nv, 'nbe': nbe, 'longitude': lon_nodes, 'longitude_c': lon_elements,
                            'latitude': lat_nodes, 'latitude_c': lat_elements, 'depth': depth, 'h': h,
-                           'mask': land_sea_mask_elements, 'permutation': permutation}
+                           'mask': land_sea_mask_elements, 'permutation': permutation,
+                           'trim_first_latitude': trim_first_latitude, 'trim_last_latitude': trim_last_latitude}
 
         # Set dimensions
         zos_dimensions = ('time', 'latitude', 'longitude')
