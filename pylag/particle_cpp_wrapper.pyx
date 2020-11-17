@@ -295,37 +295,53 @@ cdef to_string(Particle* particle):
     s : str
         String describing the particle
 
-    TODO
-    ----
-    1) Add back in host elements
-    2) Add back in phis
     """
+    cdef vector[string] grids
+    cdef vector[int] hosts
 
-    s = "Particle properties \n"\
-        "------------------- \n"\
-        "Particle id = {} \n"\
-        "Particle x1 = {} \n"\
-        "Particle x2 = {} \n"\
-        "Particle x3 = {} \n"\
-        "Particle omega interfaces = {} \n"\
-        "Particle omega layers = {} \n"\
-        "Partilce in vertical boundary layer = {} \n"\
-        "Partilce k layer = {} \n"\
-        "Partilce k lower layer = {} \n"\
-        "Partilce k upper layer = {} \n"\
-        "Particle in domain = {} \n"\
-        "Particle is beached = {} \n".format(particle.get_id(),
-                                             particle.get_x1(),
-                                             particle.get_x2(),
-                                             particle.get_x3(),
-                                             particle.get_omega_interfaces(),
-                                             particle.get_omega_layers(),
-                                             particle.get_in_vertical_boundary_layer(),
-                                             particle.get_k_layer(),
-                                             particle.get_k_lower_layer(),
-                                             particle.get_k_upper_layer(),
-                                             particle.get_in_domain(),
-                                             particle.get_is_beached())
+    s_base = "Particle properties \n"\
+             "------------------- \n"\
+             "Particle id = {} \n"\
+             "Particle x1 = {} \n"\
+             "Particle x2 = {} \n"\
+             "Particle x3 = {} \n"\
+             "Particle omega interfaces = {} \n"\
+             "Particle omega layers = {} \n"\
+             "Partilce in vertical boundary layer = {} \n"\
+             "Partilce k layer = {} \n"\
+             "Partilce k lower layer = {} \n"\
+             "Partilce k upper layer = {} \n"\
+             "Particle in domain = {} \n"\
+             "Particle is beached = {} \n".format(particle.get_id(),
+                                                  particle.get_x1(),
+                                                  particle.get_x2(),
+                                                  particle.get_x3(),
+                                                  particle.get_omega_interfaces(),
+                                                  particle.get_omega_layers(),
+                                                  particle.get_in_vertical_boundary_layer(),
+                                                  particle.get_k_layer(),
+                                                  particle.get_k_lower_layer(),
+                                                  particle.get_k_upper_layer(),
+                                                  particle.get_in_domain(),
+                                                  particle.get_is_beached())
+
+    # Get host elements
+    particle.get_all_host_horizontal_elems(grids, hosts)
+    host_elements = {}
+    for grid, host in zip(grids, hosts):
+        host_elements[grid.decode()] = host
+
+    # Add hosts and phis
+    s_hosts = ""
+    s_phis = ""
+    for key, value in host_elements.items():
+        s_hosts += "Host on grid {} = {} \n".format(key, value)
+
+        phis = particle.get_phi(key.encode())
+        for i, phi in enumerate(phis):
+            s_phis += "Phi {} on grid {} = {} \n".format(i, key, phi)
+
+    s = s_base + s_hosts + s_phis
 
     return s
 
