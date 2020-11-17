@@ -72,12 +72,12 @@ If you don't want to use git to access the code, you can always grab a copy by d
 ```bash
 $ source /opt/miniconda/miniconda3/bin/activate
 (base) $ conda config --append channels conda-forge
-(base) $ conda config --append channels underworldcode
+(base) $ conda config --append channels geo_down_under
 (base) $ conda config --append channels JimClark
 (base) $ conda install conda-build conda-verify
 ```
 
-The only new step here is the addition of the underworldcode channel, which is required for the package stripy,  and the installation of conda-build and conda-verify. Next, create a new environment as above:
+The only new step here is the addition of the `geo_down_under` channel, which is required for the package stripy,  and the installation of conda-build and conda-verify. Next, create a new environment as above:
 
 ```bash
 (base) $ conda create -n particles python=3.8
