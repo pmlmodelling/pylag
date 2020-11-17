@@ -151,7 +151,7 @@ class Viewer(object):
         """List all variables stored in the file"""
 
         print('File contains the variables ...')
-        for key, var in self._ds.variables.iteritems():
+        for key, var in self._ds.variables.items():
             try:
                 long_name = var.long_name
             except AttributeError:
