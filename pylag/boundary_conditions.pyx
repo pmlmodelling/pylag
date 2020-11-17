@@ -233,15 +233,19 @@ cdef class RefHorizGeographicBoundaryConditionCalculator(HorizBoundaryConditionC
     """
     cdef DTYPE_INT_t apply(self, DataReader data_reader, Particle *particle_old,
                            Particle *particle_new) except INT_ERR:
-        cdef DTYPE_INT_t flag
+        #cdef DTYPE_INT_t flag
 
         # Move the particle back to its last known valid position
-        particle_new.set_x1(particle_old.get_x1())
-        particle_new.set_x2(particle_old.get_x2())
-        flag = data_reader.find_host(particle_old, particle_new)
+        #particle_new.set_x1(particle_old.get_x1())
+        #particle_new.set_x2(particle_old.get_x2())
+        #flag = data_reader.find_host(particle_old, particle_new)
 
-        if flag == IN_DOMAIN:
-            return flag
+        #if flag == IN_DOMAIN:
+        #    return flag
+
+        # Give default location
+        data_reader.set_default_location(particle_new)
+        return IN_DOMAIN
 
         return BDY_ERROR
 
