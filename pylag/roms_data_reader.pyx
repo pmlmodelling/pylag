@@ -724,7 +724,7 @@ cdef class ROMSDataReader(DataReader):
 
         k_layer = particle.get_k_layer()
         k_lower_layer = particle.get_k_lower_layer()
-        k_upperlayer = particle.get_k_upper_layer()
+        k_upper_layer = particle.get_k_upper_layer()
 
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
