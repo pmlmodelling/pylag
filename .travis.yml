@@ -15,6 +15,7 @@ before_install:
 install:
   - conda install -y conda-build conda-verify
   - conda config --append channels conda-forge
+  - conda config --append geo-down-under
   - conda config --append channels JimClark
 
   # Build the conda recipe for this package
