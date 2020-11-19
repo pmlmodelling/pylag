@@ -272,7 +272,7 @@ class FileReader_test(TestCase):
         self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
 
         # Check file names
-        test.assert_array_equal('test_file_2', self.file_reader.first_data_file_name)
+        test.assert_array_equal('test_file_3', self.file_reader.first_data_file_name)
         test.assert_array_equal('test_file_3', self.file_reader.second_data_file_name)
 
     def test_set_time_arrays_with_start_datetime_equal_to_data_record_start(self):
@@ -335,7 +335,7 @@ class FileReader_test(TestCase):
         self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
 
         # Check time indices
-        test.assert_equal(2, self.file_reader.tidx_first)
+        test.assert_equal(0, self.file_reader.tidx_first)
         test.assert_equal(1, self.file_reader.tidx_second)
 
     def test_set_file_names_when_updating_reading_frames_in_the_first_file(self):

@@ -186,10 +186,12 @@ class FileReader:
         # Ensure files were found in the specified directory.
         if not self.data_file_names:
             raise RuntimeError('No input files found in location {}.'.format(self.data_dir))
+        else:
+            self.n_data_files = len(self.data_file_names)
 
         # Log file names
         logger.info("Found {} input data files in directory "\
-            "`{}'.".format(len(self.data_file_names), self.data_dir))
+            "`{}'.".format(self.n_data_files, self.data_dir))
         logger.info('Input data file names are: ' + ', '.join(self.data_file_names))
         
         # Open grid metrics file for reading
@@ -247,23 +249,13 @@ class FileReader:
         logger.info('Beginning search for the input data file spanning the '\
             'specified simulation start point.')  
 
-        # Determine the time interval between consecutive input time points (e.g., is the data hourly, daily?)
+        # Check for unusable input data
         ds_first = self.dataset_reader.read_dataset(self.data_file_names[0])
         datetimes_first = self.datetime_reader.get_datetime(ds_first)
-        if len(datetimes_first) > 1:
-            self._time_delta = (datetimes_first[1] - datetimes_first[0]).total_seconds()
-        elif len(datetimes_first) == 1:
-            # The first file only contains one time point. Try to read the second from a second file.
-            if len(self.data_file_names) > 1:
-                ds_second = self.dataset_reader.read_dataset(self.data_file_names[1])
-                datetimes_second = self.datetime_reader.get_datetime(ds_second)
-                self._time_delta = (datetimes_second[0] - datetimes_first[0]).total_seconds()
-            else:
-                logger.info('The single input data file found contains just a single time point '\
-                            'which is insufficient to perform a simulation.')
-                raise RuntimeError('Only one time point value found in input dataset')
-        else:
-            raise RuntimeError('Array of input times has zero length')
+        if self.n_data_files == 1 and len(datetimes_first) == 1:
+            logger.info('The single input data file found contains just a single time point '\
+                        'which is insufficient to perform a simulation.')
+            raise RuntimeError('Only one time point value found in input dataset')
 
         self.first_data_file_name = None
         self.second_data_file_name = None
@@ -274,9 +266,12 @@ class FileReader:
             data_start_datetime = self.datetime_reader.get_datetime(ds, time_index=0)
             data_end_datetime = self.datetime_reader.get_datetime(ds, time_index=-1)
 
+            # Compute time delta
+            time_delta = self.compute_time_delta_between_datasets(data_file_name, forward=True)
+
             ds.close()
 
-            if data_start_datetime <= self.sim_start_datetime < data_end_datetime + timedelta(seconds=self._time_delta):
+            if data_start_datetime <= self.sim_start_datetime < data_end_datetime + timedelta(seconds=time_delta):
                 # Set file names depending on time direction
                 if self.time_direction == 1:
 
@@ -346,6 +341,68 @@ class FileReader:
 
         return False
 
+    def compute_time_delta_between_datasets(self, data_file_name, forward):
+        """ Compute time delta between datasets
+
+        If there is only one dataset or the last data file is given a value
+        of zero is returned. Otherwise, time delta is the time difference in
+        seconds between the last (first) time point in the named data file and the
+        first (last) time point in the next (previous) data file, as stored in
+        `self.data_file_names`. The forward argument is used to determine whether
+        time delta is computed as the difference between the next or last files.
+
+        Parameters
+        ----------
+        data_file_name : str
+            Dataset file name.
+
+        forward : bool
+            If True, compute time delta between the last time point in the current
+            file and the first time point in the next file. If False, compute
+            time delta between the first time point in the current file and the
+            last time point in the previous file.
+
+        Returns
+        -------
+        time_delta : float
+            The absolute time difference in seconds.
+        """
+        if self.n_data_files == 1:
+            # There is only one file or we are searching the last file in the set
+            # so we set time_delta to zero.
+            return 0.0
+
+        # Array index of the given data file
+        file_idx_a = self.data_file_names.index(data_file_name)
+
+        # Set other indices depending on the value of `forward`
+        if forward:
+            if file_idx_a == self.n_data_files - 1:
+                # Last file in list - return zero
+                return 0.0
+
+            file_idx_b = file_idx_a + 1
+            time_index_a = -1
+            time_index_b = 0
+        else:
+            if file_idx_a == 0:
+                # First file in list - return zero
+                return 0.0
+
+            file_idx_b = file_idx_a - 1
+            time_index_a = 0
+            time_index_b = -1
+
+        ds_a = self.dataset_reader.read_dataset(data_file_name)
+        datetime_a = self.datetime_reader.get_datetime(ds_a, time_index=time_index_a)
+        ds_a.close()
+
+        ds_b = self.dataset_reader.read_dataset(self.data_file_names[file_idx_b])
+        datetime_b = self.datetime_reader.get_datetime(ds_b, time_index=time_index_b)
+        ds_b.close()
+
+        return abs((datetime_b - datetime_a).total_seconds())
+
     def update_reading_frames(self, time):
         """ Update input datasets and reading frames
 
@@ -358,18 +415,21 @@ class FileReader:
             Time
 
         """
+        # Compute time delta
+        time_delta = self.compute_time_delta_between_datasets(self.first_data_file_name, forward=True)
+
         # Load data file covering the first time point, if necessary
         first_file_idx = None
 
         if self.time_direction == 1:
-            if (time < self.first_time[0]):
+            if time < self.first_time[0]:
                 first_file_idx = self.data_file_names.index(self.first_data_file_name) - 1
-            elif (time >= self.first_time[-1] + self._time_delta):
+            elif time >= self.first_time[-1] + time_delta:
                 first_file_idx = self.data_file_names.index(self.first_data_file_name) + 1
         else:
-            if (time <= self.first_time[0]):
+            if time <= self.first_time[0]:
                 first_file_idx = self.data_file_names.index(self.first_data_file_name) - 1
-            elif (time > self.first_time[-1] + self._time_delta):
+            elif time > self.first_time[-1] + time_delta:
                 first_file_idx = self.data_file_names.index(self.first_data_file_name) + 1
 
         if first_file_idx is not None:
@@ -384,18 +444,21 @@ class FileReader:
 
             self._set_first_time_array()
 
+        # Compute time delta
+        time_delta = self.compute_time_delta_between_datasets(self.second_data_file_name, forward=False)
+
         # Load data file covering the second time point, if necessary
         second_file_idx = None
 
         if self.time_direction == 1:
-            if (time < self.second_time[0] - self._time_delta):
+            if time < self.second_time[0] - time_delta:
                 second_file_idx = self.data_file_names.index(self.second_data_file_name) - 1
-            elif (time >= self.second_time[-1]):
+            elif time >= self.second_time[-1]:
                 second_file_idx = self.data_file_names.index(self.second_data_file_name) + 1
         else:
-            if (time <= self.second_time[0] - self._time_delta):
+            if time <= self.second_time[0] - time_delta:
                 second_file_idx = self.data_file_names.index(self.second_data_file_name) - 1
-            elif (time > self.second_time[-1]):
+            elif time > self.second_time[-1]:
                 second_file_idx = self.data_file_names.index(self.second_data_file_name) + 1
 
         if second_file_idx is not None:
@@ -657,6 +720,22 @@ class FileReader:
 
         self.second_time = np.array(second_time_seconds, dtype=DTYPE_FLOAT)
 
+    def _compute_first_dataset_time_delta(self, idx):
+        # Time delta between two time points in the first time array
+        # ----------------------------------------------------------
+        if idx < len(self.first_time) - 1:
+            return self.first_time[idx+1] - self.first_time[idx]
+        else:
+            return self.compute_time_delta_between_datasets(self.first_data_file_name, forward=True)
+
+    def _compute_second_dataset_time_delta(self, idx):
+        # Time delta between two time points in the second time array
+        # -----------------------------------------------------------
+        if idx > 0:
+            return self.second_time[idx] - self.second_time[idx-1]
+        else:
+            return self.compute_time_delta_between_datasets(self.second_data_file_name, forward=False)
+
     def _set_time_indices(self, time):
         # Set first time index
         # -------------------
@@ -668,13 +747,15 @@ class FileReader:
         if self.time_direction == 1:
             for i in range(0, n_times):
                 t_delta = time - self.first_time[i]
-                if 0.0 <= t_delta < self._time_delta:
+                t_delta_dataset = self._compute_first_dataset_time_delta(i)
+                if 0.0 <= t_delta < t_delta_dataset:
                     tidx_first = i
                     break
         else:
             for i in range(0, n_times):
                 t_delta = time - self.first_time[i]
-                if 0.0 < t_delta <= self._time_delta:
+                t_delta_dataset = self._compute_first_dataset_time_delta(i)
+                if 0.0 < t_delta <= t_delta_dataset:
                     tidx_first = i
                     break
 
@@ -685,7 +766,7 @@ class FileReader:
             raise ValueError('Time out of range.')
 
         # Set second time index
-        # --------------------
+        # ---------------------
         
         n_times = len(self.second_time)
         
@@ -694,13 +775,15 @@ class FileReader:
         if self.time_direction == 1:
             for i in range(0, n_times):
                 t_delta = self.second_time[i] - time
-                if 0.0 < t_delta <= self._time_delta:
+                t_delta_dataset = self._compute_second_dataset_time_delta(i)
+                if 0.0 < t_delta <= t_delta_dataset:
                     tidx_second = i
                     break
         else:
             for i in range(0, n_times):
                 t_delta = self.second_time[i] - time
-                if 0.0 <= t_delta < self._time_delta:
+                t_delta_dataset = self._compute_second_dataset_time_delta(i)
+                if 0.0 <= t_delta < t_delta_dataset:
                     tidx_second = i
                     break
                 
