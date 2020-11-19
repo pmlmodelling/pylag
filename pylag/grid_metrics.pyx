@@ -456,9 +456,9 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
 
         # Trim latitudes
         if trim_first_latitude == 1:
-            ref_var = ref_var[:, :, 1:, :]
+            ref_var = ref_var[:, :, :, 1:]
         if trim_last_latitude == 1:
-            ref_var = ref_var[:, :, :-1, :]
+            ref_var = ref_var[:, :, :, :-1]
 
     # Create the Triangulation
     print('\nCreating the triangulation ', end='... ')
@@ -497,9 +497,9 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
 
             # Trim latitudes
             if trim_first_latitude == 1:
-                bathy = bathy[1:, :]
+                bathy = bathy[:, 1:]
             if trim_last_latitude == 1:
-                bathy = bathy[:-1, :]
+                bathy = bathy[:, :-1]
 
             # Reshape array
             bathy = bathy.reshape(np.prod(bathy.shape), order='C')
@@ -549,9 +549,9 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
 
         # Trim latitudes
         if trim_first_latitude == 1:
-            land_sea_mask_nodes = land_sea_mask_nodes[1:, :]
+            land_sea_mask_nodes = land_sea_mask_nodes[:, 1:]
         if trim_last_latitude == 1:
-            land_sea_mask_nodes = land_sea_mask_nodes[:-1, :]
+            land_sea_mask_nodes = land_sea_mask_nodes[:, :-1]
 
         # Fix up long name to reflect flipping of mask
         mask_attrs['long_name'] = "Land-sea mask: sea = 0 ; land = 1"
