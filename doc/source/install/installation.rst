@@ -129,5 +129,5 @@ To build PyLag's documentation, a number of extra dependencies are required. The
 .. code-block:: bash
 
    (particles) $ conda install sphinx nbsphinx sphinx_rtd_theme sphinxcontrib-napoleon jupyter \
-                 jupyter_client ipykernel ffmpeg seapy
+                 jupyter_client ipykernel ffmpeg seapy cmocean matplotlib cartopy
 

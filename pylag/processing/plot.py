@@ -6,22 +6,27 @@ from __future__ import division, print_function
 
 import numpy as np
 from scipy import interp
-import stripy as stripy
-import collections
-from matplotlib import cbook
-from matplotlib import pyplot as plt
-from matplotlib.tri.triangulation import Triangulation
-from matplotlib.collections import PolyCollection
-from matplotlib.colors import Normalize
-from matplotlib import cm as mplcm
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-import cartopy.crs as ccrs
-from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 from netCDF4 import Dataset
 from cftime import num2pydate
-from cmocean import cm
+import stripy as stripy
+import collections
 
-from PyFVCOM.plot import cm2inch
+try:
+    from matplotlib import cbook
+    from matplotlib import pyplot as plt
+    from matplotlib.tri.triangulation import Triangulation
+    from matplotlib.collections import PolyCollection
+    from matplotlib.colors import Normalize
+    from matplotlib import cm as mplcm
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
+    import cartopy.crs as ccrs
+    from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
+    from cmocean import cm
+except (ImportError, ModuleNotFoundError):
+    print("Could not import one or more requirements. `pylag.plot` depends on "\
+          "matplotlib, cartopy and cmocean. Please install these using `conda` or "\
+          "`pip` should you wish to use these plotting tools.")
+    pass
 
 from pylag.processing.ncview import Viewer
 from pylag.processing.utils import round_time
@@ -1548,6 +1553,22 @@ def create_cbar_ax(ax):
     """
     divider = make_axes_locatable(ax)
     return divider.append_axes("right", size="5%", pad=0.05)
+
+
+def cm2inch(value):
+    """ Convert centimetres to inches.
+
+    Parameters
+    ----------
+    value : float
+        Length in cm.
+
+    Returns
+    -------
+     : float
+         Length in inches.
+    """
+    return value / 2.54
 
 
 def colourmap(variable):

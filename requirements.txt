@@ -6,31 +6,17 @@ mpi4py
 numpy>=1.18
 scipy>=1.4.1
 cython>=0.29
-matplotlib
 progressbar
 natsort
 netCDF4
 cftime>=1.1
 configparser
+shapely
 PyFVCOM
+PyQT-fit
+joblib
+stripy
 
 # For testing
 nose2
 
-# For building the documentation
-matplotlib
-cartopy
-shapely
-cmocean
-sphinx
-nbsphinx
-sphinx_rtd_theme
-sphinxcontrib-napoleon
-jupyter
-jupyter_client
-ipykernel
-ffmpeg-python
-PyQT-fit
-seapy
-joblib
-stripy
