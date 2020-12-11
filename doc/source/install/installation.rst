@@ -3,19 +3,17 @@
 Installation
 ============
 
-For end users, the easiest way to install *PyLag* is using *Conda*. This will install *PyLag* and all its dependencies into a clean environment and make it available to use. Developers who wish to work with the source code directly should first register to access *PyLag's* git repository `here <http://www.pml.ac.uk/Modelling_at_PML/Access_Code>`_. Once registered, you will be able to clone a copy of *PyLag's* source code and install it manually. Both use cases are described below.
+For end users, the easiest way to install *PyLag* is using *Conda*. This will install *PyLag* and all its dependencies into a clean environment and make it available to use. Developers who wish to work with the source code directly should clone *PyLag's* git repository from `GitHub <https://github.com/jimc101/PyLag>`_ and install it manually. Both use cases are described below.
 
 .. note::
-        *PyLag* has been developed and tested within a UNIX/Linux environment, and the following instructions assume the user is working
-        within a similar environment.
+        *PyLag* has been developed and tested within a UNIX/Linux environment, and the following instructions assume the user is working in a similar environment.
 
 .. _users:
 
 Installation using Conda
 ------------------------
 
-First `install miniconda3 <https://conda.io/projects/conda/en/latest/user-guide/install/linux.html>`_ in a location of your choosing. 
-Then, activate *Conda* and add the channels *conda-forge* and *JimClark*. The latter is a temporary distribution channel for *PyLag*. For example:
+First `install miniconda3 <https://conda.io/projects/conda/en/latest/user-guide/install/linux.html>`_ in a location of your choosing. Then, activate *Conda* and add the channels *conda-forge* and *JimClark*. The latter is a temporary distribution channel for *PyLag*. For example:
 
 .. code-block:: bash
 
@@ -52,22 +50,14 @@ which should exit without error.
 Building from source
 --------------------
 
-Developers who wish to work with the source code directly should first register to access *PyLag's* git repository `here <http://www.pml.ac.uk/Modelling_at_PML/Access_Code>`_. The preferred means of accessing the source code is through the source code management system `git <https://git-scm.com/>`_, which is free open-source software available for most common computing platforms. By using *git*, users can easily stay up to date with the latest *PyLag* release, report issues or track bugfixes. For *PyLag*, *git* access is enabled through the *git* management system `GitLab <https://gitlab.ecosystem-modelling.pml.ac.uk>`_.
-
-After you have registered to use the code, a *GitLab* account will be created for you. If you checked the *PyLag* tick-box on the registration page you will have been automatically added to the
-`PyLag Group <https://gitlab.ecosystem-modelling.pml.ac.uk/groups/PyLag>`_.
-
-When accessing the code using *git*, it is recommended that users use secure shell (SSH) to communicate with the *GitLab* server. This allows users to establish a secure connection between their computer and *GitLab*, and to easily pull and push repositories.
-
-With SSH access setup, you can clone both repositories using the following commands:
+Developers who wish to work with the source code directly should first clone *PyLag's* git repository from `GitHub <https://github.com/jimc101/PyLag>`_. With SSH access setup, you can clone the repository using the following commands:
 
 .. code-block:: bash
 
     $ mkdir -p $HOME/code/git/PyLag && cd $HOME/code/git/PyLag
-    $ git clone https://gitlab.ecosystem-modelling.pml.ac.uk/PyLag/PyLag.git>
+    $ git clone https://github.com/jimc101/PyLag.git
 
-
-If you don't want to use git to access the code, you can always grab a copy by downloading and unpacking tarballs of the two repositories. The cleanest and safest way of installing *PyLag's* dependencies is using *Conda*. Following steps similar to those described above, we can configure a new *Conda* environment so:
+The cleanest and safest way of installing *PyLag's* dependencies is using *Conda*. Following steps similar to those described above, we can configure a new *Conda* environment so:
 
 .. code-block:: bash
 
