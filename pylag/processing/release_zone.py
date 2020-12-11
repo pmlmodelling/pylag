@@ -8,7 +8,7 @@ import numpy as np
 import numbers
 from scipy.spatial import ConvexHull
 
-from PyFVCOM.coordinate import utm_from_lonlat, lonlat_from_utm
+from pylag.processing.coordinate import utm_from_lonlat, lonlat_from_utm
 
 have_shapely = True
 try:

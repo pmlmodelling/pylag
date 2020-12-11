@@ -124,10 +124,11 @@ On my machine, *openmpi* is enabled using the module command, which correctly se
 Building the docs
 -----------------
 
-To build PyLag's documentation, a number of extra dependencies are required. These are not packaged with *PyLag* by default in order to keep the base installation slim and easier to manage. If you would like to build the documentation, the extra dependencies can be installed using conda or pip. The following command uses conda to install all the extra dependencies in the conda environment already created:
+To build PyLag's documentation, a number of extra dependencies are required. These are not packaged with *PyLag* by default in order to keep the base installation slim and easier to manage. If you would like to build the documentation, the extra dependencies can be installed using conda or pip. The following commands use conda to install all the extra dependencies in the conda environment already created:
 
 .. code-block:: bash
 
-   (particles) $ conda install sphinx nbsphinx sphinx_rtd_theme sphinxcontrib-napoleon jupyter \
-                 jupyter_client ipykernel ffmpeg seapy cmocean matplotlib cartopy
+   (particles) $ conda install -n particles sphinx nbsphinx sphinx_rtd_theme sphinxcontrib-napoleon jupyter \
+                 jupyter_client ipykernel ffmpeg seapy cmocean matplotlib shapely cartopy
+   (particles) $ conda install -c JimClark -n particles PyFVCOM PyQT-fit
 

@@ -24,22 +24,20 @@ requirements:
     - {{ compiler('cxx') }}
   run:
     - python
-    - ipython
     - mpi4py
     - numpy>=1.18
     - scipy>=1.4.1
     - cython>=0.29
-    - shapely
     - progressbar
     - natsort
     - netCDF4
     - cftime>=1.1
     - configparser
-    - PyFVCOM
-    - PyQt-fit
-    - nose2
     - stripy
     - joblib
+    - shapely
+    - pyproj
+    - nose2
 
 test:
   import:

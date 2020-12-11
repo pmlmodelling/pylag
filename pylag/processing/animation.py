@@ -6,7 +6,12 @@ from __future__ import division, print_function
 import os
 import numpy as np
 from netCDF4 import Dataset, num2date
-from matplotlib import pyplot as plt
+
+try:
+    from matplotlib import pyplot as plt
+except (ImportError, ModuleNotFoundError):
+    raise ImportError("`pylag.processing.animation` requires matplotlib. Please install it using " \
+                      "`conda` or `pip` to use this module.")
 
 from pylag.processing.plot import PyLagPlotter
 

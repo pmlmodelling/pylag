@@ -6,7 +6,12 @@ from __future__ import division, print_function
 import numpy as np
 from scipy import stats
 
-from PyFVCOM.read import FileReader as FVCOMFileReader
+has_pyfvcom=True
+try:
+    from PyFVCOM.read import FileReader as FVCOMFileReader
+except (ImportError, ModuleNotFoundError):
+    has_pyfvcom=False
+    print('PyFVCOM is not installed. Some module functionality will be disabled.')
 
 from pylag.processing.ncview import Viewer
 
@@ -50,6 +55,9 @@ def get_rmse(fvcom_file_name, fvcom_var_name, pylag_file_names, dates, pylag_tim
         The RMSE.
 
     """
+    if not has_pyfvcom:
+        raise RuntimeError('Please install PyFVCOM to use `pylag.fvcom.get_rmse`.')
+
     # Create FVCOM File Reader
     fvcom_reader = FVCOMFileReader(fvcom_file_name)
 
@@ -98,6 +106,9 @@ def get_fvcom_date_indices(fvcom_reader, dates):
     """ Get FVCOM date indices
 
     """
+    if not has_pyfvcom:
+        raise RuntimeError('Please install PyFVCOM to use `pylag.fvcom.get_fvcom_date_indices`.')
+    
     return [fvcom_reader.time.datetime.tolist().index(date) for date in dates]
 
 
@@ -105,6 +116,9 @@ def get_fvcom_var(fvcom_reader, fvcom_var_name, time_index, depth_integrated=Tru
     """ Extract data for the given variable at the given time index
 
     """
+    if not has_pyfvcom:
+        raise RuntimeError('Please install PyFVCOM to use `pylag.fvcom.get_fvcom_var`.')
+    
     fvcom_reader.load_data([fvcom_var_name], dims={'time': [time_index]})
     fvcom_tracer = getattr(fvcom_reader.data, fvcom_var_name).squeeze()
 
