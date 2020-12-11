@@ -1719,6 +1719,6 @@ cdef class ROMSDataReader(DataReader):
 
         # Apply vertical flip?
         if self._flip_vertical_axis == True:
-            return np.flip(z.values.copy(), axis=0)
+            return np.flip(z, axis=0)
 
         return z

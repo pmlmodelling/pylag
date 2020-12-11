@@ -38,18 +38,9 @@ requirements:
     - netCDF4
     - cftime>=1.1
     - configparser
-    - sphinx
-    - nbsphinx
-    - sphinx_rtd_theme
-    - sphinxcontrib-napoleon
-    - jupyter
-    - jupyter_client
-    - ipykernel
-    - ffmpeg
     - PyFVCOM
     - PyQt-fit
     - nose2
-    - seapy
     - stripy
     - joblib
 

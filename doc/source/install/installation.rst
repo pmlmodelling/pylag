@@ -34,13 +34,13 @@ Finally, install *PyLag*:
 
 .. code-block:: bash
 
-    $ conda install -n particles -c JimClark pylag
+    (particleS) $ conda install -n particles -c JimClark pylag
 
 To test that *PyLag* has been correctly installed, type:
 
 .. code-block:: bash
 
-    $ python -c "import pylag"
+    (particles) $ python -c "import pylag"
 
 which should exit without error.
 
@@ -78,9 +78,9 @@ And finally, in the PyLag source code directory, build and install *PyLag*.
 
 .. code-block:: bash
 
-    $ cd $HOME/code/git/PyLag/PyLag
-    $ conda build . --numpy 1.19
-    $ conda install -n particles --use-local pylag
+    (particles) $ cd $HOME/code/git/PyLag/PyLag
+    (particles) $ conda build . --numpy 1.19
+    (particles) $ conda install -n particles --use-local pylag
 
 Occsionally, when building *PyLag* this way, users have hit upon clashes with locally installed packages. To get around this problem, you may find it useful to add the following aliases to your bashrc file, which you can use to activate and deactivate *Conda*:
 
@@ -93,8 +93,8 @@ The *Conda* build process is quite long, and it doesn't lend itself to rapid bui
 
 .. code-block:: bash
 
-    $ cd $HOME/code/git/PyLag/PyLag
-    $ pip install .
+    (particles) $ cd $HOME/code/git/PyLag/PyLag
+    (particles) $ pip install .
 
 
 .. _alternatives:
@@ -120,3 +120,14 @@ On my machine, *openmpi* is enabled using the module command, which correctly se
 
 .. note::
     The use of *sudo* -- which would allow *PyLag* to be installed at the system level -- is strongly discouraged.
+
+Building the docs
+-----------------
+
+To build PyLag's documentation, a number of extra dependencies are required. These are not packaged with *PyLag* by default in order to keep the base installation slim and easier to manage. If you would like to build the documentation, the extra dependencies can be installed using conda or pip. The following command uses conda to install all the extra dependencies in the conda environment already created:
+
+.. code-block:: bash
+
+   (particles) $ conda install sphinx nbsphinx sphinx_rtd_theme sphinxcontrib-napoleon jupyter \
+                 jupyter_client ipykernel ffmpeg seapy
+
