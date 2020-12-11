@@ -219,6 +219,5 @@ setup(name="PyLag",
           "seapy",
           "stripy",
           "joblib",
-          "xarray"
       ],
 )

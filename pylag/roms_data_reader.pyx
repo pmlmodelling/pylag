@@ -20,7 +20,6 @@ except ImportError:
     import ConfigParser as configparser
 
 import numpy as np
-import xarray as xr
 
 from cpython cimport bool
 
@@ -1237,14 +1236,10 @@ cdef class ROMSDataReader(DataReader):
                                                             x_grid_rho, y_grid_rho, xc_grid_rho, yc_grid_rho)
 
         # Read in depth vars
-        self._s_rho = xr.DataArray(self.mediator.get_grid_variable('s_rho', (self._n_s_rho), DTYPE_FLOAT),
-                                   dims=self.mediator.get_grid_variable_dimensions('s_rho'))
-        self._s_w = xr.DataArray(self.mediator.get_grid_variable('s_w', (self._n_s_w), DTYPE_FLOAT),
-                                 dims=self.mediator.get_grid_variable_dimensions('s_w'))
-        self._cs_r = xr.DataArray(self.mediator.get_grid_variable('cs_r', (self._n_s_rho), DTYPE_FLOAT),
-                                  dims=self.mediator.get_grid_variable_dimensions('cs_r'))
-        self._cs_w = xr.DataArray(self.mediator.get_grid_variable('cs_w', (self._n_s_w), DTYPE_FLOAT),
-                                  dims=self.mediator.get_grid_variable_dimensions('cs_w'))
+        self._s_rho = self.mediator.get_grid_variable('s_rho', (self._n_s_rho), DTYPE_FLOAT)
+        self._s_w = self.mediator.get_grid_variable('s_w', (self._n_s_w), DTYPE_FLOAT)
+        self._cs_r = self.mediator.get_grid_variable('cs_r', (self._n_s_rho), DTYPE_FLOAT)
+        self._cs_w = self.mediator.get_grid_variable('cs_w', (self._n_s_w), DTYPE_FLOAT)
         self._hc = self.mediator.get_grid_variable('hc', (1), DTYPE_FLOAT)
 
         # Vertical transform used when constructing depth grid
@@ -1700,33 +1695,30 @@ cdef class ROMSDataReader(DataReader):
         if depth_grid == 'grid_rho':
             cs = self._cs_r
             s = self._s_rho
+            n_s = self._n_s_rho
         elif depth_grid == 'grid_w':
             cs = self._cs_w
             s = self._s_w
+            n_s = self._n_s_w
         else:
             raise ValueError('Unrecognised vertical grid name {}'.format(depth_grid))
 
-        # Define dim names
-        node_dim_name = 'nodes_grid_rho'
-        depth_dim_name = s.dims[0]
-
-        # Generate xarray data arrays for h and zeta
-        h = xr.DataArray(h, dims=(node_dim_name))
-        zeta = xr.DataArray(zeta, dims=(node_dim_name))
+        # Tile vars to give matching array dims
+        h_tiled = np.tile(h, (n_s, 1))
+        zeta_tiled = np.tile(zeta, (n_s, 1))
+        s = np.tile(s, (self._n_nodes_grid_rho, 1)).T
+        cs = np.tile(cs, (self._n_nodes_grid_rho, 1)).T
 
         # Apply vertical transform
         if self._vtransform == 1:
-            zo = self._hc * (s - cs) + cs * h
-            z = zo + zeta * (1 + zo/h)
+            zo = self._hc * (s - cs) + cs * h_tiled
+            z = zo + zeta_tiled * (1 + zo/h_tiled)
         elif self._vtransform == 2:
-            zo = (self._hc * s + cs * h) / (self._hc + h)
-            z = zeta + (zeta + h) * zo
-
-        # Ensure depth is the first axis
-        z = z.transpose(depth_dim_name, node_dim_name)
+            zo = (self._hc * s + cs * h_tiled) / (self._hc + h_tiled)
+            z = zeta_tiled + (zeta_tiled + h_tiled) * zo
 
         # Apply vertical flip?
         if self._flip_vertical_axis == True:
             return np.flip(z.values.copy(), axis=0)
 
-        return z.values.copy()
+        return z

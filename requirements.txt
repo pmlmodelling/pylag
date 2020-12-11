@@ -13,7 +13,6 @@ netCDF4
 cftime>=1.1
 configparser
 PyFVCOM
-xarray
 
 # For testing
 nose2

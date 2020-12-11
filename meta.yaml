@@ -50,7 +50,6 @@ requirements:
     - PyQt-fit
     - nose2
     - seapy
-    - xarray
     - stripy
     - joblib
 
