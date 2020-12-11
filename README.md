@@ -18,10 +18,3 @@ Uncles, R. J., Clark, J. R., Bedington, M., Torres, R. 2020. “On sediment disp
 
 Full installations instructions and tutorial examples can be found in [PyLag's documentation](https://pylag.readthedocs.io/en/latest/).
 
-## Release status and notes
-
-PyLag is still very much in development. This page will be updated when future releases are made.
-
-### Version 0.1 - 18/11/2020
-
-Code made publicly available via [GitHub](https://github.com/jimc101/PyLagGitHub).
