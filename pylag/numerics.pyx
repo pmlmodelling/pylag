@@ -1841,36 +1841,66 @@ def get_iterative_method(config):
     if not config.has_option("NUMERICS", "iterative_method"):
         raise ValueError("Failed to find the option `iterative_method' in the "\
                 "supplied configuration file.")
-    
+
+    iterative_method = config.get("NUMERICS", "iterative_method")
+
     # Prevent backtracking when using RDMs
-    if "Diff" in config.get("NUMERICS", "iterative_method") and _get_time_direction_string(config) == "reverse":
+    if "Diff" in iterative_method and _get_time_direction_string(config) == "reverse":
         raise ValueError("The use of RDMs when reverse tracking is prohibited")
 
+    # Prevent using 1D diffusion if has_kh is False
+    if "Diff" in iterative_method and _get_time_direction_string(config) == "reverse":
+        raise ValueError("The use of RDMs when reverse tracking is prohibited")
+
+    if "Diff" in iterative_method:
+         # Prevent the use of vertical diffusion schemes if the data files don't have the vertical eddy diffusivity
+        try:
+            has_kh = config.getboolean("OCEAN_CIRCULATION_MODEL", "has_Kh")
+            if not has_kh and ("1D" in iterative_method or "3D" in iterative_method):
+                raise RuntimeError("Incompatible configuration options specified. PyLag cannot run with vertical \n" \
+                                   "diffusion if the vertical eddy diffusivity variable is not present \n"\
+                                   "(i.e. `has_Kh = False`). Please select a different iterative method; for example \n"\
+                                   "a deterministic scheme.")
+        except configparser.NoOptionError:
+            pass
+
+        # Prevent the use of horizontal diffusion schemes if the data files don't have the horizontal eddy diffusivity
+        try:
+            has_Ah = config.getboolean("OCEAN_CIRCULATION_MODEL", "has_Ah")
+            if not has_Ah and ("2D" in iterative_method or "3D" in iterative_method):
+                raise RuntimeError("Incompatible configuration options specified. PyLag cannot run with horizontal \n" \
+                                   "diffusion if the horizontal eddy diffusivity variable is not present \n"\
+                                   "(i.e. `has_Ah = False`). Please select a different iterative method; for example \n"\
+                                   "a deterministic scheme.")
+        except configparser.NoOptionError:
+            pass
+
     # Return the specified iterative method
-    if config.get("NUMERICS", "iterative_method") == "Adv_RK4_2D":
+    if iterative_method == "Adv_RK4_2D":
         return AdvRK42DItMethod(config)
-    elif config.get("NUMERICS", "iterative_method") == "Adv_RK4_3D":
+    elif iterative_method == "Adv_RK4_3D":
         return AdvRK43DItMethod(config)
-    elif config.get("NUMERICS", "iterative_method") == "Diff_Const_2D":
+    elif iterative_method == "Diff_Const_2D":
         return DiffConst2DItMethod(config)
-    elif config.get("NUMERICS", "iterative_method") == "Diff_Naive_1D":
+    elif iterative_method == "Diff_Naive_1D":
         return DiffNaive1DItMethod(config)
-    elif config.get("NUMERICS", "iterative_method") == "Diff_Naive_2D":
+    elif iterative_method == "Diff_Naive_2D":
         return DiffNaive2DItMethod(config)
-    elif config.get("NUMERICS", "iterative_method") == "Diff_Euler_1D":
+    elif iterative_method == "Diff_Euler_1D":
         return DiffEuler1DItMethod(config)
-    elif config.get("NUMERICS", "iterative_method") == "Diff_Visser_1D":
+    elif iterative_method == "Diff_Visser_1D":
         return DiffVisser1DItMethod(config)
-    elif config.get("NUMERICS", "iterative_method") == "Diff_Milstein_1D":
+    elif iterative_method == "Diff_Milstein_1D":
         return DiffMilstein1DItMethod(config)
-    elif config.get("NUMERICS", "iterative_method") == "Diff_Milstein_2D":
+    elif iterative_method == "Diff_Milstein_2D":
         return DiffMilstein2DItMethod(config)
-    elif config.get("NUMERICS", "iterative_method") == "Diff_Milstein_3D":
+    elif iterative_method == "Diff_Milstein_3D":
         return DiffMilstein3DItMethod(config)
-    elif config.get("NUMERICS", "iterative_method") == "AdvDiff_Milstein_3D":
+    elif iterative_method == "AdvDiff_Milstein_3D":
         return AdvDiffMilstein3DItMethod(config)
     else:
         raise ValueError('Unsupported deterministic-stochastic iterative method.')
+
 
 def get_adv_iterative_method(config):
     """ Factory method for iterative methods that handle advection only
@@ -1889,13 +1919,16 @@ def get_adv_iterative_method(config):
         raise ValueError("Failed to find the option `adv_iterative_method' in "\
                 "the supplied configuration file.")
     
+    iterative_method = config.get("NUMERICS", "adv_iterative_method")
+
     # Return the specified numerical integrator.
-    if config.get("NUMERICS", "adv_iterative_method") == "Adv_RK4_2D":
+    if iterative_method == "Adv_RK4_2D":
         return AdvRK42DItMethod(config)
-    elif config.get("NUMERICS", "adv_iterative_method") == "Adv_RK4_3D":
+    elif iterative_method == "Adv_RK4_3D":
         return AdvRK43DItMethod(config)
     else:
         raise ValueError('Unsupported deterministic iterative method.')
+
 
 def get_diff_iterative_method(config):
     """ Factory method for iterative methods that handle diffusion only
@@ -1913,29 +1946,55 @@ def get_diff_iterative_method(config):
         raise ValueError("Failed to find the option `diff_iterative_method' in"\
                 " the supplied configuration file.")
 
+    iterative_method = config.get("NUMERICS", "diff_iterative_method")
+
     # Prevent backtracking when using a RDM
     if _get_time_direction_string(config) == "reverse":
         raise ValueError("The use of RDMs when reverse tracking is prohibited")
-    
+
+    # Prevent the use of vertical diffusion schemes if the data files don't have the vertical eddy diffusivity
+    try:
+        has_kh = config.getboolean("OCEAN_CIRCULATION_MODEL", "has_Kh")
+        if not has_kh and ("1D" in iterative_method or "3D" in iterative_method):
+            raise RuntimeError("Incompatible configuration options specified. PyLag cannot run with vertical \n" \
+                               "diffusion if the vertical eddy diffusivity variable is not present \n"\
+                               "(i.e. `has_Kh = False`). Please select a different iterative method; for example \n"\
+                               "a deterministic scheme.")
+    except configparser.NoOptionError:
+        pass
+
+    # Prevent the use of horizontal diffusion schemes if the data files don't have the horizontal eddy diffusivity
+    try:
+        if "Const" not in iterative_method:
+            has_Ah = config.getboolean("OCEAN_CIRCULATION_MODEL", "has_Ah")
+            if not has_Ah and ("2D" in iterative_method or "3D" in iterative_method):
+                raise RuntimeError("Incompatible configuration options specified. PyLag cannot run with horizontal \n" \
+                                   "diffusion if the horizontal eddy diffusivity variable is not present \n"\
+                                   "(i.e. `has_Ah = False`). Please select a different iterative method; for example \n"\
+                                   "a deterministic scheme.")
+    except configparser.NoOptionError:
+        pass
+
     # Return the specified numerical integrator.
-    if config.get("NUMERICS", "diff_iterative_method") == "Diff_Const_2D":
+    if iterative_method == "Diff_Const_2D":
         return DiffConst2DItMethod(config)
-    elif config.get("NUMERICS", "diff_iterative_method") == "Diff_Naive_1D":
+    elif iterative_method == "Diff_Naive_1D":
         return DiffNaive1DItMethod(config)
-    elif config.get("NUMERICS", "diff_iterative_method") == "Diff_Naive_2D":
+    elif iterative_method == "Diff_Naive_2D":
         return DiffNaive2DItMethod(config)
-    elif config.get("NUMERICS", "diff_iterative_method") == "Diff_Euler_1D":
+    elif iterative_method == "Diff_Euler_1D":
         return DiffEuler1DItMethod(config)
-    elif config.get("NUMERICS", "diff_iterative_method") == "Diff_Visser_1D":
+    elif iterative_method == "Diff_Visser_1D":
         return DiffVisser1DItMethod(config)
-    elif config.get("NUMERICS", "diff_iterative_method") == "Diff_Milstein_1D":
+    elif iterative_method == "Diff_Milstein_1D":
         return DiffMilstein1DItMethod(config)
-    elif config.get("NUMERICS", "diff_iterative_method") == "Diff_Milstein_2D":
+    elif iterative_method == "Diff_Milstein_2D":
         return DiffMilstein2DItMethod(config)
-    elif config.get("NUMERICS", "diff_iterative_method") == "Diff_Milstein_3D":
+    elif iterative_method == "Diff_Milstein_3D":
         return DiffMilstein3DItMethod(config)
     else:
         raise ValueError('Unsupported iterative method specified.')
+
 
 def get_global_time_step(config):
     """ Return the global time step

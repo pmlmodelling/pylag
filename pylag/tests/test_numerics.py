@@ -9,6 +9,118 @@ from pylag.numerics import get_num_method
 
 class Numerics_test(TestCase):
 
+    def test_use_diffusion_with_Kh_and_Ah(self):
+        # Create config
+        config = configparser.ConfigParser()
+
+        config.add_section("SIMULATION")
+        config.set("SIMULATION", "depth_restoring", 'False')
+        config.set("SIMULATION", "fixed_depth", '0.0')
+        config.set("SIMULATION", "time_direction", 'forward')
+
+        config.add_section("OCEAN_CIRCULATION_MODEL")
+        config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'cartesian')
+        config.set('OCEAN_CIRCULATION_MODEL', 'has_Kh', 'True')
+        config.set('OCEAN_CIRCULATION_MODEL', 'has_Ah', 'True')
+
+        config.add_section("BOUNDARY_CONDITIONS")
+        config.set('BOUNDARY_CONDITIONS', 'horiz_bound_cond', 'None')
+        config.set('BOUNDARY_CONDITIONS', 'vert_bound_cond', 'None')
+
+        config.add_section("NUMERICS")
+        config.set('NUMERICS', 'num_method', 'standard')
+        config.set('NUMERICS', 'iterative_method', 'Diff_Milstein_3D')
+
+        # Valid time steps
+        config.set('NUMERICS', 'time_step_adv', '100.0')
+        config.set('NUMERICS', 'time_step_diff', '5.0')
+
+        num_method = get_num_method(config)
+
+    def test_use_diffusion_without_Kh_and_Ah(self):
+        # Create config
+        config = configparser.ConfigParser()
+
+        config.add_section("SIMULATION")
+        config.set("SIMULATION", "depth_restoring", 'False')
+        config.set("SIMULATION", "fixed_depth", '0.0')
+        config.set("SIMULATION", "time_direction", 'forward')
+
+        config.add_section("OCEAN_CIRCULATION_MODEL")
+        config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'cartesian')
+        config.set('OCEAN_CIRCULATION_MODEL', 'has_Kh', 'False')
+        config.set('OCEAN_CIRCULATION_MODEL', 'has_Ah', 'False')
+
+        config.add_section("BOUNDARY_CONDITIONS")
+        config.set('BOUNDARY_CONDITIONS', 'horiz_bound_cond', 'None')
+        config.set('BOUNDARY_CONDITIONS', 'vert_bound_cond', 'None')
+
+        config.add_section("NUMERICS")
+        config.set('NUMERICS', 'num_method', 'standard')
+        config.set('NUMERICS', 'iterative_method', 'Diff_Milstein_3D')
+
+        # Valid time steps
+        config.set('NUMERICS', 'time_step_adv', '100.0')
+        config.set('NUMERICS', 'time_step_diff', '5.0')
+
+        self.assertRaises(RuntimeError, get_num_method, config)
+
+    def test_use_diffusion_without_Kh_and_but_with_Ah(self):
+        # Create config
+        config = configparser.ConfigParser()
+
+        config.add_section("SIMULATION")
+        config.set("SIMULATION", "depth_restoring", 'False')
+        config.set("SIMULATION", "fixed_depth", '0.0')
+        config.set("SIMULATION", "time_direction", 'forward')
+
+        config.add_section("OCEAN_CIRCULATION_MODEL")
+        config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'cartesian')
+        config.set('OCEAN_CIRCULATION_MODEL', 'has_Kh', 'False')
+        config.set('OCEAN_CIRCULATION_MODEL', 'has_Ah', 'True')
+
+        config.add_section("BOUNDARY_CONDITIONS")
+        config.set('BOUNDARY_CONDITIONS', 'horiz_bound_cond', 'None')
+        config.set('BOUNDARY_CONDITIONS', 'vert_bound_cond', 'None')
+
+        config.add_section("NUMERICS")
+        config.set('NUMERICS', 'num_method', 'standard')
+        config.set('NUMERICS', 'iterative_method', 'Diff_Milstein_3D')
+
+        # Valid time steps
+        config.set('NUMERICS', 'time_step_adv', '100.0')
+        config.set('NUMERICS', 'time_step_diff', '5.0')
+
+        self.assertRaises(RuntimeError, get_num_method, config)
+
+    def test_use_diffusion_with_Kh_and_but_without_Ah(self):
+        # Create config
+        config = configparser.ConfigParser()
+
+        config.add_section("SIMULATION")
+        config.set("SIMULATION", "depth_restoring", 'False')
+        config.set("SIMULATION", "fixed_depth", '0.0')
+        config.set("SIMULATION", "time_direction", 'forward')
+
+        config.add_section("OCEAN_CIRCULATION_MODEL")
+        config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'cartesian')
+        config.set('OCEAN_CIRCULATION_MODEL', 'has_Kh', 'True')
+        config.set('OCEAN_CIRCULATION_MODEL', 'has_Ah', 'False')
+
+        config.add_section("BOUNDARY_CONDITIONS")
+        config.set('BOUNDARY_CONDITIONS', 'horiz_bound_cond', 'None')
+        config.set('BOUNDARY_CONDITIONS', 'vert_bound_cond', 'None')
+
+        config.add_section("NUMERICS")
+        config.set('NUMERICS', 'num_method', 'standard')
+        config.set('NUMERICS', 'iterative_method', 'Diff_Milstein_3D')
+
+        # Valid time steps
+        config.set('NUMERICS', 'time_step_adv', '100.0')
+        config.set('NUMERICS', 'time_step_diff', '5.0')
+
+        self.assertRaises(RuntimeError, get_num_method, config)
+
     def test_set_valid_OSONumMethod_advection_and_diffusion_time_steps(self):
         # Create config
         config = configparser.ConfigParser()
