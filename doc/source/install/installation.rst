@@ -104,21 +104,25 @@ The *Conda* build process is quite long, and it doesn't lend itself to rapid bui
 Alternative installation methods
 --------------------------------
 
-In principle, there are several other ways *PyLag* can be installed. For example, using `virtualenv <https://virtualenv.pypa.io/en/stable/>`_; or by using *pip* to perform a local install with the ``--user`` flag. The main thing to watch out for with these other methods is dependency issues. Furthermore, *Conda* correctly configures your environment to make it possible to run *PyLag* in serial or parallel modes. When not using *Conda*, you will likely have to configure your environment to support parallel execution (and, in-fact, installation).
-
-This is because *PyLag* includes a dependency on the python package `MPI for Python <https://mpi4py.readthedocs.io/en/stable/>`_. To install *MPI for Python*, it is first necessary to ensure that you have a working MPI implementation on your system, and that all paths to MPI libraries and header files have been correctly set. You must use your Linux package manager to install a working MPI Implementation. On my laptop running Fedora 27, the following commands suffice:
+In principle, there are several other ways *PyLag* can be installed. For example, using `virtualenv <https://virtualenv.pypa.io/en/stable/>`_; or by using *pip* to perform a local install with the ``--user`` flag. The main thing to watch out for with these other methods is dependency issues. In particular, make sure you have *Cython* and *NumPy* installed already (e.g. using *pip* or *dnf*). Furthermore, *Conda* correctly configures your environment to make it possible to run *PyLag* in serial or parallel modes. When not using *Conda*, you will likely have to configure your environment to support parallel execution (and, in-fact, installation). This is because *PyLag* includes a dependency on the python package `MPI for Python <https://mpi4py.readthedocs.io/en/stable/>`_. To install *MPI for Python*, it is first necessary to ensure that you have a working MPI implementation on your system, and that all paths to MPI libraries and header files have been correctly set. You must use your Linux package manager to install a working MPI Implementation. On my laptop running Fedora 31, the following commands suffice:
 
 .. code-block:: bash
 
-   sudo dnf install -y openmpi python3-openmpi
+   $ sudo dnf install -y openmpi openmpi-devel python3-openmpi
 
-Alternatively, if it is available via your package manager, you can install `python3-mpi4py` at the system level, which should automatically install all necessary MPI dependencies.
-
-On my machine, *openmpi* is enabled using the module command, which correctly sets environmental paths to the *openmpi* MPI libraries and header files:
+On my machine, *openmpi* is enabled using the module command, which correctly sets environment paths to the *openmpi* MPI libraries and header files:
 
 .. code-block:: bash
 
-   module load mpi/openmpi-x86_64
+   $ module load mpi/openmpi-x86_64
+
+If running the above command fails with the system saying it is unable to find the *module* command, first use your package manager (e.g. *dnf*) to  ensure that the *environment-modules* package is installed. After installing it, you will need to open a new terminal. If it is still not found, try running:
+
+.. code-block:: bash
+
+    $ source /etc/profile.d/modules.sh
+
+first. If this fixes the problem, you can add the above command to your *.bashrc* file.
 
 .. note::
     The use of *sudo* -- which would allow *PyLag* to be installed at the system level -- is strongly discouraged.
