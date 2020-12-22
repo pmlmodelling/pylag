@@ -13,12 +13,14 @@ For end users, the easiest way to install *PyLag* is using *Conda*. This will in
 Installation using Conda
 ------------------------
 
-First `install miniconda3 <https://conda.io/projects/conda/en/latest/user-guide/install/linux.html>`_ in a location of your choosing. Then, activate *Conda* and add the channels *conda-forge* and *JimClark*. The latter is a temporary distribution channel for *PyLag*. For example:
+First `install miniconda3 <https://conda.io/projects/conda/en/latest/user-guide/install/linux.html>`_ in a location of your choosing. Then, activate *Conda*, ensure conda is up to data, and add the channels *conda-forge*, *geo-down-under* and *JimClark*. The channel *geo-down-under* is needed for one of PyLag's dependencies. The channel *JimClark* is a temporary distribution channel for *PyLag*. For example:
 
 .. code-block:: bash
 
     $ source /opt/miniconda/miniconda3/bin/activate
+    $ conda update conda
     $ conda config --append channels conda-forge
+    $ conda config --append channels geo-down-under
     $ conda config --append channels JimClark
 
 The above code assumes *miniconda3* was installed into the directory ``/opt/miniconda``, once the appropriate write permissions have been set. The default behaviour is to install *miniconda3* into your home directory. This is, of course, also fine.
@@ -34,7 +36,7 @@ Finally, install *PyLag*:
 
 .. code-block:: bash
 
-    (particleS) $ conda install -n particles -c JimClark pylag
+    (particles) $ conda install -n particles -c JimClark pylag
 
 To test that *PyLag* has been correctly installed, type:
 
@@ -63,11 +65,11 @@ The cleanest and safest way of installing *PyLag's* dependencies is using *Conda
 
     $ source /opt/miniconda/miniconda3/bin/activate
     $ conda config --append channels conda-forge
-    $ conda config --append channels geo_down_under
+    $ conda config --append channels geo-down-under
     $ conda config --append channels JimClark
     $ conda install conda-build conda-verify
 
-The only new step here is the addition of the geo_down_under channel, which is required for the package stripy, and the installation of conda-build and conda-verify. Next, create a new environment as above:
+The only new step here is the installation of conda-build and conda-verify. Next, create a new environment as above:
 
 .. code-block:: bash
 
@@ -82,7 +84,7 @@ And finally, in the PyLag source code directory, build and install *PyLag*.
     (particles) $ conda build . --numpy 1.19
     (particles) $ conda install -n particles --use-local pylag
 
-Occsionally, when building *PyLag* this way, users have hit upon clashes with locally installed packages. To get around this problem, you may find it useful to add the following aliases to your bashrc file, which you can use to activate and deactivate *Conda*:
+Occasionally, when building *PyLag* this way, users have hit upon clashes with locally installed packages. To get around this problem, you may find it useful to add the following aliases to your bashrc file, which you can use to activate and deactivate *Conda*:
 
 .. code-block:: bash
 
@@ -102,7 +104,7 @@ The *Conda* build process is quite long, and it doesn't lend itself to rapid bui
 Alternative installation methods
 --------------------------------
 
-In principle, there are several other ways *PyLag* can be installed. For example, using `virtualenv <https://virtualenv.pypa.io/en/stable/>`_; or by using *pip* to perform a local install with the ``--user`` flag. The main thing to watch out for with these other methods is dependency issues. In particular, *PyLag* leverages functionality within the `PyFVCOM <https://pypi.org/project/PyFVCOM/>`_ and `PyQt-fit <https://pyqt-fit.readthedocs.io/en/latest/index.html>`_ packages. When building using *Conda*, pre-built versions of theses packages are brought down and installed automatically. However, with custom installs, they may need to be installed separately. Furthermore, *Conda* correctly configures your environment to make it possible to run *PyLag* in serial or parallel modes. When not using *Conda*, you will likely have to configure your environment to support parallel execution (and, in-fact, installation).
+In principle, there are several other ways *PyLag* can be installed. For example, using `virtualenv <https://virtualenv.pypa.io/en/stable/>`_; or by using *pip* to perform a local install with the ``--user`` flag. The main thing to watch out for with these other methods is dependency issues. Furthermore, *Conda* correctly configures your environment to make it possible to run *PyLag* in serial or parallel modes. When not using *Conda*, you will likely have to configure your environment to support parallel execution (and, in-fact, installation).
 
 This is because *PyLag* includes a dependency on the python package `MPI for Python <https://mpi4py.readthedocs.io/en/stable/>`_. To install *MPI for Python*, it is first necessary to ensure that you have a working MPI implementation on your system, and that all paths to MPI libraries and header files have been correctly set. You must use your Linux package manager to install a working MPI Implementation. On my laptop running Fedora 27, the following commands suffice:
 
@@ -124,7 +126,7 @@ On my machine, *openmpi* is enabled using the module command, which correctly se
 Building the docs
 -----------------
 
-To build PyLag's documentation, a number of extra dependencies are required. These are not packaged with *PyLag* by default in order to keep the base installation slim and easier to manage. If you would like to build the documentation, the extra dependencies can be installed using conda or pip. The following commands use conda to install all the extra dependencies in the conda environment already created:
+To build PyLag's documentation, a number of extra dependencies are required. These are not packaged with *PyLag* by default in order to keep the base installation slim and easier to manage. If you would like to build the documentation, the extra dependencies can be installed using *conda* or *pip*. The following commands use conda to install all the extra dependencies in the conda environment already created:
 
 .. code-block:: bash
 
