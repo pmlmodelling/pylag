@@ -10,8 +10,9 @@ import numpy
 
 MAJOR               = 0
 MINOR               = 3
-ISRELEASED          = False
-VERSION = '{}.{}'.format(MAJOR, MINOR)
+PATCH               = 1
+ISRELEASED          = True
+VERSION = '{}.{}.{}'.format(MAJOR, MINOR, PATCH)
 
 build_type = 'prod'
 #build_type = 'prof'
