@@ -16,7 +16,6 @@ install:
   - conda install -y conda-build conda-verify
   - conda config --append channels conda-forge
   - conda config --append channels geo-down-under
-  - conda config --append channels JimClark
 
   # Build the conda recipe for this package
   - conda build -q --no-test meta.yaml --python=$TRAVIS_PYTHON_VERSION --output-folder bld-dir --numpy 1.19
