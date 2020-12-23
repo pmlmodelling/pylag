@@ -66,10 +66,9 @@ The cleanest and safest way of installing *PyLag's* dependencies is using *Conda
     $ source /opt/miniconda/miniconda3/bin/activate
     $ conda config --append channels conda-forge
     $ conda config --append channels geo-down-under
-    $ conda config --append channels JimClark
     $ conda install conda-build conda-verify
 
-The only new step here is the installation of conda-build and conda-verify. Next, create a new environment as above:
+The new step here is the installation of conda-build and conda-verify. Note we don't add the JimClark channel in order to avoid conda installing pylag from Anaconda cloud. Next, create a new environment as above:
 
 .. code-block:: bash
 
@@ -138,3 +137,4 @@ To build PyLag's documentation, a number of extra dependencies are required. The
                  jupyter_client ipykernel ffmpeg seapy cmocean matplotlib shapely cartopy
    (particles) $ conda install -c JimClark -n particles PyFVCOM PyQT-fit
 
+If you haven't added the JimClark channel you will need to do this before installing PyFVCOM and PyQT-fit.
