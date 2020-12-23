@@ -63,7 +63,7 @@ class Numerics_test(TestCase):
         config.set('NUMERICS', 'time_step_adv', '100.0')
         config.set('NUMERICS', 'time_step_diff', '5.0')
 
-        self.assertRaises(RuntimeError, get_iterative_method, config)
+        self.assertRaises(ValueError, get_iterative_method, config)
 
     def test_use_diffusion_without_Kh_and_but_with_Ah(self):
         # Create config
@@ -91,7 +91,7 @@ class Numerics_test(TestCase):
         config.set('NUMERICS', 'time_step_adv', '100.0')
         config.set('NUMERICS', 'time_step_diff', '5.0')
 
-        self.assertRaises(RuntimeError, get_iterative_method, config)
+        self.assertRaises(ValueError, get_iterative_method, config)
 
     def test_use_diffusion_with_Kh_and_but_without_Ah(self):
         # Create config
@@ -119,7 +119,7 @@ class Numerics_test(TestCase):
         config.set('NUMERICS', 'time_step_adv', '100.0')
         config.set('NUMERICS', 'time_step_diff', '5.0')
 
-        self.assertRaises(RuntimeError, get_iterative_method, config)
+        self.assertRaises(ValueError, get_iterative_method, config)
 
     def test_set_valid_OSONumMethod_advection_and_diffusion_time_steps(self):
         # Create config
