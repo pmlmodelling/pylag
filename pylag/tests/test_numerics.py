@@ -4,7 +4,7 @@ try:
 except ImportError:
     import ConfigParser as configparser
 
-from pylag.numerics import get_num_method
+from pylag.numerics import get_num_method, get_iterative_method
 
 
 class Numerics_test(TestCase):
@@ -35,7 +35,7 @@ class Numerics_test(TestCase):
         config.set('NUMERICS', 'time_step_adv', '100.0')
         config.set('NUMERICS', 'time_step_diff', '5.0')
 
-        num_method = get_num_method(config)
+        it_method = get_iterative_method(config)
 
     def test_use_diffusion_without_Kh_and_Ah(self):
         # Create config
@@ -63,7 +63,7 @@ class Numerics_test(TestCase):
         config.set('NUMERICS', 'time_step_adv', '100.0')
         config.set('NUMERICS', 'time_step_diff', '5.0')
 
-        self.assertRaises(RuntimeError, get_num_method, config)
+        self.assertRaises(RuntimeError, get_iterative_method, config)
 
     def test_use_diffusion_without_Kh_and_but_with_Ah(self):
         # Create config
@@ -91,7 +91,7 @@ class Numerics_test(TestCase):
         config.set('NUMERICS', 'time_step_adv', '100.0')
         config.set('NUMERICS', 'time_step_diff', '5.0')
 
-        self.assertRaises(RuntimeError, get_num_method, config)
+        self.assertRaises(RuntimeError, get_iterative_method, config)
 
     def test_use_diffusion_with_Kh_and_but_without_Ah(self):
         # Create config
@@ -119,7 +119,7 @@ class Numerics_test(TestCase):
         config.set('NUMERICS', 'time_step_adv', '100.0')
         config.set('NUMERICS', 'time_step_diff', '5.0')
 
-        self.assertRaises(RuntimeError, get_num_method, config)
+        self.assertRaises(RuntimeError, get_iterative_method, config)
 
     def test_set_valid_OSONumMethod_advection_and_diffusion_time_steps(self):
         # Create config
