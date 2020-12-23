@@ -69,3 +69,6 @@ cdef extern from "particle.h" namespace "particles":
         void set_k_upper_layer(const DTYPE_INT_t&) except +
         DTYPE_INT_t get_k_upper_layer() except +
 
+        void set_age(const DTYPE_FLOAT_t&) except +
+        DTYPE_FLOAT_t get_age() except +
+

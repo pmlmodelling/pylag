@@ -20,7 +20,8 @@ namespace particles {
           k_layer(-999),
           in_vertical_boundary_layer(false),
           k_lower_layer(-999),
-          k_upper_layer(-999) {
+          k_upper_layer(-999),
+          age(-999.) {
     }
 
     // Copy constructor
@@ -40,7 +41,8 @@ namespace particles {
           k_layer(rhs.k_layer),
           in_vertical_boundary_layer(rhs.in_vertical_boundary_layer),
           k_lower_layer(rhs.k_lower_layer),
-          k_upper_layer(rhs.k_upper_layer) {
+          k_upper_layer(rhs.k_upper_layer),
+          age(rhs.age) {
     }
 
     // Copy assignment operator
@@ -62,6 +64,7 @@ namespace particles {
         in_vertical_boundary_layer = rhs.in_vertical_boundary_layer;
         k_lower_layer = rhs.k_lower_layer;
         k_upper_layer = rhs.k_upper_layer;
+        age = rhs.age;
 
         return *this;
     }
@@ -219,5 +222,13 @@ namespace particles {
 
     int Particle::get_k_upper_layer() const {
         return k_upper_layer;
+    }
+
+    void Particle::set_age(const float& rhs) {
+        age = rhs;
+    }
+
+    float Particle::get_age() const {
+        return age;
     }
 }

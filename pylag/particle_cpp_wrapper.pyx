@@ -29,7 +29,8 @@ cdef class ParticleSmartPtr:
                   DTYPE_INT_t is_beached=0, host_elements={},
                   DTYPE_INT_t k_layer=INT_INVALID, bint in_vertical_boundary_layer=False,
                   DTYPE_INT_t k_lower_layer=INT_INVALID, DTYPE_INT_t k_upper_layer=INT_INVALID,
-                  DTYPE_INT_t id=INT_INVALID, DTYPE_INT_t status=0, ParticleSmartPtr particle_smart_ptr=None):
+                  DTYPE_INT_t id=INT_INVALID, DTYPE_INT_t status=0, DTYPE_FLOAT_t age=FLOAT_INVALID,
+                  ParticleSmartPtr particle_smart_ptr=None):
 
         cdef ParticleSmartPtr _particle_smart_ptr
 
@@ -57,6 +58,7 @@ cdef class ParticleSmartPtr:
             self._particle.set_in_vertical_boundary_layer(in_vertical_boundary_layer)
             self._particle.set_k_lower_layer(k_lower_layer)
             self._particle.set_k_upper_layer(k_upper_layer)
+            self._particle.set_age(age)
 
             # Set local coordinates on all grids
             self.set_all_phis(phis)
@@ -260,6 +262,11 @@ cdef class ParticleSmartPtr:
         """ Flag signifying whether or not the particle resides in either the top or bottom boundary layers """
         return self._particle.get_in_vertical_boundary_layer()
 
+    @property
+    def age(self):
+        """ The age of the particle in seconds """
+        return self._particle.get_age()
+
 
 cdef ParticleSmartPtr copy(ParticleSmartPtr particle_smart_ptr):
     """ Create a copy of a ParticleSmartPtr object
@@ -312,18 +319,20 @@ cdef to_string(Particle* particle):
              "Partilce k lower layer = {} \n"\
              "Partilce k upper layer = {} \n"\
              "Particle in domain = {} \n"\
-             "Particle is beached = {} \n".format(particle.get_id(),
-                                                  particle.get_x1(),
-                                                  particle.get_x2(),
-                                                  particle.get_x3(),
-                                                  particle.get_omega_interfaces(),
-                                                  particle.get_omega_layers(),
-                                                  particle.get_in_vertical_boundary_layer(),
-                                                  particle.get_k_layer(),
-                                                  particle.get_k_lower_layer(),
-                                                  particle.get_k_upper_layer(),
-                                                  particle.get_in_domain(),
-                                                  particle.get_is_beached())
+             "Particle is beached = {} \n"\
+             "Particle age = {} seconds \n".format(particle.get_id(),
+                                                   particle.get_x1(),
+                                                   particle.get_x2(),
+                                                   particle.get_x3(),
+                                                   particle.get_omega_interfaces(),
+                                                   particle.get_omega_layers(),
+                                                   particle.get_in_vertical_boundary_layer(),
+                                                   particle.get_k_layer(),
+                                                   particle.get_k_lower_layer(),
+                                                   particle.get_k_upper_layer(),
+                                                   particle.get_in_domain(),
+                                                   particle.get_is_beached(),
+                                                   particle.get_age())
 
     # Get host elements
     particle.get_all_host_horizontal_elems(grids, hosts)

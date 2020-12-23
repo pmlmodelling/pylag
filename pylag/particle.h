@@ -84,6 +84,9 @@ namespace particles {
             void set_k_layer(const int& rhs);
             int get_k_layer() const;
 
+            void set_age(const float& rhs);
+            float get_age() const;
+
 
         private:
 
@@ -152,6 +155,12 @@ namespace particles {
             // position. Only set if the particle is not in the top or bottom boundary
             // layers
             int k_upper_layer;
+
+            // Intrinsic particle properties
+            // -----------------------------
+
+            // Particle age in seconds
+            float age;
     };
 
 }

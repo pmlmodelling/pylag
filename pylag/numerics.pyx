@@ -1987,6 +1987,72 @@ def get_diff_iterative_method(config):
         raise ValueError('Unsupported iterative method specified.')
 
 
+cdef class ParticleStateNumMethod:
+    """ An abstract base class for particle state numerical methods
+
+    The following method(s) should be implemented in the derived class:
+
+    * :meth: step
+
+    Attributes
+    ----------
+    _time_step : float
+        Time step to be used by the iterative method
+    """
+    cdef void step(self, DTYPE_FLOAT_t time, Particle *particle):
+        raise NotImplementedError
+
+
+cdef class EulerParticleStateNumMethod:
+    """ Euler particle state numerical method
+
+    Particle states are updated using a simple euler scheme. For the time
+    being, all this does is update the particle's age.
+
+    Attributes
+    ----------
+    _time_step : float
+        Time step to be used in the intergration
+    """
+    def __init__(self, config):
+        # Set time step
+        self._time_step = get_global_time_step(config)
+
+    cdef void step(self, DTYPE_FLOAT_t time, Particle *particle):
+        cdef DTYPE_FLOAT_t age
+
+        age = time + self._time_step
+        particle.set_age(age)
+
+
+def get_particle_state_num_method(config):
+    """ Factory method for particle state num methods
+
+    The type of method to be constructed is read from an object of
+    type ConfigParser which is passed in as a function argument.
+
+    Parameters
+    ----------
+    config : ConfigParser
+        Object of type ConfigParser.
+    """
+    if not config.has_option("NUMERICS", "particle_state_num_method"):
+        raise ValueError("Failed to find the option `particle_state_num_method` in "\
+                "the supplied configuration file.")
+
+    # Prevent use when back tracking
+    if _get_time_direction_string(config) == "reverse":
+        raise ValueError("Cannot integrate particle state variables when back tracking.")
+
+    num_method = config.get("NUMERICS", "particle_state_num_method")
+
+    # Return the specified numerical integrator.
+    if num_method == "euler":
+        return EulerParticleStateNumMethod(config)
+    else:
+        raise ValueError('Unsupported particle state numerical method.')
+
+
 def get_global_time_step(config):
     """ Return the global time step
     

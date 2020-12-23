@@ -23,3 +23,11 @@ cdef class ItMethod:
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
             Particle *particle, Delta *delta_X) except INT_ERR
+
+
+# Base class for particle state time integration schemes
+cdef class ParticleStateNumMethod:
+    cdef DTYPE_FLOAT_t _time_step
+
+    cdef void step(self, DTYPE_FLOAT_t time, Particle *particle)
+

@@ -25,13 +25,13 @@ from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 from pylag.data_types_python import INT_INVALID, FLOAT_INVALID
 from pylag.variable_library import get_invalid_value
 
-from pylag.numerics import get_num_method
+from pylag.numerics import get_num_method, get_particle_state_num_method
 
 from libcpp.vector cimport vector
 
 from pylag.data_reader cimport DataReader
 from pylag.math cimport sigma_to_cartesian_coords, cartesian_to_sigma_coords
-from pylag.numerics cimport NumMethod
+from pylag.numerics cimport NumMethod, ParticleStateNumMethod
 from pylag.particle cimport Particle
 from pylag.particle_cpp_wrapper cimport ParticleSmartPtr, copy, to_string
 
@@ -59,6 +59,7 @@ cdef class OPTModel:
     cdef object coordinate_system
     cdef DataReader data_reader
     cdef NumMethod num_method
+    cdef ParticleStateNumMethod particle_state_num_method
     cdef object environmental_variables
     cdef object particle_seed_smart_ptrs
     cdef object particle_smart_ptrs
@@ -79,6 +80,9 @@ cdef class OPTModel:
 
         # Create num method object
         self.num_method = get_num_method(self.config)
+
+        # Create num method object
+        self.particle_state_num_method = get_particle_state_num_method(self.config)
 
         # Read in the coordinate system
         coordinate_system = self.config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system").strip().lower()
@@ -239,6 +243,9 @@ cdef class OPTModel:
                     # Don't set vertical grid vars as this will fail if zeta < h. They will be set later.
                     particle_ptr.set_is_beached(1)
 
+                # Initialise the age of the particle to 0 s.
+                particle_ptr.set_age(0.0)
+
             self.particle_smart_ptrs.append(particle_smart_ptr)
             self.particle_ptrs.push_back(particle_ptr)
 
@@ -354,6 +361,9 @@ cdef class OPTModel:
                     particle_ptr.set_in_domain(False)
                     particle_ptr.set_status(1)
                     continue
+
+                # Update particle states
+                self.particle_state_num_method.step(time, particle_ptr)
                 
     def get_diagnostics(self, time):
         """ Get particle diagnostics
