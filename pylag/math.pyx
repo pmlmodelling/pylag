@@ -269,7 +269,7 @@ cpdef DTYPE_INT_t intersection_is_within_arc_segment(const vector[DTYPE_FLOAT_t]
     # Compute the difference
     difference = abs(theta_arc - theta_1 - theta_2)
 
-    if difference > 1.e-6:
+    if difference > EPSILON:
         return 0
 
     return 1

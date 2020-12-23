@@ -1387,6 +1387,11 @@ cdef class UnstructuredGeographicGrid(Grid):
         cdef vector[DTYPE_INT_t] x2_indices = vector[DTYPE_INT_t](3, -999)
         cdef vector[DTYPE_INT_t] nbe_indices = vector[DTYPE_INT_t](3, -999)
 
+        # Containers for tetrahedral coordinates
+        cdef vector[DTYPE_FLOAT_t] phi = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef vector[DTYPE_FLOAT_t] s = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef DTYPE_FLOAT_t s_test
+
         x1_indices = [0,1,2]
         x2_indices = [1,2,0]
         nbe_indices = [2,0,1]
@@ -1474,11 +1479,22 @@ cdef class UnstructuredGeographicGrid(Grid):
                     return flag
 
             if current_elem == elem:
-                # Particle has not exited the current element meaning it must
-                # still reside in the domain
+                # The algorithm indicates the particle has not exited the current element; we
+                # check the tetrahedral coordinates to see if they are indeed all +ve.
+                s = self.get_tetrahedral_coords(particle_new.get_x1(), particle_new.get_x2(), current_elem)
+                s_test = float_min(float_min(s[0], s[1]), s[2])
+                if s_test >= 0.0:
+                    # Methods agree. Flag particle as being in the domain.
+                    particle_new.set_host_horizontal_elem(self.name, current_elem)
+                    phi = self.get_normalised_tetrahedral_coords(s)
+                    particle_new.set_phi(self.name, phi)
+                else:
+                    # Methods disagree. This can happen due to numerical precision issues. Respond
+                    # by moving the particle to the element's centroid!
+                    particle_new.set_host_horizontal_elem(self.name, current_elem)
+                    self.set_default_location(particle_new)
+
                 flag = IN_DOMAIN
-                particle_new.set_host_horizontal_elem(self.name, current_elem)
-                self.set_local_coordinates(particle_new)
 
                 return flag
 
