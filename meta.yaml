@@ -34,7 +34,7 @@ requirements:
     - cftime>=1.1
     - configparser
     - stripy
-    - joblib
+    - joblib<=0.17
     - shapely
     - pyproj
     - nose2
