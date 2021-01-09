@@ -85,7 +85,7 @@ cdef class OPTModel:
         self.num_method = get_num_method(self.config)
 
         # Create num method object
-        self.particle_state_num_method = get_particle_state_num_method(self.config)
+        #self.particle_state_num_method = get_particle_state_num_method(self.config)
 
         # Read in the coordinate system
         coordinate_system = self.config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system").strip().lower()
