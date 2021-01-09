@@ -74,6 +74,9 @@ cdef class OPTModel:
     # Copy of the global time step
     cdef DTYPE_FLOAT_t _global_time_step
 
+    # Use bio model?
+    cdef bint use_bio_model
+
     def __init__(self, config, data_reader):
         # Initialise config
         self.config = config
@@ -83,9 +86,6 @@ cdef class OPTModel:
 
         # Create num method object
         self.num_method = get_num_method(self.config)
-
-        # Create num method object
-        #self.particle_state_num_method = get_particle_state_num_method(self.config)
 
         # Read in the coordinate system
         coordinate_system = self.config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system").strip().lower()
@@ -102,6 +102,14 @@ cdef class OPTModel:
             self.environmental_variables = []
 
         self._global_time_step = get_global_time_step(self.config)
+
+        # Are we running with biology?
+        try:
+            self.use_bio_model = self.config.getboolean("BIO_MODEL", "use_bio_model")
+        except (configparser.NoSectionError, configparser.NoOptionError) as e:
+            self.use_bio_model = False
+
+        #self.particle_state_num_method = get_particle_state_num_method(self.config)
 
     def set_particle_data(self, group_ids, x1_positions, x2_positions, x3_positions):
         """Initialise memory views for data describing the particle seed.
@@ -251,6 +259,11 @@ cdef class OPTModel:
                 # Initialise the age of the particle to 0 s.
                 particle_ptr.set_age(0.0)
 
+                # Give life to the particle if use_bio_model is True.
+                # TODO - all bio model initialisations might be best done in a separate bio module.
+                if self.use_bio_model:
+                    particle_ptr.set_is_alive(True)
+
             self.particle_smart_ptrs.append(particle_smart_ptr)
             self.particle_ptrs.push_back(particle_ptr)
 
@@ -373,7 +386,7 @@ cdef class OPTModel:
 
                 # Update the particle's age
                 particle_ptr.set_age(new_time)
-                
+
     def get_diagnostics(self, time):
         """ Get particle diagnostics
         
