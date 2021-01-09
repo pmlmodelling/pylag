@@ -2009,8 +2009,7 @@ cdef class ParticleStateNumMethod:
 cdef class EulerParticleStateNumMethod:
     """ Euler particle state numerical method
 
-    Particle states are updated using a simple euler scheme. For the time
-    being, all this does is update the particle's age.
+    Particle states are updated using a simple euler scheme.
 
     Attributes
     ----------
@@ -2022,10 +2021,7 @@ cdef class EulerParticleStateNumMethod:
         self._time_step = get_global_time_step(config)
 
     cdef void step(self, DTYPE_FLOAT_t time, Particle *particle):
-        cdef DTYPE_FLOAT_t age
-
-        age = time + self._time_step
-        particle.set_age(age)
+        pass
 
 
 def get_particle_state_num_method(config):
