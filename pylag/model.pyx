@@ -25,7 +25,7 @@ from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 from pylag.data_types_python import INT_INVALID, FLOAT_INVALID
 from pylag.variable_library import get_invalid_value
 
-from pylag.numerics import get_num_method, get_particle_state_num_method, get_global_time_step
+from pylag.numerics import get_num_method, get_global_time_step
 
 from libcpp.vector cimport vector
 
@@ -34,6 +34,7 @@ from pylag.math cimport sigma_to_cartesian_coords, cartesian_to_sigma_coords
 from pylag.numerics cimport NumMethod, ParticleStateNumMethod
 from pylag.particle cimport Particle
 from pylag.particle_cpp_wrapper cimport ParticleSmartPtr, copy, to_string
+from pylag.bio_model cimport BioModel
 
 
 cdef class OPTModel:
@@ -74,8 +75,9 @@ cdef class OPTModel:
     # Copy of the global time step
     cdef DTYPE_FLOAT_t _global_time_step
 
-    # Use bio model?
+    # Include a biological model?
     cdef bint use_bio_model
+    cdef BioModel bio_model
 
     def __init__(self, config, data_reader):
         # Initialise config
@@ -109,7 +111,8 @@ cdef class OPTModel:
         except (configparser.NoSectionError, configparser.NoOptionError) as e:
             self.use_bio_model = False
 
-        #self.particle_state_num_method = get_particle_state_num_method(self.config)
+        if self.use_bio_model:
+            self.bio_model = BioModel()
 
     def set_particle_data(self, group_ids, x1_positions, x2_positions, x3_positions):
         """Initialise memory views for data describing the particle seed.
@@ -259,10 +262,12 @@ cdef class OPTModel:
                 # Initialise the age of the particle to 0 s.
                 particle_ptr.set_age(0.0)
 
-                # Give life to the particle if use_bio_model is True.
-                # TODO - all bio model initialisations might be best done in a separate bio module.
+                # Initialise bio particle properties
                 if self.use_bio_model:
-                    particle_ptr.set_is_alive(True)
+                    if self.config.get("SIMULATION", "initialisation_method") != "restart_file":
+                        self.bio_model.set_initial_particle_properties(particle_ptr)
+                    else:
+                        raise NotImplementedError('It is not yet possible to run bio models with restarts')
 
             self.particle_smart_ptrs.append(particle_smart_ptr)
             self.particle_ptrs.push_back(particle_ptr)
@@ -386,6 +391,12 @@ cdef class OPTModel:
 
                 # Update the particle's age
                 particle_ptr.set_age(new_time)
+
+        # Update particle biological properties
+        if self.use_bio_model:
+            for particle_ptr in self.particle_ptrs:
+                if particle_ptr.get_in_domain() and particle_ptr.get_is_alive():
+                    self.bio_model.update(self.data_reader, time, particle_ptr)
 
     def get_diagnostics(self, time):
         """ Get particle diagnostics
