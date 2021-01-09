@@ -25,7 +25,7 @@ from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 from pylag.data_types_python import INT_INVALID, FLOAT_INVALID
 from pylag.variable_library import get_invalid_value
 
-from pylag.numerics import get_num_method, get_particle_state_num_method
+from pylag.numerics import get_num_method, get_particle_state_num_method, get_global_time_step
 
 from libcpp.vector cimport vector
 
@@ -71,6 +71,9 @@ cdef class OPTModel:
     cdef DTYPE_FLOAT_t[:] _x2_positions
     cdef DTYPE_FLOAT_t[:] _x3_positions
 
+    # Copy of the global time step
+    cdef DTYPE_FLOAT_t _global_time_step
+
     def __init__(self, config, data_reader):
         # Initialise config
         self.config = config
@@ -97,6 +100,8 @@ cdef class OPTModel:
             self.environmental_variables = [var_name.strip() for var_name in var_names]
         except (configparser.NoSectionError, configparser.NoOptionError) as e:
             self.environmental_variables = []
+
+        self._global_time_step = get_global_time_step(self.config)
 
     def set_particle_data(self, group_ids, x1_positions, x2_positions, x3_positions):
         """Initialise memory views for data describing the particle seed.
@@ -337,6 +342,10 @@ cdef class OPTModel:
         """
         cdef Particle* particle_ptr
         cdef DTYPE_INT_t flag
+        cdef DTYPE_FLOAT_t new_time
+
+        # Time following the update. Used to set the particle's age.
+        new_time = time + self._global_time_step
 
         for particle_ptr in self.particle_ptrs:
             if particle_ptr.get_in_domain():
@@ -362,8 +371,8 @@ cdef class OPTModel:
                     particle_ptr.set_status(1)
                     continue
 
-                # Update particle states
-                self.particle_state_num_method.step(time, particle_ptr)
+                # Update the particle's age
+                particle_ptr.set_age(new_time)
                 
     def get_diagnostics(self, time):
         """ Get particle diagnostics
