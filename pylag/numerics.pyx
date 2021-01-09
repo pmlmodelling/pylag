@@ -231,20 +231,20 @@ cdef class StdNumMethod(NumMethod):
 
             return flag
 
-        # Set vertical grid vars. NB use t + dt!
-        flag = data_reader.set_vertical_grid_vars(time+self._time_step, &_particle_copy)
+        # Check to see if the particle has beached. Only set vertical grid vars if it is in water.
+        if data_reader.is_wet(time+self._time_step, &_particle_copy) == 1:
+            # Set vertical grid vars. NB use t + dt!
+            flag = data_reader.set_vertical_grid_vars(time+self._time_step, &_particle_copy)
 
-        # Apply surface/bottom boundary conditions if required
-        if flag != IN_DOMAIN:
-            flag = self._vert_bc_calculator.apply(data_reader, time+self._time_step, &_particle_copy)
+            # Apply surface/bottom boundary conditions if required
+            if flag != IN_DOMAIN:
+                flag = self._vert_bc_calculator.apply(data_reader, time+self._time_step, &_particle_copy)
 
-            # Return if failure recorded
-            if flag == BDY_ERROR:
-                return flag
-
-        # Check to see if the particle has beached
-        if data_reader.is_wet(time+self._time_step, &_particle_copy) == 0:
-             _particle_copy.set_is_beached(1)
+                # Return if failure recorded
+                if flag == BDY_ERROR:
+                    return flag
+        else:
+            _particle_copy.set_is_beached(1)
 
         # Copy back particle properties
         particle[0] = _particle_copy
@@ -416,8 +416,16 @@ cdef class OS0NumMethod(NumMethod):
         if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
             return flag
 
-        # Set vertical grid vars NB these are evaluated at time `time',
-        # since this is when the diffusion loop starts
+        # Check to see if the particle has beached. NB use time `time',
+        # since this is when the diffusion loop starts.
+        if data_reader.is_wet(time, &_particle_copy_a) == 0:
+            _particle_copy_a.set_is_beached(1)
+
+            particle[0] = _particle_copy_a
+
+            return flag
+
+        # Set vertical grid vars
         flag = data_reader.set_vertical_grid_vars(time, &_particle_copy_a)
 
         # Apply surface/bottom boundary conditions if required
@@ -427,15 +435,6 @@ cdef class OS0NumMethod(NumMethod):
             # Return if failure recorded
             if flag == BDY_ERROR:
                 return flag
-
-        # Check to see if the particle has beached
-        if data_reader.is_wet(time, &_particle_copy_a) == 0:
-            _particle_copy_a.set_is_beached(1)
-
-            particle[0] = _particle_copy_a
-
-            return flag
-
 
         # Diffusion
         # ---------
@@ -465,6 +464,14 @@ cdef class OS0NumMethod(NumMethod):
             if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
                 return flag
 
+            # Check to see if the particle has beached
+            if data_reader.is_wet(t+self._diff_time_step, &_particle_copy_b) == 0:
+                _particle_copy_b.set_is_beached(1)
+
+                particle[0] = _particle_copy_b
+
+                return flag
+
             flag = data_reader.set_vertical_grid_vars(t+self._diff_time_step, &_particle_copy_b)
 
             # Apply surface/bottom boundary conditions if required
@@ -474,14 +481,6 @@ cdef class OS0NumMethod(NumMethod):
                 # Return if failure recorded
                 if flag == BDY_ERROR:
                     return flag
-
-            # Check to see if the particle has beached
-            if data_reader.is_wet(t+self._diff_time_step, &_particle_copy_b) == 0:
-                _particle_copy_b.set_is_beached(1)
-
-                particle[0] = _particle_copy_b
-
-                return flag
 
             # Save the particle's last position to help with host element searching
             _particle_copy_a = _particle_copy_b
@@ -662,8 +661,15 @@ cdef class OS1NumMethod(NumMethod):
         if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
             return flag
 
-        # NB these are evaluated at time `time', since this is when the
+        # Check is beached status. NB evaluated at time `time', since this is when the
         # advection update starts
+        if data_reader.is_wet(time, &_particle_copy_a) == 0:
+            _particle_copy_a.set_is_beached(1)
+
+            particle[0] = _particle_copy_a
+
+            return flag
+
         flag = data_reader.set_vertical_grid_vars(time, &_particle_copy_a)
 
         # Apply surface/bottom boundary conditions if required
@@ -673,14 +679,6 @@ cdef class OS1NumMethod(NumMethod):
             # Return if failure recorded
             if flag == BDY_ERROR:
                 return flag
-
-        # Check is beached status
-        if data_reader.is_wet(time, &_particle_copy_a) == 0:
-            _particle_copy_a.set_is_beached(1)
-
-            particle[0] = _particle_copy_a
-
-            return flag
 
         # Advection step
         # --------------
@@ -716,6 +714,14 @@ cdef class OS1NumMethod(NumMethod):
         # Time at which to start the second diffusion step
         t = time + self._diff_time_step
 
+        # Check is beached status
+        if data_reader.is_wet(t, &_particle_copy_b) == 0:
+            _particle_copy_a.set_is_beached(1)
+
+            particle[0] = _particle_copy_b
+
+            return flag
+
         flag = data_reader.set_vertical_grid_vars(t, &_particle_copy_b)
 
         # Apply surface/bottom boundary conditions if required
@@ -725,14 +731,6 @@ cdef class OS1NumMethod(NumMethod):
             # Return if failure recorded
             if flag == BDY_ERROR:
                 return flag
-
-        # Check is beached status
-        if data_reader.is_wet(t, &_particle_copy_b) == 0:
-            _particle_copy_a.set_is_beached(1)
-
-            particle[0] = _particle_copy_b
-
-            return flag
 
         # Save the particle's last position to help with host element searching
         _particle_copy_a = _particle_copy_b
@@ -766,10 +764,14 @@ cdef class OS1NumMethod(NumMethod):
             zmax = data_reader.get_zmax(t, &_particle_copy_b)
             _particle_copy_b.set_x3(self._fixed_depth_below_surface + zmax)
 
-            if data_reader.is_wet(t, &_particle_copy_b) == 0:
+            if data_reader.is_wet(t, &_particle_copy_b) == 1:
 
                 # Determine the new host zlayer
                 flag = data_reader.set_vertical_grid_vars(t, &_particle_copy_b)
+
+                # Apply surface/bottom boundary conditions if required
+                if flag != IN_DOMAIN:
+                    flag = self._vert_bc_calculator.apply(data_reader, t, &_particle_copy_b)
 
                 # Return if failure recorded
                 if flag != IN_DOMAIN:
@@ -783,18 +785,19 @@ cdef class OS1NumMethod(NumMethod):
 
             return flag
 
-        flag = data_reader.set_vertical_grid_vars(t, &_particle_copy_b)
+        # Set vertical grid vars if the particle is in water
+        if data_reader.is_wet(t, &_particle_copy_b) == 1:
 
-        # Apply surface/bottom boundary conditions if required
-        if flag != IN_DOMAIN:
-            flag = self._vert_bc_calculator.apply(data_reader, t, &_particle_copy_b)
+            flag = data_reader.set_vertical_grid_vars(t, &_particle_copy_b)
 
-            # Return if failure recorded
-            if flag == BDY_ERROR:
-                return flag
+            # Apply surface/bottom boundary conditions if required
+            if flag != IN_DOMAIN:
+                flag = self._vert_bc_calculator.apply(data_reader, t, &_particle_copy_b)
 
-        # Check to see if the particle has beached
-        if data_reader.is_wet(t, &_particle_copy_b) == 0:
+                # Return if failure recorded
+                if flag == BDY_ERROR:
+                    return flag
+        else:
             _particle_copy_b.set_is_beached(1)
 
         # Copy back particle properties
@@ -1161,6 +1164,14 @@ cdef class AdvRK43DItMethod(ItMethod):
         if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
             return flag
 
+        # Check for wet/dry status - return early if the particle has beached
+        if data_reader.is_wet(t, &_particle) == 0:
+            delta_X.x1 = k1[0]/6.0
+            delta_X.x2 = k1[1]/6.0
+            delta_X.x3 = k1[2]/6.0
+
+            return flag
+
         # Set vertical grid vars
         flag = data_reader.set_vertical_grid_vars(t, &_particle)
 
@@ -1171,14 +1182,6 @@ cdef class AdvRK43DItMethod(ItMethod):
             # Return if failure recorded
             if flag == BDY_ERROR:
                 return flag
-
-        # Check for wet/dry status - return early if the particle has beached
-        if data_reader.is_wet(t, &_particle) == 0:
-            delta_X.x1 = k1[0]/6.0
-            delta_X.x2 = k1[1]/6.0
-            delta_X.x3 = k1[2]/6.0
-
-            return flag
 
         data_reader.get_velocity(t, &_particle, vel)
         for i in xrange(ndim):
@@ -1204,6 +1207,14 @@ cdef class AdvRK43DItMethod(ItMethod):
         if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
             return flag
 
+        # Check for wet/dry status - return early if the particle has beached
+        if data_reader.is_wet(t, &_particle) == 0:
+            delta_X.x1 = (k1[0] + 2.0*k2[0])/6.0
+            delta_X.x2 = (k1[1] + 2.0*k2[1])/6.0
+            delta_X.x3 = (k1[2] + 2.0*k2[2])/6.0
+
+            return flag
+
         # Set vertical grid vars.
         flag = data_reader.set_vertical_grid_vars(t, &_particle)
 
@@ -1214,14 +1225,6 @@ cdef class AdvRK43DItMethod(ItMethod):
             # Return if failure recorded
             if flag == BDY_ERROR:
                 return flag
-
-        # Check for wet/dry status - return early if the particle has beached
-        if data_reader.is_wet(t, &_particle) == 0:
-            delta_X.x1 = (k1[0] + 2.0*k2[0])/6.0
-            delta_X.x2 = (k1[1] + 2.0*k2[1])/6.0
-            delta_X.x3 = (k1[2] + 2.0*k2[2])/6.0
-
-            return flag
 
         data_reader.get_velocity(t, &_particle, vel)
         for i in xrange(ndim):
@@ -1247,6 +1250,14 @@ cdef class AdvRK43DItMethod(ItMethod):
         if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
             return flag
 
+        # Check for wet/dry status - return early if the particle has beached
+        if data_reader.is_wet(t, &_particle) == 0:
+            delta_X.x1 = (k1[0] + 2.0*k2[0] + 2.0*k3[0])/6.0
+            delta_X.x2 = (k1[1] + 2.0*k2[1] + 2.0*k3[1])/6.0
+            delta_X.x3 = (k1[2] + 2.0*k2[2] + 2.0*k3[2])/6.0
+
+            return flag
+
         # Set vertical grid vars.
         flag = data_reader.set_vertical_grid_vars(t, &_particle)
 
@@ -1257,14 +1268,6 @@ cdef class AdvRK43DItMethod(ItMethod):
             # Return if failure recorded
             if flag == BDY_ERROR:
                 return flag
-
-        # Check for wet/dry status - return early if the particle has beached
-        if data_reader.is_wet(t, &_particle) == 0:
-            delta_X.x1 = (k1[0] + 2.0*k2[0] + 2.0*k3[0])/6.0
-            delta_X.x2 = (k1[1] + 2.0*k2[1] + 2.0*k3[1])/6.0
-            delta_X.x3 = (k1[2] + 2.0*k2[2] + 2.0*k3[2])/6.0
-
-            return flag
 
         data_reader.get_velocity(t, &_particle, vel)
         for i in xrange(ndim):
