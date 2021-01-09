@@ -30,7 +30,7 @@ cdef class ParticleSmartPtr:
                   DTYPE_INT_t k_layer=INT_INVALID, bint in_vertical_boundary_layer=False,
                   DTYPE_INT_t k_lower_layer=INT_INVALID, DTYPE_INT_t k_upper_layer=INT_INVALID,
                   DTYPE_INT_t id=INT_INVALID, DTYPE_INT_t status=0, DTYPE_FLOAT_t age=FLOAT_INVALID,
-                  ParticleSmartPtr particle_smart_ptr=None):
+                  bint is_alive=False, ParticleSmartPtr particle_smart_ptr=None):
 
         cdef ParticleSmartPtr _particle_smart_ptr
 
@@ -59,6 +59,7 @@ cdef class ParticleSmartPtr:
             self._particle.set_k_lower_layer(k_lower_layer)
             self._particle.set_k_upper_layer(k_upper_layer)
             self._particle.set_age(age)
+            self._particle.set_is_alive(is_alive)
 
             # Set local coordinates on all grids
             self.set_all_phis(phis)
@@ -266,6 +267,11 @@ cdef class ParticleSmartPtr:
     def age(self):
         """ The age of the particle in seconds """
         return self._particle.get_age()
+
+    @property
+    def is_alive(self):
+        """ Boolean flag indicating whether the particle is alive or dead """
+        return self._particle.get_is_alive()
 
 
 cdef ParticleSmartPtr copy(ParticleSmartPtr particle_smart_ptr):

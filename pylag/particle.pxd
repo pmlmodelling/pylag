@@ -72,3 +72,6 @@ cdef extern from "particle.h" namespace "particles":
         void set_age(const DTYPE_FLOAT_t&) except +
         DTYPE_FLOAT_t get_age() except +
 
+        void set_is_alive(const bint&) except +
+        bint get_is_alive() except +
+

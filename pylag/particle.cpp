@@ -21,7 +21,8 @@ namespace particles {
           in_vertical_boundary_layer(false),
           k_lower_layer(-999),
           k_upper_layer(-999),
-          age(-999.) {
+          age(-999.),
+          is_alive(false) {
     }
 
     // Copy constructor
@@ -42,7 +43,8 @@ namespace particles {
           in_vertical_boundary_layer(rhs.in_vertical_boundary_layer),
           k_lower_layer(rhs.k_lower_layer),
           k_upper_layer(rhs.k_upper_layer),
-          age(rhs.age) {
+          age(rhs.age),
+          is_alive(rhs.is_alive) {
     }
 
     // Copy assignment operator
@@ -65,6 +67,7 @@ namespace particles {
         k_lower_layer = rhs.k_lower_layer;
         k_upper_layer = rhs.k_upper_layer;
         age = rhs.age;
+        is_alive = rhs.is_alive;
 
         return *this;
     }
@@ -230,5 +233,13 @@ namespace particles {
 
     float Particle::get_age() const {
         return age;
+    }
+
+    bool Particle::get_is_alive() const {
+        return is_alive;
+    }
+
+    void Particle::set_is_alive(const bool& rhs) {
+        is_alive = rhs;
     }
 }

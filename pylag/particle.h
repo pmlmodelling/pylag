@@ -87,6 +87,8 @@ namespace particles {
             void set_age(const float& rhs);
             float get_age() const;
 
+            void set_is_alive(const bool& rhs);
+            bool get_is_alive() const;
 
         private:
 
@@ -161,6 +163,9 @@ namespace particles {
 
             // Particle age in seconds
             float age;
+
+            // Particle is living?
+            bool is_alive;
     };
 
 }
