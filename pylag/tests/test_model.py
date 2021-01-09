@@ -25,6 +25,7 @@ class OPTModel_test1(TestCase):
         config.set('SIMULATION', 'depth_coordinates', 'depth_below_surface')
         config.add_section("NUMERICS")
         config.set('NUMERICS', 'num_method', 'test')
+        config.set('NUMERICS', 'time_step_adv', '1.0')
         config.add_section("OCEAN_CIRCULATION_MODEL")
         config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'cartesian')
         
@@ -38,7 +39,7 @@ class OPTModel_test1(TestCase):
         del(self.model)
 
     def test_all_seed_particles_lie_outside_of_the_model_domain(self):
-        group_ids = np.array([1,1])
+        group_ids = np.array([1, 1])
         x_positions = np.array([-1., -1.])
         y_positions = np.array([-1., -1.])
         z_positions = np.array([-1., -1.])
@@ -64,6 +65,7 @@ class OPTModel_test2(TestCase):
         config.set('SIMULATION', 'depth_coordinates', 'depth_below_surface')
         config.add_section("NUMERICS")
         config.set('NUMERICS', 'num_method', 'test')
+        config.set('NUMERICS', 'time_step_adv', '1.0')
         config.add_section("OCEAN_CIRCULATION_MODEL")
         config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'cartesian')
         
@@ -103,6 +105,7 @@ class OPTModel_test3(TestCase):
         config.set('SIMULATION', 'depth_coordinates', 'height_above_bottom')
         config.add_section("NUMERICS")
         config.set('NUMERICS', 'num_method', 'test')
+        config.set('NUMERICS', 'time_step_adv', '1.0')
         config.add_section("OCEAN_CIRCULATION_MODEL")
         config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'cartesian')
         

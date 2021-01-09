@@ -2075,7 +2075,7 @@ def get_global_time_step(config):
         Object of type ConfigParser.
     """
     num_method = config.get("NUMERICS", "num_method")
-    if num_method == "operator_split_0" or num_method == "operator_split_1":
+    if num_method == "test" or num_method == "operator_split_0" or num_method == "operator_split_1":
         return config.getfloat("NUMERICS", "time_step_adv")
     elif num_method == "standard":
         iterative_method = config.get("NUMERICS", "iterative_method")
