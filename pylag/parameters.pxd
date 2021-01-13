@@ -13,3 +13,6 @@ cpdef DTYPE_FLOAT_t deg_to_radians
 
 # Pi
 cpdef DTYPE_FLOAT_t pi
+
+# Seconds per day
+cpdef DTYPE_FLOAT_t seconds_per_day
