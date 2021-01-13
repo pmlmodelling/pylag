@@ -10,12 +10,19 @@ API is exposed in Python with accompanying documentation.
 
 include "constants.pxi"
 
+from pylag.mortality import get_mortality_calculator
+
 
 cdef class BioModel:
     """ A bio model object
+
+    Attributes
+    ----------
+    mortality_calculator : MortalityCalculator
+        Mortality calculator.
     """
-    def __init__(self):
-        pass
+    def __init__(self, config):
+        self.mortality_calculator = get_mortality_calculator(config)
 
     cdef void set_initial_particle_properties(self, Particle *particle) except *:
         """ Initialise particle properties
@@ -43,4 +50,6 @@ cdef class BioModel:
         particle : C pointer
             C pointer to a Particle struct
         """
-        pass
+        # Mortality
+        if self.mortality_calculator:
+            self.mortality_calculator.apply(data_reader, time, particle)
