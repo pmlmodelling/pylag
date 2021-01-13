@@ -2018,7 +2018,7 @@ cdef class EulerParticleStateNumMethod:
     """
     def __init__(self, config):
         # Set time step
-        self._time_step = get_global_time_step(config)
+        self._time_step = get_bio_time_step(config)
 
     cdef void step(self, DTYPE_FLOAT_t time, Particle *particle):
         pass
@@ -2050,6 +2050,35 @@ def get_particle_state_num_method(config):
         return EulerParticleStateNumMethod(config)
     else:
         raise ValueError('Unsupported particle state numerical method.')
+
+
+def get_bio_time_step(config):
+    """ Return the bio time step
+
+    At the current time, this is pinned to the global time step - bio
+    sub-stepping is not permitted. A check is put in place to ensure
+    the bio time step is equal to the global time step. See below
+    for information on how the global time step is set.
+
+    Parameters
+    ----------
+    config : ConfigParser
+        Object of type ConfigParser.
+    """
+    bio_time_step = config.getfloat("NUMERICS", "bio_time_step")
+
+    try:
+        global_time_step = get_global_time_step(config)
+    except (configparser.NoSectionError, configparser.NoOptionError) as e:
+        # This is okay, as users may want to run bio updates without
+        # physical transport.
+        return bio_time_step
+
+    if global_time_step == bio_time_step:
+        return bio_time_step
+    else:
+        raise ValueError('At the current time, the time step used when updating biological state variables '\
+                         'should be equal to the global physical time step.')
 
 
 def get_global_time_step(config):
