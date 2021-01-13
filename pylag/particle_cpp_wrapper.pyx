@@ -203,6 +203,16 @@ cdef class ParticleSmartPtr:
 
         return host_elements
 
+    def set_age(self, age):
+        """ Set the particle's age
+
+        Parameters
+        ----------
+        age : float
+            The age in seconds.
+        """
+        self._particle.set_age(age)
+
     @property
     def status(self):
         """ The particle's status (0 - okay; 1 - error) """
