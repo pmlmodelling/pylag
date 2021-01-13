@@ -365,6 +365,12 @@ cdef class OPTModel:
         # Time following the update. Used to set the particle's age.
         new_time = time + self._global_time_step
 
+        # Update particle biological properties
+        if self.use_bio_model:
+            for particle_ptr in self.particle_ptrs:
+                if particle_ptr.get_in_domain() and particle_ptr.get_is_alive():
+                    self.bio_model.update(self.data_reader, time, particle_ptr)
+
         for particle_ptr in self.particle_ptrs:
             if particle_ptr.get_in_domain():
                 flag = self.num_method.step(self.data_reader, time, particle_ptr)
@@ -389,14 +395,8 @@ cdef class OPTModel:
                     particle_ptr.set_status(1)
                     continue
 
-                # Update the particle's age
-                particle_ptr.set_age(new_time)
-
-        # Update particle biological properties
-        if self.use_bio_model:
-            for particle_ptr in self.particle_ptrs:
-                if particle_ptr.get_in_domain() and particle_ptr.get_is_alive():
-                    self.bio_model.update(self.data_reader, time, particle_ptr)
+            # Update the particle's age
+            particle_ptr.set_age(new_time)
 
     def get_diagnostics(self, time):
         """ Get particle diagnostics
