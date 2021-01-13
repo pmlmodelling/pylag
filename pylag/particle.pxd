@@ -18,6 +18,8 @@ cdef extern from "particle.h" namespace "particles":
 
         void clear_host_horizontal_elems() except +
 
+        void clear_bio_parameters() except +
+
         void set_group_id(const DTYPE_INT_t&) except +
         DTYPE_INT_t get_group_id() except +
 
@@ -74,4 +76,9 @@ cdef extern from "particle.h" namespace "particles":
 
         void set_is_alive(const bint&) except +
         bint get_is_alive() except +
+
+        void set_bio_parameter(const string&, const DTYPE_FLOAT_t&) except +
+        DTYPE_FLOAT_t get_bio_parameter(const string&) except +
+
+        void get_all_bio_parameters(vector[string]&, vector[float]&) except +
 

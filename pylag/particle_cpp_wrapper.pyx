@@ -30,7 +30,7 @@ cdef class ParticleSmartPtr:
                   DTYPE_INT_t k_layer=INT_INVALID, bint in_vertical_boundary_layer=False,
                   DTYPE_INT_t k_lower_layer=INT_INVALID, DTYPE_INT_t k_upper_layer=INT_INVALID,
                   DTYPE_INT_t id=INT_INVALID, DTYPE_INT_t status=0, DTYPE_FLOAT_t age=FLOAT_INVALID,
-                  bint is_alive=False, ParticleSmartPtr particle_smart_ptr=None):
+                  bint is_alive=False, bio_parameters={}, ParticleSmartPtr particle_smart_ptr=None):
 
         cdef ParticleSmartPtr _particle_smart_ptr
 
@@ -66,6 +66,9 @@ cdef class ParticleSmartPtr:
 
             # Add hosts
             self.set_all_host_horizontal_elems(host_elements)
+
+            # Set all bio parameters
+            self.set_all_bio_parameters(bio_parameters)
 
         if not self._particle:
             raise MemoryError()
@@ -212,6 +215,67 @@ cdef class ParticleSmartPtr:
             The age in seconds.
         """
         self._particle.set_age(age)
+
+    def set_bio_parameter(self, name, value):
+        """ Set biological parameter
+
+        Parameters
+        ----------
+        name : str
+            The name of the parameter.
+
+        value : float
+            The parameters value.
+        """
+        param_name = name.encode() if type(name) == str else name
+        self._particle.set_bio_parameter(param_name, value)
+
+    def get_bio_parameter(self, name):
+        """ Get biological parameter
+
+        Parameters
+        ----------
+        name : str
+            The name of the parameter.
+
+        Returns
+        -------
+        value : float
+            The value of the parameter.
+        """
+        param_name = name.encode() if type(name) == str else name
+
+        return self._particle.get_bio_parameter(param_name)
+
+    def set_all_bio_parameters(self, bio_parameters):
+        """ Set all bio parameters
+
+        Parameters
+        ----------
+        bio_parameters : dict
+            Dictionary of bio parameters {name: value}
+        """
+        self._particle.clear_bio_parameters()
+        for name, value in bio_parameters.items():
+            self.set_phi(name, value)
+
+    def get_all_bio_parameters(self):
+        """ Get all bio parameters
+
+        Returns
+        -------
+        bio_parameters : dict
+             Bio parameters stored in a dictionary.
+        """
+        cdef vector[string] names
+        cdef vector[float] values
+        self._particle.get_all_bio_parameters(names, values)
+
+        bio_parameters = {}
+        for name, value in zip(names, values):
+            bio_parameters[name.decode()] = value
+
+        return bio_parameters
 
     @property
     def status(self):

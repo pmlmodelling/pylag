@@ -30,6 +30,8 @@ namespace particles {
 
             void clear_host_horizontal_elems();
 
+            void clear_bio_parameters();
+
             // Getters and setters
             // -------------------
 
@@ -89,6 +91,11 @@ namespace particles {
 
             void set_is_alive(const bool& rhs);
             bool get_is_alive() const;
+
+            void set_bio_parameter(const std::string& name, const float& value);
+            float get_bio_parameter(const std::string& name) const;
+
+            void get_all_bio_parameters(std::vector<std::string>& names, std::vector<float>& values) const;
 
         private:
 
@@ -158,14 +165,18 @@ namespace particles {
             // layers
             int k_upper_layer;
 
-            // Intrinsic particle properties
-            // -----------------------------
+            // Intrinsic particle properties and parameters
+            // --------------------------------------------
 
             // Particle age in seconds
             float age;
 
             // Particle is living?
             bool is_alive;
+
+            // Biological and biochemical parameters. Format is: <name, value>.
+            std::unordered_map<std::string, float> bio_parameters;
+
     };
 
 }

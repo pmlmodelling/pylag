@@ -22,7 +22,8 @@ namespace particles {
           k_lower_layer(-999),
           k_upper_layer(-999),
           age(-999.),
-          is_alive(false) {
+          is_alive(false),
+          bio_parameters{} {
     }
 
     // Copy constructor
@@ -44,7 +45,8 @@ namespace particles {
           k_lower_layer(rhs.k_lower_layer),
           k_upper_layer(rhs.k_upper_layer),
           age(rhs.age),
-          is_alive(rhs.is_alive) {
+          is_alive(rhs.is_alive),
+          bio_parameters(rhs.bio_parameters) {
     }
 
     // Copy assignment operator
@@ -68,6 +70,7 @@ namespace particles {
         k_upper_layer = rhs.k_upper_layer;
         age = rhs.age;
         is_alive = rhs.is_alive;
+        bio_parameters = rhs.bio_parameters;
 
         return *this;
     }
@@ -78,6 +81,10 @@ namespace particles {
 
     void Particle::clear_host_horizontal_elems() {
         host_elements.clear();
+    }
+
+    void Particle::clear_bio_parameters() {
+        bio_parameters.clear();
     }
 
     // Getters and setters
@@ -241,5 +248,20 @@ namespace particles {
 
     void Particle::set_is_alive(const bool& rhs) {
         is_alive = rhs;
+    }
+
+    void Particle::set_bio_parameter(const std::string& name, const float& value) {
+        bio_parameters[name] = value;
+    }
+
+    float Particle::get_bio_parameter(const std::string& name) const {
+        return bio_parameters.at(name);
+    }
+
+    void Particle::get_all_bio_parameters(std::vector<std::string>& names, std::vector<float>& values) const {
+        for (auto& x: bio_parameters) {
+            names.push_back(x.first);
+            values.push_back(x.second);
+        }
     }
 }
