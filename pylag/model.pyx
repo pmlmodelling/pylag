@@ -112,7 +112,7 @@ cdef class OPTModel:
             self.use_bio_model = False
 
         if self.use_bio_model:
-            self.bio_model = BioModel()
+            self.bio_model = BioModel(config)
 
     def set_particle_data(self, group_ids, x1_positions, x2_positions, x3_positions):
         """Initialise memory views for data describing the particle seed.
