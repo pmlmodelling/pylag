@@ -25,4 +25,5 @@ performing ensemble simulations; and exploiting PyLag's parallel computing suppo
     fvcom_backward_tracking
     arakawa_a_forward_tracking
     roms_txla
+    mortality
 
