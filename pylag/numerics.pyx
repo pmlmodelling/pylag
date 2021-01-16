@@ -2065,7 +2065,7 @@ def get_bio_time_step(config):
     config : ConfigParser
         Object of type ConfigParser.
     """
-    bio_time_step = config.getfloat("NUMERICS", "bio_time_step")
+    bio_time_step = config.getfloat("NUMERICS", "time_step_bio")
 
     try:
         global_time_step = get_global_time_step(config)
