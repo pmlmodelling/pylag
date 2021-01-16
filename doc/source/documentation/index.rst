@@ -12,3 +12,4 @@ In the following sections, further details are provided regarding *PyLag's* over
     overview
     configuration
     initial_positions
+    mortality
