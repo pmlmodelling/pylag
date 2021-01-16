@@ -136,7 +136,7 @@ class NetCDFLogger(object):
         # Add host
         for grid_name in self.grid_names:
             self._host_vars[grid_name] = self._ncfile.createVariable('host_{}'.format(grid_name), DTYPE_INT,
-                                                                    ('time', 'particles',), **self._ncopts)
+                                                                     ('time', 'particles',), **self._ncopts)
             self._host_vars[grid_name].units = 'None'
             self._host_vars[grid_name].long_name = 'Host horizontal element on grid {}'.format(grid_name)
             self._host_vars[grid_name].invalid = '{}'.format(INT_INVALID)
@@ -152,7 +152,17 @@ class NetCDFLogger(object):
 
         self._is_beached = self._ncfile.createVariable('is_beached', DTYPE_INT, ('time', 'particles',), **self._ncopts)
         self._is_beached.long_name = 'Is beached'
-        
+
+        self._age = self._ncfile.createVariable('age', variable_library.get_data_type('age'),
+                                                ('time', 'particles',), **self._ncopts)
+        self._age.units = variable_library.get_units('age')
+        self._age.long_name = variable_library.get_long_name('age')
+        self._age.invalid = '{}'.format(variable_library.get_invalid_value('age'))
+
+        self._is_alive = self._ncfile.createVariable('is_alive', 'i4', ('time', 'particles',), **self._ncopts)
+        self._is_alive.units = 'None'
+        self._is_alive.long_name = 'Is alive flag (1 - yes; 0 - no)'
+
         # Add grid variables
         self._h = self._ncfile.createVariable('h', variable_library.get_data_type('h'),
                                               ('time', 'particles',), **self._ncopts)
@@ -221,6 +231,8 @@ class NetCDFLogger(object):
         self._is_beached[tidx, :] = particle_data['is_beached']
         self._in_domain[tidx, :] = particle_data['in_domain']
         self._status[tidx, :] = particle_data['status']
+        self._age[tidx, :] = particle_data['age']
+        self._is_alive[tidx, :] = particle_data['is_alive']
 
         # Add host horizontal elements
         for grid_name in self.grid_names:

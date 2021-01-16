@@ -29,6 +29,7 @@ from pylag.numerics import get_num_method, get_global_time_step
 
 from libcpp.vector cimport vector
 
+from pylag.parameters cimport seconds_per_day
 from pylag.data_reader cimport DataReader
 from pylag.math cimport sigma_to_cartesian_coords, cartesian_to_sigma_coords
 from pylag.numerics cimport NumMethod, ParticleStateNumMethod
@@ -423,7 +424,7 @@ cdef class OPTModel:
 
         # Initialise lists
         diags = {'x1': [], 'x2': [], 'x3': [], 'h': [], 'zeta': [], 'is_beached': [],
-                 'in_domain': [], 'status': []}
+                 'in_domain': [], 'status': [], 'age': [], 'is_alive': []}
 
         # Initialise host data
         for grid_name in self.get_grid_names():
@@ -449,7 +450,9 @@ cdef class OPTModel:
             diags['is_beached'].append(particle_smart_ptr.is_beached)
             diags['in_domain'].append(particle_smart_ptr.in_domain)
             diags['status'].append(particle_smart_ptr.status)
-            
+            diags['age'].append(particle_smart_ptr.age / seconds_per_day)
+            diags['is_alive'].append(particle_smart_ptr.is_alive)
+
             # Grid variables
             if particle_smart_ptr.in_domain:
                 h = self.data_reader.get_zmin(time, particle_smart_ptr.get_ptr())
