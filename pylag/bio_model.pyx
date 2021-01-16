@@ -35,6 +35,10 @@ cdef class BioModel:
         # Make the particle alive
         particle.set_is_alive(True)
 
+        # Initialise mortality parameters
+        if self.mortality_calculator:
+            self.mortality_calculator.set_initial_particle_properties(particle)
+
     cdef void update(self, DataReader data_reader, DTYPE_FLOAT_t time,
                      Particle *particle) except *:
         """ Update particle properties
