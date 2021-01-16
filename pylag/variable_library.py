@@ -178,6 +178,14 @@ _variable_long_names['zeta'] = 'Sea surface elevation'
 _variable_invalid_values['zeta'] = FLOAT_INVALID
 
 
+# Status variables
+# ---------------
+_variable_data_types['age'] = DTYPE_FLOAT
+_variable_units['age'] = 'days (d)'
+_variable_long_names['age'] = 'Particle age'
+_variable_invalid_values['age'] = FLOAT_INVALID
+
+
 # Environmental variables
 # -----------------------
 
