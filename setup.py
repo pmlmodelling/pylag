@@ -11,7 +11,7 @@ import numpy
 MAJOR               = 0
 MINOR               = 3
 PATCH               = 2
-ISRELEASED          = True
+ISRELEASED          = False
 VERSION = '{}.{}.{}'.format(MAJOR, MINOR, PATCH)
 
 build_type = 'prod'
