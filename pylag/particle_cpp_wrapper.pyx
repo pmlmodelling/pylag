@@ -216,6 +216,16 @@ cdef class ParticleSmartPtr:
         """
         self._particle.set_age(age)
 
+    def get_age(self):
+        """ Get the particle's age
+
+        Parameters
+        ----------
+        age : float
+            The age in seconds.
+        """
+        self._particle.get_age()
+
     def set_bio_parameter(self, name, value):
         """ Set biological parameter
 
