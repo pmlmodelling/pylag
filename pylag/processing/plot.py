@@ -474,6 +474,9 @@ class ArakawaAPlotter(PyLagPlotter):
         del ds
 
     def _read_grid_information(self, ds):
+        # Is this a global grid or a regional/local one with open boundaries?
+        self.is_global = True if ds.is_global.strip().lower() == "true" else False
+
         # Read in the required grid variables
         self.n_nodes = len(ds.dimensions['node'])
         self.n_elems = len(ds.dimensions['element'])
@@ -495,11 +498,14 @@ class ArakawaAPlotter(PyLagPlotter):
         # Node index permutation
         self.permutation = ds.variables['permutation'][:]
 
-        # Create a new spherical triangulation
-        self.tri = stripy.sTriangulation(lons=np.radians(self.x), lats=np.radians(self.y), permute=False)
-
         # Simplices
-        self.simplices = self.tri.simplices
+        self.simplices = ds.variables['nv'][:].transpose()
+
+        # Create a new spherical triangulation
+        if self.is_global:
+            self.tri = stripy.sTriangulation(lons=np.radians(self.x), lats=np.radians(self.y), permute=False)
+        else:
+            self.tri = Triangulation(self.x, self.y, self.simplices, mask=self.maskc)
 
         # Indices for ocean elements
         self.ocean_elements = np.asarray(self.maskc == 0).nonzero()[0]
