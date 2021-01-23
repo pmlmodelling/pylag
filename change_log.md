@@ -2,6 +2,18 @@
 
 PyLag is still very much in development. This page will be updated when future releases are made.
 
+## Version 0.3.3 23/01/2020
+
+* Switch out stripy for scipy when creating regional triangulations from an Arakawa A-grid in order to fix problems associated with the treatment of open boundaries.
+
+## Version 0.3.2 09/01/2020
+
+* Fix boundary error that occasionally arises with wetting and drying.
+
+## Version 0.3.1 23/12/2020
+
+* Fix negative phi issue with geographic coords on an Arakawa A grid.
+
 ## Version 0.3 22/12/2020
 
 * Update installation instructions regarding issue #35
