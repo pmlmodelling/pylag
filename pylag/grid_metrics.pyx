@@ -534,6 +534,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
     else:
         # Create the Triangulation
         tri = Delaunay(points)
+        print('done')
 
         # Save simplices
         #   - Flip to reverse ordering, as expected by PyLag
