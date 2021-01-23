@@ -32,12 +32,17 @@ class GridMetricsFileCreator(object):
     format : str, optional
         The format of the NetCDF file (e.g. NetCDF4). Default: NetCDF4.
 
+    is_global bool, optional
+        Flag signifying whether the grid is global or not. Optional, default : False.
+
     """
 
-    def __init__(self, file_name='./grid_metrics.nc', format="NETCDF4"):
+    def __init__(self, file_name='./grid_metrics.nc', format="NETCDF4", is_global=False):
         self.file_name = file_name
 
         self.format = format
+
+        self.is_global = is_global
 
         # Coordinate dimensions
         self.dims = dict()
@@ -142,6 +147,11 @@ class GridMetricsFileCreator(object):
         global_attrs['contact'] = 'James R. Clark (jcl@pml.ac.uk)'
         global_attrs['netcdf-version-id'] = 'netCDF-4'
         global_attrs['comment'] = ""
+
+        if self.is_global:
+            global_attrs['is_global'] = "True"
+        else:
+            global_attrs['is_global'] = "False"
 
         self.ncfile.setncatts(global_attrs)
 
@@ -276,18 +286,26 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_
 
 
 def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_var_name='latitude',
-                                       depth_var_name='depth', surface_only=False, mask_var_name=None,
-                                       reference_var_name=None, bathymetry_var_name=None, stripy_nbe=True,
-                                       num_threads=1, prng_seed=10, grid_metrics_file_name='./grid_metrics.nc'):
+                                       depth_var_name='depth', mask_var_name=None, reference_var_name=None,
+                                       bathymetry_var_name=None, dim_names=None, is_global=False,
+                                       surface_only=False, stripy_nbe=True, num_threads=1, prng_seed=10,
+                                       grid_metrics_file_name='./grid_metrics.nc'):
     """ Create a Arakawa A-grid metrics file
 
     This function creates a grid metrics file for data defined on a regular rectilinear
     Arakawa A-grid. The approach taken is to reinterpret the regular grid as a single,
     unstructured grid which can be understood by PyLag.
 
-    We use stripy to create a spherical triangulation on the surface of the Earth. This
-    may be a full global triangulation or a regional triangulation, depending on the
-    input grid. In the version tested (stripy 2.02), stripy requires that the first three
+    The unstructured grid can be created in one of two ways. The first is by using the python
+    package `scipy` to create a Delaunay triangulation. The second uses the python package
+    `stripy` to create the triangulation. The two methods are tied to different applications.
+    The first method should be used when creating a triangulation of a regional grid. The
+    second method should be used when creating a triangulation of a global grid. The choice is
+    made through the optional argument `is_global`. Two different methods are used
+    since they offer significant advantages over each other in the two target applications.
+
+    We use stripy to create a spherical triangulation on the surface of the Earth in the
+    global use case. In the version tested (stripy 2.02), stripy requires that the first three
     lat/lon points don't lie on a Great Circle. As this will typically be the case with
     regularly gridded data, we must permute the lat and lon arrays. To achieve this we
     use NumPy to shuffle array indices. These shuffled indices are used to permute data arrays.
@@ -320,12 +338,6 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
     depth_var_name : str, optional
         The name of the depth variable. Optional, default : 'depth'
 
-    surface_only : bool, optional
-        If False, process depth and bathymetry. If True, only process variables
-        specific to the horizontal grid. Set to False if you want to do 3D
-        transport modelling, and True if you want to do 2D surface only
-        transport modeling. Optional, default : False.
-
     mask_var_name : str, optional
         The name of the mask variable which will be used to generate the
         land sea mask. If `None`, the land sea mask is inferred from the
@@ -344,6 +356,26 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
         of `reference_var_name`. If the output files contain a time varying mask due to
         changes in sea surface elevation, the bathymetry should be provided. Optional,
         default : True.
+
+    dim_names : dict, optional
+        Dictionary of dimension names. The dictionary should be used to specify dimension
+        names if they are different to the standard names: 'time', 'depth', 'latitude',
+        'longitude'. The above strings should be used for the dimension dictionary keys.
+        For example, to specify a longitude dimension name of 'lon', pass in the dictionary:
+        dim_names = {'longitude': 'lon'}.
+
+    is_global : bool, optional
+        Boolean flag signifying whether or not the input grid should be treated as a global
+        grid. If `True`, the python package stripy is used to create a global triangulation.
+        If `False`, a Delaunay triangulation is created using scipy. To reflect typical
+        PyLag use cases, the flag is optional with a default value of False. Optional,
+        default : False.
+
+    surface_only : bool, optional
+        If False, process depth and bathymetry. If True, only process variables
+        specific to the horizontal grid. Set to False if you want to do 3D
+        transport modelling, and True if you want to do 2D surface only
+        transport modeling. Optional, default : False.
 
     stripy_nbe : bool, optional
         Use `stripy` to compute neighbour simplices if True. If False, create a K-D Tree
@@ -381,8 +413,20 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
     if surface_only is False:
         if bathymetry_var_name is None and reference_var_name is None:
             raise ValueError('Either the name of the bathymetry variable or the name of a reference ' \
-                             'masked variable must be given in order to compute and save the bathymetry,'\
+                             'masked variable must be given in order to compute and save the bathymetry, '\
                              'as required by PyLag when running with input fields.')
+
+    # Process dimension name
+    if dim_names is not None:
+        time_dim_name = dim_names.get('time', 'time')
+        depth_dim_name = dim_names.get('depth', 'depth')
+        lon_dim_name = dim_names.get('longitude', 'longitude')
+        lat_dim_name = dim_names.get('latitude', 'latitude')
+    else:
+        time_dim_name = 'time'
+        depth_dim_name = 'depth'
+        lat_dim_name = 'latitude'
+        lon_dim_name = 'longitude'
 
     # Open the input file for reading
     input_dataset = Dataset(file_name, 'r')
@@ -445,7 +489,8 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
     # Read in the reference variable if needed
     if mask_var_name is None or (surface_only is False and bathymetry_var_name is None):
         ref_var, _ = _get_variable(input_dataset, reference_var_name)
-        ref_var = sort_axes(ref_var)
+        ref_var = sort_axes(ref_var, time_name=time_dim_name, depth_name=depth_dim_name, lat_name=lat_dim_name,
+                            lon_name=lon_dim_name)
 
         if not np.ma.isMaskedArray(ref_var):
             raise RuntimeError('Reference variable is not a masked array. Cannot generate land-sea mask '/
@@ -464,33 +509,48 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
     print('\nCreating the triangulation ', end='... ')
     node_indices = np.arange(n_nodes, dtype=DTYPE_INT)
 
-    # Permute arrays
-    np.random.shuffle(node_indices)
-    lon_nodes = lon_nodes[node_indices]
-    lat_nodes = lat_nodes[node_indices]
+    # Use stipy of scipy depending on whether the grid is global or not.
+    if is_global:
+        # Permute arrays
+        np.random.shuffle(node_indices)
+        lon_nodes = lon_nodes[node_indices]
+        lat_nodes = lat_nodes[node_indices]
 
-    # Create the triangulation
-    tri = stripy.sTriangulation(lons=np.radians(lon_nodes), lats=np.radians(lat_nodes), permute=False)
-    print('done')
+        # Create the triangulation
+        tri = stripy.sTriangulation(lons=np.radians(lon_nodes), lats=np.radians(lat_nodes), permute=False)
+        print('done')
 
-    # Save simplices
-    #   - Flip to reverse ordering, as expected by PyLag
-    nv = np.asarray(np.flip(tri.simplices.copy(), axis=1), dtype=DTYPE_INT)
+        # Save simplices
+        #   - Flip to reverse ordering, as expected by PyLag
+        nv = np.asarray(np.flip(tri.simplices.copy(), axis=1), dtype=DTYPE_INT)
 
-    # Neighbour array
-    print('\nIdentifying neighbour simplices ...')
-    if stripy_nbe:
-        nbe = np.asarray(tri.neighbour_simplices(), dtype=DTYPE_INT)
+        # Neighbour array
+        print('\nIdentifying neighbour simplices ', end='... ')
+        if stripy_nbe:
+            nbe = np.asarray(tri.neighbour_simplices(), dtype=DTYPE_INT)
+        else:
+            nbe = identify_neighbour_simplices(tri)
+        print('done')
     else:
-        nbe = identify_neighbour_simplices(tri)
-    print('done')
+        # Create the Triangulation
+        tri = Delaunay(points)
+        print('done')
+
+        # Save simplices
+        #   - Flip to reverse ordering, as expected by PyLag
+        nv = np.asarray(np.flip(tri.simplices.copy(), axis=1), dtype=DTYPE_INT)
+
+        # Save neighbours
+        nbe = np.asarray(tri.neighbors, dtype=DTYPE_INT)
 
     # Save bathymetry
     if surface_only is False:
         print('\nGenerating the bathymetry:')
         if bathymetry_var_name:
-            bathy_var, bathy_attrs = _get_variable(input_dataset, bathymetry_var_name)
-            bathy = sort_axes(bathy_var).squeeze()
+            # NB assumes bathymetry is positive up
+            bathy_var, _ = _get_variable(input_dataset, bathymetry_var_name)
+            bathy = sort_axes(bathy_var, time_name=time_dim_name, depth_name=depth_dim_name, lat_name=lat_dim_name,
+                              lon_name=lon_dim_name).squeeze()
 
             if len(bathy.shape) != 2:
                 raise RuntimeError('Bathymetry array is not 2D.')
@@ -520,12 +580,12 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
                 else:
                     bathy[i] = 0.0
 
-            # Add standard attributes
-            bathy_attrs = {'standard_name': 'depth',
-                           'units': 'm',
-                           'long_name': 'depth, measured down from the free surface',
-                           'axis': 'Z',
-                           'positive': 'down'}
+        # Add standard attributes
+        bathy_attrs = {'standard_name': 'depth',
+                       'units': 'm',
+                       'long_name': 'depth, measured down from the free surface',
+                       'axis': 'Z',
+                       'positive': 'down'}
 
         # Permute the bathymetry array
         bathy = bathy[node_indices]
@@ -536,7 +596,8 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
         mask_var, mask_attrs = _get_variable(input_dataset, mask_var_name)
 
         # Generate land-sea mask at nodes
-        land_sea_mask_nodes = sort_axes(mask_var).squeeze()
+        land_sea_mask_nodes = sort_axes(mask_var, time_name=time_dim_name, depth_name=depth_dim_name,
+                                        lat_name=lat_dim_name, lon_name=lon_dim_name).squeeze()
         if len(land_sea_mask_nodes.shape) < 2 or len(land_sea_mask_nodes.shape) > 3:
             raise ValueError('Unsupported land sea mask with shape {}'.format(land_sea_mask_nodes.shape))
 
@@ -581,9 +642,21 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
 
     # Save lons and lats at element centres
     print('\nCalculating lons and lats at element centres ', end='... ')
-    xc, yc = tri.face_midpoints()
-    lon_elements = np.degrees(xc)
-    lat_elements = np.degrees(yc)
+    if is_global:
+        xc, yc = tri.face_midpoints()
+        lon_elements = np.degrees(xc)
+        lat_elements = np.degrees(yc)
+    else:
+        lon_elements = np.empty(n_elems, dtype=DTYPE_FLOAT)
+        lat_elements = np.empty(n_elems, dtype=DTYPE_FLOAT)
+
+        # To be accurate, this should be done using a spherical transformation to (x,y,z) coords.
+        # However, since the centroid is rarely used in the code (all interpolations are done
+        # using nodal values) this should be sufficent.
+        for i, element in enumerate(range(n_elems)):
+            lon_elements[i] = lon_nodes[(nv[element, :])].mean()
+            lat_elements[i] = lat_nodes[(nv[element, :])].mean()
+
     print('done')
 
     # Generate the land-sea mask at elements
@@ -630,7 +703,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
     print('\nCreating grid metrics file {} '.format(grid_metrics_file_name), end='... ')
 
     # Instantiate file creator
-    gm_file_creator = GridMetricsFileCreator(grid_metrics_file_name)
+    gm_file_creator = GridMetricsFileCreator(grid_metrics_file_name, is_global=is_global)
 
     # Create skeleton file
     gm_file_creator.create_file()
@@ -1240,7 +1313,7 @@ def _get_dimension_index(dimensions, name):
     try:
         return dimensions.index(name)
     except ValueError:
-        print('Failed to find dimension index. Dimensions were {}; supplied '
+        print('\n\nFailed to find dimension index. Dimensions were {}; supplied '
               'names were {}.'.format(dimensions, name))
         raise
 
