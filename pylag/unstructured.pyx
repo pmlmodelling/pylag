@@ -619,13 +619,6 @@ cdef class UnstructuredCartesianGrid(Grid):
 
                     return IN_DOMAIN
                 else:
-                    # Element has two land boundaries
-                    if self.config.get('GENERAL', 'log_level') == 'DEBUG':
-                        logger = logging.getLogger(__name__)
-                        logger.warning('Global host element search '
-                            'determined that the particle lies within an '
-                            'element with two land boundaries. Such elements '
-                            'are flagged as lying outside of the model domain.')
                     return BDY_ERROR
         return BDY_ERROR
 
@@ -1553,13 +1546,6 @@ cdef class UnstructuredGeographicGrid(Grid):
 
                     return IN_DOMAIN
                 else:
-                    # Element has two land boundaries
-                    if self.config.get('GENERAL', 'log_level') == 'DEBUG':
-                        logger = logging.getLogger(__name__)
-                        logger.warning('Global host element search '
-                            'determined that the particle lies within an '
-                            'element with two land boundaries. Such elements '
-                            'are flagged as lying outside of the model domain.')
                     return BDY_ERROR
         return BDY_ERROR
 
