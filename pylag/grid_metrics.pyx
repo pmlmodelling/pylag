@@ -276,8 +276,8 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_
 
 
 def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_var_name='latitude',
-                                       depth_var_name='depth', surface_only=False, mask_var_name=None,
-                                       reference_var_name=None, bathymetry_var_name=None, stripy_nbe=True,
+                                       depth_var_name='depth', mask_var_name=None, reference_var_name=None,
+                                       bathymetry_var_name=None, dim_names=None, surface_only=False, stripy_nbe=True,
                                        num_threads=1, prng_seed=10, grid_metrics_file_name='./grid_metrics.nc'):
     """ Create a Arakawa A-grid metrics file
 
@@ -320,12 +320,6 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
     depth_var_name : str, optional
         The name of the depth variable. Optional, default : 'depth'
 
-    surface_only : bool, optional
-        If False, process depth and bathymetry. If True, only process variables
-        specific to the horizontal grid. Set to False if you want to do 3D
-        transport modelling, and True if you want to do 2D surface only
-        transport modeling. Optional, default : False.
-
     mask_var_name : str, optional
         The name of the mask variable which will be used to generate the
         land sea mask. If `None`, the land sea mask is inferred from the
@@ -344,6 +338,19 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
         of `reference_var_name`. If the output files contain a time varying mask due to
         changes in sea surface elevation, the bathymetry should be provided. Optional,
         default : True.
+
+    dim_names : dict, optional
+        Dictionary of dimension names. The dictionary should be used to specify dimension
+        names if they are different to the standard names: 'time', 'depth', 'latitude',
+        'longitude'. The above strings should be used for the dimension dictionary keys.
+        For example, to specify a longitude dimension name of 'lon', pass in the dictionary:
+        dim_names = {'longitude': 'lon'}.
+
+    surface_only : bool, optional
+        If False, process depth and bathymetry. If True, only process variables
+        specific to the horizontal grid. Set to False if you want to do 3D
+        transport modelling, and True if you want to do 2D surface only
+        transport modeling. Optional, default : False.
 
     stripy_nbe : bool, optional
         Use `stripy` to compute neighbour simplices if True. If False, create a K-D Tree
@@ -381,8 +388,20 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
     if surface_only is False:
         if bathymetry_var_name is None and reference_var_name is None:
             raise ValueError('Either the name of the bathymetry variable or the name of a reference ' \
-                             'masked variable must be given in order to compute and save the bathymetry,'\
+                             'masked variable must be given in order to compute and save the bathymetry, '\
                              'as required by PyLag when running with input fields.')
+
+    # Process dimension name
+    if dim_names is not None:
+        time_dim_name = dim_names.get('time', 'time')
+        depth_dim_name = dim_names.get('depth', 'depth')
+        lon_dim_name = dim_names.get('longitude', 'longitude')
+        lat_dim_name = dim_names.get('latitude', 'latitude')
+    else:
+        time_dim_name = 'time'
+        depth_dim_name = 'depth'
+        lat_dim_name = 'latitude'
+        lon_dim_name = 'longitude'
 
     # Open the input file for reading
     input_dataset = Dataset(file_name, 'r')
@@ -445,7 +464,8 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
     # Read in the reference variable if needed
     if mask_var_name is None or (surface_only is False and bathymetry_var_name is None):
         ref_var, _ = _get_variable(input_dataset, reference_var_name)
-        ref_var = sort_axes(ref_var)
+        ref_var = sort_axes(ref_var, time_name=time_dim_name, depth_name=depth_dim_name, lat_name=lat_dim_name,
+                            lon_name=lon_dim_name)
 
         if not np.ma.isMaskedArray(ref_var):
             raise RuntimeError('Reference variable is not a masked array. Cannot generate land-sea mask '/
@@ -478,7 +498,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
     nv = np.asarray(np.flip(tri.simplices.copy(), axis=1), dtype=DTYPE_INT)
 
     # Neighbour array
-    print('\nIdentifying neighbour simplices ...')
+    print('\nIdentifying neighbour simplices ', end='... ')
     if stripy_nbe:
         nbe = np.asarray(tri.neighbour_simplices(), dtype=DTYPE_INT)
     else:
@@ -489,8 +509,10 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
     if surface_only is False:
         print('\nGenerating the bathymetry:')
         if bathymetry_var_name:
-            bathy_var, bathy_attrs = _get_variable(input_dataset, bathymetry_var_name)
-            bathy = sort_axes(bathy_var).squeeze()
+            # NB assumes bathymetry is positive up
+            bathy_var, _ = _get_variable(input_dataset, bathymetry_var_name)
+            bathy = sort_axes(bathy_var, time_name=time_dim_name, depth_name=depth_dim_name, lat_name=lat_dim_name,
+                              lon_name=lon_dim_name).squeeze()
 
             if len(bathy.shape) != 2:
                 raise RuntimeError('Bathymetry array is not 2D.')
@@ -520,12 +542,12 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
                 else:
                     bathy[i] = 0.0
 
-            # Add standard attributes
-            bathy_attrs = {'standard_name': 'depth',
-                           'units': 'm',
-                           'long_name': 'depth, measured down from the free surface',
-                           'axis': 'Z',
-                           'positive': 'down'}
+        # Add standard attributes
+        bathy_attrs = {'standard_name': 'depth',
+                       'units': 'm',
+                       'long_name': 'depth, measured down from the free surface',
+                       'axis': 'Z',
+                       'positive': 'down'}
 
         # Permute the bathymetry array
         bathy = bathy[node_indices]
@@ -536,7 +558,8 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
         mask_var, mask_attrs = _get_variable(input_dataset, mask_var_name)
 
         # Generate land-sea mask at nodes
-        land_sea_mask_nodes = sort_axes(mask_var).squeeze()
+        land_sea_mask_nodes = sort_axes(mask_var, time_name=time_dim_name, depth_name=depth_dim_name,
+                                        lat_name=lat_dim_name, lon_name=lon_dim_name).squeeze()
         if len(land_sea_mask_nodes.shape) < 2 or len(land_sea_mask_nodes.shape) > 3:
             raise ValueError('Unsupported land sea mask with shape {}'.format(land_sea_mask_nodes.shape))
 
@@ -1240,7 +1263,7 @@ def _get_dimension_index(dimensions, name):
     try:
         return dimensions.index(name)
     except ValueError:
-        print('Failed to find dimension index. Dimensions were {}; supplied '
+        print('\n\nFailed to find dimension index. Dimensions were {}; supplied '
               'names were {}.'.format(dimensions, name))
         raise
 
