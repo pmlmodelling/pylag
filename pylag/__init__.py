@@ -17,7 +17,6 @@ from pylag import parallel, processing
 
 # Module imports
 from pylag import version
-from pylag import main
 from pylag import mock
 from pylag import random
 from pylag import grid_metrics
