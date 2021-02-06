@@ -149,7 +149,6 @@ class GridMetricsFileCreator(object):
         global_attrs['contact'] = 'James R. Clark (jcl@pml.ac.uk)'
         global_attrs['netcdf-version-id'] = 'netCDF-4'
         global_attrs['pylag-version-id'] = version.git_revision
-        global_attrs['comment'] = ""
 
         if self.is_global:
             global_attrs['is_global'] = "True"
@@ -157,6 +156,8 @@ class GridMetricsFileCreator(object):
             global_attrs['is_global'] = "False"
 
         self.ncfile.setncatts(global_attrs)
+
+        global_attrs['comment'] = ""
 
         return global_attrs
 
