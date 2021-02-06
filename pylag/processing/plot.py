@@ -23,9 +23,12 @@ try:
     from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
     from cmocean import cm
 except (ImportError, ModuleNotFoundError):
-    raise ImportError("Could not import one or more requirements. `pylag.plot` depends on " \
-                      "matplotlib, cartopy and cmocean. Please install these using `conda` or " \
-                      "`pip` should you wish to use pylag.plot.")
+    raise ImportError("Could not import one or more requirements. `pylag.processing.plot` \n" \
+                      "depends on matplotlib, cartopy and cmocean. These have not been distributed\n" \
+                      "with PyLag in order to keep the number of dependencies down. If you would like \n" \
+                      "to use the `pylag.processing.plot` module, please install these using `conda` or \n" \
+                      "`pip`. For more information, see the PyLag installation guide: \n" \
+                      "https://pylag.readthedocs.io/en/latest/.")
 
 from pylag.processing.ncview import Viewer
 from pylag.processing.utils import round_time
