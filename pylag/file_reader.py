@@ -18,6 +18,7 @@ except ImportError:
 from pylag.data_types_python import DTYPE_FLOAT
 from pylag.numerics import get_time_direction
 from pylag.utils import round_time
+from pylag import version
 
 
 class FileReader:
@@ -200,7 +201,11 @@ class FileReader:
         # Try to read grid data from the grid metrics file
         try:
             self.grid_file = self.dataset_reader.read_dataset(self.grid_metrics_file_name)
-            logger.info('Openend grid metrics file {}.'.format(self.grid_metrics_file_name))
+            logger.info('Opened grid metrics file {}.'.format(self.grid_metrics_file_name))
+
+            if self.grid_file.getncattr('pylag-version-id') != version.git_revision:
+                logger.warning('The grid metrics file was created with a different version of PyLag to that ' \
+                               'being run. To avoid consistency issues, please update the grid metrics file.')
         except RuntimeError:
             logger.error('Failed to read grid metrics file {}.'.format(self.grid_metrics_file_name))
             raise ValueError('Failed to read the grid metrics file.')
