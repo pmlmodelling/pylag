@@ -673,10 +673,15 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
     nv = nv.T
     nbe = nbe.T
 
-    # Flag open boundaries with -2 flag
-    print('\nFlagging open boundaries ', end='... ')
-    nbe[np.asarray(nbe == -1).nonzero()] = -2
-    print('done')
+    # Flag open boundaries with -2 flag in the regional case
+    if is_global == False:
+        print('\nFlagging open boundaries ', end='... ')
+        nbe[np.asarray(nbe == -1).nonzero()] = -2
+        print('done')
+    else:
+        # In the global case no open boundary neighbours should have been flagged
+        if np.count_nonzero(nbe == -1) != 0:
+            raise RuntimeError('Neighbour array for global grid contains invalid entries')
 
     # Flag land elements with -1 flag
     print('\nFlag land elements in neighbour array ', end='... ')
