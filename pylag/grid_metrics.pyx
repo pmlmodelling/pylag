@@ -1381,8 +1381,20 @@ cpdef identify_neighbour_simplices(stri, iterations=10, verbose=True):
     nbe : ndarray
         Array of unsorted neighbour indices with shape (n_simplices, 3).
     """
-    # Number of simplices
-    simplices = stri.simplices
+    cdef DTYPE_INT_t[:, :] simplices
+    cdef DTYPE_INT_t[:] simplex_indices
+    cdef DTYPE_INT_t[:, :] nbe_view, nbe_tree_view
+    cdef DTYPE_INT_t[:] found_view
+
+    cdef DTYPE_INT_t i, j, k, m, n
+    cdef DTYPE_INT_t n_simplices_subset
+    cdef DTYPE_INT_t simplex_idx, neighbour_idx
+    cdef DTYPE_INT_t matching_nodes
+    cdef DTYPE_INT_t counter
+
+    # Simplices from Stripy. Sort the array so that we can efficiently scan
+    # for neighbours. Save in a Cython memory view for rapid indexing.
+    simplices = np.sort(stri.simplices, axis=1).astype(DTYPE_INT)
     n_simplices = simplices.shape[0]
 
     # Array of k values, where each entry corresponds to the number of nearest
@@ -1401,23 +1413,27 @@ cpdef identify_neighbour_simplices(stri, iterations=10, verbose=True):
     # Flag identifying whether all neighbours have been found. One entry per simplex.
     # Initialised to zero which indicates the simplex's neighbours have not yet been
     # found.
-    found = np.zeros(n_simplices)
+    found = np.zeros(n_simplices, dtype=DTYPE_INT)
+    found_view = found
 
     # Neighbour array, initialised to -1. This ensures simplices lying along an
     # open boundary are handled correctly.
-    nbe = -1 * np.ones_like(simplices)
+    nbe = -1 * np.ones_like(simplices, DTYPE_INT)
+    nbe_view = nbe
 
     # Iteratively find all neighbours for all elements.
     for k in k_values:
         if verbose:
-            print('Searching for adjoining neighbours with k = {}'.format(k))
+            print('\nSearching for adjoining neighbours with k = {} '.format(k), end='... ')
 
-        simplex_indices = np.asarray(found==0).nonzero()[0]
+        simplex_indices = np.asarray(found==0, dtype=DTYPE_INT).nonzero()[0]
 
         mids_subset = mids[simplex_indices]
 
         _, nbe_tree = tree.query(mids_subset, k=k, distance_upper_bound=2.0)
+        nbe_tree_view = nbe_tree.astype(DTYPE_INT)
 
+        # Optimised inner loops with static typing
         n_simplices_subset = simplex_indices.shape[0]
         for i in range(n_simplices_subset):
 
@@ -1425,18 +1441,33 @@ cpdef identify_neighbour_simplices(stri, iterations=10, verbose=True):
 
             counter = 0
             for j in range(k):
-                neighbour_idx = nbe_tree[i, j]
-                if np.in1d(simplices[simplex_idx, :], simplices[neighbour_idx, :]).sum() == 2:
-                    nbe[simplex_idx, counter] = neighbour_idx
+                neighbour_idx = nbe_tree_view[i, j]
+
+                # Count common entries
+                m = 0
+                n = 0
+                matching_nodes = 0
+                while m < 3 and n < 3:
+                    if simplices[simplex_idx, m] < simplices[neighbour_idx, n]:
+                        m += 1
+                    elif simplices[simplex_idx, m] > simplices[neighbour_idx, n]:
+                        n += 1
+                    else:
+                        matching_nodes += 1
+                        m += 1
+                        n += 1
+
+                if matching_nodes == 2:
+                    nbe_view[simplex_idx, counter] = neighbour_idx
                     counter += 1
 
                 # Check if all neighbours were found
                 if counter == 3:
-                    found[simplex_idx] = 1
+                    found_view[simplex_idx] = 1
                     break
 
         if verbose:
-            print('Found {} %'.format(100*np.count_nonzero(found)/n_simplices))
+            print('found {} %'.format(100*np.count_nonzero(found)/n_simplices))
 
         if np.count_nonzero(found) == n_simplices:
             return nbe
