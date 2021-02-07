@@ -12,6 +12,7 @@ import stripy as stripy
 import collections
 
 try:
+    import matplotlib
     from matplotlib import cbook
     from matplotlib import pyplot as plt
     from matplotlib.tri.triangulation import Triangulation
@@ -498,6 +499,10 @@ class ArakawaAPlotter(PyLagPlotter):
         else:
             raise ValueError('Arakawa A-grid plotter includes support for geographic coordinates only')
 
+        # Has trimming been applied to the lat array?
+        self.trim_first_latitude = bool(ds.variables['trim_first_latitude'][0])
+        self.trim_last_latitude = bool(ds.variables['trim_last_latitude'][0])
+
         # Node index permutation
         self.permutation = ds.variables['permutation'][:]
 
@@ -522,9 +527,27 @@ class ArakawaAPlotter(PyLagPlotter):
                          self.y.min(),
                          self.y.max()])
 
-    def reshape(self, field):
+    def preprocess_array(self, field):
+        """ Preprocess field array
+
+        Fix up the field array by interpreting moving it onto the unstructured grid used by
+        PyLag. The field array must be 2D and ordered [lon, lat]. Checks for this are not
+        performed. To transform the array automatically, use `pylag.grid_metrics.sort_axes`.
+        If the field array is global, points at the poles are automatically trimmed.
+
+        Parameters
+        ----------
+        field : 2D NumPy
+            2D NumPy array defined on a [lon, lat] grid.
+        """
         if len(field.shape) != 2:
             raise ValueError('Expected 2D array')
+
+        if self.is_global:
+            if self.trim_first_latitude == True:
+                field = field[:, 1:]
+            if self.trim_last_latitude == True:
+                field = field[:, :-1]
 
         _field = field.flatten(order='C')[self.permutation]
 
@@ -533,13 +556,13 @@ class ArakawaAPlotter(PyLagPlotter):
 
         return _field
 
-    def plot_field(self, ax, field, reshape=False, update=False, configure=True, add_colour_bar=True, cb_label=None,
-                   tick_inc=True, extents=None, transform=ccrs.Geodetic(), draw_coastlines=False, resolution='10m',
-                   **kwargs):
+    def plot_field(self, ax, field, preprocess_array=False, update=False, configure=True, add_colour_bar=True,
+                   cb_label=None, tick_inc=True, extents=None, transform=ccrs.Geodetic(), draw_coastlines=False,
+                   resolution='10m', **kwargs):
         """ Map the supplied field
 
         The field must be defined on either a) the same triangular mesh that is defined in the grid metrics
-        file, or b) on the original structured grid. In the case of (b), `reshape` must be set to True. The
+        file, or b) on the original structured grid. In the case of (b), `preprocess` must be set to True. The
         field array will then be automatically mapped onto the unstructured triangular mesh. Typically, option
         (a) applies when plotting values saved in the grid metrics file (e.g. `h`) while option (b) applies
         when plotting time dependent variables from the original output file (e.g. current speed).
@@ -555,7 +578,7 @@ class ArakawaAPlotter(PyLagPlotter):
         field : NumPy NDArray
             The field to plot.
 
-        reshape : bool, optional
+        preprocess_array : bool, optional
             Flag signifying whether the `field` variable should be first mapped onto grid nodal coordinates.
             Default : False.
 
@@ -601,7 +624,7 @@ class ArakawaAPlotter(PyLagPlotter):
             The plot object
         """
         # Check array shapes
-        if reshape is False:
+        if preprocess_array == False:
             if len(field.shape) != 1:
                 raise ValueError('Expected 1D array')
 
@@ -610,7 +633,7 @@ class ArakawaAPlotter(PyLagPlotter):
 
             _field = field
         else:
-            _field = reshape(field)
+            _field = self.preprocess_array(field)
 
         # Compute field value at face centre of ocean triangles
         _field = _field[self.ocean_simplices].mean(axis=1)
@@ -666,6 +689,64 @@ class ArakawaAPlotter(PyLagPlotter):
             self._add_colour_bar(figure, ax, collection, cb_label)
 
         return ax, collection
+
+    def plot_quiver(self, ax, u, v, preprocess_arrays=True, configure=True, update=False, tick_inc=True,
+                    extents=None, transform=ccrs.PlateCarree(), draw_coastlines=False, resolution='10m',
+                    **kwargs):
+        """ Produce a quiver plot of the supplied velocity field
+
+        """
+        assert u.shape == v.shape, "u and v shapes do not match"
+
+        # Check array shapes
+        if preprocess_arrays == False:
+            if len(u.shape) != 1:
+                raise ValueError('Expected 1D u/v arrays. Array has shape {}.'.format(u.shape))
+
+            if u.shape[0] != self.n_nodes:
+                raise ValueError('The size of the `u` and `v` arrays do not match the number of nodes')
+
+            _u = u
+            _v = v
+        else:
+            _u = self.preprocess_array(u)
+            _v = self.preprocess_array(v)
+
+        if update is True:
+            for collection in ax.collections:
+                if type(collection) == matplotlib.quiver.Quiver:
+                    collection.set_UVC(_u, _v)
+                    return ax
+            raise RuntimeError('Received update is True, but the current axis does not contain a Quiver plot object.')
+
+        quiver = ax.quiver(self.x, self.y, _u, _v, transform=transform,
+                           units='inches', scale_units='inches', scale=0.5)
+
+        plt.quiverkey(quiver, 0.9, 0.9, 0.5,
+                      '{} '.format(0.5) + r'$\mathrm{ms^{-1}}$',
+                      coordinates='axes')
+
+        # If not configuring the rest of the plot return to caller
+        if not configure:
+            return ax
+
+        # Set extents
+        if extents is None:
+            extents = self._get_default_extents()
+
+        ax.set_extent(extents, transform)
+
+        if draw_coastlines:
+            ax.coastlines(resolution=resolution, linewidth=self.line_width)
+
+        if tick_inc:
+            self._add_ticks(ax)
+
+        ax.set_xlabel('Longitude (E)', fontsize=self.font_size)
+        ax.set_ylabel('Longitude (N)', fontsize=self.font_size)
+
+        return ax
+
 
     def draw_grid(self, ax, draw_masked_elements=False, linewidth=0.25, edgecolor='k', facecolor='none',
                   transform=ccrs.Geodetic()):
