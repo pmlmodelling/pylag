@@ -292,7 +292,7 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_
 def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_var_name='latitude',
                                        depth_var_name='depth', mask_var_name=None, reference_var_name=None,
                                        bathymetry_var_name=None, dim_names=None, is_global=False,
-                                       surface_only=False, stripy_nbe=True, num_threads=1, prng_seed=10,
+                                       surface_only=False, num_threads=1, prng_seed=10,
                                        grid_metrics_file_name='./grid_metrics.nc'):
     """ Create a Arakawa A-grid metrics file
 
@@ -380,12 +380,6 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
         specific to the horizontal grid. Set to False if you want to do 3D
         transport modelling, and True if you want to do 2D surface only
         transport modeling. Optional, default : False.
-
-    stripy_nbe : bool, optional
-        Use `stripy` to compute neighbour simplices if True. If False, create a K-D Tree
-        of nearest neighbours and use it to compute neighbour simplices. The former method
-        is generally faster for smaller meshes, but suffers from scaling problems with
-        larger meshes. Optional, default : True.
 
     num_threads : int, optional
         The number of threads to use when using threading.
@@ -530,10 +524,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
 
         # Neighbour array
         print('\nIdentifying neighbour simplices:')
-        if stripy_nbe:
-            nbe = np.asarray(tri.neighbour_simplices(), dtype=DTYPE_INT)
-        else:
-            nbe = identify_neighbour_simplices(tri)
+        nbe = identify_neighbour_simplices(tri)
     else:
         # Create the Triangulation
         tri = Delaunay(points)
