@@ -619,7 +619,7 @@ cdef class ArakawaADataReader(DataReader):
         cdef DTYPE_FLOAT_t zeta_next
         cdef vector[DTYPE_FLOAT_t] zeta_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
 
-        if self._surface_only:
+        if self._surface_only == True or self._has_zeta == False:
             return 0.0
 
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
@@ -1266,10 +1266,6 @@ cdef class ArakawaADataReader(DataReader):
             zeta_next = self.mediator.get_time_dependent_variable_at_next_time_index(zeta_var_name,
                     self._variable_shapes['zos'], DTYPE_FLOAT)
             self._zeta_next = self._reshape_var(zeta_next, self._variable_dimension_indices['zos'])
-        else:
-            # If zeta wasn't given, set it to zero throughout
-            self._zeta_last = np.zeros((self._n_nodes), dtype=DTYPE_FLOAT)
-            self._zeta_next = np.zeros((self._n_nodes), dtype=DTYPE_FLOAT)
 
         # Update memory views for u
         u_var_name = self._variable_names['uo']
