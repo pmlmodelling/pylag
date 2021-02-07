@@ -529,12 +529,11 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
         nv = np.asarray(np.flip(tri.simplices.copy(), axis=1), dtype=DTYPE_INT)
 
         # Neighbour array
-        print('\nIdentifying neighbour simplices ', end='... ')
+        print('\nIdentifying neighbour simplices:')
         if stripy_nbe:
             nbe = np.asarray(tri.neighbour_simplices(), dtype=DTYPE_INT)
         else:
             nbe = identify_neighbour_simplices(tri)
-        print('done')
     else:
         # Create the Triangulation
         tri = Delaunay(points)
@@ -1248,7 +1247,7 @@ def sort_axes(nc_var, time_name='time', depth_name='depth', lat_name='latitude',
     var : NumPy NDArray
         Variable array with sorted axes.
     """
-    print("Sorting axes for variable `{}`".format(nc_var.name), end='...')
+    print("Sorting axes for variable `{}`".format(nc_var.name), end='... ')
 
     var = nc_var[:]
     dimensions = nc_var.dimensions
