@@ -8,6 +8,7 @@ try:
 except ImportError:
     import ConfigParser as configparser
 
+from pylag import version
 from pylag.file_reader import FileReader, FileNameReader, DatasetReader
 
 # Module level variables used in testing
@@ -56,6 +57,12 @@ class TestDataset(object):
 
         # Initialise variable dictionary
         self.variables = {'time': time_var}
+
+        # NetCDF attributes
+        self.attrs = {'pylag-version-id': version.git_revision}
+
+    def getncattr(self, name):
+        return self.attrs[name]
 
     def close(self):
         del(self.variables)
