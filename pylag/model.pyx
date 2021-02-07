@@ -316,8 +316,9 @@ cdef class OPTModel:
                 particle_smart_ptr.set_all_host_horizontal_elems(host_elements)
                 flag = self.data_reader.find_host_using_local_search(particle_smart_ptr.get_ptr())
                 if flag != IN_DOMAIN:
-                    # Local search failed - try a global search
-                    flag = self.data_reader.find_host_using_global_search(particle_smart_ptr.get_ptr())
+                    # Local search failed. Check to see if the particle is in a masked element. If not, do a global search.
+                    if flag != IN_MASKED_ELEM:
+                        flag = self.data_reader.find_host_using_global_search(particle_smart_ptr.get_ptr())
             else:
                 # Global search ...
                 flag = self.data_reader.find_host_using_global_search(particle_smart_ptr.get_ptr())

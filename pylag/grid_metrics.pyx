@@ -279,6 +279,20 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_
         attrs[attr_name] = nbe_var.getncattr(attr_name)
     gm_file_creator.create_variable('nbe', nbe_data, dimensions, dtype, attrs=attrs)
 
+    # Create land-sea mask
+    land_sea_mask_elements = np.zeros(n_elems, dtype=DTYPE_INT)
+    for i in range(n_elems):
+        # Mask elements with two land boundaries
+        if np.count_nonzero(nbe_data[:, i] == -1) == 2:
+            land_sea_mask_elements[i] = 1
+
+    # Land sea mask attributes
+    mask_attrs = {'standard_name': 'sea_binary_mask',
+                  'units': '1',
+                  'long_name': 'Land-sea mask: sea = 0, land = 1'}
+
+    gm_file_creator.create_variable('mask', land_sea_mask_elements, ('element',), DTYPE_INT, attrs=mask_attrs)
+
     # Close FVCOM dataset
     # -------------------
     fvcom_dataset.close()
@@ -673,29 +687,29 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
         if np.count_nonzero(nbe == -1) != 0:
             raise RuntimeError('Neighbour array for global grid contains invalid entries')
 
-    # Flag land elements with -1 flag
-    print('\nFlag land elements in neighbour array ', end='... ')
-    land_elements = np.asarray(land_sea_mask_elements == 1).nonzero()[0]
-
-    # Save a copy of nbe's shape and flatten
-    nbe_shp = nbe.shape
-    nbe = nbe.flatten()
-
-    if num_threads > 1:
-        nbe_split = np.array_split(nbe, num_threads)
-
-        with Parallel(n_jobs=num_threads, backend='threading') as parallel:
-            parallel([delayed(flag_land_elements_wrapper, check_pickle=False)(nbe_split[i], land_elements) for i in range(num_threads)])
-
-        # Join the arrays
-        nbe = np.concatenate(nbe_split)
-    else:
-        for element in land_elements:
-            nbe[np.asarray(nbe == element).nonzero()] = -1
-
-    # Reshape the original array and return
-    nbe = np.asarray(nbe).reshape(nbe_shp)
-    print('done')
+#    # Flag land elements with -1 flag
+#    print('\nFlag land elements in neighbour array ', end='... ')
+#    land_elements = np.asarray(land_sea_mask_elements == 1).nonzero()[0]
+#
+#    # Save a copy of nbe's shape and flatten
+#    nbe_shp = nbe.shape
+#    nbe = nbe.flatten()
+#
+#    if num_threads > 1:
+#        nbe_split = np.array_split(nbe, num_threads)
+#
+#        with Parallel(n_jobs=num_threads, backend='threading') as parallel:
+#            parallel([delayed(flag_land_elements_wrapper, check_pickle=False)(nbe_split[i], land_elements) for i in range(num_threads)])
+#
+#        # Join the arrays
+#        nbe = np.concatenate(nbe_split)
+#    else:
+#        for element in land_elements:
+#            nbe[np.asarray(nbe == element).nonzero()] = -1
+#
+#    # Reshape the original array and return
+#    nbe = np.asarray(nbe).reshape(nbe_shp)
+#    print('done')
 
     # Create grid metrics file
     # ------------------------
@@ -1086,29 +1100,29 @@ def create_roms_grid_metrics_file(file_name,
         # Flag open boundaries with -2 flag
         nbes[grid_name][np.asarray(nbes[grid_name] == -1).nonzero()] = -2
 
-        print('Flag land elements in neighbour array ', end='... ')
-        if mask_var_names[grid_name] is not None:
-            land_elements = np.asarray(land_sea_mask_elements[grid_name] == 1).nonzero()[0]
-
-            # Save a copy of nbe's shape and flatten
-            nbe_shp = nbes[grid_name].shape
-            nbe = nbes[grid_name].flatten()
-
-            if num_threads > 1:
-                nbe_split = np.array_split(nbe, num_threads)
-
-                with Parallel(n_jobs=num_threads, backend='threading') as parallel:
-                    parallel([delayed(flag_land_elements_wrapper, check_pickle=False)(nbe_split[i], land_elements) for i in range(num_threads)])
-
-                # Join the arrays
-                nbe = np.concatenate(nbe_split)
-            else:
-                for element in land_elements:
-                    nbe[np.asarray(nbe == element).nonzero()] = -1
-
-            # Reshape the original array and return
-            nbes[grid_name] = np.asarray(nbe).reshape(nbe_shp)
-        print('done')
+#        print('Flag land elements in neighbour array ', end='... ')
+#        if mask_var_names[grid_name] is not None:
+#            land_elements = np.asarray(land_sea_mask_elements[grid_name] == 1).nonzero()[0]
+#
+#            # Save a copy of nbe's shape and flatten
+#            nbe_shp = nbes[grid_name].shape
+#            nbe = nbes[grid_name].flatten()
+#
+#            if num_threads > 1:
+#                nbe_split = np.array_split(nbe, num_threads)
+#
+#                with Parallel(n_jobs=num_threads, backend='threading') as parallel:
+#                    parallel([delayed(flag_land_elements_wrapper, check_pickle=False)(nbe_split[i], land_elements) for i in range(num_threads)])
+#
+#                # Join the arrays
+#                nbe = np.concatenate(nbe_split)
+#            else:
+#                for element in land_elements:
+#                    nbe[np.asarray(nbe == element).nonzero()] = -1
+#
+#            # Reshape the original array and return
+#            nbes[grid_name] = np.asarray(nbe).reshape(nbe_shp)
+#        print('done')
 
     # Vertical grid vars
     print('\nReading vertical grid vars')

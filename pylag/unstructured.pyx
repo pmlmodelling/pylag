@@ -265,6 +265,9 @@ cdef class UnstructuredCartesianGrid(Grid):
 
     yc : 1D memory view
         y-coordinates of element centres
+
+    land_sea_mask : 1D memory view
+        Land-sea element mask
     """
     # Configurtion object
     cdef object config
@@ -289,7 +292,10 @@ cdef class UnstructuredCartesianGrid(Grid):
     cdef DTYPE_FLOAT_t[:] xc
     cdef DTYPE_FLOAT_t[:] yc
 
-    def __init__(self, config, name, n_nodes, n_elems, nv, nbe, x, y, xc, yc):
+    # Land sea mask
+    cdef DTYPE_INT_t[:] land_sea_mask
+
+    def __init__(self, config, name, n_nodes, n_elems, nv, nbe, x, y, xc, yc, land_sea_mask):
         self.config = config
 
         self.name = name
@@ -301,6 +307,7 @@ cdef class UnstructuredCartesianGrid(Grid):
         self.y = y[:]
         self.xc = xc[:]
         self.yc = yc[:]
+        self.land_sea_mask = land_sea_mask[:]
 
     cdef DTYPE_INT_t find_host_using_local_search(self, Particle *particle) except INT_ERR:
         """ Returns the host horizontal element through local searching.
@@ -367,15 +374,10 @@ cdef class UnstructuredCartesianGrid(Grid):
             if phi_test >= 0.0:
                 host_found = True
 
-            # If the particle has walked into an element with two land
-            # boundaries flag this as an error.
+            # Check to see if the particle has walked into an invalid element (e.g. an
+            # element treated as land)
             if host_found is True:
-                n_host_land_boundaries = 0
-                for i in xrange(3):
-                    if self.nbe[i,guess] == -1:
-                        n_host_land_boundaries += 1
-
-                if n_host_land_boundaries < 2:
+                if self.land_sea_mask[guess] == 0:
                     # Normal element
                     particle.set_host_horizontal_elem(self.name, guess)
 
@@ -383,8 +385,8 @@ cdef class UnstructuredCartesianGrid(Grid):
 
                     return IN_DOMAIN
                 else:
-                    # Element has two land boundaries
-                    return BDY_ERROR
+                    # Element is masked
+                    return IN_MASKED_ELEM
 
             # If not, use phi to select the next element to be searched
             second_to_last_guess = last_guess
@@ -528,13 +530,7 @@ cdef class UnstructuredCartesianGrid(Grid):
 
                 # Check to see if the pathline has exited the domain
                 if elem >= 0:
-                    # Treat elements with two boundaries as land (i.e. set
-                    # `flag' equal to -1) and return the last element checked
-                    n_host_boundaries = 0
-                    for i in xrange(3):
-                        if self.nbe[i,elem] == -1:
-                            n_host_boundaries += 1
-                    if n_host_boundaries == 2:
+                    if self.land_sea_mask[elem] == 1:
                         flag = LAND_BDY_CROSSED
 
                         # Set host to the last element the particle passed through
@@ -605,14 +601,7 @@ cdef class UnstructuredCartesianGrid(Grid):
                 host_found = True
 
             if host_found is True:
-                # If the element has two land boundaries, flag the particle as
-                # being outside of the domain
-                n_host_land_boundaries = 0
-                for i in xrange(3):
-                    if self.nbe[i,guess] == -1:
-                        n_host_land_boundaries += 1
-
-                if n_host_land_boundaries < 2:
+                if self.land_sea_mask[guess] == 0:
                     particle.set_host_horizontal_elem(self.name, guess)
 
                     particle.set_phi(self.name, phi)
@@ -1161,6 +1150,9 @@ cdef class UnstructuredGeographicGrid(Grid):
 
     yc : 1D memory view
         y-coordinates of element centres
+
+    land_sea_mask : 1D memory view
+        Land sea element mask
     """
     # Configurtion object
     cdef object config
@@ -1185,12 +1177,15 @@ cdef class UnstructuredGeographicGrid(Grid):
     cdef DTYPE_FLOAT_t[:] xc
     cdef DTYPE_FLOAT_t[:] yc
 
+    # Land sea element mask
+    cdef DTYPE_INT_t[:] land_sea_mask
+
     # Barycentric gradients
     cdef vector[DTYPE_INT_t] barycentric_gradients_have_been_cached
     cdef vector[vector[DTYPE_FLOAT_t]] dphi_dx
     cdef vector[vector[DTYPE_FLOAT_t]] dphi_dy
 
-    def __init__(self, config, name, n_nodes, n_elems, nv, nbe, x, y, xc, yc):
+    def __init__(self, config, name, n_nodes, n_elems, nv, nbe, x, y, xc, yc, land_sea_mask):
 
         self.config = config
 
@@ -1203,6 +1198,7 @@ cdef class UnstructuredGeographicGrid(Grid):
         self.y = y[:]
         self.xc = xc[:]
         self.yc = yc[:]
+        self.land_sea_mask = land_sea_mask[:]
 
         # Containers for preserving the value of gradient calculations
         cdef vector[DTYPE_FLOAT_t] gradients = vector[DTYPE_FLOAT_t](3, -999.)
@@ -1276,15 +1272,10 @@ cdef class UnstructuredGeographicGrid(Grid):
             if s_test >= 0.0:
                 host_found = True
 
-            # If the particle has walked into an element with two land
-            # boundaries flag this as an error.
+            # Check to see if the particle has walked into an invalid element (e.g. an
+            # element treated as land)
             if host_found is True:
-                n_host_land_boundaries = 0
-                for i in xrange(3):
-                    if self.nbe[i,guess] == -1:
-                        n_host_land_boundaries += 1
-
-                if n_host_land_boundaries < 2:
+                if self.land_sea_mask[guess] == 0:
                     # Normal element
                     particle.set_host_horizontal_elem(self.name, guess)
 
@@ -1294,8 +1285,7 @@ cdef class UnstructuredGeographicGrid(Grid):
 
                     return IN_DOMAIN
                 else:
-                    # Element has two land boundaries
-                    return BDY_ERROR
+                    return IN_MASKED_ELEM
 
             # If not, use phi to select the next element to be searched
             second_to_last_guess = last_guess
@@ -1441,13 +1431,7 @@ cdef class UnstructuredGeographicGrid(Grid):
 
                 # Check to see if the pathline has exited the domain
                 if elem >= 0:
-                    # Treat elements with two boundaries as land (i.e. set
-                    # `flag' equal to -1) and return the last element checked
-                    n_host_boundaries = 0
-                    for i in xrange(3):
-                        if self.nbe[i,elem] == -1:
-                            n_host_boundaries += 1
-                    if n_host_boundaries == 2:
+                    if self.land_sea_mask[elem] == 1:
                         flag = LAND_BDY_CROSSED
 
                         # Set host to the last element the particle passed through
@@ -1530,14 +1514,7 @@ cdef class UnstructuredGeographicGrid(Grid):
                 host_found = True
 
             if host_found is True:
-                # If the element has two land boundaries, flag the particle as
-                # being outside of the domain
-                n_host_land_boundaries = 0
-                for i in xrange(3):
-                    if self.nbe[i,guess] == -1:
-                        n_host_land_boundaries += 1
-
-                if n_host_land_boundaries < 2:
+                if self.land_sea_mask[guess] == 0:
                     particle.set_host_horizontal_elem(self.name, guess)
 
                     phi = self.get_normalised_tetrahedral_coords(s)

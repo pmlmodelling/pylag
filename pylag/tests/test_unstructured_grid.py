@@ -32,6 +32,7 @@ class UnstructuredCartesianGrid_test(TestCase):
         self.y = np.array([1.0, 1.0, 1.0, 2.0, 2.0, 3.0, 1.0], dtype=DTYPE_FLOAT)
         self.xc = np.array([1.3333333333, 1.6666666667, 0.6666666667, 1.5000000000, 2.3333333333], dtype=DTYPE_FLOAT)
         self.yc = np.array([1.6666666667, 1.3333333333, 1.3333333333, 2.3333333333, 1.3333333333], dtype=DTYPE_FLOAT)
+        self.mask = np.array([0, 0, 1, 1, 1], dtype=DTYPE_INT)
 
         # Create config
         config = configparser.ConfigParser()
@@ -41,7 +42,7 @@ class UnstructuredCartesianGrid_test(TestCase):
         # Create unstructured grid
         self.unstructured_grid = UnstructuredCartesianGrid(config, self.name, self.n_nodes, self.n_elems,
                                                            self.nv, self.nbe, self.x, self.y, self.xc,
-                                                           self.yc)
+                                                           self.yc, self.mask)
         
     def tearDown(self):
         del self.unstructured_grid
@@ -220,6 +221,7 @@ class UnstructuredGeographicGrid_test(TestCase):
         self.y = lat_nodes.astype(DTYPE_FLOAT)
         self.xc = lon_elements.astype(DTYPE_FLOAT)
         self.yc = lat_elements.astype(DTYPE_FLOAT)
+        self.land_sea_mask_elements = land_sea_mask_elements.astype(DTYPE_INT)
 
         # Create config
         config = configparser.ConfigParser()
@@ -229,7 +231,7 @@ class UnstructuredGeographicGrid_test(TestCase):
         # Create unstructured grid
         self.unstructured_grid = UnstructuredGeographicGrid(config, self.name, self.n_nodes, self.n_elems,
                                                             self.nv, self.nbe, self.x, self.y, self.xc,
-                                                            self.yc)
+                                                            self.yc, self.land_sea_mask_elements)
 
     def tearDown(self):
         del self.unstructured_grid

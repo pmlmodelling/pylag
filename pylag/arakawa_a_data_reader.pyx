@@ -325,6 +325,11 @@ cdef class ArakawaADataReader(DataReader):
             This indicates that the particle exited the domain across an open
             boundary. Host is set to the last element the particle passed
             through before exiting the domain.
+
+        flag = IN_MASKED_ELEM:
+            This indicated the particle is in the domain but the element it is
+            in is masked. The flag is only returned by the local and global
+            search algorithms.
         
         Parameters
         ----------
@@ -1176,9 +1181,12 @@ cdef class ArakawaADataReader(DataReader):
         xc = xc - self._xmin
         yc = yc - self._ymin
 
+        # Land sea mask
+        self._land_sea_mask = self.mediator.get_grid_variable('mask', (self._n_elems), DTYPE_INT)
+
         # Initialise unstructured grid
         self._unstructured_grid = get_unstructured_grid(self.config, self._name, self._n_nodes, self._n_elems,
-                                                        self._nv, self._nbe, x, y, xc, yc)
+                                                        self._nv, self._nbe, x, y, xc, yc, self._land_sea_mask)
 
         # Read in depth vars if doing a 3D run
         if not self._surface_only:
@@ -1193,8 +1201,6 @@ cdef class ArakawaADataReader(DataReader):
             self._depth_levels_last = np.empty((self._n_depth, self._n_nodes), dtype=DTYPE_FLOAT)
             self._depth_levels_next = np.empty((self._n_depth, self._n_nodes), dtype=DTYPE_FLOAT)
 
-        # Land sea mask
-        self._land_sea_mask = self.mediator.get_grid_variable('mask', (self._n_elems), DTYPE_INT)
 
         # Initialise is wet arrays (but don't fill for now)
         self._wet_cells_last = np.empty((self._n_elems), dtype=DTYPE_INT)

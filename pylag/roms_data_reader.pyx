@@ -136,6 +136,8 @@ cdef class ROMSDataReader(DataReader):
     #cdef DTYPE_INT_t[:] _mask_grid_u, _mask_grid_v, _mask_grid_rho
 
     # Land sea mask on rho grid element (1 - sea point, 0 - land point)
+    cdef DTYPE_INT_t[:] _mask_c_grid_u
+    cdef DTYPE_INT_t[:] _mask_c_grid_v
     cdef DTYPE_INT_t[:] _mask_c_grid_rho
 
     # Dictionary of dimension names
@@ -362,7 +364,12 @@ cdef class ROMSDataReader(DataReader):
             This indicates that the particle exited the domain across an open
             boundary. Host elements are set to the last element the particle passed
             through before exiting the domain.
-        
+
+        flag = IN_MASKED_ELEM:
+            This indicated the particle is in the domain but the element it is
+            in is masked. The flag is only returned by the local and global
+            search algorithms.
+
         Parameters
         ----------
         particle_old: *Particle
@@ -1211,29 +1218,34 @@ cdef class ROMSDataReader(DataReader):
         xc_grid_rho = xc_grid_rho - self._xmin
         yc_grid_rho = yc_grid_rho - self._ymin
 
+        # Land sea mask - elements. Rho grid only for now. U/V grids initialised to all sea points.
+        self._mask_c_grid_u = np.zeros(self._n_elems_grid_u, dtype=DTYPE_INT)
+        self._mask_c_grid_v = np.zeros(self._n_elems_grid_v, dtype=DTYPE_INT)
+        self._mask_c_grid_rho = self.mediator.get_grid_variable('mask_c_grid_rho', (self._n_elems_grid_rho), DTYPE_INT)
+
         # Initialise the unstructured grids objects
         if self._grid_type == 'rectilinear':
             # Use native U and V grids
             self._unstructured_grid_u = get_unstructured_grid(self.config, self._name_grid_u, self._n_nodes_grid_u,
                                                               self._n_elems_grid_u, self._nv_grid_u, self._nbe_grid_u,
-                                                              x_grid_u, y_grid_u, xc_grid_u, yc_grid_u)
+                                                              x_grid_u, y_grid_u, xc_grid_u, yc_grid_u, self._mask_c_grid_u)
 
             self._unstructured_grid_v = get_unstructured_grid(self.config, self._name_grid_v, self._n_nodes_grid_v,
                                                               self._n_elems_grid_v, self._nv_grid_v, self._nbe_grid_v,
-                                                              x_grid_v, y_grid_v, xc_grid_v, yc_grid_v)
+                                                              x_grid_v, y_grid_v, xc_grid_v, yc_grid_v, self._mask_c_grid_v)
         elif  self._grid_type == 'curvilinear':
             # Use rho grid for u/v velocity components. These will be remapped onto the rho grid as they are read in.
             self._unstructured_grid_u = get_unstructured_grid(self.config, self._name_grid_u, self._n_nodes_grid_rho,
                                                               self._n_elems_grid_rho, self._nv_grid_rho, self._nbe_grid_rho,
-                                                              x_grid_rho, y_grid_rho, xc_grid_rho, yc_grid_rho)
+                                                              x_grid_rho, y_grid_rho, xc_grid_rho, yc_grid_rho, self._mask_c_grid_rho)
 
             self._unstructured_grid_v = get_unstructured_grid(self.config, self._name_grid_v, self._n_nodes_grid_rho,
                                                               self._n_elems_grid_rho, self._nv_grid_rho, self._nbe_grid_rho,
-                                                              x_grid_rho, y_grid_rho, xc_grid_rho, yc_grid_rho)
+                                                              x_grid_rho, y_grid_rho, xc_grid_rho, yc_grid_rho, self._mask_c_grid_rho)
 
         self._unstructured_grid_rho = get_unstructured_grid(self.config, self._name_grid_rho, self._n_nodes_grid_rho,
                                                             self._n_elems_grid_rho, self._nv_grid_rho, self._nbe_grid_rho,
-                                                            x_grid_rho, y_grid_rho, xc_grid_rho, yc_grid_rho)
+                                                            x_grid_rho, y_grid_rho, xc_grid_rho, yc_grid_rho, self._mask_c_grid_rho)
 
         # Read in depth vars
         self._s_rho = self.mediator.get_grid_variable('s_rho', (self._n_s_rho), DTYPE_FLOAT)
@@ -1259,9 +1271,6 @@ cdef class ROMSDataReader(DataReader):
         #self._mask_grid_u = self.mediator.get_grid_variable('mask_grid_u', (self._n_nodes_grid_u), DTYPE_INT)
         #self._mask_grid_v = self.mediator.get_grid_variable('mask_grid_v', (self._n_nodes_grid_v), DTYPE_INT)
         #self._mask_grid_rho = self.mediator.get_grid_variable('mask_grid_rho', (self._n_nodes_grid_rho), DTYPE_INT)
-
-        # Land sea mask - elements (grid rho only)
-        self._mask_c_grid_rho = self.mediator.get_grid_variable('mask_c_grid_rho', (self._n_elems_grid_rho), DTYPE_INT)
 
         # Add zeta to shape and dimension indices to dictionaries
         if self._has_zeta:
