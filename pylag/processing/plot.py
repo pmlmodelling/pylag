@@ -509,17 +509,22 @@ class ArakawaAPlotter(PyLagPlotter):
         # Simplices
         self.simplices = ds.variables['nv'][:].transpose()
 
-        # Create a new spherical triangulation
-        if self.is_global:
-            self.tri = stripy.sTriangulation(lons=np.radians(self.x), lats=np.radians(self.y), permute=False)
-        else:
-            self.tri = Triangulation(self.x, self.y, self.simplices, mask=self.maskc)
+        # Only initialise this if needed (using create triangulation)
+        self.stri = None
 
         # Indices for ocean elements
         self.ocean_elements = np.asarray(self.maskc == 0).nonzero()[0]
 
         # Ocean only simplices
         self.ocean_simplices = self.simplices[self.ocean_elements, :]
+
+    def _create_triangulation(self):
+        # Create a new spherical triangulation
+        if self.is_global:
+            self.tri = stripy.sTriangulation(lons=np.radians(self.x), lats=np.radians(self.y), permute=False)
+        else:
+            self.tri = Triangulation(self.x, self.y, self.simplices, mask=self.maskc)
+
 
     def _get_default_extents(self):
         return np.array([self.x.min(),
