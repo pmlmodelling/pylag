@@ -32,6 +32,8 @@ class BoundaryConditions_test(TestCase):
 
     def test_get_invalid_horiz_boundary_condition_calculator(self):
         config = configparser.ConfigParser()
+        config.add_section('OCEAN_CIRCULATION_MODEL')
+        config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'cartesian')
         config.add_section('BOUNDARY_CONDITIONS')
         config.set('BOUNDARY_CONDITIONS', 'horiz_bound_cond', 'does_not_exist')
 

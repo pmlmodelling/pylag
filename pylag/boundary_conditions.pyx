@@ -64,6 +64,27 @@ cdef class HorizBoundaryConditionCalculator:
         raise NotImplementedError
 
 
+cdef class RestoringHorizCartesianBoundaryConditionCalculator(HorizBoundaryConditionCalculator):
+    """ Restoring horizontal boundary condition calculator for cartesian grids
+
+    Restoring horizontal boundary condition calculators for cartesian coordinate
+    grids simply move the particle back to its last valid position.
+    """
+    cdef DTYPE_INT_t apply(self, DataReader data_reader, Particle *particle_old,
+                           Particle *particle_new) except INT_ERR:
+        cdef DTYPE_INT_t flag
+
+        # Move the particle back to its last known valid position
+        particle_new.set_x1(particle_old.get_x1())
+        particle_new.set_x2(particle_old.get_x2())
+        flag = data_reader.find_host(particle_old, particle_new)
+
+        if flag == IN_DOMAIN:
+            return flag
+
+        return BDY_ERROR
+
+
 cdef class RefHorizCartesianBoundaryConditionCalculator(HorizBoundaryConditionCalculator):
     """ Reflecting horizontal boundary condition calculator for cartesian grids
 
@@ -225,29 +246,37 @@ cdef class RefHorizCartesianBoundaryConditionCalculator(HorizBoundaryConditionCa
         return BDY_ERROR
 
 
-cdef class RefHorizGeographicBoundaryConditionCalculator(HorizBoundaryConditionCalculator):
-    """ Reflecting horizontal boundary condition calculator for geographic grids
+cdef class RestoringHorizGeographicBoundaryConditionCalculator(HorizBoundaryConditionCalculator):
+    """ Restoring horizontal boundary condition calculator for geographic grids
 
-    Reflecting horizontal boundary condition calculators for geographic coordinate
+    Restoring horizontal boundary condition calculators for geographic coordinate
     grids simply move the particle back to its last valid position.
     """
     cdef DTYPE_INT_t apply(self, DataReader data_reader, Particle *particle_old,
                            Particle *particle_new) except INT_ERR:
-        #cdef DTYPE_INT_t flag
+        cdef DTYPE_INT_t flag
 
         # Move the particle back to its last known valid position
-        #particle_new.set_x1(particle_old.get_x1())
-        #particle_new.set_x2(particle_old.get_x2())
-        #flag = data_reader.find_host(particle_old, particle_new)
+        particle_new.set_x1(particle_old.get_x1())
+        particle_new.set_x2(particle_old.get_x2())
+        flag = data_reader.find_host(particle_old, particle_new)
 
-        #if flag == IN_DOMAIN:
-        #    return flag
-
-        # Give default location
-        data_reader.set_default_location(particle_new)
-        return IN_DOMAIN
+        if flag == IN_DOMAIN:
+            return flag
 
         return BDY_ERROR
+
+
+cdef class RefHorizGeographicBoundaryConditionCalculator(HorizBoundaryConditionCalculator):
+    """ Reflecting horizontal boundary condition calculator for geographic grids
+
+    TODO
+    ----
+    1) Implement this.
+    """
+    cdef DTYPE_INT_t apply(self, DataReader data_reader, Particle *particle_old,
+                           Particle *particle_new) except INT_ERR:
+        raise NotImplementedError('Boundary condition has not yet been implemented')
 
 
 cdef class VertBoundaryConditionCalculator:
@@ -285,6 +314,7 @@ cdef class VertBoundaryConditionCalculator:
     cdef DTYPE_INT_t apply(self, DataReader data_reader, DTYPE_FLOAT_t time, 
                            Particle *particle) except INT_ERR:
         raise NotImplementedError
+
 
 cdef class RefVertBoundaryConditionCalculator(VertBoundaryConditionCalculator):
     """ Reflecting vertical boundary condition calculator
@@ -355,14 +385,24 @@ def get_horiz_boundary_condition_calculator(config):
     except (configparser.NoSectionError, configparser.NoOptionError) as e:
         return None
     else:
-        if boundary_condition == "reflecting":
+        coordinate_system = config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system")
+
+        if coordinate_system not in ['cartesian', 'geographic']:
+            raise ValueError('Unsupported coordinate system.')
+
+        if boundary_condition == "restoring":
+            coordinate_system = config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system")
+            if coordinate_system == "cartesian":
+                return RestoringHorizCartesianBoundaryConditionCalculator()
+            elif coordinate_system == "geographic":
+                return RestoringHorizGeographicBoundaryConditionCalculator()
+
+        elif boundary_condition == "reflecting":
             coordinate_system = config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system")
             if coordinate_system == "cartesian":
                 return RefHorizCartesianBoundaryConditionCalculator()
             elif coordinate_system == "geographic":
                 return RefHorizGeographicBoundaryConditionCalculator()
-            else:
-                raise ValueError('Unsupported coordinate system for use with reflecting boundary conditions.')
 
         elif boundary_condition == "None":
             return None
