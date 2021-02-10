@@ -1467,10 +1467,10 @@ cdef class UnstructuredGeographicGrid(Grid):
                     particle_new.set_phi(self.name, phi)
                 else:
                     # Methods disagree. This can happen due to numerical precision issues. Respond
-                    # by moving the particle to the element's centroid!
-                    particle_new.set_host_horizontal_elem(self.name, current_elem)
-                    self.set_default_location(particle_new)
-
+                    # by moving the particle back to its last know good position.
+                    particle_new.set_x1(particle_old.get_x1())
+                    particle_new.set_x2(particle_old.get_x2())
+                    particle_new.set_host_horizontal_elem(self.name, particle_old.get_host_horizontal_elem(self.name))
                 flag = IN_DOMAIN
 
                 return flag
