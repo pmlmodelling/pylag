@@ -233,6 +233,7 @@ cpdef DTYPE_INT_t intersection_is_within_arc_segments(const vector[DTYPE_FLOAT_t
 
     return 0
 
+
 cpdef DTYPE_INT_t intersection_is_within_arc_segment(const vector[DTYPE_FLOAT_t] &x1,
                                                      const vector[DTYPE_FLOAT_t] &x2,
                                                      const vector[DTYPE_FLOAT_t] &xi) except INT_ERR:
@@ -262,6 +263,10 @@ cpdef DTYPE_INT_t intersection_is_within_arc_segment(const vector[DTYPE_FLOAT_t]
     # Determine the angle between the two arc end points
     theta_arc = angle_between_two_vectors(x1, x2)
 
+    # Avoid potential numerical issues associated with small angles
+    if theta_arc < EPSILON:
+        return 0
+
     # Determine the angles between the arc end points and the intersection point
     theta_1 = angle_between_two_vectors(x1, xi)
     theta_2 = angle_between_two_vectors(x2, xi)
@@ -277,10 +282,18 @@ cpdef DTYPE_INT_t intersection_is_within_arc_segment(const vector[DTYPE_FLOAT_t]
 
 cpdef DTYPE_FLOAT_t angle_between_two_vectors(const vector[DTYPE_FLOAT_t] &a,
                                               const vector[DTYPE_FLOAT_t] &b) except FLOAT_ERR:
-    """ Determine the angle between two vectors
+    """ Determine the angle between two unit vectors
     """
-    return acos(inner_product_three(a, b) / (euclidian_norm(a) * euclidian_norm(b)))
+    cdef DTYPE_FLOAT_t x
 
+    # Compute the inner product
+    x = inner_product_three(a, b)
+
+    # Defend against numerical issues with acos
+    x = float_max(x, -1.0)
+    x = float_min(x, 1.0)
+
+    return acos(x)
 
 cpdef vector[DTYPE_FLOAT_t] unit_vector(const vector[DTYPE_FLOAT_t] &a) except *:
     cdef vector[DTYPE_FLOAT_t] a_unit = vector[DTYPE_FLOAT_t](3, 999.)
