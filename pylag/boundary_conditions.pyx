@@ -276,7 +276,9 @@ cdef class RefHorizGeographicBoundaryConditionCalculator(HorizBoundaryConditionC
     """
     cdef DTYPE_INT_t apply(self, DataReader data_reader, Particle *particle_old,
                            Particle *particle_new) except INT_ERR:
-        raise NotImplementedError('Boundary condition has not yet been implemented')
+        raise NotImplementedError('Reflecting boundary conditions in geographic coordinates ' \
+                                  'have not yet been implemented. Please use a restoring condition ' \
+                                  'instead.')
 
 
 cdef class VertBoundaryConditionCalculator:
