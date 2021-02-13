@@ -225,13 +225,13 @@ cpdef DTYPE_INT_t intersection_is_within_arc_segments(const vector[DTYPE_FLOAT_t
     """
     cdef DTYPE_INT_t is_within_segment_1, is_within_segment_2
 
-    is_within_segment_1 = intersection_is_within_arc_segment(x1, x2, xi)
-    is_within_segment_2 = intersection_is_within_arc_segment(x3, x4, xi)
+    if intersection_is_within_arc_segment(x1, x2, xi) == 0:
+        return 0
 
-    if is_within_segment_1 == 1 and is_within_segment_2 == 1:
-        return 1
+    if intersection_is_within_arc_segment(x3, x4, xi) == 0:
+        return 0
 
-    return 0
+    return 1
 
 
 cpdef DTYPE_INT_t intersection_is_within_arc_segment(const vector[DTYPE_FLOAT_t] &x1,
