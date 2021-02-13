@@ -30,6 +30,7 @@ from libcpp.string cimport string
 from libcpp.vector cimport vector
 
 # PyLag cython imports
+from pylag.parameters cimport cartesian, geographic
 from pylag.particle cimport Particle
 from pylag.particle_cpp_wrapper cimport to_string
 from pylag.data_reader cimport DataReader
@@ -76,6 +77,9 @@ cdef class FVCOMDataReader(DataReader):
 
     # The name of the grid
     cdef string _name
+
+    # Integer flag for the coordinate system being used
+    cdef DTYPE_INT_t _coordinate_system
 
     # Grid dimensions
     cdef DTYPE_INT_t _n_elems, _n_nodes, _n_siglay, _n_siglev
@@ -162,6 +166,15 @@ cdef class FVCOMDataReader(DataReader):
 
         # Time direction
         self._time_direction = <int>get_time_direction(config)
+
+        # Coordinate system
+        coordinate_system = self.config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system").strip().lower()
+        if coordinate_system == "cartesian":
+            self._coordinate_system = cartesian
+        elif coordinate_system == "geographic":
+            self._coordinate_system = geographic
+        else:
+            raise ValueError("Unsupported model coordinate system `{}'".format(coordinate_system))
 
         # Set flags from config
         self._has_Kh = self.config.getboolean("OCEAN_CIRCULATION_MODEL", "has_Kh")
@@ -1253,8 +1266,7 @@ cdef class FVCOMDataReader(DataReader):
         self._nbe = self.mediator.get_grid_variable('nbe', (3, self._n_elems), DTYPE_INT)
 
         # Raw grid x/y or lat/lon coordinates
-        coordinate_system = self.config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system").strip().lower()
-        if coordinate_system == "cartesian":
+        if self._coordinate_system == cartesian:
             x = self.mediator.get_grid_variable('x', (self._n_nodes), DTYPE_FLOAT)
             y = self.mediator.get_grid_variable('y', (self._n_nodes), DTYPE_FLOAT)
             xc = self.mediator.get_grid_variable('xc', (self._n_elems), DTYPE_FLOAT)
@@ -1264,7 +1276,7 @@ cdef class FVCOMDataReader(DataReader):
             self._xmin = np.min(x)
             self._ymin = np.min(y)
 
-        elif coordinate_system == "geographic":
+        elif self._coordinate_system == geographic:
             x = self.mediator.get_grid_variable('longitude', (self._n_nodes), DTYPE_FLOAT)
             y = self.mediator.get_grid_variable('latitude', (self._n_nodes), DTYPE_FLOAT)
             xc = self.mediator.get_grid_variable('longitude_c', (self._n_elems), DTYPE_FLOAT)
@@ -1273,8 +1285,6 @@ cdef class FVCOMDataReader(DataReader):
             # Don't apply offsets in geographic case - set them to 0.0!
             self._xmin = 0.0
             self._ymin = 0.0
-        else:
-            raise ValueError("Unsupported model coordinate system `{}'".format(coordinate_system))
 
         # Apply offsets
         self._x = x - self._xmin

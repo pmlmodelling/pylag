@@ -16,3 +16,9 @@ cpdef DTYPE_FLOAT_t pi
 
 # Seconds per day
 cpdef DTYPE_FLOAT_t seconds_per_day
+
+# Cordinate system flags
+cpdef DTYPE_INT_t cartesian
+cpdef DTYPE_INT_t geographic
+
+
