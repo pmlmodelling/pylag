@@ -268,6 +268,9 @@ cdef class UnstructuredCartesianGrid(Grid):
 
     land_sea_mask : 1D memory view
         Land-sea element mask
+
+    land_sea_mask_nodes : 1D memory view
+        Land-sea element mask nodes
     """
     # Configurtion object
     cdef object config
@@ -309,7 +312,7 @@ cdef class UnstructuredCartesianGrid(Grid):
         self.xc = xc[:]
         self.yc = yc[:]
         self.land_sea_mask = land_sea_mask[:]
-        self.land_sea_mask = land_sea_mask_nodes[:]
+        self.land_sea_mask_nodes = land_sea_mask_nodes[:]
 
     cdef DTYPE_INT_t find_host_using_local_search(self, Particle *particle) except INT_ERR:
         """ Returns the host horizontal element through local searching.
@@ -1155,6 +1158,9 @@ cdef class UnstructuredGeographicGrid(Grid):
 
     land_sea_mask : 1D memory view
         Land sea element mask
+
+    land_sea_mask_nodes : 1D memory view
+        Land sea element mask at nodes
     """
     # Configurtion object
     cdef object config
@@ -1181,13 +1187,14 @@ cdef class UnstructuredGeographicGrid(Grid):
 
     # Land sea element mask
     cdef DTYPE_INT_t[:] land_sea_mask
+    cdef DTYPE_INT_t[:] land_sea_mask_nodes
 
     # Barycentric gradients
     cdef vector[DTYPE_INT_t] barycentric_gradients_have_been_cached
     cdef vector[vector[DTYPE_FLOAT_t]] dphi_dx
     cdef vector[vector[DTYPE_FLOAT_t]] dphi_dy
 
-    def __init__(self, config, name, n_nodes, n_elems, nv, nbe, x, y, xc, yc, land_sea_mask):
+    def __init__(self, config, name, n_nodes, n_elems, nv, nbe, x, y, xc, yc, land_sea_mask, land_sea_mask_nodes):
 
         self.config = config
 
@@ -1201,6 +1208,7 @@ cdef class UnstructuredGeographicGrid(Grid):
         self.xc = xc[:]
         self.yc = yc[:]
         self.land_sea_mask = land_sea_mask[:]
+        self.land_sea_mask_nodes = land_sea_mask_nodes[:]
 
         # Containers for preserving the value of gradient calculations
         cdef vector[DTYPE_FLOAT_t] gradients = vector[DTYPE_FLOAT_t](3, -999.)

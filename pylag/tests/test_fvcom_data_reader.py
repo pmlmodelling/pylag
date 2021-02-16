@@ -33,8 +33,8 @@ class MockFVCOMMediator(Mediator):
                           'siglev': n_siglev, 'siglay': n_siglay}
                           
         # Grid variables
-        nv = np.array([[4,0,2,4,3],[3,1,4,5,6],[1,3,1,3,0]],dtype=int)
-        nbe = np.array([[1,0,0,-1,-1],[2,4,-1,0,1],[3,-1,-1,-1,-1]],dtype=int)
+        nv = np.array([[4,0,2,4,3],[3,1,4,5,6],[1,3,1,3,0]], dtype=int)
+        nbe = np.array([[1,0,0,-1,-1],[2,4,-1,0,1],[3,-1,-1,-1,-1]], dtype=int)
         x = np.array([2.0, 1.0, 0.0, 2.0, 1.0, 1.5, 3.0], dtype=float)
         y = np.array([1.0, 1.0, 1.0, 2.0, 2.0, 3.0, 1.0], dtype=float)
         xc = np.array([1.3333333333, 1.6666666667, 0.6666666667, 1.5000000000, 2.3333333333], dtype=float)
@@ -43,9 +43,10 @@ class MockFVCOMMediator(Mediator):
         siglev = np.array([[0., -.2,-.8,-1.],]*n_nodes, dtype=float).transpose()
         h = np.array([10., 11., 10., 11., 11., 10.], dtype=float)
         mask = np.array([0, 0, 1, 1, 1], dtype=int)
+        mask_nodes = np.array([0, 0, 0, 0, 0, 0, 0], dtype=int)
         self._grid_vars = {'nv': nv, 'nbe': nbe, 'x': x, 'y': y, 'xc': xc,
                            'yc': yc, 'siglay': siglay, 'siglev': siglev,
-                           'h': h, 'mask': mask}
+                           'h': h, 'mask': mask, 'mask_nodes': mask_nodes}
         
         # Dictionaries holding the value of time dependent and time independent variables
         zeta = np.array([[0.,1.,0.,1.,1.,0.],[0.,2.,0.,2.,2.,0.]],dtype=float)

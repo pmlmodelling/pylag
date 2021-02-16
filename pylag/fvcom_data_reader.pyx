@@ -157,6 +157,7 @@ cdef class FVCOMDataReader(DataReader):
 
     # Land sea mask on elements (1 - sea point, 0 - land point)
     cdef DTYPE_INT_t[:] _land_sea_mask
+    cdef DTYPE_INT_t[:] _land_sea_mask_nodes
 
     def __init__(self, config, mediator):
         self.config = config
@@ -1294,10 +1295,12 @@ cdef class FVCOMDataReader(DataReader):
 
         # Land sea mask
         self._land_sea_mask = self.mediator.get_grid_variable('mask', (self._n_elems), DTYPE_INT)
+        self._land_sea_mask_nodes = self.mediator.get_grid_variable('mask_nodes', (self._n_nodes), DTYPE_INT)
 
         # Initialise unstructured grid
         self._unstructured_grid = get_unstructured_grid(self.config, self._name, self._n_nodes, self._n_elems, self._nv,
-                                                        self._nbe, self._x, self._y, self._xc, self._yc, self._land_sea_mask)
+                                                        self._nbe, self._x, self._y, self._xc, self._yc,
+                                                        self._land_sea_mask, self._land_sea_mask_nodes)
 
         # Sigma levels at nodal coordinates
         self._siglev = self.mediator.get_grid_variable('siglev', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)

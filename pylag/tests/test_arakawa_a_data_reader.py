@@ -132,17 +132,18 @@ class MockArakawaAMediator(Mediator):
         nbe[np.asarray(nbe == -1).nonzero()] = -2
 
         # Flag land boundaries with -1 flag
-        land_elements = np.asarray(land_sea_mask_elements == 1).nonzero()[0]
-        for element in land_elements:
-            nbe[np.asarray(nbe == element).nonzero()] = -1
+        #land_elements = np.asarray(land_sea_mask_elements == 1).nonzero()[0]
+        #for element in land_elements:
+        #    nbe[np.asarray(nbe == element).nonzero()] = -1
 
         # Add to grid dimensions and variables
         self._dim_vars = {'latitude': n_latitude, 'longitude': n_longitude, 'depth': n_depth,
                           'node': n_nodes, 'element': n_elements}
         self._grid_vars = {'nv': nv, 'nbe': nbe, 'longitude': lon_nodes, 'longitude_c': lon_elements,
                            'latitude': lat_nodes, 'latitude_c': lat_elements, 'depth': depth, 'h': h,
-                           'mask': land_sea_mask_elements, 'permutation': permutation,
-                           'trim_first_latitude': trim_first_latitude, 'trim_last_latitude': trim_last_latitude}
+                           'mask': land_sea_mask_elements, 'mask_nodes': land_sea_mask_nodes,
+                           'permutation': permutation, 'trim_first_latitude': trim_first_latitude,
+                           'trim_last_latitude': trim_last_latitude}
 
         # Set dimensions
         zos_dimensions = ('time', 'latitude', 'longitude')

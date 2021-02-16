@@ -106,6 +106,7 @@ class MockROMSMediator(Mediator):
 
             self._grid_vars['mask_{}'.format(grid_name)] = np.zeros_like(lon_nodes)
             self._grid_vars['mask_c_{}'.format(grid_name)] = np.zeros_like(lon_elements)
+            self._grid_vars['mask_n_{}'.format(grid_name)] = np.zeros_like(lon_elements)
 
         # Bathymetry at rho points [lat, lon]
         h = np.array([[20., 20.], [10., 10.]])

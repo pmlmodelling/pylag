@@ -33,6 +33,7 @@ class UnstructuredCartesianGrid_test(TestCase):
         self.xc = np.array([1.3333333333, 1.6666666667, 0.6666666667, 1.5000000000, 2.3333333333], dtype=DTYPE_FLOAT)
         self.yc = np.array([1.6666666667, 1.3333333333, 1.3333333333, 2.3333333333, 1.3333333333], dtype=DTYPE_FLOAT)
         self.mask = np.array([0, 0, 1, 1, 1], dtype=DTYPE_INT)
+        self.mask_nodes = np.array([0, 0, 0, 0, 0], dtype=DTYPE_INT)
 
         # Create config
         config = configparser.ConfigParser()
@@ -42,7 +43,7 @@ class UnstructuredCartesianGrid_test(TestCase):
         # Create unstructured grid
         self.unstructured_grid = UnstructuredCartesianGrid(config, self.name, self.n_nodes, self.n_elems,
                                                            self.nv, self.nbe, self.x, self.y, self.xc,
-                                                           self.yc, self.mask)
+                                                           self.yc, self.mask, self.mask_nodes)
         
     def tearDown(self):
         del self.unstructured_grid
@@ -195,6 +196,9 @@ class UnstructuredGeographicGrid_test(TestCase):
             lon_elements[i] = lon_nodes[(nv[element, :])].mean()
             lat_elements[i] = lat_nodes[(nv[element, :])].mean()
 
+        # Generate land-sea mask for nodes (all sea points for now)
+        land_sea_mask_nodes = np.zeros(n_nodes, dtype=DTYPE_INT)
+
         # Generate the land-sea mask for elements
         land_sea_mask_elements = np.empty(n_elements, dtype=DTYPE_INT)
         gm.compute_land_sea_element_mask(nv, land_sea_mask_nodes, land_sea_mask_elements)
@@ -222,6 +226,7 @@ class UnstructuredGeographicGrid_test(TestCase):
         self.xc = lon_elements.astype(DTYPE_FLOAT)
         self.yc = lat_elements.astype(DTYPE_FLOAT)
         self.land_sea_mask_elements = land_sea_mask_elements.astype(DTYPE_INT)
+        self.land_sea_mask_nodes = land_sea_mask_nodes.astype(DTYPE_INT)
 
         # Create config
         config = configparser.ConfigParser()
@@ -231,7 +236,8 @@ class UnstructuredGeographicGrid_test(TestCase):
         # Create unstructured grid
         self.unstructured_grid = UnstructuredGeographicGrid(config, self.name, self.n_nodes, self.n_elems,
                                                             self.nv, self.nbe, self.x, self.y, self.xc,
-                                                            self.yc, self.land_sea_mask_elements)
+                                                            self.yc, self.land_sea_mask_elements,
+                                                            self.land_sea_mask_nodes)
 
     def tearDown(self):
         del self.unstructured_grid
