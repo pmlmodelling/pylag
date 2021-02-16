@@ -294,8 +294,9 @@ cdef class UnstructuredCartesianGrid(Grid):
 
     # Land sea mask
     cdef DTYPE_INT_t[:] land_sea_mask
+    cdef DTYPE_INT_t[:] land_sea_mask_nodes
 
-    def __init__(self, config, name, n_nodes, n_elems, nv, nbe, x, y, xc, yc, land_sea_mask):
+    def __init__(self, config, name, n_nodes, n_elems, nv, nbe, x, y, xc, yc, land_sea_mask, land_sea_mask_nodes):
         self.config = config
 
         self.name = name
@@ -308,6 +309,7 @@ cdef class UnstructuredCartesianGrid(Grid):
         self.xc = xc[:]
         self.yc = yc[:]
         self.land_sea_mask = land_sea_mask[:]
+        self.land_sea_mask = land_sea_mask_nodes[:]
 
     cdef DTYPE_INT_t find_host_using_local_search(self, Particle *particle) except INT_ERR:
         """ Returns the host horizontal element through local searching.
