@@ -673,6 +673,16 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
     compute_land_sea_element_mask(nv, land_sea_mask_nodes, land_sea_mask_elements)
     print('done')
 
+    # Mask elements with two land boundaries
+    print('\nMask elements with two land boundaries ', end='... ')
+    mask_elements_with_two_land_boundaries(nbe, land_sea_mask_elements)
+    print('done')
+
+    # Add standard attributes for the element mask
+    element_mask_attrs = {'standard_name': 'sea_binary_mask',
+                          'units': '1',
+                          'long_name': 'Land-sea mask: sea = 0, land = 1, boundary element = 2'}
+
     # Transpose nv and nbe arrays to give the dimension ordering expected by PyLag
     nv = nv.T
     nbe = nbe.T
@@ -1560,6 +1570,7 @@ cpdef compute_land_sea_element_mask(const DTYPE_INT_t [:,:] nv, const DTYPE_INT_
                                     DTYPE_INT_t [:] element_mask):
     cdef DTYPE_INT_t node
     cdef DTYPE_INT_t n_elements, n_vertices
+    cdef DTYPE_INT_t counter
     cdef DTYPE_INT_t i
 
     n_elements = nv.shape[0]
@@ -1567,9 +1578,40 @@ cpdef compute_land_sea_element_mask(const DTYPE_INT_t [:,:] nv, const DTYPE_INT_
 
     element_mask[:] = 0
     for i in range(n_elements):
+        counter = 0
         for j in range(n_vertices):
             node = nv[i, j]
             if nodal_mask[node] == 1:
+                counter += 1
+
+        if counter == 0:
+            # Sea
+            continue
+        elif counter == 3:
+            # Land
+            element_mask[i] = 1
+        else:
+            # Boundary element
+            element_mask[i] = 2
+
+
+cdef mask_elements_with_two_land_boundaries(const DTYPE_INT_t[:,:] nbe, DTYPE_INT_t[:] element_mask):
+    cdef DTYPE_INT_t i, j
+    cdef DTYPE_INT_t n_elements, n_neighbours
+    cdef DTYPE_INT_t neighbour
+    cdef DTYPE_INT_t counter
+
+    n_elements = nbe.shape[0]
+    n_neighbours = nbe.shape[1]
+    for i in range(n_elements):
+        if element_mask[i] == 0:
+            counter = 0
+            for j in range(n_neighbours):
+                neighbour = nbe[i, j]
+                if element_mask[neighbour] == 1:
+                    counter += 1
+
+            if counter == 2:
                 element_mask[i] = 1
 
 
