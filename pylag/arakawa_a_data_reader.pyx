@@ -570,22 +570,12 @@ cdef class ArakawaADataReader(DataReader):
         zmin : float
             The bottom depth.
         """
-        cdef int i # Loop counters
-        cdef int vertex # Vertex identifier  
-        cdef vector[DTYPE_FLOAT_t] h_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.) # Bathymetry at nodes
         cdef DTYPE_FLOAT_t h # Bathymetry at (x1, x2)
-
-        # Host element
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
 
         if self._surface_only:
             return 0.0
 
-        for i in xrange(N_VERTICES):
-            vertex = self._nv[i,host_element]
-            h_tri[i] = self._h[vertex]
-
-        h = interp.interpolate_within_element(h_tri, particle.get_phi(self._name))
+        h = self._unstructured_grid.interpolate_in_space(self._h, particle)
 
         return -h
 
@@ -608,36 +598,18 @@ cdef class ArakawaADataReader(DataReader):
         zmax : float
             Sea surface elevation.
         """
-        cdef int i # Loop counters
-        cdef int vertex # Vertex identifier
+        cdef DTYPE_FLOAT_t time_fraction # Time interpolation coefficient
         cdef DTYPE_FLOAT_t zeta # Sea surface elevation at (t, x1, x2)
-
-        # Host element
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
-
-        # Intermediate arrays
-        cdef DTYPE_FLOAT_t zeta_last
-        cdef DTYPE_FLOAT_t zeta_next
-        cdef vector[DTYPE_FLOAT_t] zeta_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
 
         if self._surface_only == True or self._has_zeta == False:
             return 0.0
 
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
-        for i in xrange(N_VERTICES):
-            vertex = self._nv[i, host_element]
-            zeta_last = self._zeta_last[vertex]
-            zeta_next = self._zeta_next[vertex]
-
-            # Interpolate in time
-            if zeta_last == zeta_next:
-                zeta_tri[i] = zeta_last
-            else:
-                zeta_tri[i] = interp.linear_interp(time_fraction, zeta_last, zeta_next)
-
-        # Interpolate in space
-        zeta = interp.interpolate_within_element(zeta_tri, particle.get_phi(self._name))
+        zeta = self._unstructured_grid.interpolate_in_time_and_space(self._zeta_last,
+                                                                     self._zeta_next,
+                                                                     time_fraction,
+                                                                     particle)
 
         return zeta
 
