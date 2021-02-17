@@ -9,9 +9,9 @@ from Cython.Build import cythonize
 import numpy
 
 MAJOR               = 0
-MINOR               = 3
-PATCH               = 3
-ISRELEASED          = False
+MINOR               = 4
+PATCH               = 0
+ISRELEASED          = True
 VERSION = '{}.{}.{}'.format(MAJOR, MINOR, PATCH)
 
 build_type = 'prod'

@@ -2,6 +2,26 @@
 
 PyLag is still very much in development. This page will be updated when future releases are made.
 
+## Version 0.4 17/02/2020
+
+* Add basic infrastructure to support individual based modelling.
+
+* Add the ability to simulate particle mortality with accompanying tutorial example.
+
+* Add the ability to specify non-standard dimension and variable names when creating an Arakawa A-grid metric file.
+
+* Fix bug associated with the incorrect flagging of open boundaries by stripy.
+
+* Record the version of PyLag use to create the grid metrics file in the global attributes to assist with version consistency checking.
+
+* Switch to using the land sea element mask for identifying land elements in grids that have masked entries. This yields a significant improvement in speed when creating the particle seed should many of the particle lie outside of the model domain.
+
+* Add quiver plotting tool to assist with plotting the velocity field.
+
+* Implement restoring horizontal boundary condition and clearly distinguish this from reflecting conditions in cartesian and geographic coordinates.
+
+* Add fix for numerical issues associated with the use of acos from the c library.
+
 ## Version 0.3.3 23/01/2020
 
 * Switch out stripy for scipy when creating regional triangulations from an Arakawa A-grid in order to fix problems associated with the treatment of open boundaries.
