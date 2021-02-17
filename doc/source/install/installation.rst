@@ -80,7 +80,7 @@ And finally, in the PyLag source code directory, build and install *PyLag*.
 .. code-block:: bash
 
     (particles) $ cd $HOME/code/git/PyLag/PyLag
-    (particles) $ conda build . --numpy 1.19
+    (particles) $ conda build . --numpy 1.20
     (particles) $ conda install -n particles --use-local pylag
 
 Occasionally, when building *PyLag* this way, users have hit upon clashes with locally installed packages. To get around this problem, you may find it useful to add the following aliases to your bashrc file, which you can use to activate and deactivate *Conda*:
