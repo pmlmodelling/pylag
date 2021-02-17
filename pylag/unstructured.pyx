@@ -1826,13 +1826,26 @@ cdef class UnstructuredGeographicGrid(Grid):
         # Host element
         cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self.name)
 
+        # Adjusted interpolation weights if required
+        cdef vector[DTYPE_FLOAT_t] phi
+
         cdef DTYPE_INT_t i
 
         for i in xrange(N_VERTICES):
             vertex = self.nv[i, host_element]
             var_nodes[i] = var_arr[vertex]
 
-        return interp.interpolate_within_element(var_nodes, particle.get_phi(self.name))
+        if self.land_sea_mask[host_element] == 0:
+            # Normal sea element
+            return interp.interpolate_within_element(var_nodes, particle.get_phi(self.name))
+
+        elif self.land_sea_mask[host_element] == 2:
+            # Boundary element with masked nodes. Adjust interpolation coefficients.
+            phi = self._adjust_interpolation_coefficients(host_element, particle.get_phi(self.name))
+            return interp.interpolate_within_element(var_nodes, phi)
+
+        else:
+            raise RuntimeError('Cannot interpolate within masked element `{}`.'.format(self.land_sea_mask[host_element]))
 
     cdef DTYPE_FLOAT_t interpolate_in_time_and_space(self, DTYPE_FLOAT_t[:] var_last_arr, DTYPE_FLOAT_t[:] var_next_arr,
             DTYPE_FLOAT_t time_fraction, Particle* particle) except FLOAT_ERR:
@@ -1864,6 +1877,9 @@ cdef class UnstructuredGeographicGrid(Grid):
         cdef DTYPE_FLOAT_t var_last, var_next
         cdef vector[DTYPE_FLOAT_t] var_nodes = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
 
+        # Adjusted interpolation weights if required
+        cdef vector[DTYPE_FLOAT_t] phi
+
         # Host element
         cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self.name)
 
@@ -1879,7 +1895,42 @@ cdef class UnstructuredGeographicGrid(Grid):
             else:
                 var_nodes[i] = var_last
 
-        return interp.interpolate_within_element(var_nodes, particle.get_phi(self.name))
+        if self.land_sea_mask[host_element] == 0:
+            # Normal sea element
+            return interp.interpolate_within_element(var_nodes, particle.get_phi(self.name))
+
+        elif self.land_sea_mask[host_element] == 2:
+            # Boundary element with masked nodes. Adjust interpolation coefficients.
+            phi = self._adjust_interpolation_coefficients(host_element, particle.get_phi(self.name))
+            return interp.interpolate_within_element(var_nodes, phi)
+
+        else:
+            raise RuntimeError('Cannot interpolate within masked element `{}`.'.format(self.land_sea_mask[host_element]))
+
+
+    cdef vector[DTYPE_FLOAT_t] _adjust_interpolation_coefficients(self, const DTYPE_INT_t host,
+                                                                  const vector[DTYPE_FLOAT_t]& phi):
+
+        cdef vector[DTYPE_FLOAT_t] phi_new = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef vector[DTYPE_FLOAT_t] mask = vector[DTYPE_FLOAT_t](N_VERTICES, 0.)
+        cdef DTYPE_FLOAT_t sum
+        cdef DTYPE_INT_t node
+        cdef DTYPE_INT_t i
+
+        # Set mask and normalisation factor
+        sum = 0.0
+        for i in range(N_VERTICES):
+            node = self.nv[i, host]
+            if self.node_mask[node] == 0:
+                mask[i] = 1.0
+                sum += phi[i]
+
+        # Adjust the weights
+        for i in range(N_VERTICES):
+            phi_new[i] = mask[i] * phi[i] / sum
+
+        return phi_new
+
 
     cdef void interpolate_grad_in_time_and_space(self, DTYPE_FLOAT_t[:] var_last_arr, DTYPE_FLOAT_t[:] var_next_arr,
             DTYPE_FLOAT_t time_fraction, Particle* particle, DTYPE_FLOAT_t var_prime[2]) except *:
@@ -1906,7 +1957,7 @@ cdef class UnstructuredGeographicGrid(Grid):
             dvar_dx and dvar_dy components stored in a C array of length two.
 
         """
-                # Gradients in phi
+        # Gradients in phi
         cdef vector[DTYPE_FLOAT_t] dphi_dx = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
         cdef vector[DTYPE_FLOAT_t] dphi_dy = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
 
