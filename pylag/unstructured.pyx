@@ -1943,26 +1943,36 @@ cdef class UnstructuredGeographicGrid(Grid):
     cdef vector[DTYPE_FLOAT_t] _adjust_interpolation_coefficients(self, const DTYPE_INT_t host,
                                                                   const vector[DTYPE_FLOAT_t]& phi):
 
-        cdef vector[DTYPE_FLOAT_t] phi_new = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-        cdef vector[DTYPE_FLOAT_t] mask = vector[DTYPE_FLOAT_t](N_VERTICES, 0.)
-        cdef DTYPE_FLOAT_t sum
+        cdef vector[DTYPE_FLOAT_t] phi_new = vector[DTYPE_FLOAT_t](N_VERTICES, 0.)
+        cdef DTYPE_FLOAT_t phi_test
+        cdef DTYPE_INT_t index
         cdef DTYPE_INT_t node
         cdef DTYPE_INT_t i
 
-        # Set mask and normalisation factor
-        sum = 0.0
+        phi_test = 0.0
+        index = -999
         for i in range(N_VERTICES):
             node = self.nv[i, host]
             if self.land_sea_mask_nodes[node] == 0:
-                mask[i] = 1.0
-                sum += phi[i]
+                if phi[i] > phi_test:
+                    phi_test = phi[i]
+                    index = i
 
-        # Adjust the weights
-        for i in range(N_VERTICES):
-            phi_new[i] = mask[i] * phi[i] / sum
+        if phi_test > 0.0:
+            # Use a nearest neighbour interpolation scheme
+            for i in range(N_VERTICES):
+                if phi[i] == phi_test:
+                    phi_new[i] = 1.0
+
+                    # Break to guard against identical phis
+                    break
+        elif index > -1:
+            # Particle must sit over a masked node. Use the last unmasked element checked.
+            phi_new[index] = 1.0
+        else:
+            raise RuntimeError('Failed to adjust interpolation weights')
 
         return phi_new
-
 
     cdef void interpolate_grad_in_time_and_space(self, DTYPE_FLOAT_t[:] var_last_arr, DTYPE_FLOAT_t[:] var_next_arr,
             DTYPE_FLOAT_t time_fraction, Particle* particle, DTYPE_FLOAT_t var_prime[2]) except *:
