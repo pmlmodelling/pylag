@@ -501,3 +501,51 @@ cpdef vector[DTYPE_FLOAT_t] geographic_to_cartesian_coords(const DTYPE_FLOAT_t &
     coords[2] = r * sin(lat_rad)
 
     return coords
+
+
+def geographic_to_cartesian_coords_python(lon_rad, lat_rad):
+    """ Convert geographic to cartesian coordinates on a unit sphere
+
+    Pure python implementation of the conversion from geographic to
+    cartesian coordinates which acts on numpy arrays.
+
+    Parameters
+    ----------
+    lon_rad : NumPy 1D array
+        Longitude radians
+
+    lat_rad : NumPy 1D array
+        Latitude in radians
+
+    Returns
+    -------
+     x, y, z : NumPy 1D arrays
+         Cartesian coordinates.
+    """
+
+    x = np.cos(lon_rad) * np.cos(lat_rad)
+    y = np.sin(lon_rad) * np.cos(lat_rad)
+    z = np.sin(lat_rad)
+
+    return x, y, z
+
+
+def cartesian_to_geographic_coords_python(x, y, z):
+    """ Convert cartesian to geographic coordinates
+
+    (x, y, z) should be unit vectors.
+
+    Parameters
+    ----------
+    (x,y,z) : float
+        (x,y,z) coordinates
+
+    Returns
+    -------
+     lon, lat: float
+         Longitude and latitude in radians
+    """
+    lon = np.arctan2(y, x)
+    lat = np.arcsin(z)
+
+    return lon, lat
