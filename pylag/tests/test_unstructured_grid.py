@@ -145,26 +145,20 @@ class UnstructuredGeographicGrid_test(TestCase):
     """
 
     def setUp(self):
-        # Basic grid (3 x 3 x 4).
-        latitude = np.array([11., 12., 13.], dtype=DTYPE_FLOAT)
+        # Basic grid (4 x 3 x 4).
+        latitude = np.array([11., 12., 13., 14], dtype=DTYPE_FLOAT)
         longitude = np.array([1., 2., 3.], dtype=DTYPE_FLOAT)
 
         # Mask [depth, lat, lon]. 1 is sea, 0 land. Note the last depth level is masked everywhere.
-        mask = np.array([[[1, 1, 1], [1, 1, 1], [0, 0, 0]],
-                         [[1, 1, 1], [1, 1, 1], [0, 0, 0]],
-                         [[1, 1, 1], [0, 0, 0], [0, 0, 0]],
-                         [[0, 0, 0], [0, 0, 0], [0, 0, 0]]], dtype=DTYPE_INT)
+        mask = np.array([[1, 1, 1], [1, 1, 1], [0, 0, 0], [0, 0, 0]], dtype=DTYPE_INT)
 
         # Switch the mask convention to that which PyLag anticipates. i.e. 1 is a masked point, 0 a non-masked point.
         mask = 1 - mask
 
         # Separately save the surface mask at nodes. This is taken as the land sea mask.
-        land_sea_mask = mask[0, :, :]
+        land_sea_mask = mask[:, :]
         land_sea_mask_nodes = np.moveaxis(land_sea_mask, 0, 1)  # Move to [lon, lat]
         land_sea_mask_nodes = land_sea_mask_nodes.reshape(np.prod(land_sea_mask_nodes.shape), order='C')
-
-        # Mask one extra point (node 1) to help with testing wet dry status calls
-        mask[:, 1, 0] = 1
 
         # Form the unstructured grid
         lon2d, lat2d = np.meshgrid(longitude[:], latitude[:], indexing='ij')
@@ -190,14 +184,7 @@ class UnstructuredGeographicGrid_test(TestCase):
         gm.sort_adjacency_array(nv, nbe)
 
         # Save lon and lat points at element centres
-        lon_elements = np.empty(n_elements, dtype=DTYPE_FLOAT)
-        lat_elements = np.empty(n_elements, dtype=DTYPE_FLOAT)
-        for i, element in enumerate(range(n_elements)):
-            lon_elements[i] = lon_nodes[(nv[element, :])].mean()
-            lat_elements[i] = lat_nodes[(nv[element, :])].mean()
-
-        # Generate land-sea mask for nodes (all sea points for now)
-        land_sea_mask_nodes = np.zeros(n_nodes, dtype=DTYPE_INT)
+        lon_elements, lat_elements = gm.compute_element_midpoints_in_geographic_coordinates(nv, lon_nodes, lat_nodes)
 
         # Generate the land-sea mask for elements
         land_sea_mask_elements = np.empty(n_elements, dtype=DTYPE_INT)
@@ -211,9 +198,9 @@ class UnstructuredGeographicGrid_test(TestCase):
         nbe[np.asarray(nbe == -1).nonzero()] = -2
 
         # Flag land boundaries with -1 flag
-        land_elements = np.asarray(land_sea_mask_elements == 1).nonzero()[0]
-        for element in land_elements:
-            nbe[np.asarray(nbe == element).nonzero()] = -1
+        #land_elements = np.asarray(land_sea_mask_elements == 1).nonzero()[0]
+        #for element in land_elements:
+        #    nbe[np.asarray(nbe == element).nonzero()] = -1
 
         # Save grid variables
         self.name = b'test_grid'
@@ -250,10 +237,10 @@ class UnstructuredGeographicGrid_test(TestCase):
 
     def test_find_host_when_particle_is_in_the_domain(self):
         particle_new = ParticleSmartPtr(x1=2.333333333, x2=11.6666666667,
-                                        host_elements={'test_grid':  5})
+                                        host_elements={'test_grid':  7})
         flag = self.unstructured_grid.find_host_using_local_search_wrapper(particle_new)
         test.assert_equal(flag, 0)
-        test.assert_equal(particle_new.get_host_horizontal_elem('test_grid'), 4)
+        test.assert_equal(particle_new.get_host_horizontal_elem('test_grid'), 6)
 
     def test_get_phi_when_particle_is_at_an_elements_vertex(self):
         # Vertex 0
@@ -277,3 +264,41 @@ class UnstructuredGeographicGrid_test(TestCase):
         phi = self.unstructured_grid.get_phi(x1, x2, host)
         test.assert_array_almost_equal(phi, [0., 0., 1.])
 
+    def test_interpolate_in_space(self):
+        h_grid = np.array([25., 10., 999., 999.,  25.,  10., 999., 999.,  25.,  10., 999., 999.], dtype=DTYPE_FLOAT)
+
+        # Set the particle at the element's centroid
+        x1 = 1.6670652236426569
+        x2 = 11.667054258869966
+        host_elements = {'test_grid': 0}
+
+        particle = ParticleSmartPtr(x1=x1, x2=x2, host_elements=host_elements)
+        self.unstructured_grid.set_local_coordinates_wrapper(particle)
+        h = self.unstructured_grid.interpolate_in_space_wrapper(h_grid, particle)
+        test.assert_almost_equal(h, 15.)
+
+    def test_interpolate_in_space_at_the_centre_of_a_boundary_element(self):
+        h_grid = np.array([25., 10., 999., 999.,  25.,  10., 999., 999.,  25.,  10., 999., 999.], dtype=DTYPE_FLOAT)
+
+        # Set the particle at the element's centroid
+        x1 = 1.667100645520906
+        x2 = 12.66708505715026
+        host_elements = {'test_grid': 5}
+
+        particle = ParticleSmartPtr(x1=x1, x2=x2, host_elements=host_elements)
+        self.unstructured_grid.set_local_coordinates_wrapper(particle)
+        h = self.unstructured_grid.interpolate_in_space_wrapper(h_grid, particle)
+        test.assert_almost_equal(h, 10.)
+
+    def test_interpolate_in_space_on_a_boundary_element(self):
+        h_grid = np.array([25., 10., 999., 999.,  25.,  10., 999., 999.,  25.,  10., 999., 999.], dtype=DTYPE_FLOAT)
+
+        # Set the particle at the element's centroid
+        x1 = 2.
+        x2 = 13.
+        host_elements = {'test_grid': 5}
+
+        particle = ParticleSmartPtr(x1=x1, x2=x2, host_elements=host_elements)
+        self.unstructured_grid.set_local_coordinates_wrapper(particle)
+        h = self.unstructured_grid.interpolate_in_space_wrapper(h_grid, particle)
+        test.assert_almost_equal(h, 10.)

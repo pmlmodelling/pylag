@@ -31,8 +31,8 @@ class MockArakawaAMediator(Mediator):
     these, with accompanying unit tests put in place to ensure this is so.
     """
     def __init__(self):
-        # Basic grid (3 x 3 x 4).
-        latitude = np.array([11., 12., 13.], dtype=DTYPE_FLOAT)
+        # Basic grid (4 x 3 x 4).
+        latitude = np.array([11., 12., 13., 14], dtype=DTYPE_FLOAT)
         longitude = np.array([1., 2., 3.], dtype=DTYPE_FLOAT)
         depth = np.array([0., 10., 20., 30.], dtype=DTYPE_FLOAT)
 
@@ -42,15 +42,15 @@ class MockArakawaAMediator(Mediator):
         n_depth = depth.shape[0]
 
         # Bathymetry [lat, lon]
-        h = np.array([[25., 25., 25.], [10., 10., 10.], [999., 999., 999.]], dtype=DTYPE_FLOAT)
+        h = np.array([[25., 25., 25.], [10., 10., 10.], [999., 999., 999.], [999., 999., 999.]], dtype=DTYPE_FLOAT)
         h = np.moveaxis(h, 1, 0)  # Move to [lon, lat]
         h = h.reshape(np.prod(h.shape), order='C')
 
         # Mask [depth, lat, lon]. 1 is sea, 0 land. Note the last depth level is masked everywhere.
-        mask = np.array([[[1, 1, 1], [1, 1, 1], [0, 0, 0]],
-                         [[1, 1, 1], [1, 1, 1], [0, 0, 0]],
-                         [[1, 1, 1], [0, 0, 0], [0, 0, 0]],
-                         [[0, 0, 0], [0, 0, 0], [0, 0, 0]]], dtype=DTYPE_INT)
+        mask = np.array([[[1, 1, 1], [1, 1, 1], [0, 0, 0], [0, 0, 0]],
+                         [[1, 1, 1], [1, 1, 1], [0, 0, 0], [0, 0, 0]],
+                         [[1, 1, 1], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
+                         [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]]], dtype=DTYPE_INT)
 
         # Switch the mask convention to that which PyLag anticipates. i.e. 1 is a masked point, 0 a non-masked point.
         mask = 1 - mask
@@ -61,25 +61,26 @@ class MockArakawaAMediator(Mediator):
         land_sea_mask_nodes = land_sea_mask_nodes.reshape(np.prod(land_sea_mask_nodes.shape), order='C')
 
         # Zeta (time = 0) [lat, lon]
-        zeta_t0 = np.ma.masked_array([[1., 1., 1.], [0., 0., 0.], [999., 999., 999.]], mask=land_sea_mask, dtype=DTYPE_FLOAT)
+        zeta_t0 = np.ma.masked_array([[1., 1., 1.], [0., 0., 0.], [999., 999., 999.], [999., 999., 999.]],
+                                     mask=land_sea_mask, dtype=DTYPE_FLOAT)
         zeta_t1 = np.ma.copy(zeta_t0)
 
         # Mask one extra point (node 1) to help with testing wet dry status calls
         mask[:, 1, 0] = 1
 
         # u/v/w (time = 0) [depth, lat, lon]. Include mask.
-        uvw_t0 = np.ma.masked_array([[[2., 2., 2.], [1., 1., 1.], [999., 999., 999.]],
-                                     [[1., 1., 1.], [0., 0., 0.], [999., 999., 999.]],
-                                     [[0., 0., 0.], [999., 999., 999.], [999., 999., 999.]],
-                                     [[999., 999., 999.], [999., 999., 999.], [999., 999., 999.]]],
+        uvw_t0 = np.ma.masked_array([[[2., 2., 2.], [1., 1., 1.], [999., 999., 999.], [999., 999., 999.]],
+                                     [[1., 1., 1.], [0., 0., 0.], [999., 999., 999.], [999., 999., 999.]],
+                                     [[0., 0., 0.], [999., 999., 999.], [999., 999., 999.], [999., 999., 999.]],
+                                     [[999., 999., 999.], [999., 999., 999.], [999., 999., 999.], [999., 999., 999.]]],
                                     mask=mask, dtype=DTYPE_FLOAT)
         uvw_t1 = np.ma.copy(uvw_t0)
 
         # t/s (time = 0) [depth, lat, lon]. Include mask.
-        ts_t0 = np.ma.masked_array([[[2., 2., 2.], [1., 1., 1.], [999., 999., 999.]],
-                                   [[1., 1., 1.], [0., 0., 0.], [999., 999., 999.]],
-                                   [[0., 0., 0.], [999., 999., 999.], [999., 999., 999.]],
-                                   [[999., 999., 999.], [999., 999., 999.], [999., 999., 999.]]],
+        ts_t0 = np.ma.masked_array([[[2., 2., 2.], [1., 1., 1.], [999., 999., 999.], [999., 999., 999.]],
+                                    [[1., 1., 1.], [0., 0., 0.], [999., 999., 999.], [999., 999., 999.]],
+                                    [[0., 0., 0.], [999., 999., 999.], [999., 999., 999.], [999., 999., 999.]],
+                                    [[999., 999., 999.], [999., 999., 999.], [999., 999., 999.], [999., 999., 999.]]],
                                    mask=mask, dtype=DTYPE_FLOAT)
         ts_t1 = np.ma.copy(ts_t0)
 
@@ -114,11 +115,7 @@ class MockArakawaAMediator(Mediator):
         gm.sort_adjacency_array(nv, nbe)
 
         # Save lon and lat points at element centres
-        lon_elements = np.empty(n_elements, dtype=DTYPE_FLOAT)
-        lat_elements = np.empty(n_elements, dtype=DTYPE_FLOAT)
-        for i, element in enumerate(range(n_elements)):
-            lon_elements[i] = lon_nodes[(nv[element, :])].mean()
-            lat_elements[i] = lat_nodes[(nv[element, :])].mean()
+        lon_elements, lat_elements = gm.compute_element_midpoints_in_geographic_coordinates(nv, lon_nodes, lat_nodes)
 
         # Generate the land-sea mask for elements
         land_sea_mask_elements = np.empty(n_elements, dtype=DTYPE_INT)
@@ -272,26 +269,26 @@ class ArawawaADataReader_test(TestCase):
 
     def test_find_host_when_particle_is_in_the_domain(self):
         particle_old = ParticleSmartPtr(x1=2.666666667-self.xmin, x2=11.333333333-self.ymin,
-                                        host_elements={'arakawa_a': 5})
+                                        host_elements={'arakawa_a': 7})
         particle_new = ParticleSmartPtr(x1=2.333333333-self.xmin, x2=11.6666666667-self.ymin,
                                         host_elements={'arakawa_a': -999})
         flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
         test.assert_equal(flag, 0)
-        test.assert_equal(particle_new.get_host_horizontal_elem('arakawa_a'), 4)
+        test.assert_equal(particle_new.get_host_horizontal_elem('arakawa_a'), 6)
 
     def test_find_host_when_particle_has_crossed_a_land_boundary(self):
-        particle_old = ParticleSmartPtr(x1=2.333333333-self.xmin, x2=11.666666667-self.ymin,
-                                        host_elements={'arakawa_a': 4})
-        particle_new = ParticleSmartPtr(x1=2.333333333-self.xmin, x2=12.1-self.ymin,
+        particle_old = ParticleSmartPtr(x1=2.333333333-self.xmin, x2=12.666666667-self.ymin,
+                                        host_elements={'arakawa_a': 10})
+        particle_new = ParticleSmartPtr(x1=2.333333333-self.xmin, x2=13.1-self.ymin,
                                         host_elements={'arakawa_a': -999})
         flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
         test.assert_equal(flag, -1)
-        test.assert_equal(particle_new.get_host_horizontal_elem('arakawa_a'), 4)
+        test.assert_equal(particle_new.get_host_horizontal_elem('arakawa_a'), 10)
 
     def test_get_zmin(self):
         x1 = 2.0-self.xmin
         x2 = 12.0-self.ymin
-        host_elements = {'arakawa_a': 4}
+        host_elements = {'arakawa_a': 0}
 
         time = 0.0
 
@@ -303,7 +300,7 @@ class ArawawaADataReader_test(TestCase):
     def test_get_zmax(self):
         x1 = 2.0-self.xmin
         x2 = 12.0-self.ymin
-        host_elements = {'arakawa_a': 4}
+        host_elements = {'arakawa_a': 0}
 
         time = 0.0
         particle = ParticleSmartPtr(x1=x1, x2=x2, host_elements=host_elements)
@@ -322,7 +319,7 @@ class ArawawaADataReader_test(TestCase):
         x1 = 2.0-self.xmin
         x2 = 12.0-self.ymin
         x3 = 0.0
-        host_elements = {'arakawa_a': 4}
+        host_elements = {'arakawa_a': 0}
 
         particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
@@ -338,7 +335,7 @@ class ArawawaADataReader_test(TestCase):
         x1 = 2.0-self.xmin
         x2 = 12.0-self.ymin
         x3 = -10.
-        host_elements = {'arakawa_a': 4}
+        host_elements = {'arakawa_a': 0}
 
         particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
@@ -354,7 +351,7 @@ class ArawawaADataReader_test(TestCase):
         x1 = 2.0-self.xmin
         x2 = 12.0-self.ymin
         x3 = -5.0  # 1 m below the moving free surface
-        host_elements = {'arakawa_a': 4}
+        host_elements = {'arakawa_a': 0}
 
         particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
@@ -368,7 +365,67 @@ class ArawawaADataReader_test(TestCase):
     def test_get_velocity_in_surface_layer(self):
         x1 = 2.0-self.xmin
         x2 = 12.0-self.ymin
+        host_elements = {'arakawa_a': 0}
+
+        # Test #1
+        x3 = 0.0 # Surface
+        time = 0.0
+
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        test.assert_equal(flag, 0)
+
+        vel = np.empty(3, dtype=DTYPE_FLOAT)
+        self.data_reader.get_velocity_wrapper(time, particle, vel)
+        test.assert_array_almost_equal(vel, [1., 1., 1.])
+
+        # Test #2
+        x3 = -5.0  # Half way down the surface layer
+        time = 1800.0
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+
+        vel = np.empty(3, dtype=DTYPE_FLOAT)
+        self.data_reader.get_velocity_wrapper(time, particle, vel)
+        test.assert_equal(flag, 0)
+        test.assert_array_almost_equal(vel, [0.5, 0.5, 0.5])
+
+    def test_get_velocity_in_surface_layer_in_a_boundary_element(self):
+        x1 = 1.333333333-self.xmin
+        x2 = 12.333333333-self.ymin
         host_elements = {'arakawa_a': 4}
+
+        # Test #1
+        x3 = 0.0 # Surface
+        time = 0.0
+
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+        test.assert_equal(flag, 0)
+
+        vel = np.empty(3, dtype=DTYPE_FLOAT)
+        self.data_reader.get_velocity_wrapper(time, particle, vel)
+        test.assert_array_almost_equal(vel, [1., 1., 1.])
+
+        # Test #2
+        x3 = -5.0  # Half way down the surface layer
+        time = 1800.0
+        particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
+        self.data_reader.set_local_coordinates_wrapper(particle)
+        flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
+
+        vel = np.empty(3, dtype=DTYPE_FLOAT)
+        self.data_reader.get_velocity_wrapper(time, particle, vel)
+        test.assert_equal(flag, 0)
+        test.assert_array_almost_equal(vel, [0.5, 0.5, 0.5])
+
+    def test_get_velocity_in_surface_layer_on_a_boundary(self):
+        x1 = 2.0-self.xmin
+        x2 = 13.0-self.ymin
+        host_elements = {'arakawa_a': 5}
 
         # Test #1
         x3 = 0.0 # Surface
@@ -398,7 +455,7 @@ class ArawawaADataReader_test(TestCase):
     def test_get_thetao(self):
         x1 = 2.0-self.xmin
         x2 = 12.0-self.ymin
-        host_elements = {'arakawa_a': 4}
+        host_elements = {'arakawa_a': 0}
 
         x3 = -5.0
         time = 0.0
@@ -412,7 +469,7 @@ class ArawawaADataReader_test(TestCase):
     def test_get_so(self):
         x1 = 2.0-self.xmin
         x2 = 12.0-self.ymin
-        host_elements = {'arakawa_a': 4}
+        host_elements = {'arakawa_a': 0}
 
         x3 = -5.
         time = 0.0
@@ -484,9 +541,10 @@ class ArawawaADataReader_test(TestCase):
     def test_element_is_wet(self):
         x1 = 2.3333333333-self.xmin
         x2 = 11.6666666667-self.ymin
-        host_elements={'arakawa_a': 4}
+        host_elements = {'arakawa_a': 6}
 
         time = 0.0
+        print('Element is wet test')
 
         particle = ParticleSmartPtr(x1=x1, x2=x2, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
