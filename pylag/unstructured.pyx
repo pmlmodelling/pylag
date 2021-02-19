@@ -1921,7 +1921,7 @@ cdef class UnstructuredGeographicGrid(Grid):
         sum = 0.0
         for i in range(N_VERTICES):
             node = self.nv[i, host]
-            if self.node_mask[node] == 0:
+            if self.land_sea_mask_nodes[node] == 0:
                 mask[i] = 1.0
                 sum += phi[i]
 
