@@ -1219,20 +1219,24 @@ cdef class ArakawaADataReader(DataReader):
         u_last = self.mediator.get_time_dependent_variable_at_last_time_index(u_var_name,
                 self._variable_shapes['uo'], DTYPE_FLOAT)
         self._u_last = self._reshape_var(u_last, self._variable_dimension_indices['uo'])
+        del(u_last)
 
         u_next = self.mediator.get_time_dependent_variable_at_next_time_index(u_var_name,
                 self._variable_shapes['uo'], DTYPE_FLOAT)
         self._u_next = self._reshape_var(u_next, self._variable_dimension_indices['uo'])
+        del(u_next)
 
         # Update memory views for v
         v_var_name = self._variable_names['vo']
         v_last = self.mediator.get_time_dependent_variable_at_last_time_index(v_var_name,
                 self._variable_shapes['vo'], DTYPE_FLOAT)
         self._v_last = self._reshape_var(v_last, self._variable_dimension_indices['vo'])
+        del(v_last)
 
         v_next = self.mediator.get_time_dependent_variable_at_next_time_index(v_var_name,
                 self._variable_shapes['vo'], DTYPE_FLOAT)
         self._v_next = self._reshape_var(v_next, self._variable_dimension_indices['vo'])
+        del(v_next)
 
         # Update memory views for w
         if self._has_w:
@@ -1240,20 +1244,24 @@ cdef class ArakawaADataReader(DataReader):
             w_last = self.mediator.get_time_dependent_variable_at_last_time_index(w_var_name,
                     self._variable_shapes['wo'], DTYPE_FLOAT)
             self._w_last = self._reshape_var(w_last, self._variable_dimension_indices['wo'])
+            del(w_last)
 
             w_next = self.mediator.get_time_dependent_variable_at_next_time_index(w_var_name,
                     self._variable_shapes['wo'], DTYPE_FLOAT)
             self._w_next = self._reshape_var(w_next, self._variable_dimension_indices['wo'])
+            del(w_next)
 
         # Update depth mask
         if not self._surface_only:
             depth_mask_last = self.mediator.get_mask_at_last_time_index(u_var_name,
                     self._variable_shapes['uo'])
             self._depth_mask_last = self._reshape_var(depth_mask_last, self._variable_dimension_indices['uo'])
+            del(depth_mask_last)
 
             depth_mask_next = self.mediator.get_mask_at_next_time_index(u_var_name,
                     self._variable_shapes['uo'])
             self._depth_mask_next = self._reshape_var(depth_mask_next, self._variable_dimension_indices['uo'])
+            del(depth_mask_next)
 
             # Compute actual depth levels using reference values and zeta
             for k in xrange(self._n_depth):
@@ -1267,10 +1275,12 @@ cdef class ArakawaADataReader(DataReader):
             kh_last = self.mediator.get_time_dependent_variable_at_last_time_index(kh_var_name,
                     self._variable_shapes['Kh'], DTYPE_FLOAT)
             self._kh_last = self._reshape_var(kh_last, self._variable_dimension_indices['Kh'])
+            del(kh_last)
 
             kh_next = self.mediator.get_time_dependent_variable_at_next_time_index(kh_var_name,
                     self._variable_shapes['Kh'], DTYPE_FLOAT)
             self._kh_next = self._reshape_var(kh_next, self._variable_dimension_indices['Kh'])
+            del(kh_next)
 
         # Update memory views for Ah
         if self._has_Ah:
@@ -1278,10 +1288,12 @@ cdef class ArakawaADataReader(DataReader):
             ah_last = self.mediator.get_time_dependent_variable_at_last_time_index(ah_var_name,
                     self._variable_shapes['Ah'], DTYPE_FLOAT)
             self._ah_last = self._reshape_var(ah_last, self._variable_dimension_indices['Ah'])
+            del(ah_last)
 
             ah_next = self.mediator.get_time_dependent_variable_at_next_time_index(ah_var_name,
                     self._variable_shapes['Ah'], DTYPE_FLOAT)
             self._ah_next = self._reshape_var(ah_next, self._variable_dimension_indices['Ah'])
+            del(ah_next)
 
         # Set is wet status
         # NB the status of cells is inferred from the depth mask and the land-sea element mask. If a surface cell is
@@ -1306,20 +1318,24 @@ cdef class ArakawaADataReader(DataReader):
             thetao_next = self.mediator.get_time_dependent_variable_at_next_time_index(var_name,
                     self._variable_shapes['thetao'], DTYPE_FLOAT)
             self._thetao_next = self._reshape_var(thetao_next, self._variable_dimension_indices['thetao'])
+            del(thetao_next)
 
             thetao_last = self.mediator.get_time_dependent_variable_at_last_time_index(var_name,
                     self._variable_shapes['thetao'], DTYPE_FLOAT)
             self._thetao_last = self._reshape_var(thetao_last, self._variable_dimension_indices['thetao'])
+            del(thetao_last)
 
         if 'so' in self.env_var_names:
             var_name = self._variable_names['so']
             so_next = self.mediator.get_time_dependent_variable_at_next_time_index(var_name,
                     self._variable_shapes['so'], DTYPE_FLOAT)
             self._so_next = self._reshape_var(so_next, self._variable_dimension_indices['so'])
+            del(so_next)
 
             so_last = self.mediator.get_time_dependent_variable_at_last_time_index(var_name,
                     self._variable_shapes['so'], DTYPE_FLOAT)
             self._so_last = self._reshape_var(so_last, self._variable_dimension_indices['so'])
+            del(so_last)
 
         return
 
