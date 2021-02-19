@@ -414,7 +414,7 @@ cdef class UnstructuredCartesianGrid(Grid):
             # Check to see if the particle has walked into an invalid element (e.g. an
             # element treated as land)
             if host_found is True:
-                if self.land_sea_mask[guess] == 0:
+                if self.land_sea_mask[guess] != 1:
                     # Normal element
                     particle.set_host_horizontal_elem(self.name, guess)
 
@@ -638,7 +638,7 @@ cdef class UnstructuredCartesianGrid(Grid):
                 host_found = True
 
             if host_found is True:
-                if self.land_sea_mask[guess] == 0:
+                if self.land_sea_mask[guess] != 1:
                     particle.set_host_horizontal_elem(self.name, guess)
 
                     particle.set_phi(self.name, phi)
@@ -1317,7 +1317,7 @@ cdef class UnstructuredGeographicGrid(Grid):
             # Check to see if the particle has walked into an invalid element (e.g. an
             # element treated as land)
             if host_found is True:
-                if self.land_sea_mask[guess] == 0:
+                if self.land_sea_mask[guess] != 1:
                     # Normal element
                     particle.set_host_horizontal_elem(self.name, guess)
 
@@ -1556,7 +1556,7 @@ cdef class UnstructuredGeographicGrid(Grid):
                 host_found = True
 
             if host_found is True:
-                if self.land_sea_mask[guess] == 0:
+                if self.land_sea_mask[guess] != 1:
                     particle.set_host_horizontal_elem(self.name, guess)
 
                     phi = self.get_normalised_tetrahedral_coords(s)
