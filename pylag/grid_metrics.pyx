@@ -19,6 +19,8 @@ from netCDF4 import Dataset
 import time
 
 from pylag import version
+from pylag.math import geographic_to_cartesian_coords_python
+from pylag.math import cartesian_to_geographic_coords_python
 
 
 class GridMetricsFileCreator(object):
@@ -655,16 +657,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
         lon_elements = np.degrees(xc)
         lat_elements = np.degrees(yc)
     else:
-        lon_elements = np.empty(n_elems, dtype=DTYPE_FLOAT)
-        lat_elements = np.empty(n_elems, dtype=DTYPE_FLOAT)
-
-        # To be accurate, this should be done using a spherical transformation to (x,y,z) coords.
-        # However, since the centroid is rarely used in the code (all interpolations are done
-        # using nodal values) this should be sufficent.
-        for i, element in enumerate(range(n_elems)):
-            lon_elements[i] = lon_nodes[(nv[element, :])].mean()
-            lat_elements[i] = lat_nodes[(nv[element, :])].mean()
-
+        lon_elements, lat_elements = compute_element_midpoints_in_geographic_coordinates(nv, lon_nodes, lat_nodes)
     print('done')
 
     # Generate the land-sea mask at elements
@@ -1088,10 +1081,9 @@ def create_roms_grid_metrics_file(file_name,
 
         # Save lon and lat points at element centres
         print('Calculating lons and lats at element centres ', end='... ')
-        lon_elements[grid_name] = np.empty(elements[grid_name], dtype=DTYPE_FLOAT)
-        lat_elements[grid_name] = np.empty(elements[grid_name], dtype=DTYPE_FLOAT)
-        compute_element_centre_means(nvs[grid_name], lon_nodes[grid_name], lon_elements[grid_name])
-        compute_element_centre_means(nvs[grid_name], lat_nodes[grid_name], lat_elements[grid_name])
+        lon_elements[grid_name], lat_elements[grid_name] = compute_element_midpoints_in_geographic_coordinates(nvs[grid_name],
+                                                                                                               lon_nodes[grid_name],
+                                                                                                               lat_nodes[grid_name])
         print('done')
 
         # Generate the land-sea mask at elements
@@ -1548,22 +1540,24 @@ cpdef sort_adjacency_array(DTYPE_INT_t [:, :] nv, DTYPE_INT_t [:, :] nbe):
         nbe[i, 2] = index_side3
 
 
-cpdef compute_element_centre_means(const DTYPE_INT_t [:,:] nv, const DTYPE_FLOAT_t [:] nodal_values,
-                                   DTYPE_FLOAT_t [:] element_values):
-    cdef DTYPE_INT_t n_elements, n_vertices
-    cdef DTYPE_INT_t node
-    cdef DTYPE_INT_t i, j
-    cdef DTYPE_FLOAT_t sum
+cpdef compute_element_midpoints_in_geographic_coordinates(nv, lon_nodes, lat_nodes):
+    # Convert to radians
+    lon_nodes_radians = np.radians(lon_nodes)
+    lat_nodes_radians = np.radians(lat_nodes)
 
-    n_elements = nv.shape[0]
-    n_vertices = nv.shape[1]
+    # Convert to Cartesian coordinates
+    x, y, z = geographic_to_cartesian_coords_python(lon_nodes_radians, lat_nodes_radians)
+    points = np.column_stack([x, y, z])
 
-    for i in range(n_elements):
-        sum = 0.0
-        for j in range(n_vertices):
-            node = nv[i, j]
-            sum += nodal_values[node]
-        element_values[i] = sum / n_vertices
+    # Compute mid points in Cartesian coordinates
+    mids = points[nv].mean(axis=1)
+    mids /= np.linalg.norm(mids, axis=1).reshape(-1,1)
+
+    # Convert back to geographic coordinates
+    midlons, midlats = cartesian_to_geographic_coords_python(mids[:,0], mids[:,1], mids[:,2])
+
+    # Convert back to degrees and return
+    return np.degrees(midlons), np.degrees(midlats)
 
 
 cpdef compute_land_sea_element_mask(const DTYPE_INT_t [:,:] nv, const DTYPE_INT_t [:] nodal_mask,
