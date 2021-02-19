@@ -9,9 +9,9 @@ from Cython.Build import cythonize
 import numpy
 
 MAJOR               = 0
-MINOR               = 3
-PATCH               = 3
-ISRELEASED          = False
+MINOR               = 4
+PATCH               = 0
+ISRELEASED          = True
 VERSION = '{}.{}.{}'.format(MAJOR, MINOR, PATCH)
 
 build_type = 'prod'
@@ -196,7 +196,7 @@ setup(name="PyLag",
       tests_require=['nose2'],
       install_requires=[
           "cython>=0.29",
-          "numpy>=1.18",
+          "numpy>=1.20",
           "scipy>=1.4.1",
           "netCDF4",
           "cftime>=1.1",
