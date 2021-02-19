@@ -208,8 +208,40 @@ cdef class Grid:
                            vector[DTYPE_FLOAT_t] &dphi_dy) except *:
         raise NotImplementedError
 
+    def interpolate_in_space_wrapper(self, var_arr, ParticleSmartPtr particle):
+        """ Python wrapper for interpolate in space
+
+        Parameters
+        ----------
+        var_arr : numpy array
+            Variable array of points defined at element nodes.
+
+        particle : pylag.particle_cpp_wrapper.ParticleSmartPtr
+            The particle at its current position.
+        """
+        return self.interpolate_in_space(var_arr, particle.get_ptr())
+
     cdef DTYPE_FLOAT_t interpolate_in_space(self, DTYPE_FLOAT_t[:] var_arr, Particle *particle) except FLOAT_ERR:
         raise NotImplementedError
+
+    def interpolate_in_time_and_space_wrapper(self, var_last_arr, var_next_arr, time_fraction, ParticleSmartPtr particle):
+        """ Python wrapper for interpolate in time and space
+
+        Parameters
+        ----------
+        var_last_arr : numpy array
+            Variable array of points defined at element nodes at the last time point.
+
+        var_last_arr : numpy array
+            Variable array of points defined at element nodes at the next time point.
+
+        time_fraction : float
+            Fraction position between the first and last time points.
+
+        particle : pylag.particle_cpp_wrapper.ParticleSmartPtr
+            The particle at its current position.
+        """
+        return self.interpolate_in_time_and_space(var_last_arr, var_next_arr, time_fraction, particle.get_ptr())
 
     cdef DTYPE_FLOAT_t interpolate_in_time_and_space(self, DTYPE_FLOAT_t[:] var_last_arr, DTYPE_FLOAT_t[:] var_next_arr,
                                                      DTYPE_FLOAT_t time_fraction, Particle *particle) except FLOAT_ERR:
