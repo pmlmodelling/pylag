@@ -771,7 +771,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
                                     attrs={'long_name': 'elements surrounding each element'})
 
     # Add land sea mask - elements
-    gm_file_creator.create_variable('mask', land_sea_mask_elements, ('element',), DTYPE_INT, attrs=mask_attrs)
+    gm_file_creator.create_variable('mask', land_sea_mask_elements, ('element',), DTYPE_INT, attrs=element_mask_attrs)
 
     # Add land sea mask
     gm_file_creator.create_variable('mask_nodes', land_sea_mask_nodes, ('node',), DTYPE_INT, attrs=mask_attrs)
@@ -1580,7 +1580,7 @@ cpdef compute_land_sea_element_mask(const DTYPE_INT_t [:,:] nv, const DTYPE_INT_
 
         if counter == 0:
             # Sea
-            continue
+            element_mask[i] = 0
         elif counter == 3:
             # Land
             element_mask[i] = 1
