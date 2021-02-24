@@ -1658,12 +1658,12 @@ cdef class UnstructuredGeographicGrid(Grid):
             x2[0] = x_tri[x2_idx] * deg_to_radians; x2[1] = y_tri[x2_idx] * deg_to_radians
 
             if get_intersection_point_in_geographic_coordinates(x1, x2, x3, x4, xi) == 1:
-                intersection.x1 = radians_to_deg * [0]
-                intersection.y1 = radians_to_deg * [1]
-                intersection.x2 = radians_to_deg * [0]
-                intersection.y2 = radians_to_deg * [1]
-                intersection.xi = radians_to_deg * [0]
-                intersection.yi = radians_to_deg * [1]
+                intersection.x1 = radians_to_deg * x1[0]
+                intersection.y1 = radians_to_deg * x1[1]
+                intersection.x2 = radians_to_deg * x2[0]
+                intersection.y2 = radians_to_deg * x2[1]
+                intersection.xi = radians_to_deg * xi[0]
+                intersection.yi = radians_to_deg * xi[1]
                 return intersection
             else:
                 continue

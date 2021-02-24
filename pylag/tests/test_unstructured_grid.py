@@ -264,6 +264,17 @@ class UnstructuredGeographicGrid_test(TestCase):
         phi = self.unstructured_grid.get_phi(x1, x2, host)
         test.assert_array_almost_equal(phi, [0., 0., 1.])
 
+    def test_get_boundary_intersection(self):
+        particle_old = ParticleSmartPtr(x1=1.99, x2=12.9, host_elements={'test_grid': 5})
+        particle_new = ParticleSmartPtr(x1=1.99, x2=13.1, host_elements={'test_grid': 5})
+        intersection = self.unstructured_grid.get_boundary_intersection_wrapper(particle_old, particle_new)
+        test.assert_almost_equal(intersection.x1_py, 1.0)
+        test.assert_almost_equal(intersection.y1_py, 13.0)
+        test.assert_almost_equal(intersection.x2_py, 2.0)
+        test.assert_almost_equal(intersection.y2_py, 13.0)
+        test.assert_almost_equal(intersection.xi_py, 1.99, decimal=4)
+        test.assert_almost_equal(intersection.yi_py, 13.0, decimal=4)
+
     def test_interpolate_in_space(self):
         h_grid = np.array([25., 10., 999., 999.,  25.,  10., 999., 999.,  25.,  10., 999., 999.], dtype=DTYPE_FLOAT)
 
