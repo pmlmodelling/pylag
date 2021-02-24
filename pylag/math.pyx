@@ -10,9 +10,9 @@ include "constants.pxi"
 
 import numpy as np
 
-from libc.math cimport sin, cos, asin, acos, sqrt, abs
+from libc.math cimport sin, cos, asin, acos, atan2, sqrt, abs
 
-from pylag.parameters cimport pi, earth_radius
+from pylag.parameters cimport pi, earth_radius, radians_to_deg
 
 
 cdef class Intersection:
@@ -77,6 +77,7 @@ cdef class Intersection:
     @yi_py.setter
     def yi_py(self, value):
         self.yi = value
+
 
 def get_intersection_point_wrapper(const vector[DTYPE_FLOAT_t] &x1,
                                     const vector[DTYPE_FLOAT_t] &x2,
@@ -143,6 +144,86 @@ cdef DTYPE_INT_t get_intersection_point(const vector[DTYPE_FLOAT_t] &x1,
         return 0
 
     return 1
+
+
+def get_intersection_point_in_geographic_coordinates_wrapper(const vector[DTYPE_FLOAT_t] &x1,
+                                                             const vector[DTYPE_FLOAT_t] &x2,
+                                                             const vector[DTYPE_FLOAT_t] &x3,
+                                                             const vector[DTYPE_FLOAT_t] &x4):
+    cdef vector[DTYPE_FLOAT_t] xi = vector[DTYPE_FLOAT_t](2, -999.)
+
+    if get_intersection_point_in_geographic_coordinates(x1, x2, x3, x4, xi) == 1:
+        xi[0] = radians_to_deg * xi[0]
+        xi[1] = radians_to_deg * xi[1]
+        return xi
+    else:
+        raise ValueError('Lines do not intersect')
+
+
+cdef DTYPE_INT_t get_intersection_point_in_geographic_coordinates(const vector[DTYPE_FLOAT_t] &x1,
+                                                                  const vector[DTYPE_FLOAT_t] &x2,
+                                                                  const vector[DTYPE_FLOAT_t] &x3,
+                                                                  const vector[DTYPE_FLOAT_t] &x4,
+                                                                  vector[DTYPE_FLOAT_t] &xi) except INT_ERR:
+    """ Determine the intersection point of two line segments in geographic coordinates
+
+    Determine the intersection point of two line segments in geographic
+    coordinates. The first line is defined by the two dimensional position
+    vectors x1 and x2; the second by the two dimensional position vectors
+    x3 and x4.
+
+    Parameters:
+    -----------
+    x1, x2, x3, x4 : vector[float, float]
+        Position vectors for the end points of the two lines x1x2 and x3x4 in radians.
+
+    Returns:
+    --------
+    xi : vector[float, float]
+        x and y coordinates of the intersection point in radians.
+    """
+    cdef vector[DTYPE_FLOAT_t] x1_cart, x2_cart, x3_cart, x4_cart
+    cdef vector[DTYPE_FLOAT_t] n1, n2
+    cdef vector[DTYPE_FLOAT_t] l
+    cdef vector[DTYPE_FLOAT_t] intersection_1 = vector[DTYPE_FLOAT_t](3, 999.)
+    cdef vector[DTYPE_FLOAT_t] intersection_2 = vector[DTYPE_FLOAT_t](3, 999.)
+    cdef vector[DTYPE_FLOAT_t] intersection = vector[DTYPE_FLOAT_t](2, 999.)
+    cdef DTYPE_INT_t intersection_1_is_valid, intersection_2_is_valid
+
+    # Convert from geographic to cartesian coordinates
+    x1_cart = geographic_to_cartesian_coords(x1[0], x1[1], 1)
+    x2_cart = geographic_to_cartesian_coords(x2[0], x2[1], 1)
+    x3_cart = geographic_to_cartesian_coords(x3[0], x3[1], 1)
+    x4_cart = geographic_to_cartesian_coords(x4[0], x4[1], 1)
+
+    # Compute plane normals for the two arcs
+    n1 = vector_product(x1_cart, x2_cart)
+    n2 = vector_product(x3_cart, x4_cart)
+
+    # Compute vector running through the two great circle intersection points
+    l = vector_product(n1, n2)
+
+    # Get the two intersection points
+    intersection_1 = unit_vector(l)
+    for i in xrange(3):
+        intersection_2[i] = -intersection_1[i]
+
+    # Check if either of the two intersections are valid
+    if intersection_is_within_arc_segments(x1_cart, x2_cart, x3_cart, x4_cart, intersection_1) == 1:
+        intersection = cartesian_to_geographic_coords(intersection_1)
+        xi[0] = intersection[0]
+        xi[1] = intersection[1]
+        return 1
+
+    if intersection_is_within_arc_segments(x1_cart, x2_cart, x3_cart, x4_cart, intersection_2) == 1:
+        intersection = cartesian_to_geographic_coords(intersection_2)
+        xi[0] = intersection[0]
+        xi[1] = intersection[1]
+        return 1
+
+    # Intersection was not found!
+    return 0
+
 
 cpdef DTYPE_INT_t great_circle_arc_segments_intersect(const vector[DTYPE_FLOAT_t] &x1,
                                                       const vector[DTYPE_FLOAT_t] &x2,
@@ -501,6 +582,27 @@ cpdef vector[DTYPE_FLOAT_t] geographic_to_cartesian_coords(const DTYPE_FLOAT_t &
     coords[2] = r * sin(lat_rad)
 
     return coords
+
+
+cpdef vector[DTYPE_FLOAT_t] cartesian_to_geographic_coords(const vector[DTYPE_FLOAT_t] &coords_cart):
+    """ Convert cartesian to geographic coordinates
+
+    Parameters
+    ----------
+    coords_cart : vector[float]
+        Cartesian coordinates.
+
+    Returns
+    -------
+    coords_geog: vector[float]
+        [lon, lat] coordinates.
+    """
+    cdef vector[DTYPE_FLOAT_t] coords_geog = vector[DTYPE_FLOAT_t](2, -999.)
+
+    coords_geog[0] = atan2(coords_cart[1], coords_cart[0])
+    coords_geog[1] = asin(coords_cart[2])
+
+    return coords_geog
 
 
 def geographic_to_cartesian_coords_python(lon_rad, lat_rad):

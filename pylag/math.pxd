@@ -62,11 +62,19 @@ cpdef vector[DTYPE_FLOAT_t] geographic_to_cartesian_coords(const DTYPE_FLOAT_t &
                                                            const DTYPE_FLOAT_t &lat_rad,
                                                            const DTYPE_FLOAT_t &r)
 
+cpdef vector[DTYPE_FLOAT_t] cartesian_to_geographic_coords(const vector[DTYPE_FLOAT_t] &coords_cart)
+
 cdef DTYPE_INT_t get_intersection_point(const vector[DTYPE_FLOAT_t] &x1,
                                         const vector[DTYPE_FLOAT_t] &x2,
                                         const vector[DTYPE_FLOAT_t] &x3,
                                         const vector[DTYPE_FLOAT_t] &x4,
                                         vector[DTYPE_FLOAT_t] &xi) except INT_ERR
+
+cdef DTYPE_INT_t get_intersection_point_in_geographic_coordinates(const vector[DTYPE_FLOAT_t] &x1,
+                                                                  const vector[DTYPE_FLOAT_t] &x2,
+                                                                  const vector[DTYPE_FLOAT_t] &x3,
+                                                                  const vector[DTYPE_FLOAT_t] &x4,
+                                                                  vector[DTYPE_FLOAT_t] &xi) except INT_ERR
 
 cpdef DTYPE_INT_t great_circle_arc_segments_intersect(const vector[DTYPE_FLOAT_t] &x1,
                                                       const vector[DTYPE_FLOAT_t] &x2,
