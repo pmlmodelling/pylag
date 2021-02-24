@@ -120,6 +120,14 @@ def test_geographic_to_cartesian_coords():
     test.assert_array_almost_equal(coords, [0., 10., 0.])
 
 
+def test_cartesian_to_geographic_coords():
+    coords_cart = [0., 1., 0.]
+
+    coords_geog = math.cartesian_to_geographic_coords(coords_cart)
+
+    test.assert_array_almost_equal(coords_geog, [np.pi/2., 0.0])
+
+
 def test_get_intersection_point_for_perpendicular_lines():
     x1 = np.array([0.0, 2.0], dtype=DTYPE_FLOAT)
     x2 = np.array([0.0, 0.0], dtype=DTYPE_FLOAT)
@@ -127,6 +135,15 @@ def test_get_intersection_point_for_perpendicular_lines():
     x4 = np.array([-1.0, 1.0], dtype=DTYPE_FLOAT)
     xi = math.get_intersection_point_wrapper(x1, x2, x3, x4)
     test.assert_array_almost_equal(xi, [0.0, 1.0])
+
+
+def test_get_intersection_point_in_geographic_coordinates():
+    x1 = np.radians([0.0, 2.0]).astype(DTYPE_FLOAT)
+    x2 = np.radians([0.0, -1.0]).astype(DTYPE_FLOAT)
+    x3 = np.radians([2.0, 0.0]).astype(DTYPE_FLOAT)
+    x4 = np.radians([-1.0, 0.0]).astype(DTYPE_FLOAT)
+    xi = math.get_intersection_point_in_geographic_coordinates_wrapper(x1, x2, x3, x4)
+    test.assert_array_almost_equal(xi, [0.0, 0.0])
 
 
 def test_get_intersection_point_for_angled_lines():
