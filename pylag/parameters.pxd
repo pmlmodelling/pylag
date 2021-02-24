@@ -10,6 +10,7 @@ cpdef DTYPE_FLOAT_t earth_radius
 
 # Unit conversions
 cpdef DTYPE_FLOAT_t deg_to_radians
+cpdef DTYPE_FLOAT_t radians_to_deg
 
 # Pi
 cpdef DTYPE_FLOAT_t pi
