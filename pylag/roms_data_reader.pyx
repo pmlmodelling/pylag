@@ -31,6 +31,7 @@ from libcpp.string cimport string
 from libcpp.vector cimport vector
 
 # PyLag cython imports
+from pylag.parameters cimport deg_to_radians
 from pylag.particle cimport Particle
 from pylag.particle_cpp_wrapper cimport to_string
 from pylag.data_reader cimport DataReader
@@ -1186,42 +1187,26 @@ cdef class ROMSDataReader(DataReader):
         coordinate_system = self.config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system").strip().lower()
 
         if coordinate_system == "geographic":
-            x_grid_u = self.mediator.get_grid_variable('longitude_grid_u', (self._n_nodes_grid_u), DTYPE_FLOAT)
-            y_grid_u = self.mediator.get_grid_variable('latitude_grid_u', (self._n_nodes_grid_u), DTYPE_FLOAT)
-            xc_grid_u = self.mediator.get_grid_variable('longitude_c_grid_u', (self._n_elems_grid_u), DTYPE_FLOAT)
-            yc_grid_u = self.mediator.get_grid_variable('latitude_c_grid_u', (self._n_elems_grid_u), DTYPE_FLOAT)
+            x_grid_u = self.mediator.get_grid_variable('longitude_grid_u', (self._n_nodes_grid_u), DTYPE_FLOAT) * deg_to_radians
+            y_grid_u = self.mediator.get_grid_variable('latitude_grid_u', (self._n_nodes_grid_u), DTYPE_FLOAT) * deg_to_radians
+            xc_grid_u = self.mediator.get_grid_variable('longitude_c_grid_u', (self._n_elems_grid_u), DTYPE_FLOAT) * deg_to_radians
+            yc_grid_u = self.mediator.get_grid_variable('latitude_c_grid_u', (self._n_elems_grid_u), DTYPE_FLOAT) * deg_to_radians
 
-            x_grid_v = self.mediator.get_grid_variable('longitude_grid_v', (self._n_nodes_grid_v), DTYPE_FLOAT)
-            y_grid_v = self.mediator.get_grid_variable('latitude_grid_v', (self._n_nodes_grid_v), DTYPE_FLOAT)
-            xc_grid_v = self.mediator.get_grid_variable('longitude_c_grid_v', (self._n_elems_grid_v), DTYPE_FLOAT)
-            yc_grid_v = self.mediator.get_grid_variable('latitude_c_grid_v', (self._n_elems_grid_v), DTYPE_FLOAT)
+            x_grid_v = self.mediator.get_grid_variable('longitude_grid_v', (self._n_nodes_grid_v), DTYPE_FLOAT) * deg_to_radians
+            y_grid_v = self.mediator.get_grid_variable('latitude_grid_v', (self._n_nodes_grid_v), DTYPE_FLOAT) * deg_to_radians
+            xc_grid_v = self.mediator.get_grid_variable('longitude_c_grid_v', (self._n_elems_grid_v), DTYPE_FLOAT) * deg_to_radians
+            yc_grid_v = self.mediator.get_grid_variable('latitude_c_grid_v', (self._n_elems_grid_v), DTYPE_FLOAT) * deg_to_radians
 
-            x_grid_rho = self.mediator.get_grid_variable('longitude_grid_rho', (self._n_nodes_grid_rho), DTYPE_FLOAT)
-            y_grid_rho = self.mediator.get_grid_variable('latitude_grid_rho', (self._n_nodes_grid_rho), DTYPE_FLOAT)
-            xc_grid_rho = self.mediator.get_grid_variable('longitude_c_grid_rho', (self._n_elems_grid_rho), DTYPE_FLOAT)
-            yc_grid_rho = self.mediator.get_grid_variable('latitude_c_grid_rho', (self._n_elems_grid_rho), DTYPE_FLOAT)
+            x_grid_rho = self.mediator.get_grid_variable('longitude_grid_rho', (self._n_nodes_grid_rho), DTYPE_FLOAT) * deg_to_radians
+            y_grid_rho = self.mediator.get_grid_variable('latitude_grid_rho', (self._n_nodes_grid_rho), DTYPE_FLOAT) * deg_to_radians
+            xc_grid_rho = self.mediator.get_grid_variable('longitude_c_grid_rho', (self._n_elems_grid_rho), DTYPE_FLOAT) * deg_to_radians
+            yc_grid_rho = self.mediator.get_grid_variable('latitude_c_grid_rho', (self._n_elems_grid_rho), DTYPE_FLOAT) * deg_to_radians
 
             # Don't apply offsets in geographic case - set them to 0.0!
             self._xmin = 0.0
             self._ymin = 0.0
         else:
             raise ValueError("Unsupported model coordinate system `{}'".format(coordinate_system))
-
-        # Apply offsets
-        x_grid_u = x_grid_u - self._xmin
-        y_grid_u = y_grid_u - self._ymin
-        xc_grid_u = xc_grid_u - self._xmin
-        yc_grid_u = yc_grid_u - self._ymin
-
-        x_grid_v = x_grid_v - self._xmin
-        y_grid_v = y_grid_v - self._ymin
-        xc_grid_v = xc_grid_v - self._xmin
-        yc_grid_v = yc_grid_v - self._ymin
-
-        x_grid_rho = x_grid_rho - self._xmin
-        y_grid_rho = y_grid_rho - self._ymin
-        xc_grid_rho = xc_grid_rho - self._xmin
-        yc_grid_rho = yc_grid_rho - self._ymin
 
         # Land sea mask - elements. Rho grid only for now. U/V grids initialised to all sea points.
         self._mask_c_grid_u = np.zeros(self._n_elems_grid_u, dtype=DTYPE_INT)

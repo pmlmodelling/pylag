@@ -30,7 +30,7 @@ from libcpp.string cimport string
 from libcpp.vector cimport vector
 
 # PyLag cython imports
-from pylag.parameters cimport cartesian, geographic
+from pylag.parameters cimport cartesian, geographic, deg_to_radians
 from pylag.particle cimport Particle
 from pylag.particle_cpp_wrapper cimport to_string
 from pylag.data_reader cimport DataReader
@@ -1277,21 +1277,27 @@ cdef class FVCOMDataReader(DataReader):
             self._xmin = np.min(x)
             self._ymin = np.min(y)
 
+            # Apply offsets
+            self._x = x - self._xmin
+            self._y = y - self._ymin
+            self._xc = xc - self._xmin
+            self._yc = yc - self._ymin
+
         elif self._coordinate_system == geographic:
             x = self.mediator.get_grid_variable('longitude', (self._n_nodes), DTYPE_FLOAT)
             y = self.mediator.get_grid_variable('latitude', (self._n_nodes), DTYPE_FLOAT)
             xc = self.mediator.get_grid_variable('longitude_c', (self._n_elems), DTYPE_FLOAT)
             yc = self.mediator.get_grid_variable('latitude_c', (self._n_elems), DTYPE_FLOAT)
 
+            # Convert to radians
+            self._x = x * deg_to_radians
+            self._y = y * deg_to_radians
+            self._xc = xc * deg_to_radians
+            self._yc = yc * deg_to_radians
+
             # Don't apply offsets in geographic case - set them to 0.0!
             self._xmin = 0.0
             self._ymin = 0.0
-
-        # Apply offsets
-        self._x = x - self._xmin
-        self._y = y - self._ymin
-        self._xc = xc - self._xmin
-        self._yc = yc - self._ymin
 
         # Land sea mask
         self._land_sea_mask = self.mediator.get_grid_variable('mask', (self._n_elems), DTYPE_INT)

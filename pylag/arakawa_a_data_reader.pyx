@@ -31,6 +31,7 @@ from libcpp.string cimport string
 from libcpp.vector cimport vector
 
 # PyLag cython imports
+from pylag.parameters cimport deg_to_radians
 from pylag.particle cimport Particle
 from pylag.particle_cpp_wrapper cimport to_string
 from pylag.data_reader cimport DataReader
@@ -1114,17 +1115,17 @@ cdef class ArakawaADataReader(DataReader):
             xc = self.mediator.get_grid_variable('longitude_c', (self._n_elems), DTYPE_FLOAT)
             yc = self.mediator.get_grid_variable('latitude_c', (self._n_elems), DTYPE_FLOAT)
 
+            # Convert to radians
+            x = x * deg_to_radians
+            y = y * deg_to_radians
+            xc = xc * deg_to_radians
+            yc = yc * deg_to_radians
+
             # Don't apply offsets in geographic case - set them to 0.0!
             self._xmin = 0.0
             self._ymin = 0.0
         else:
             raise ValueError("Unsupported model coordinate system `{}'".format(coordinate_system))
-
-        # Apply offsets
-        x = x - self._xmin
-        y = y - self._ymin
-        xc = xc - self._xmin
-        yc = yc - self._ymin
 
         # Land sea mask
         self._land_sea_mask = self.mediator.get_grid_variable('mask', (self._n_elems), DTYPE_INT)

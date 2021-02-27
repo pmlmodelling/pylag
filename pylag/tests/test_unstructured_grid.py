@@ -144,6 +144,9 @@ class UnstructuredGeographicGrid_test(TestCase):
     """
 
     def setUp(self):
+        # Conversion factor
+        self.deg_to_radians = np.radians(1)
+
         # Basic grid (4 x 3 x 4).
         latitude = np.array([11., 12., 13., 14], dtype=DTYPE_FLOAT)
         longitude = np.array([1., 2., 3.], dtype=DTYPE_FLOAT)
@@ -184,6 +187,12 @@ class UnstructuredGeographicGrid_test(TestCase):
 
         # Save lon and lat points at element centres
         lon_elements, lat_elements = gm.compute_element_midpoints_in_geographic_coordinates(nv, lon_nodes, lat_nodes)
+
+        # Convert to radians
+        lon_nodes = lon_nodes * self.deg_to_radians
+        lat_nodes = lat_nodes * self.deg_to_radians
+        lon_elements = lon_elements * self.deg_to_radians
+        lat_elements = lat_elements * self.deg_to_radians
 
         # Generate the land-sea mask for elements
         land_sea_mask_elements = np.empty(n_elements, dtype=DTYPE_INT)
@@ -229,13 +238,13 @@ class UnstructuredGeographicGrid_test(TestCase):
         del self.unstructured_grid
 
     def test_find_host_using_global_search(self):
-        particle = ParticleSmartPtr(x1=1.666666667, x2=11.666666667)
+        particle = ParticleSmartPtr(x1 = self.deg_to_radians * 1.666666667, x2 = self.deg_to_radians * 11.666666667)
         flag = self.unstructured_grid.find_host_using_global_search_wrapper(particle)
         test.assert_equal(particle.get_host_horizontal_elem('test_grid'), 0)
         test.assert_equal(flag, 0)
 
     def test_find_host_when_particle_is_in_the_domain(self):
-        particle_new = ParticleSmartPtr(x1=2.333333333, x2=11.6666666667,
+        particle_new = ParticleSmartPtr(x1 = self.deg_to_radians * 2.333333333, x2 = self.deg_to_radians * 11.6666666667,
                                         host_elements={'test_grid':  7})
         flag = self.unstructured_grid.find_host_using_local_search_wrapper(particle_new)
         test.assert_equal(flag, 0)
@@ -243,29 +252,29 @@ class UnstructuredGeographicGrid_test(TestCase):
 
     def test_get_phi_when_particle_is_at_an_elements_vertex(self):
         # Vertex 0
-        x1 = 2.0
-        x2 = 12.0
+        x1 = self.deg_to_radians * 2.0
+        x2 = self.deg_to_radians * 12.0
         host = 0
         phi = self.unstructured_grid.get_phi(x1, x2, host)
         test.assert_array_almost_equal(phi, [1., 0., 0.])
 
         # Vertex 1
-        x1 = 2.0
-        x2 = 11.0
+        x1 = self.deg_to_radians * 2.0
+        x2 = self.deg_to_radians * 11.0
         host = 0
         phi = self.unstructured_grid.get_phi(x1, x2, host)
         test.assert_array_almost_equal(phi, [0., 1., 0.])
 
         # Vertex 2
-        x1 = 1.0
-        x2 = 12.0
+        x1 = self.deg_to_radians * 1.0
+        x2 = self.deg_to_radians * 12.0
         host = 0
         phi = self.unstructured_grid.get_phi(x1, x2, host)
         test.assert_array_almost_equal(phi, [0., 0., 1.])
 
     def test_get_boundary_intersection(self):
-        particle_old = ParticleSmartPtr(x1=1.99, x2=12.9, host_elements={'test_grid': 5})
-        particle_new = ParticleSmartPtr(x1=1.99, x2=13.1, host_elements={'test_grid': 5})
+        particle_old = ParticleSmartPtr(x1 = self.deg_to_radians * 1.99, x2 = self.deg_to_radians * 12.9, host_elements={'test_grid': 5})
+        particle_new = ParticleSmartPtr(x1 = self.deg_to_radians * 1.99, x2 = self.deg_to_radians * 13.1, host_elements={'test_grid': 5})
         intersection = self.unstructured_grid.get_boundary_intersection_wrapper(particle_old, particle_new)
         test.assert_almost_equal(intersection.x1_py, np.radians(1.0))
         test.assert_almost_equal(intersection.y1_py, np.radians(13.0))
@@ -278,8 +287,8 @@ class UnstructuredGeographicGrid_test(TestCase):
         h_grid = np.array([25., 10., 999., 999.,  25.,  10., 999., 999.,  25.,  10., 999., 999.], dtype=DTYPE_FLOAT)
 
         # Set the particle at the element's centroid
-        x1 = 1.6670652236426569
-        x2 = 11.667054258869966
+        x1 = self.deg_to_radians * 1.6670652236426569
+        x2 = self.deg_to_radians * 11.667054258869966
         host_elements = {'test_grid': 0}
 
         particle = ParticleSmartPtr(x1=x1, x2=x2, host_elements=host_elements)
@@ -291,8 +300,8 @@ class UnstructuredGeographicGrid_test(TestCase):
         h_grid = np.array([25., 10., 999., 999.,  25.,  10., 999., 999.,  25.,  10., 999., 999.], dtype=DTYPE_FLOAT)
 
         # Set the particle at the element's centroid
-        x1 = 1.667100645520906
-        x2 = 12.66708505715026
+        x1 = self.deg_to_radians * 1.667100645520906
+        x2 = self.deg_to_radians * 12.66708505715026
         host_elements = {'test_grid': 5}
 
         particle = ParticleSmartPtr(x1=x1, x2=x2, host_elements=host_elements)
@@ -304,11 +313,12 @@ class UnstructuredGeographicGrid_test(TestCase):
         h_grid = np.array([25., 10., 999., 999.,  25.,  10., 999., 999.,  25.,  10., 999., 999.], dtype=DTYPE_FLOAT)
 
         # Set the particle at the element's centroid
-        x1 = 2.
-        x2 = 13.
+        x1 = self.deg_to_radians * 2.
+        x2 = self.deg_to_radians * 13.
         host_elements = {'test_grid': 5}
 
         particle = ParticleSmartPtr(x1=x1, x2=x2, host_elements=host_elements)
         self.unstructured_grid.set_local_coordinates_wrapper(particle)
         h = self.unstructured_grid.interpolate_in_space_wrapper(h_grid, particle)
         test.assert_almost_equal(h, 10.)
+

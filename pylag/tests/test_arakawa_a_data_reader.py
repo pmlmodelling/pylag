@@ -31,6 +31,8 @@ class MockArakawaAMediator(Mediator):
     these, with accompanying unit tests put in place to ensure this is so.
     """
     def __init__(self):
+        self.deg_to_radians = np.radians(1)
+
         # Basic grid (4 x 3 x 4).
         latitude = np.array([11., 12., 13., 14], dtype=DTYPE_FLOAT)
         longitude = np.array([1., 2., 3.], dtype=DTYPE_FLOAT)
@@ -219,6 +221,8 @@ class MockArakawaAMediator(Mediator):
 class ArawawaADataReader_test(TestCase):
 
     def setUp(self):
+        self.deg_to_radians = np.radians(1)
+
         # Create config
         config = configparser.ConfigParser()
         config.add_section("GENERAL")
@@ -254,40 +258,36 @@ class ArawawaADataReader_test(TestCase):
         datetime_end = datetime.datetime(2000, 1, 1)  # Arbitrary end time, ignored by mock mediator
         self.data_reader.setup_data_access(datetime_start, datetime_end)
 
-        # Grid offsets
-        self.xmin = self.data_reader.get_xmin()
-        self.ymin = self.data_reader.get_ymin()
-
     def tearDown(self):
         del(self.data_reader)
 
     def test_find_host_using_global_search(self):
-        particle = ParticleSmartPtr(x1=1.666666667-self.xmin, x2=11.666666667-self.ymin)
+        particle = ParticleSmartPtr(x1=self.deg_to_radians*1.666666667, x2=self.deg_to_radians*11.666666667)
         flag = self.data_reader.find_host_using_global_search_wrapper(particle)
         test.assert_equal(particle.get_host_horizontal_elem('arakawa_a'), 0)
         test.assert_equal(flag, 0)
 
     def test_find_host_when_particle_is_in_the_domain(self):
-        particle_old = ParticleSmartPtr(x1=2.666666667-self.xmin, x2=11.333333333-self.ymin,
+        particle_old = ParticleSmartPtr(x1=self.deg_to_radians*2.666666667, x2=self.deg_to_radians*11.333333333,
                                         host_elements={'arakawa_a': 7})
-        particle_new = ParticleSmartPtr(x1=2.333333333-self.xmin, x2=11.6666666667-self.ymin,
+        particle_new = ParticleSmartPtr(x1=self.deg_to_radians*2.333333333, x2=self.deg_to_radians*11.6666666667,
                                         host_elements={'arakawa_a': -999})
         flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
         test.assert_equal(flag, 0)
         test.assert_equal(particle_new.get_host_horizontal_elem('arakawa_a'), 6)
 
     def test_find_host_when_particle_has_crossed_a_land_boundary(self):
-        particle_old = ParticleSmartPtr(x1=2.333333333-self.xmin, x2=12.666666667-self.ymin,
+        particle_old = ParticleSmartPtr(x1=self.deg_to_radians*2.333333333, x2=self.deg_to_radians*12.666666667,
                                         host_elements={'arakawa_a': 10})
-        particle_new = ParticleSmartPtr(x1=2.333333333-self.xmin, x2=13.1-self.ymin,
+        particle_new = ParticleSmartPtr(x1=self.deg_to_radians*2.333333333, x2=self.deg_to_radians*13.1,
                                         host_elements={'arakawa_a': -999})
         flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
         test.assert_equal(flag, -1)
         test.assert_equal(particle_new.get_host_horizontal_elem('arakawa_a'), 10)
 
     def test_get_zmin(self):
-        x1 = 2.0-self.xmin
-        x2 = 12.0-self.ymin
+        x1 = self.deg_to_radians*2.0
+        x2 = self.deg_to_radians*12.0
         host_elements = {'arakawa_a': 0}
 
         time = 0.0
@@ -298,8 +298,8 @@ class ArawawaADataReader_test(TestCase):
         test.assert_almost_equal(bathy, -10.0)
 
     def test_get_zmax(self):
-        x1 = 2.0-self.xmin
-        x2 = 12.0-self.ymin
+        x1 = self.deg_to_radians * 2.0
+        x2 = self.deg_to_radians * 12.0
         host_elements = {'arakawa_a': 0}
 
         time = 0.0
@@ -316,8 +316,8 @@ class ArawawaADataReader_test(TestCase):
 
     def test_set_vertical_grid_vars_for_a_particle_on_the_sea_surface(self):
         time = 0.0
-        x1 = 2.0-self.xmin
-        x2 = 12.0-self.ymin
+        x1 = self.deg_to_radians * 2.0
+        x2 = self.deg_to_radians * 12.0
         x3 = 0.0
         host_elements = {'arakawa_a': 0}
 
@@ -332,8 +332,8 @@ class ArawawaADataReader_test(TestCase):
 
     def test_set_vertical_grid_vars_for_a_particle_on_the_sea_floor(self):
         time = 0.0
-        x1 = 2.0-self.xmin
-        x2 = 12.0-self.ymin
+        x1 = self.deg_to_radians * 2.0
+        x2 = self.deg_to_radians * 12.0
         x3 = -10.
         host_elements = {'arakawa_a': 0}
 
@@ -348,8 +348,8 @@ class ArawawaADataReader_test(TestCase):
 
     def test_set_vertical_grid_vars_for_a_particle_in_the_surface_layer(self):
         time = 0.0
-        x1 = 2.0-self.xmin
-        x2 = 12.0-self.ymin
+        x1 = self.deg_to_radians * 2.0
+        x2 = self.deg_to_radians * 12.0
         x3 = -5.0  # 1 m below the moving free surface
         host_elements = {'arakawa_a': 0}
 
@@ -363,8 +363,8 @@ class ArawawaADataReader_test(TestCase):
         test.assert_almost_equal(particle.omega_interfaces, 0.5)
 
     def test_get_velocity_in_surface_layer(self):
-        x1 = 2.0-self.xmin
-        x2 = 12.0-self.ymin
+        x1 = self.deg_to_radians * 2.0
+        x2 = self.deg_to_radians * 12.0
         host_elements = {'arakawa_a': 0}
 
         # Test #1
@@ -393,8 +393,8 @@ class ArawawaADataReader_test(TestCase):
         test.assert_array_almost_equal(vel, [0.5, 0.5, 0.5])
 
     def test_get_velocity_in_surface_layer_in_a_boundary_element(self):
-        x1 = 1.333333333-self.xmin
-        x2 = 12.333333333-self.ymin
+        x1 = self.deg_to_radians * 1.333333333
+        x2 = self.deg_to_radians * 12.333333333
         host_elements = {'arakawa_a': 4}
 
         # Test #1
@@ -423,8 +423,8 @@ class ArawawaADataReader_test(TestCase):
         test.assert_array_almost_equal(vel, [0.5, 0.5, 0.5])
 
     def test_get_velocity_in_surface_layer_on_a_boundary(self):
-        x1 = 2.0-self.xmin
-        x2 = 13.0-self.ymin
+        x1 = self.deg_to_radians * 2.0
+        x2 = self.deg_to_radians * 13.0
         host_elements = {'arakawa_a': 5}
 
         # Test #1
@@ -453,8 +453,8 @@ class ArawawaADataReader_test(TestCase):
         test.assert_array_almost_equal(vel, [0.5, 0.5, 0.5])
 
     def test_get_thetao(self):
-        x1 = 2.0-self.xmin
-        x2 = 12.0-self.ymin
+        x1 = self.deg_to_radians * 2.0
+        x2 = self.deg_to_radians * 12.0
         host_elements = {'arakawa_a': 0}
 
         x3 = -5.0
@@ -467,8 +467,8 @@ class ArawawaADataReader_test(TestCase):
         test.assert_almost_equal(thetao,  0.5)
 
     def test_get_so(self):
-        x1 = 2.0-self.xmin
-        x2 = 12.0-self.ymin
+        x1 = self.deg_to_radians * 2.0
+        x2 = self.deg_to_radians * 12.0
         host_elements = {'arakawa_a': 0}
 
         x3 = -5.
@@ -481,8 +481,8 @@ class ArawawaADataReader_test(TestCase):
         test.assert_almost_equal(so,  0.5)
 
     # def test_get_vertical_eddy_diffusivity(self):
-    #     x1 = 1.3333333333-self.xmin
-    #     x2 = 1.6666666667-self.ymin
+    #     x1 = self.deg_to_radians * 1.3333333333
+    #     x2 = self.deg_to_radians * 1.6666666667
     #     host = 0
     #
     #     x3 = -0.2
@@ -495,8 +495,8 @@ class ArawawaADataReader_test(TestCase):
     #     test.assert_almost_equal(diffusivity,  0.005)
     #
     # def test_get_vertical_eddy_diffusivity_derivative(self):
-    #     x1 = 1.3333333333-self.xmin
-    #     x2 = 1.6666666667-self.ymin
+    #     x1 = self.deg_to_radians * 1.3333333333
+    #     x2 = self.deg_to_radians * 1.6666666667
     #     host = 0
     #
     #     x3 = -0.2
@@ -509,8 +509,8 @@ class ArawawaADataReader_test(TestCase):
     #     test.assert_almost_equal(diffusivity_gradient, -0.0026042)
     #
     # def test_get_horizontal_eddy_viscosity(self):
-    #     x1 = 1.3333333333-self.xmin
-    #     x2 = 1.6666666667-self.ymin
+    #     x1 = self.deg_to_radians * 1.3333333333
+    #     x2 = self.deg_to_radians * 1.6666666667
     #     host = 0
     #
     #     x3 = -0.1
@@ -523,8 +523,8 @@ class ArawawaADataReader_test(TestCase):
     #     test.assert_almost_equal(viscosity,  0.01)
     #
     # def test_get_horizontal_eddy_viscosity_derivative(self):
-    #     x1 = 1.3333333333-self.xmin
-    #     x2 = 1.6666666667-self.ymin
+    #     x1 = self.deg_to_radians * 1.3333333333
+    #     x2 = self.deg_to_radians * 1.6666666667
     #     host = 0
     #
     #     x3 = -0.1
@@ -539,12 +539,11 @@ class ArawawaADataReader_test(TestCase):
     #     test.assert_array_almost_equal(Ah_prime, [0.0, 0.0])
     #
     def test_element_is_wet(self):
-        x1 = 2.3333333333-self.xmin
-        x2 = 11.6666666667-self.ymin
+        x1 = self.deg_to_radians * 2.3333333333
+        x2 = self.deg_to_radians * 11.6666666667
         host_elements = {'arakawa_a': 6}
 
         time = 0.0
-        print('Element is wet test')
 
         particle = ParticleSmartPtr(x1=x1, x2=x2, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
@@ -552,8 +551,8 @@ class ArawawaADataReader_test(TestCase):
         test.assert_equal(status, 1)
 
     def test_element_is_dry(self):
-        x1 = 1.6666666667-self.xmin
-        x2 = 11.6666666667-self.ymin
+        x1 = self.deg_to_radians * 1.6666666667
+        x2 = self.deg_to_radians * 11.6666666667
         host_elements={'arakawa_a': 0}
 
         time = 0.0

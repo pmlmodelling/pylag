@@ -29,7 +29,7 @@ from pylag.numerics import get_num_method, get_global_time_step
 
 from libcpp.vector cimport vector
 
-from pylag.parameters cimport seconds_per_day
+from pylag.parameters cimport seconds_per_day, radians_to_deg, deg_to_radians
 from pylag.data_reader cimport DataReader
 from pylag.math cimport sigma_to_cartesian_coords, cartesian_to_sigma_coords
 from pylag.numerics cimport NumMethod, ParticleStateNumMethod
@@ -133,8 +133,14 @@ cdef class OPTModel:
             Particle z-positions.
         """
         self._group_ids = group_ids
-        self._x1_positions = x1_positions
-        self._x2_positions = x2_positions
+
+        if self.coordinate_system == "cartesian":
+            self._x1_positions = x1_positions
+            self._x2_positions = x2_positions
+        elif self.coordinate_system == "geographic":
+            self._x1_positions = x1_positions * deg_to_radians
+            self._x2_positions = x2_positions * deg_to_radians
+
         self._x3_positions = x3_positions
 
     def setup_input_data_access(self, start_datetime, end_datetime):
@@ -438,8 +444,13 @@ cdef class OPTModel:
         for particle_smart_ptr in self.particle_smart_ptrs:
 
             # Particle location data
-            diags['x1'].append(particle_smart_ptr.x1 + xmin)
-            diags['x2'].append(particle_smart_ptr.x2 + ymin)
+            if self.coordinate_system == "cartesian":
+                diags['x1'].append(particle_smart_ptr.x1 + xmin)
+                diags['x2'].append(particle_smart_ptr.x2 + ymin)
+            elif self.coordinate_system == "geographic":
+                diags['x1'].append(particle_smart_ptr.x1 * radians_to_deg)
+                diags['x2'].append(particle_smart_ptr.x2 * radians_to_deg)
+
             diags['x3'].append(particle_smart_ptr.x3)
 
             # Grid specific host element data
@@ -501,13 +512,13 @@ cdef class OPTModel:
         if self.coordinate_system == "cartesian":
             xmin = self.data_reader.get_xmin()
             ymin = self.data_reader.get_ymin()
-        elif self.coordinate_system == "geographic":
-            xmin = 0.0
-            ymin = 0.0
 
-        # Add grid offsets
-        all_particle_data['x1'] = [x1 + xmin for x1 in all_particle_data['x1']]
-        all_particle_data['x2'] = [x2 + ymin for x2 in all_particle_data['x2']]
+            # Add grid offsets
+            all_particle_data['x1'] = [x1 + xmin for x1 in all_particle_data['x1']]
+            all_particle_data['x2'] = [x2 + ymin for x2 in all_particle_data['x2']]
+        elif self.coordinate_system == "geographic":
+            all_particle_data['x1'] = [x1 * radians_to_deg for x1 in all_particle_data['x1']]
+            all_particle_data['x2'] = [x2 * radians_to_deg for x2 in all_particle_data['x2']]
 
         return all_particle_data
 

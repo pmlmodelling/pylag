@@ -1247,30 +1247,22 @@ cdef class UnstructuredGeographicGrid(Grid):
         self.nv = nv
         self.nbe = nbe
 
-        # Convert to radians
-        lon_nodes = x * deg_to_radians
-        lat_nodes = y * deg_to_radians
-        lon_centres = xc * deg_to_radians
-        lat_centres = yc * deg_to_radians
-
         # Nodal coordinates (geographic coordinates)
-        self.lon_nodes = lon_nodes
-        self.lat_nodes = lat_nodes
+        self.lon_nodes = x
+        self.lat_nodes = y
         self.r_nodes = np.ones(n_nodes, dtype=DTYPE_FLOAT)
 
         # Nodel coordinates (cartesian coordinates)
-        x_nodes, y_nodes, z_nodes = geographic_to_cartesian_coords_python(lon_nodes,
-                                                                          lat_nodes)
+        x_nodes, y_nodes, z_nodes = geographic_to_cartesian_coords_python(x, y)
         self.points_nodes = np.column_stack((x_nodes, y_nodes, z_nodes))
 
         # Element centre coordinates (geographic coordinates)
-        self.lon_centres = lon_centres
-        self.lat_centres = lat_centres
+        self.lon_centres = xc
+        self.lat_centres = yc
         self.r_centres = np.ones(n_elems, dtype=DTYPE_FLOAT)
 
         # Element centre coordinates (cartesian coordinates)
-        x_centres, y_centres, z_centres = geographic_to_cartesian_coords_python(lon_centres,
-                                                                                lat_centres)
+        x_centres, y_centres, z_centres = geographic_to_cartesian_coords_python(xc, yc)
         self.points_centres = np.column_stack((x_centres, y_centres, z_centres))
 
         # Masks
@@ -1463,8 +1455,8 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         # Construct arrays to hold the coordinates of the particle's previous
         # position vector and its new position vector
-        x3[0] = particle_old.get_x1() * deg_to_radians; x3[1] = particle_old.get_x2() * deg_to_radians
-        x4[0] = particle_new.get_x1() * deg_to_radians; x4[1] = particle_new.get_x2() * deg_to_radians
+        x3[0] = particle_old.get_x1(); x3[1] = particle_old.get_x2()
+        x4[0] = particle_new.get_x1(); x4[1] = particle_new.get_x2()
 
         # Start the search using the host known to contain (x1_old, x2_old)
         elem = particle_old.get_host_horizontal_elem(self.name)
@@ -1667,8 +1659,8 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         # Construct arrays to hold the coordinates of the particle's previous
         # position vector and its new position vector
-        x3[0] = particle_old.get_x1() * deg_to_radians; x3[1] = particle_old.get_x2() * deg_to_radians
-        x4[0] = particle_new.get_x1() * deg_to_radians; x4[1] = particle_new.get_x2() * deg_to_radians
+        x3[0] = particle_old.get_x1(); x3[1] = particle_old.get_x2()
+        x4[0] = particle_new.get_x1(); x4[1] = particle_new.get_x2()
 
         # Extract nodal coordinates
         for i in xrange(3):
@@ -1712,8 +1704,8 @@ cdef class UnstructuredGeographicGrid(Grid):
         """
         cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self.name)
 
-        particle.set_x1(self.lon_centres[host_element]*radians_to_deg)
-        particle.set_x2(self.lat_centres[host_element]*radians_to_deg)
+        particle.set_x1(self.lon_centres[host_element])
+        particle.set_x2(self.lat_centres[host_element])
         self.set_local_coordinates(particle)
         return
 
@@ -1761,22 +1753,27 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         Parameters
         ----------
+        x1 : float
+            Longitude in radians
 
+        x2 : float
+            Latitude in radians
+
+        host : int
+            Host element
 
         Returns
         -------
         phi : vector[FLOAT]
             Three vector giving a point's normalised tetrahedral coordinates within a spherical triangle.
         """
-        cdef vector[DTYPE_FLOAT_t] phi = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
         cdef vector[DTYPE_FLOAT_t] s = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
 
         s = self.get_tetrahedral_coords(x1, x2, host)
-        phi = self.get_normalised_tetrahedral_coords(s)
 
-        return phi
+        return self.get_normalised_tetrahedral_coords(s)
 
-    cpdef vector[DTYPE_FLOAT_t] get_normalised_tetrahedral_coords(self, vector[DTYPE_FLOAT_t] s):
+    cpdef vector[DTYPE_FLOAT_t] get_normalised_tetrahedral_coords(self, const vector[DTYPE_FLOAT_t] &s):
         """ Get normalised tetrahedral coordinates given the tetrahedral coordinates
 
         Parameters
@@ -1800,7 +1797,9 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         return phi
 
-    cpdef vector[DTYPE_FLOAT_t] get_tetrahedral_coords(self, DTYPE_FLOAT_t x1, DTYPE_FLOAT_t x2, DTYPE_INT_t host):
+    cpdef vector[DTYPE_FLOAT_t] get_tetrahedral_coords(self, const DTYPE_FLOAT_t &x1,
+                                                       const DTYPE_FLOAT_t &x2,
+                                                       const DTYPE_INT_t &host):
         """ Get tetrahedral coordinates given a point's position and the host element
 
         The method uses the approach described by Lawson (1984).
@@ -1808,10 +1807,10 @@ cdef class UnstructuredGeographicGrid(Grid):
         Parameters
         ----------
         x1 : float
-            Particle longitude in deg E.
+            Particle longitude in radians.
 
         x2 : float
-            Particle latitude in deg N.
+            Particle latitude in radians.
 
         host : int
             Host element.
@@ -1849,17 +1848,13 @@ cdef class UnstructuredGeographicGrid(Grid):
         vertex_0 = self.nv[0, host]
         vertex_1 = self.nv[1, host]
         vertex_2 = self.nv[2, host]
-        for j in range(3):
-            p0[j] = self.points_nodes[vertex_0, j]
-            p1[j] = self.points_nodes[vertex_1, j]
-            p2[j] = self.points_nodes[vertex_2, j]
-
-        # Convert point coordinates to radians
-        x1_rad = x1*deg_to_radians
-        x2_rad = x2*deg_to_radians
+        for i in range(3):
+            p0[i] = self.points_nodes[vertex_0, i]
+            p1[i] = self.points_nodes[vertex_1, i]
+            p2[i] = self.points_nodes[vertex_2, i]
 
         # For the supplied point only, convert to cartesian coordinates on the unit sphere
-        p = geographic_to_cartesian_coords(x1_rad, x2_rad, 1.0)
+        p = geographic_to_cartesian_coords(x1, x2, 1.0)
 
         # Compute tetrahedral coordinates (NB clockwise point ordering)
         s[0] = det_third_order(p, p2, p1)
@@ -2182,16 +2177,16 @@ cdef class UnstructuredGeographicGrid(Grid):
         Parameters
         ----------
         x : float
-            Longitude of the point at which data will be interpolated in deg E.
+            Longitude of the point at which data will be interpolated in radians.
 
         y : float
-            Latitude of the point at which data will be interpolated in deg N.
+            Latitude of the point at which data will be interpolated in radians.
 
         xpts : vector[float]
-            Longitudes of the points at which we have data (in deg E.)
+            Longitudes of the points at which we have data in radians.
 
         ypts : vector[float]
-            Latitude of the points at which we have data (in deg N.)
+            Latitude of the points at which we have data in radians.
 
         vals : vector[float]
             Values at the points where data is specified
@@ -2201,9 +2196,6 @@ cdef class UnstructuredGeographicGrid(Grid):
          : float
              The interpolated value.
         """
-        # Point points in radians
-        cdef DTYPE_FLOAT_t x_rad, y_rad, xref_rad, yref_rad
-
         # Great circle distance between the point and a reference point
         cdef DTYPE_FLOAT_t r
 
@@ -2225,17 +2217,11 @@ cdef class UnstructuredGeographicGrid(Grid):
         else:
             raise ValueError('Array lengths do not match.')
 
-        # Convert x/y to radians from degrees
-        x_rad = x * deg_to_radians
-        y_rad = y * deg_to_radians
-
         # Loop over all reference points
         sum = 0.0
         sumw = 0.0
         for i in xrange(n_pts):
-            xref_rad = xpts[i] * deg_to_radians
-            yref_rad = ypts[i] * deg_to_radians
-            r = haversine(x_rad, y_rad, xref_rad, yref_rad)
+            r = haversine(x, y, xpts[i], ypts[i])
             if r == 0.0: return vals[i]
             w = 1.0/(r*r) # hardoced p value of -2
             sum = sum + w

@@ -63,7 +63,7 @@ cdef class GeographicPositionModifier(PositionModifier):
     cdef DTYPE_FLOAT_t multiplier
 
     def __init__(self):
-        self.multiplier = deg_to_radians * earth_radius
+        self.multiplier = earth_radius
 
     cdef void update_position(self, Particle *particle, Delta *delta_X) except *:
         """ Update the particle's position
@@ -78,7 +78,7 @@ cdef class GeographicPositionModifier(PositionModifier):
         """
         cdef DTYPE_FLOAT_t x1, x2, x3
 
-        x1 = particle.get_x1() + delta_X.x1 / (self.multiplier * cos(deg_to_radians * particle.get_x2()))
+        x1 = particle.get_x1() + delta_X.x1 / (self.multiplier * cos(particle.get_x2()))
         x2 = particle.get_x2() + delta_X.x2 / self.multiplier
         x3 = particle.get_x3() + delta_X.x3
 
