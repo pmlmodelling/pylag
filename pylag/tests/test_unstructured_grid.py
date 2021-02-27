@@ -14,7 +14,6 @@ from pylag.particle_cpp_wrapper import ParticleSmartPtr
 from pylag.unstructured import UnstructuredCartesianGrid, UnstructuredGeographicGrid
 from pylag import grid_metrics as gm
 
-
 class UnstructuredCartesianGrid_test(TestCase):
     """ Unit tests for unstructured Cartesian grids
 
@@ -268,12 +267,12 @@ class UnstructuredGeographicGrid_test(TestCase):
         particle_old = ParticleSmartPtr(x1=1.99, x2=12.9, host_elements={'test_grid': 5})
         particle_new = ParticleSmartPtr(x1=1.99, x2=13.1, host_elements={'test_grid': 5})
         intersection = self.unstructured_grid.get_boundary_intersection_wrapper(particle_old, particle_new)
-        test.assert_almost_equal(intersection.x1_py, 1.0)
-        test.assert_almost_equal(intersection.y1_py, 13.0)
-        test.assert_almost_equal(intersection.x2_py, 2.0)
-        test.assert_almost_equal(intersection.y2_py, 13.0)
-        test.assert_almost_equal(intersection.xi_py, 1.99, decimal=4)
-        test.assert_almost_equal(intersection.yi_py, 13.0, decimal=4)
+        test.assert_almost_equal(intersection.x1_py, np.radians(1.0))
+        test.assert_almost_equal(intersection.y1_py, np.radians(13.0))
+        test.assert_almost_equal(intersection.x2_py, np.radians(2.0))
+        test.assert_almost_equal(intersection.y2_py, np.radians(13.0))
+        test.assert_almost_equal(intersection.xi_py, np.radians(1.99), decimal=4)
+        test.assert_almost_equal(intersection.yi_py, np.radians(13.0), decimal=4)
 
     def test_interpolate_in_space(self):
         h_grid = np.array([25., 10., 999., 999.,  25.,  10., 999., 999.,  25.,  10., 999., 999.], dtype=DTYPE_FLOAT)
