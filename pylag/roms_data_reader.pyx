@@ -1199,7 +1199,7 @@ cdef class ROMSDataReader(DataReader):
             x_grid_rho = self.mediator.get_grid_variable('longitude_grid_rho', (self._n_nodes_grid_rho), DTYPE_FLOAT)
             y_grid_rho = self.mediator.get_grid_variable('latitude_grid_rho', (self._n_nodes_grid_rho), DTYPE_FLOAT)
             xc_grid_rho = self.mediator.get_grid_variable('longitude_c_grid_rho', (self._n_elems_grid_rho), DTYPE_FLOAT)
-            yc_grid_rho = self.mediator.get_grid_variable('latitude_c_grid_u', (self._n_elems_grid_u), DTYPE_FLOAT)
+            yc_grid_rho = self.mediator.get_grid_variable('latitude_c_grid_rho', (self._n_elems_grid_rho), DTYPE_FLOAT)
 
             # Don't apply offsets in geographic case - set them to 0.0!
             self._xmin = 0.0
