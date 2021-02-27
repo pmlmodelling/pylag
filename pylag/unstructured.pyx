@@ -29,6 +29,7 @@ from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 # PyLag python imports
 from pylag.particle_cpp_wrapper cimport ParticleSmartPtr
+from pylag.math import geographic_to_cartesian_coords_python
 
 # PyLag cython imports
 from pylag.parameters cimport deg_to_radians, radians_to_deg, earth_radius, pi
@@ -1177,16 +1178,16 @@ cdef class UnstructuredGeographicGrid(Grid):
         Memory view of elements surrounding elements. With shape [3, n_elems]
 
     x : 1D memory view
-        x-coordinates of grid nodes
+        x-coordinates of grid nodes in degrees longitude.
 
     y : 1D memory view
-        y-coordinates of grid nodes
+        y-coordinates of grid nodes in degrees latitude.
 
     xc : 1D memory view
-        x-coordinates of element centres
+        x-coordinates of element centres in degrees longitude.
 
     yc : 1D memory view
-        y-coordinates of element centres
+        y-coordinates of element centres in degrees latitude.
 
     land_sea_mask : 1D memory view
         Land sea element mask
@@ -1209,13 +1210,21 @@ cdef class UnstructuredGeographicGrid(Grid):
     # Element adjacency
     cdef DTYPE_INT_t[:,:] nbe
 
-    # Nodal coordinates
-    cdef DTYPE_FLOAT_t[:] x
-    cdef DTYPE_FLOAT_t[:] y
+    # Nodal coordinates in geographic coordinates. NB lon/lat in radians.
+    cdef DTYPE_FLOAT_t[:] lon_nodes
+    cdef DTYPE_FLOAT_t[:] lat_nodes
+    cdef DTYPE_FLOAT_t[:] r_nodes
 
-    # Element centre coordinates
-    cdef DTYPE_FLOAT_t[:] xc
-    cdef DTYPE_FLOAT_t[:] yc
+    # Nodal coordinates in Cartesian coordinates
+    cdef DTYPE_FLOAT_t[:,:] points_nodes
+
+    # Nodal coordinates in geographic coordinates. NB lon/lat in radians.
+    cdef DTYPE_FLOAT_t[:] lon_centres
+    cdef DTYPE_FLOAT_t[:] lat_centres
+    cdef DTYPE_FLOAT_t[:] r_centres
+
+    # Element centre coordinates in Cartesian coordinates
+    cdef DTYPE_FLOAT_t[:,:] points_centres
 
     # Land sea element mask
     cdef DTYPE_INT_t[:] land_sea_mask
@@ -1231,14 +1240,40 @@ cdef class UnstructuredGeographicGrid(Grid):
         self.config = config
 
         self.name = name
+
+        # Grid structure
         self.n_nodes = n_nodes
         self.n_elems = n_elems
-        self.nv = nv[:]
-        self.nbe = nbe[:]
-        self.x = x[:]
-        self.y = y[:]
-        self.xc = xc[:]
-        self.yc = yc[:]
+        self.nv = nv
+        self.nbe = nbe
+
+        # Convert to radians
+        lon_nodes = x * deg_to_radians
+        lat_nodes = y * deg_to_radians
+        lon_centres = xc * deg_to_radians
+        lat_centres = yc * deg_to_radians
+
+        # Nodal coordinates (geographic coordinates)
+        self.lon_nodes = lon_nodes
+        self.lat_nodes = lat_nodes
+        self.r_nodes = np.ones(n_nodes, dtype=DTYPE_FLOAT)
+
+        # Nodel coordinates (cartesian coordinates)
+        x_nodes, y_nodes, z_nodes = geographic_to_cartesian_coords_python(lon_nodes,
+                                                                          lat_nodes)
+        self.points_nodes = np.column_stack((x_nodes, y_nodes, z_nodes))
+
+        # Element centre coordinates (geographic coordinates)
+        self.lon_centres = lon_centres
+        self.lat_centres = lat_centres
+        self.r_centres = np.ones(n_elems, dtype=DTYPE_FLOAT)
+
+        # Element centre coordinates (cartesian coordinates)
+        x_centres, y_centres, z_centres = geographic_to_cartesian_coords_python(lon_centres,
+                                                                                lat_centres)
+        self.points_centres = np.column_stack((x_centres, y_centres, z_centres))
+
+        # Masks
         self.land_sea_mask = land_sea_mask[:]
         self.land_sea_mask_nodes = land_sea_mask_nodes[:]
 
@@ -1441,8 +1476,8 @@ cdef class UnstructuredGeographicGrid(Grid):
             # Extract nodal coordinates
             for i in xrange(3):
                 vertex = self.nv[i,elem]
-                x_tri[i] = self.x[vertex]
-                y_tri[i] = self.y[vertex]
+                x_tri[i] = self.lon_nodes[vertex]
+                y_tri[i] = self.lat_nodes[vertex]
 
             # This keeps track of the element currently being checked
             current_elem = elem
@@ -1458,8 +1493,8 @@ cdef class UnstructuredGeographicGrid(Grid):
                     continue
 
                 # End coordinates for the side
-                x1[0] = x_tri[x1_idx] * deg_to_radians; x1[1] = y_tri[x1_idx] * deg_to_radians
-                x2[0] = x_tri[x2_idx] * deg_to_radians; x2[1] = y_tri[x2_idx] * deg_to_radians
+                x1[0] = x_tri[x1_idx]; x1[1] = y_tri[x1_idx]
+                x2[0] = x_tri[x2_idx]; x2[1] = y_tri[x2_idx]
 
                 if great_circle_arc_segments_intersect(x1, x2, x3, x4) == 0:
                     # Lines do not intersect - check the next one
@@ -1638,8 +1673,8 @@ cdef class UnstructuredGeographicGrid(Grid):
         # Extract nodal coordinates
         for i in xrange(3):
             vertex = self.nv[i, particle_new.get_host_horizontal_elem(self.name)]
-            x_tri[i] = self.x[vertex]
-            y_tri[i] = self.y[vertex]
+            x_tri[i] = self.lon_nodes[vertex]
+            y_tri[i] = self.lat_nodes[vertex]
 
         # Loop over all sides of the element to find the land boundary the element crossed
         for i in xrange(3):
@@ -1654,16 +1689,16 @@ cdef class UnstructuredGeographicGrid(Grid):
                     continue
 
             # End coordinates for the side
-            x1[0] = x_tri[x1_idx] * deg_to_radians; x1[1] = y_tri[x1_idx] * deg_to_radians
-            x2[0] = x_tri[x2_idx] * deg_to_radians; x2[1] = y_tri[x2_idx] * deg_to_radians
+            x1[0] = x_tri[x1_idx]; x1[1] = y_tri[x1_idx]
+            x2[0] = x_tri[x2_idx]; x2[1] = y_tri[x2_idx]
 
             if get_intersection_point_in_geographic_coordinates(x1, x2, x3, x4, xi) == 1:
-                intersection.x1 = radians_to_deg * x1[0]
-                intersection.y1 = radians_to_deg * x1[1]
-                intersection.x2 = radians_to_deg * x2[0]
-                intersection.y2 = radians_to_deg * x2[1]
-                intersection.xi = radians_to_deg * xi[0]
-                intersection.yi = radians_to_deg * xi[1]
+                intersection.x1 = x1[0]
+                intersection.y1 = x1[1]
+                intersection.x2 = x2[0]
+                intersection.y2 = x2[1]
+                intersection.xi = xi[0]
+                intersection.yi = xi[1]
                 return intersection
             else:
                 continue
@@ -1677,8 +1712,8 @@ cdef class UnstructuredGeographicGrid(Grid):
         """
         cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self.name)
 
-        particle.set_x1(self.xc[host_element])
-        particle.set_x2(self.yc[host_element])
+        particle.set_x1(self.lon_centres[host_element]*radians_to_deg)
+        particle.set_x2(self.lat_centres[host_element]*radians_to_deg)
         self.set_local_coordinates(particle)
         return
 
@@ -1792,36 +1827,39 @@ cdef class UnstructuredGeographicGrid(Grid):
         of a sphere. Rocky mountain journal of mathematics. 14:1.
         """
 
-        cdef int i # Loop counters
-        cdef int vertex # Vertex identifier
+        # Loop counter
+        cdef int i
 
-        # Element vertex coordinates in geographic coordinates
-        cdef vector[DTYPE_FLOAT_t] x_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-        cdef vector[DTYPE_FLOAT_t] y_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        # Vertex identifiers
+        cdef DTYPE_INT_t vertex_0, vertex_1, vertex_2
 
-        cdef vector[DTYPE_FLOAT_t] s = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        # Element vertex coordinates in cartesian coordinates
+        cdef vector[DTYPE_FLOAT_t] p = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef vector[DTYPE_FLOAT_t] p0 = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef vector[DTYPE_FLOAT_t] p1 = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef vector[DTYPE_FLOAT_t] p2 = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
 
         # x1 and x2 in radians
         cdef DTYPE_FLOAT_t x1_rad, x2_rad
 
-        # Element vertex coordinates in cartesian coordinates
-        cdef vector[DTYPE_FLOAT_t] p, p0, p1, p2
+        # Tetrahedral coords
+        cdef vector[DTYPE_FLOAT_t] s = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
 
-        # Extract element vertices
-        for i in xrange(N_VERTICES):
-            vertex = self.nv[i,host]
-            x_tri[i] = self.x[vertex] * deg_to_radians
-            y_tri[i] = self.y[vertex] * deg_to_radians
+        # Extract nodal cartesian coordinates
+        vertex_0 = self.nv[0, host]
+        vertex_1 = self.nv[1, host]
+        vertex_2 = self.nv[2, host]
+        for j in range(3):
+            p0[j] = self.points_nodes[vertex_0, j]
+            p1[j] = self.points_nodes[vertex_1, j]
+            p2[j] = self.points_nodes[vertex_2, j]
 
         # Convert point coordinates to radians
         x1_rad = x1*deg_to_radians
         x2_rad = x2*deg_to_radians
 
-        # Convert to cartesian coordinates on the unit sphere
+        # For the supplied point only, convert to cartesian coordinates on the unit sphere
         p = geographic_to_cartesian_coords(x1_rad, x2_rad, 1.0)
-        p0 = geographic_to_cartesian_coords(x_tri[0], y_tri[0], 1.0)
-        p1 = geographic_to_cartesian_coords(x_tri[1], y_tri[1], 1.0)
-        p2 = geographic_to_cartesian_coords(x_tri[2], y_tri[2], 1.0)
 
         # Compute tetrahedral coordinates (NB clockwise point ordering)
         s[0] = det_third_order(p, p2, p1)
@@ -1887,12 +1925,12 @@ cdef class UnstructuredGeographicGrid(Grid):
         # Element vertices
         for i in xrange(N_VERTICES):
             vertex = self.nv[i,host]
-            x_tri[i] = self.x[vertex] * deg_to_radians
-            y_tri[i] = self.y[vertex] * deg_to_radians
+            x_tri[i] = self.lon_nodes[vertex]
+            y_tri[i] = self.lat_nodes[vertex]
 
         # The element centroid in radians
-        xc = self.xc[host] * deg_to_radians
-        yc = self.yc[host] * deg_to_radians
+        xc = self.lon_centres[host]
+        yc = self.lat_centres[host]
 
         # Convert to cartesian coordinates
         pc = geographic_to_cartesian_coords(xc, yc, earth_radius)
