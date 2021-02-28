@@ -13,6 +13,7 @@ except ImportError:
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 
 from pylag.arakawa_a_data_reader import ArakawaADataReader
+from pylag.boundary_conditions import RefHorizGeographicBoundaryConditionCalculator as RefHorizBoundaryConditionCalculator
 from pylag.particle_cpp_wrapper import ParticleSmartPtr
 
 from pylag.mediator import Mediator
@@ -563,3 +564,81 @@ class ArawawaADataReader_test(TestCase):
         test.assert_equal(status, 0)
 
 
+class ArakawaAReflectingHorizBoundaryCondition_test(TestCase):
+
+    def setUp(self):
+        self.deg_to_radians = np.radians(1)
+
+        # Create config
+        config = configparser.ConfigParser()
+        config.add_section("GENERAL")
+        config.set('GENERAL', 'log_level', 'info')
+        config.add_section("SIMULATION")
+        config.set('SIMULATION', 'time_direction', 'forward')
+        config.set('SIMULATION', 'surface_only', 'False')
+        config.add_section("OCEAN_CIRCULATION_MODEL")
+        config.set('OCEAN_CIRCULATION_MODEL', 'time_dim_name', 'time')
+        config.set('OCEAN_CIRCULATION_MODEL', 'depth_dim_name', 'depth')
+        config.set('OCEAN_CIRCULATION_MODEL', 'latitude_dim_name', 'latitude')
+        config.set('OCEAN_CIRCULATION_MODEL', 'longitude_dim_name', 'longitude')
+        config.set('OCEAN_CIRCULATION_MODEL', 'time_var_name', 'time')
+        config.set('OCEAN_CIRCULATION_MODEL', 'uo_var_name', 'uo')
+        config.set('OCEAN_CIRCULATION_MODEL', 'vo_var_name', 'vo')
+        config.set('OCEAN_CIRCULATION_MODEL', 'wo_var_name', 'wo')
+        config.set('OCEAN_CIRCULATION_MODEL', 'zos_var_name', 'zos')
+        config.set('OCEAN_CIRCULATION_MODEL', 'has_is_wet', 'True')
+        config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'geographic')
+        config.add_section("OUTPUT")
+
+        # Create mediator
+        mediator = MockArakawaAMediator()
+
+        # Create data reader
+        self.data_reader = ArakawaADataReader(config, mediator)
+
+        # Read in data
+        datetime_start = datetime.datetime(2000, 1, 1)  # Arbitrary start time, ignored by mock mediator
+        datetime_end = datetime.datetime(2000, 1, 1)  # Arbitrary end time, ignored by mock mediator
+        self.data_reader.setup_data_access(datetime_start, datetime_end)
+
+        # Boundary condition calculator
+        self.horiz_boundary_condition_calculator = RefHorizBoundaryConditionCalculator()
+
+    def tearDown(self):
+        del (self.data_reader)
+
+    def test_reflect_particle_on_a_normal_trajectory(self):
+        particle_old = ParticleSmartPtr(x1=1.99*self.deg_to_radians, x2=12.8*self.deg_to_radians, host_elements={'arakawa_a': 5})
+        particle_new = ParticleSmartPtr(x1=1.99*self.deg_to_radians, x2=13.1*self.deg_to_radians, host_elements={'arakawa_a': 5})
+        flag = self.horiz_boundary_condition_calculator.apply_wrapper(self.data_reader, particle_old, particle_new)
+        test.assert_equal(flag, 0)
+        test.assert_almost_equal(particle_new.x1, 1.99*self.deg_to_radians, decimal=2)
+        test.assert_almost_equal(particle_new.x2, 12.9*self.deg_to_radians, decimal=2)
+        test.assert_equal(particle_new.get_host_horizontal_elem('arakawa_a'), 5)
+
+    # def test_reflect_particle_on_an_angled_trajectory(self):
+    #     particle_old = ParticleSmartPtr(x1=1.4 - self.xmin, x2=1.1 - self.ymin, host_elements={'fvcom': 1})
+    #     particle_new = ParticleSmartPtr(x1=1.6 - self.xmin, x2=0.9 - self.ymin, host_elements={'fvcom': 1})
+    #     flag = self.horiz_boundary_condition_calculator.apply_wrapper(self.data_reader, particle_old, particle_new)
+    #     test.assert_equal(flag, 0)
+    #     test.assert_equal(particle_new.x1 + self.xmin, 1.6)
+    #     test.assert_equal(particle_new.x2 + self.ymin, 1.1)
+    #     test.assert_equal(particle_new.get_host_horizontal_elem('fvcom'), 1)
+    #
+    # def test_reflect_particle_that_sits_on_the_boundary(self):
+    #     particle_old = ParticleSmartPtr(x1=1.5 - self.xmin, x2=1.0 - self.ymin, host_elements={'fvcom': 1})
+    #     particle_new = ParticleSmartPtr(x1=1.6 - self.xmin, x2=0.9 - self.ymin, host_elements={'fvcom': 1})
+    #     flag = self.horiz_boundary_condition_calculator.apply_wrapper(self.data_reader, particle_old, particle_new)
+    #     test.assert_equal(flag, 0)
+    #     test.assert_equal(particle_new.x1 + self.xmin, 1.6)
+    #     test.assert_equal(particle_new.x2 + self.ymin, 1.1)
+    #     test.assert_equal(particle_new.get_host_horizontal_elem('fvcom'), 1)
+    #
+    # def test_reflect_particle_that_undergoes_a_double_reflection_while_on_a_southeast_trajectory(self):
+    #     particle_old = ParticleSmartPtr(x1=1.8 - self.xmin, x2=1.1 - self.ymin, host_elements={'fvcom': 1})
+    #     particle_new = ParticleSmartPtr(x1=2.1 - self.xmin, x2=0.8 - self.ymin, host_elements={'fvcom': 1})
+    #     flag = self.horiz_boundary_condition_calculator.apply_wrapper(self.data_reader, particle_old, particle_new)
+    #     test.assert_equal(flag, 0)
+    #     test.assert_equal(particle_new.x1 + self.xmin, 1.9)
+    #     test.assert_equal(particle_new.x2 + self.ymin, 1.2)
+    #     test.assert_equal(particle_new.get_host_horizontal_elem('fvcom'), 1)

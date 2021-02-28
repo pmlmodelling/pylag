@@ -53,6 +53,10 @@ cpdef vector[DTYPE_FLOAT_t] rotate_axes(const vector[DTYPE_FLOAT_t] &p,
                                         const DTYPE_FLOAT_t &lon_rad,
                                         const DTYPE_FLOAT_t &lat_rad)
 
+cpdef vector[DTYPE_FLOAT_t] reverse_rotate_axes(const vector[DTYPE_FLOAT_t] &p,
+                                                const DTYPE_FLOAT_t &lon_rad,
+                                                const DTYPE_FLOAT_t &lat_rad)
+
 cpdef DTYPE_FLOAT_t haversine(const DTYPE_FLOAT_t &lon1_rad,
                               const DTYPE_FLOAT_t &lat1_rad,
                               const DTYPE_FLOAT_t &lat2_rad,

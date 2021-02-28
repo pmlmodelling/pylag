@@ -524,6 +524,35 @@ cpdef vector[DTYPE_FLOAT_t] rotate_axes(const vector[DTYPE_FLOAT_t] &p,
     return p_new
 
 
+cpdef vector[DTYPE_FLOAT_t] reverse_rotate_axes(const vector[DTYPE_FLOAT_t] &p,
+                                                const DTYPE_FLOAT_t &lon_rad,
+                                                const DTYPE_FLOAT_t &lat_rad):
+    """ Reverse rotate coordinates axes
+
+    Perform a series of coordinate rotations that undo the rotations performed
+    by the function rotate_axes.
+
+    Parameters
+    ----------
+    p : vector[float]
+        Three vector giving the point's position in cartesian coordinates.
+
+    lon_rad : float
+        Longitude in radians through which the axes will be rotated.
+
+    lat_rad : float
+        Latitude in radians through which the axes will be rotates.
+    """
+    cdef vector[DTYPE_FLOAT_t] p_new
+
+    p_new = rotate_x(p, lat_rad)
+    p_new = rotate_y(p_new, -lon_rad)
+    p_new = rotate_x(p_new, -pi/2.0)
+    p_new = rotate_z(p_new, -pi/2.0)
+
+    return p_new
+
+
 cpdef DTYPE_FLOAT_t haversine(const DTYPE_FLOAT_t &lon1_rad,
                               const DTYPE_FLOAT_t &lat1_rad,
                               const DTYPE_FLOAT_t &lon2_rad,
