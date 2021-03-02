@@ -1434,19 +1434,15 @@ cdef class UnstructuredGeographicGrid(Grid):
         cdef vector[DTYPE_FLOAT_t] x3 = vector[DTYPE_FLOAT_t](2, -999.)
         cdef vector[DTYPE_FLOAT_t] x4 = vector[DTYPE_FLOAT_t](2, -999.)
 
-        # Intermediate arrays
-        cdef vector[DTYPE_INT_t] x1_indices = vector[DTYPE_INT_t](3, -999)
-        cdef vector[DTYPE_INT_t] x2_indices = vector[DTYPE_INT_t](3, -999)
-        cdef vector[DTYPE_INT_t] nbe_indices = vector[DTYPE_INT_t](3, -999)
-
         # Containers for tetrahedral coordinates
         cdef vector[DTYPE_FLOAT_t] phi = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
         cdef vector[DTYPE_FLOAT_t] s = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
         cdef DTYPE_FLOAT_t s_test
 
-        x1_indices = [0,1,2]
-        x2_indices = [1,2,0]
-        nbe_indices = [2,0,1]
+        # Intermediate arrays
+        cdef DTYPE_INT_t[3] x1_indices = [0, 1, 2]
+        cdef DTYPE_INT_t[3] x2_indices = [1, 2, 0]
+        cdef DTYPE_INT_t[3] nbe_indices = [2, 0, 1]
 
         # Array indices
         cdef int x1_idx
