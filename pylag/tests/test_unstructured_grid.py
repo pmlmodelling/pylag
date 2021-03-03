@@ -31,8 +31,8 @@ class UnstructuredCartesianGrid_test(TestCase):
         self.y = np.array([1.0, 1.0, 1.0, 2.0, 2.0, 3.0, 1.0], dtype=DTYPE_FLOAT)
         self.xc = np.array([1.3333333333, 1.6666666667, 0.6666666667, 1.5000000000, 2.3333333333], dtype=DTYPE_FLOAT)
         self.yc = np.array([1.6666666667, 1.3333333333, 1.3333333333, 2.3333333333, 1.3333333333], dtype=DTYPE_FLOAT)
-        self.mask = np.array([0, 0, 1, 1, 1], dtype=DTYPE_INT)
         self.mask_nodes = np.array([0, 0, 0, 0, 0], dtype=DTYPE_INT)
+        self.mask = np.array([0, 0, 2, 2, 2], dtype=DTYPE_INT)
 
         # Create config
         config = configparser.ConfigParser()
@@ -196,7 +196,7 @@ class UnstructuredGeographicGrid_test(TestCase):
 
         # Generate the land-sea mask for elements
         land_sea_mask_elements = np.empty(n_elements, dtype=DTYPE_INT)
-        gm.compute_land_sea_element_mask(nv, land_sea_mask_nodes, land_sea_mask_elements)
+        gm.compute_land_sea_element_mask(nv, land_sea_mask_nodes, land_sea_mask_elements, 2)
 
         # Transpose arrays
         nv = nv.T
@@ -204,11 +204,6 @@ class UnstructuredGeographicGrid_test(TestCase):
 
         # Flag open boundaries with -2 flag
         nbe[np.asarray(nbe == -1).nonzero()] = -2
-
-        # Flag land boundaries with -1 flag
-        #land_elements = np.asarray(land_sea_mask_elements == 1).nonzero()[0]
-        #for element in land_elements:
-        #    nbe[np.asarray(nbe == element).nonzero()] = -1
 
         # Save grid variables
         self.name = b'test_grid'

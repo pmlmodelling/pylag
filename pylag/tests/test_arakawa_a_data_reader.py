@@ -122,7 +122,7 @@ class MockArakawaAMediator(Mediator):
 
         # Generate the land-sea mask for elements
         land_sea_mask_elements = np.empty(n_elements, dtype=DTYPE_INT)
-        gm.compute_land_sea_element_mask(nv, land_sea_mask_nodes, land_sea_mask_elements)
+        gm.compute_land_sea_element_mask(nv, land_sea_mask_nodes, land_sea_mask_elements, 2)
 
         # Transpose arrays
         nv = nv.T

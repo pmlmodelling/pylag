@@ -3,6 +3,7 @@ The grid metrics module exists to assist with the creation of PyLag
 grid metrics files.
 """
 
+include "constants.pxi"
 
 # Data types used for constructing C data structures
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
@@ -307,7 +308,7 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_
 def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_var_name='latitude',
                                        depth_var_name='depth', mask_var_name=None, reference_var_name=None,
                                        bathymetry_var_name=None, dim_names=None, is_global=False,
-                                       surface_only=False, prng_seed=10,
+                                       surface_only=False, prng_seed=10, masked_vertices_per_element=0,
                                        grid_metrics_file_name='./grid_metrics.nc'):
     """ Create a Arakawa A-grid metrics file
 
@@ -391,6 +392,11 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
 
     prng_seed : int, optional
         Seed for the pseudo random number generator.
+
+    masked_vertices_per_element : int, optional
+        Number of masked vertices allowed within an element. Such elements may occur
+        along the boundary. If masked vertices are allowed, the model will ignore
+        these when interpolating within the element. Optional, default : 0.
 
     grid_metrics_file_name : str, optional
         The name of the grid metrics file that will be created. Optional,
@@ -652,7 +658,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
     # Generate the land-sea mask at elements
     print('\nGenerating land sea mask at element centres ', end='... ')
     land_sea_mask_elements = np.empty(n_elems, dtype=DTYPE_INT)
-    compute_land_sea_element_mask(nv, land_sea_mask_nodes, land_sea_mask_elements)
+    compute_land_sea_element_mask(nv, land_sea_mask_nodes, land_sea_mask_elements, masked_vertices_per_element)
     print('done')
 
     # Mask elements with two land boundaries
@@ -1052,7 +1058,7 @@ def create_roms_grid_metrics_file(file_name,
         print('Generating land sea mask at element centres ', end='... ')
         if mask_var_names[grid_name] is not None:
             land_sea_mask_elements[grid_name] = np.empty(elements[grid_name], dtype=DTYPE_INT)
-            compute_land_sea_element_mask(nvs[grid_name], land_sea_mask_nodes[grid_name], land_sea_mask_elements[grid_name])
+            compute_land_sea_element_mask(nvs[grid_name], land_sea_mask_nodes[grid_name], land_sea_mask_elements[grid_name], 0)
         else:
             land_sea_mask_elements[grid_name] = None
         print('done')
@@ -1499,11 +1505,15 @@ cpdef compute_element_midpoints_in_geographic_coordinates(nv, lon_nodes, lat_nod
 
 
 cpdef compute_land_sea_element_mask(const DTYPE_INT_t [:,:] nv, const DTYPE_INT_t [:] nodal_mask,
-                                    DTYPE_INT_t [:] element_mask):
+                                    DTYPE_INT_t [:] element_mask, const DTYPE_INT_t masked_vertices_per_element):
     cdef DTYPE_INT_t node
     cdef DTYPE_INT_t n_elements, n_vertices
     cdef DTYPE_INT_t counter
     cdef DTYPE_INT_t i
+
+    if masked_vertices_per_element < 0 or masked_vertices_per_element > 2:
+        raise ValueError('Invalid selection for the number of permitted masked vertices forming an element.' \
+                         'Options are 0, 1 or 2.')
 
     n_elements = nv.shape[0]
     n_vertices = nv.shape[1]
@@ -1518,16 +1528,18 @@ cpdef compute_land_sea_element_mask(const DTYPE_INT_t [:,:] nv, const DTYPE_INT_
 
         if counter == 0:
             # Sea
-            element_mask[i] = 0
+            element_mask[i] = SEA
+        elif counter > 0 and counter <= masked_vertices_per_element:
+            # Boundary element
+            element_mask[i] = BOUNDARY_ELEMENT
         elif counter == 3:
             # Land
-            element_mask[i] = 1
+            element_mask[i] = LAND
         else:
-            # Boundary element
-            element_mask[i] = 2
+            raise RuntimeError('Invalid number of masked nodes flagged.')
 
 
-cdef mask_elements_with_two_land_boundaries(const DTYPE_INT_t[:,:] nbe, DTYPE_INT_t[:] element_mask):
+cpdef mask_elements_with_two_land_boundaries(const DTYPE_INT_t[:,:] nbe, DTYPE_INT_t[:] element_mask):
     cdef DTYPE_INT_t i, j
     cdef DTYPE_INT_t n_elements, n_neighbours
     cdef DTYPE_INT_t neighbour

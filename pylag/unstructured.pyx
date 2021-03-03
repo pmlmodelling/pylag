@@ -415,7 +415,7 @@ cdef class UnstructuredCartesianGrid(Grid):
             # Check to see if the particle has walked into an invalid element (e.g. an
             # element treated as land)
             if host_found is True:
-                if self.land_sea_mask[guess] != 1:
+                if self.land_sea_mask[guess] != LAND:
                     # Normal element
                     particle.set_host_horizontal_elem(self.name, guess)
 
@@ -568,7 +568,7 @@ cdef class UnstructuredCartesianGrid(Grid):
 
                 # Check to see if the pathline has exited the domain
                 if elem >= 0:
-                    if self.land_sea_mask[elem] == 1:
+                    if self.land_sea_mask[elem] == LAND:
                         flag = LAND_BDY_CROSSED
 
                         # Set host to the last element the particle passed through
@@ -639,7 +639,7 @@ cdef class UnstructuredCartesianGrid(Grid):
                 host_found = True
 
             if host_found is True:
-                if self.land_sea_mask[guess] != 1:
+                if self.land_sea_mask[guess] != LAND:
                     particle.set_host_horizontal_elem(self.name, guess)
 
                     particle.set_phi(self.name, phi)
@@ -1344,7 +1344,7 @@ cdef class UnstructuredGeographicGrid(Grid):
             # Check to see if the particle has walked into an invalid element (e.g. an
             # element treated as land)
             if host_found is True:
-                if self.land_sea_mask[guess] != 1:
+                if self.land_sea_mask[guess] != LAND:
                     # Normal element
                     particle.set_host_horizontal_elem(self.name, guess)
 
@@ -1496,7 +1496,7 @@ cdef class UnstructuredGeographicGrid(Grid):
 
                 # Check to see if the pathline has exited the domain
                 if elem >= 0:
-                    if self.land_sea_mask[elem] == 1:
+                    if self.land_sea_mask[elem] == LAND:
                         flag = LAND_BDY_CROSSED
 
                         # Set host to the last element the particle passed through
@@ -1577,7 +1577,7 @@ cdef class UnstructuredGeographicGrid(Grid):
                 host_found = True
 
             if host_found is True:
-                if self.land_sea_mask[guess] != 1:
+                if self.land_sea_mask[guess] != LAND:
                     particle.set_host_horizontal_elem(self.name, guess)
 
                     phi = self.get_normalised_tetrahedral_coords(s)
@@ -1667,7 +1667,7 @@ cdef class UnstructuredGeographicGrid(Grid):
             nbe = self.nbe[nbe_idx, particle_new.get_host_horizontal_elem(self.name)]
             if nbe != -1:
                 # Masked elements are treated as land too. If the neighbour isn't masked, continue the search.
-                if self.land_sea_mask[nbe] != 1:
+                if self.land_sea_mask[nbe] != LAND:
                     continue
 
             # End coordinates for the side
@@ -1992,11 +1992,11 @@ cdef class UnstructuredGeographicGrid(Grid):
             vertex = self.nv[i, host_element]
             var_nodes[i] = var_arr[vertex]
 
-        if self.land_sea_mask[host_element] == 0:
+        if self.land_sea_mask[host_element] == SEA:
             # Normal sea element
             return interp.interpolate_within_element(var_nodes, particle.get_phi(self.name))
 
-        elif self.land_sea_mask[host_element] == 2:
+        elif self.land_sea_mask[host_element] == BOUNDARY_ELEMENT:
             # Boundary element with masked nodes. Adjust interpolation coefficients.
             phi = self._adjust_interpolation_coefficients(host_element, particle.get_phi(self.name))
             return interp.interpolate_within_element(var_nodes, phi)
@@ -2052,11 +2052,11 @@ cdef class UnstructuredGeographicGrid(Grid):
             else:
                 var_nodes[i] = var_last
 
-        if self.land_sea_mask[host_element] == 0:
+        if self.land_sea_mask[host_element] == SEA:
             # Normal sea element
             return interp.interpolate_within_element(var_nodes, particle.get_phi(self.name))
 
-        elif self.land_sea_mask[host_element] == 2:
+        elif self.land_sea_mask[host_element] == BOUNDARY_ELEMENT:
             # Boundary element with masked nodes. Adjust interpolation coefficients.
             phi = self._adjust_interpolation_coefficients(host_element, particle.get_phi(self.name))
             return interp.interpolate_within_element(var_nodes, phi)

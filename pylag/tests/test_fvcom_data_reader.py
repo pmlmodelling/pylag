@@ -42,7 +42,7 @@ class MockFVCOMMediator(Mediator):
         siglay = np.array([[-.1,-.5,-.9],]*n_nodes, dtype=float).transpose()
         siglev = np.array([[0., -.2,-.8,-1.],]*n_nodes, dtype=float).transpose()
         h = np.array([10., 11., 10., 11., 11., 10.], dtype=float)
-        mask = np.array([0, 0, 1, 1, 1], dtype=int)
+        mask = np.array([0, 0, 2, 2, 2], dtype=int)
         mask_nodes = np.array([0, 0, 0, 0, 0, 0, 0], dtype=int)
         self._grid_vars = {'nv': nv, 'nbe': nbe, 'x': x, 'y': y, 'xc': xc,
                            'yc': yc, 'siglay': siglay, 'siglev': siglev,
