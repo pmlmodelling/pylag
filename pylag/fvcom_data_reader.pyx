@@ -1301,7 +1301,7 @@ cdef class FVCOMDataReader(DataReader):
 
         # Land sea mask
         self._land_sea_mask = self.mediator.get_grid_variable('mask', (self._n_elems), DTYPE_INT)
-        self._land_sea_mask_nodes = self.mediator.get_grid_variable('mask_nodes', (self._n_nodes), DTYPE_INT)
+        self._land_sea_mask_nodes = np.zeros(self._n_nodes, dtype=DTYPE_INT)
 
         # Initialise unstructured grid
         self._unstructured_grid = get_unstructured_grid(self.config, self._name, self._n_nodes, self._n_elems, self._nv,
