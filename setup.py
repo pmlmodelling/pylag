@@ -206,7 +206,6 @@ setup(name="PyLag",
           "progressbar",
           "nose2",
           "stripy",
-          "joblib<=0.17",
           "pyproj",
       ],
 )

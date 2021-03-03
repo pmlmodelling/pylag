@@ -10,7 +10,6 @@ from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 cimport numpy as np
 
-from joblib import Parallel, delayed
 import numpy as np
 from scipy.spatial import Delaunay, cKDTree
 import stripy as stripy
@@ -308,7 +307,7 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_
 def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_var_name='latitude',
                                        depth_var_name='depth', mask_var_name=None, reference_var_name=None,
                                        bathymetry_var_name=None, dim_names=None, is_global=False,
-                                       surface_only=False, num_threads=1, prng_seed=10,
+                                       surface_only=False, prng_seed=10,
                                        grid_metrics_file_name='./grid_metrics.nc'):
     """ Create a Arakawa A-grid metrics file
 
@@ -336,13 +335,6 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
 
     If `surface_only` is set to `True`, only 2D surface grid data is extracted and saved.
     Currently, it is assumed the 0 index corresponds to the ocean's surface.
-
-    Certain operations can be computationally expensive on large grids. Threading can be
-    used to achieve some speed ups. The number of threads is set via the`num_threads`
-    option. However, this will not help with the determination of elements neighbours,
-    which is computed internally by stripy. In experiments with large grids (including a
-    global 1/12 deg. grid) this operation took several hours to complete. The problem is
-    observed to grow with the square of the number of elements.
 
     Parameters
     ----------
@@ -396,9 +388,6 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
         specific to the horizontal grid. Set to False if you want to do 3D
         transport modelling, and True if you want to do 2D surface only
         transport modeling. Optional, default : False.
-
-    num_threads : int, optional
-        The number of threads to use when using threading.
 
     prng_seed : int, optional
         Seed for the pseudo random number generator.
@@ -690,30 +679,6 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
         if np.count_nonzero(nbe == -1) != 0:
             raise RuntimeError('Neighbour array for global grid contains invalid entries')
 
-#    # Flag land elements with -1 flag
-#    print('\nFlag land elements in neighbour array ', end='... ')
-#    land_elements = np.asarray(land_sea_mask_elements == 1).nonzero()[0]
-#
-#    # Save a copy of nbe's shape and flatten
-#    nbe_shp = nbe.shape
-#    nbe = nbe.flatten()
-#
-#    if num_threads > 1:
-#        nbe_split = np.array_split(nbe, num_threads)
-#
-#        with Parallel(n_jobs=num_threads, backend='threading') as parallel:
-#            parallel([delayed(flag_land_elements_wrapper, check_pickle=False)(nbe_split[i], land_elements) for i in range(num_threads)])
-#
-#        # Join the arrays
-#        nbe = np.concatenate(nbe_split)
-#    else:
-#        for element in land_elements:
-#            nbe[np.asarray(nbe == element).nonzero()] = -1
-#
-#    # Reshape the original array and return
-#    nbe = np.asarray(nbe).reshape(nbe_shp)
-#    print('done')
-
     # Create grid metrics file
     # ------------------------
     print('\nCreating grid metrics file {} '.format(grid_metrics_file_name), end='... ')
@@ -796,7 +761,7 @@ def create_roms_grid_metrics_file(file_name,
                                   xi_dim_name_grid_v='xi_rho', eta_dim_name_grid_v='eta_v',
                                   xi_dim_name_grid_rho='xi_rho', eta_dim_name_grid_rho='eta_rho',
                                   mask_name_grid_u=None, mask_name_grid_v=None, mask_name_grid_rho='mask_rho',
-                                  bathymetry_var_name='h', angles_var_name=None, num_threads=1,
+                                  bathymetry_var_name='h', angles_var_name=None,
                                   grid_metrics_file_name='./grid_metrics.nc', **kwargs):
     """ Create a ROMS metrics file
 
@@ -880,9 +845,6 @@ def create_roms_grid_metrics_file(file_name,
 
     angles_var_name : str, optional
         Angles at rho points
-
-    num_threads : int, optional
-        Number of threads to use
 
     grid_metrics_file_name : str, optional
         The name of the grid metrics file that will be created
@@ -1101,30 +1063,6 @@ def create_roms_grid_metrics_file(file_name,
 
         # Flag open boundaries with -2 flag
         nbes[grid_name][np.asarray(nbes[grid_name] == -1).nonzero()] = -2
-
-#        print('Flag land elements in neighbour array ', end='... ')
-#        if mask_var_names[grid_name] is not None:
-#            land_elements = np.asarray(land_sea_mask_elements[grid_name] == 1).nonzero()[0]
-#
-#            # Save a copy of nbe's shape and flatten
-#            nbe_shp = nbes[grid_name].shape
-#            nbe = nbes[grid_name].flatten()
-#
-#            if num_threads > 1:
-#                nbe_split = np.array_split(nbe, num_threads)
-#
-#                with Parallel(n_jobs=num_threads, backend='threading') as parallel:
-#                    parallel([delayed(flag_land_elements_wrapper, check_pickle=False)(nbe_split[i], land_elements) for i in range(num_threads)])
-#
-#                # Join the arrays
-#                nbe = np.concatenate(nbe_split)
-#            else:
-#                for element in land_elements:
-#                    nbe[np.asarray(nbe == element).nonzero()] = -1
-#
-#            # Reshape the original array and return
-#            nbes[grid_name] = np.asarray(nbe).reshape(nbe_shp)
-#        print('done')
 
     # Vertical grid vars
     print('\nReading vertical grid vars')
@@ -1607,26 +1545,6 @@ cdef mask_elements_with_two_land_boundaries(const DTYPE_INT_t[:,:] nbe, DTYPE_IN
 
             if counter == 2:
                 element_mask[i] = 1
-
-
-cdef void flag_land_elements(DTYPE_INT_t* nbe, DTYPE_INT_t* land_elements, DTYPE_INT_t n, DTYPE_INT_t m) nogil:
-
-    cdef DTYPE_INT_t i, j
-
-    for i in range(n):
-        for j in range(m):
-            if nbe[i] == land_elements[j]:
-                nbe[i] = -1
-
-
-cpdef flag_land_elements_wrapper(np.ndarray nbe, np.ndarray land_elements):
-    cdef DTYPE_INT_t* nbe_ptr = <DTYPE_INT_t*> nbe.data
-    cdef DTYPE_INT_t* land_elements_ptr = <DTYPE_INT_t*> land_elements.data
-    cdef DTYPE_INT_t n = nbe.shape[0]
-    cdef DTYPE_INT_t m = land_elements.shape[0]
-
-    with nogil:
-        flag_land_elements(nbe_ptr, land_elements_ptr, n, m)
 
 
 def get_fvcom_open_boundary_nodes(file_name):

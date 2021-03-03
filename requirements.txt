@@ -10,7 +10,6 @@ natsort
 netCDF4
 cftime>=1.1
 configparser
-joblib<=0.17
 stripy
 pyproj
 
