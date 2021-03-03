@@ -1543,11 +1543,15 @@ cdef class DiffConst2DItMethod(ItMethod):
     """
     cdef DTYPE_FLOAT_t _Ah
 
+    cdef DTYPE_FLOAT_t _multiplier
+
     def __init__(self, config):
         # Set time step
         self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
         self._Ah = config.getfloat("OCEAN_CIRCULATION_MODEL", "horizontal_eddy_viscosity_constant")
+
+        self._multiplier = sqrt(2.0 * self._Ah * self._time_step)
         
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
             Particle *particle, Delta *delta_X) except INT_ERR:
@@ -1577,8 +1581,8 @@ cdef class DiffConst2DItMethod(ItMethod):
             always be zero since the method does not check for boundary
             crossings.
         """
-        delta_X.x1 += sqrt(2.0*self._Ah*self._time_step) * random.gauss(0.0, 1.0)
-        delta_X.x2 += sqrt(2.0*self._Ah*self._time_step) * random.gauss(0.0, 1.0)
+        delta_X.x1 += self._multiplier * random.gauss(0.0, 1.0)
+        delta_X.x2 += self._multiplier * random.gauss(0.0, 1.0)
         
         return 0
 
