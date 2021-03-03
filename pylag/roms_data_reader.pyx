@@ -38,7 +38,6 @@ from pylag.data_reader cimport DataReader
 from pylag.unstructured cimport Grid
 cimport pylag.interpolation as interp
 from pylag.math cimport int_min, float_min
-from pylag.math cimport Intersection
 
 # PyLag python imports
 from pylag import variable_library
@@ -497,7 +496,12 @@ cdef class ROMSDataReader(DataReader):
 
         return flag
 
-    cdef Intersection get_boundary_intersection(self, Particle *particle_old, Particle *particle_new):
+    cdef get_boundary_intersection(self,
+                                   Particle *particle_old,
+                                   Particle *particle_new,
+                                   vector[DTYPE_FLOAT_t] &start_point,
+                                   vector[DTYPE_FLOAT_t] &end_point,
+                                   vector[DTYPE_FLOAT_t] &intersection):
         """ Find the boundary intersection point
 
         Applied to the rho-grid only.
@@ -510,12 +514,20 @@ cdef class ROMSDataReader(DataReader):
         particle_new: *Particle
             The particle at its new position.
 
+        start_point : vector[float]
+            Start coordinates of the side the particle crossed.
+
+        end_point : vector[float]
+            End coordinates of the side the particle crossed.
+
+        intersection : vector[float]
+            Coordinates of the intersection point.
+
         Returns
         -------
-        intersection: Intersection
-            Object describing the boundary intersection.
         """
-        return self._unstructured_grid_rho.get_boundary_intersection(particle_old, particle_new)
+        return self._unstructured_grid_rho.get_boundary_intersection(particle_old, particle_new, start_point,
+                                                                     end_point, intersection)
 
     cdef set_default_location(self, Particle *particle):
         """ Set default location

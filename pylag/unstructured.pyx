@@ -41,7 +41,6 @@ from pylag.math cimport geographic_to_cartesian_coords, rotate_axes, det_third_o
 from pylag.math cimport great_circle_arc_segments_intersect
 from pylag.math cimport haversine
 from pylag.math cimport int_min, float_min, get_intersection_point, get_intersection_point_in_geographic_coordinates
-from pylag.math cimport Intersection
 
 
 cdef class Grid:
@@ -129,15 +128,32 @@ cdef class Grid:
         particle_new : pylag.particle_cpp_wrapper.ParticleSmartPtr
             The particle at its new position.
 
+        start_point : vector[float]
+            Start coordinates of the side the particle crossed.
+
+        end_point : vector[float]
+            End coordinates of the side the particle crossed.
+
+        intersection : vector[float]
+            Coordinates of the intersection point.
+
         Returns
         -------
-         : pylag.math.Intersection
-             Object describing the boundary intersection
         """
-        return self.get_boundary_intersection(particle_old.get_ptr(), particle_new.get_ptr())
+        cdef vector[DTYPE_FLOAT_t] start_point = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef vector[DTYPE_FLOAT_t] end_point = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef vector[DTYPE_FLOAT_t] intersection = vector[DTYPE_FLOAT_t](2, -999.)
 
-    cdef Intersection get_boundary_intersection(self, Particle *particle_old,
-                                                Particle *particle_new):
+        self.get_boundary_intersection(particle_old.get_ptr(), particle_new.get_ptr(), start_point, end_point, intersection)
+
+        return start_point, end_point, intersection
+
+    cdef get_boundary_intersection(self,
+                                   Particle *particle_old,
+                                   Particle *particle_new,
+                                   vector[DTYPE_FLOAT_t] &start_point,
+                                   vector[DTYPE_FLOAT_t] &end_point,
+                                   vector[DTYPE_FLOAT_t] &intersection):
         raise NotImplementedError
 
     def set_default_location_wrapper(self, ParticleSmartPtr particle):
@@ -649,7 +665,12 @@ cdef class UnstructuredCartesianGrid(Grid):
                     return BDY_ERROR
         return BDY_ERROR
 
-    cdef Intersection get_boundary_intersection(self, Particle *particle_old, Particle *particle_new):
+    cdef get_boundary_intersection(self,
+                                   Particle *particle_old,
+                                   Particle *particle_new,
+                                   vector[DTYPE_FLOAT_t] &start_point,
+                                   vector[DTYPE_FLOAT_t] &end_point,
+                                   vector[DTYPE_FLOAT_t] &intersection):
         """ Find the boundary intersection point
 
         This function is primarily intended to assist in the application of
@@ -665,10 +686,17 @@ cdef class UnstructuredCartesianGrid(Grid):
         particle_new: *Particle
             The particle at its new position.
 
+        start_point : vector[float]
+            Start coordinates of the side the particle crossed.
+
+        end_point : vector[float]
+            End coordinates of the side the particle crossed.
+
+        intersection : vector[float]
+            Coordinates of the intersection point.
+
         Returns
         -------
-        intersection: Intersection
-            Object describing the boundary intersection.
         """
         cdef int i # Loop counter
         cdef int vertex # Vertex identifier
@@ -701,11 +729,6 @@ cdef class UnstructuredCartesianGrid(Grid):
         # Variables for computing the number of land boundaries
         cdef DTYPE_INT_t n_land_boundaries
         cdef DTYPE_INT_t nbe
-
-        # The intersection
-        cdef Intersection intersection
-
-        intersection = Intersection()
 
         x1_indices = [0,1,2]
         x2_indices = [1,2,0]
@@ -746,13 +769,11 @@ cdef class UnstructuredCartesianGrid(Grid):
             x2[0] = x_tri[x2_idx]; x2[1] = y_tri[x2_idx]
 
             if get_intersection_point(x1, x2, x3, x4, xi) == 1:
-                intersection.x1 = x1[0]
-                intersection.y1 = x1[1]
-                intersection.x2 = x2[0]
-                intersection.y2 = x2[1]
-                intersection.xi = xi[0]
-                intersection.yi = xi[1]
-                return intersection
+                for i in range(2):
+                    start_point[i] = x1[i]
+                    end_point[i] = x2[i]
+                    intersection[i] = xi[i]
+                return
             else:
                 continue
 
@@ -1589,7 +1610,12 @@ cdef class UnstructuredGeographicGrid(Grid):
                     return BDY_ERROR
         return BDY_ERROR
 
-    cdef Intersection get_boundary_intersection(self, Particle *particle_old, Particle *particle_new):
+    cdef get_boundary_intersection(self,
+                                   Particle *particle_old,
+                                   Particle *particle_new,
+                                   vector[DTYPE_FLOAT_t] &start_point,
+                                   vector[DTYPE_FLOAT_t] &end_point,
+                                   vector[DTYPE_FLOAT_t] &intersection):
         """ Find the boundary intersection point
 
         This function is primarily intended to assist in the application of
@@ -1605,10 +1631,17 @@ cdef class UnstructuredGeographicGrid(Grid):
         particle_new: *Particle
             The particle at its new position.
 
+        start_point : vector[float]
+            Start coordinates of the side the particle crossed.
+
+        end_point : vector[float]
+            End coordinates of the side the particle crossed.
+
+        intersection : vector[float]
+            Coordinates of the intersection point.
+
         Returns
         -------
-        intersection: Intersection
-            Object describing the boundary intersection.
         """
         cdef int i # Loop counter
         cdef int vertex # Vertex identifier
@@ -1642,11 +1675,6 @@ cdef class UnstructuredGeographicGrid(Grid):
         cdef DTYPE_INT_t n_land_boundaries
         cdef DTYPE_INT_t nbe
 
-        # The intersection
-        cdef Intersection intersection
-
-        intersection = Intersection()
-
         # Construct arrays to hold the coordinates of the particle's previous
         # position vector and its new position vector
         x3[0] = particle_old.get_x1(); x3[1] = particle_old.get_x2()
@@ -1675,13 +1703,11 @@ cdef class UnstructuredGeographicGrid(Grid):
             x2[0] = x_tri[x2_idx]; x2[1] = y_tri[x2_idx]
 
             if get_intersection_point_in_geographic_coordinates(x1, x2, x3, x4, xi) == 1:
-                intersection.x1 = x1[0]
-                intersection.y1 = x1[1]
-                intersection.x2 = x2[0]
-                intersection.y2 = x2[1]
-                intersection.xi = xi[0]
-                intersection.yi = xi[1]
-                return intersection
+                for i in range(2):
+                    start_point[i] = x1[i]
+                    end_point[i] = x2[i]
+                    intersection[i] = xi[i]
+                return
             else:
                 continue
 

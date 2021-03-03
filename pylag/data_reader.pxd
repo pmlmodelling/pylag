@@ -1,11 +1,13 @@
 include "constants.pxi"
 
+from libcpp.vector cimport vector
+
 # Data types used for constructing C data structures
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 # PyLag cimports
 from pylag.particle cimport Particle
-from pylag.math cimport Intersection
+
 
 cdef class DataReader:
     cpdef setup_data_access(self, start_datetime, end_datetime)
@@ -23,8 +25,12 @@ cdef class DataReader:
     cdef DTYPE_INT_t find_host_using_local_search(self,
                                                   Particle *particle) except INT_ERR
 
-    cdef Intersection get_boundary_intersection(self, Particle *particle_old,
-                                                Particle *particle_new)
+    cdef get_boundary_intersection(self,
+                                   Particle *particle_old,
+                                   Particle *particle_new,
+                                   vector[DTYPE_FLOAT_t] &elem_side,
+                                   vector[DTYPE_FLOAT_t] &particle_pathline,
+                                   vector[DTYPE_FLOAT_t] &intersection)
 
     cdef set_default_location(self, Particle *particle)
 

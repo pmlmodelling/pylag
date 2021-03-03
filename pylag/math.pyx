@@ -15,74 +15,10 @@ from libc.math cimport sin, cos, asin, acos, atan2, sqrt, abs
 from pylag.parameters cimport pi, earth_radius, radians_to_deg
 
 
-cdef class Intersection:
-    """ Simple class describing the intersection point of two lines
-
-    The class includes attributes for the coordinates of the end points of the line
-    and the coordinates of the intersection point itself.
-    """
-
-    def __init__(self, x1=-999., y1=-999., x2=-999., y2=-999., xi=-999., yi=-999.):
-        self.x1 = x1
-        self.y1 = y1
-        self.x2 = x2
-        self.y2 = y2
-        self.xi = xi
-        self.yi = yi
-
-    @property
-    def x1_py(self):
-        return self.x1
-
-    @x1_py.setter
-    def x1_py(self, value):
-        self.x1 = value
-
-    @property
-    def y1_py(self):
-        return self.y1
-
-    @y1_py.setter
-    def y1_py(self, value):
-        self.y1 = value
-
-    @property
-    def x2_py(self):
-        return self.x2
-
-    @x2_py.setter
-    def x2_py(self, value):
-        self.x2 = value
-
-    @property
-    def y2_py(self):
-        return self.y2
-
-    @y2_py.setter
-    def y2_py(self, value):
-        self.y2 = value
-
-    @property
-    def xi_py(self):
-        return self.xi
-
-    @xi_py.setter
-    def xi_py(self, value):
-        self.xi = value
-
-    @property
-    def yi_py(self):
-        return self.yi
-
-    @yi_py.setter
-    def yi_py(self, value):
-        self.yi = value
-
-
 def get_intersection_point_wrapper(const vector[DTYPE_FLOAT_t] &x1,
-                                    const vector[DTYPE_FLOAT_t] &x2,
-                                    const vector[DTYPE_FLOAT_t] &x3,
-                                    const vector[DTYPE_FLOAT_t] &x4):
+                                   const vector[DTYPE_FLOAT_t] &x2,
+                                   const vector[DTYPE_FLOAT_t] &x3,
+                                   const vector[DTYPE_FLOAT_t] &x4):
     cdef vector[DTYPE_FLOAT_t] xi = vector[DTYPE_FLOAT_t](2, -999.)
 
     if get_intersection_point(x1, x2, x3, x4, xi) == 1:

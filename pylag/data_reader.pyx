@@ -140,15 +140,32 @@ cdef class DataReader:
         particle_new : pylag.particle_cpp_wrapper.ParticleSmartPtr
             The particle at its new position.
 
+        start_point : vector[float]
+            Start coordinates of the side the particle crossed.
+
+        end_point : vector[float]
+            End coordinates of the side the particle crossed.
+
+        intersection : vector[float]
+            Coordinates of the intersection point.
+
         Returns
         -------
-         : pylag.math.Intersection
-             Object describing the boundary intersection
         """
-        return self.get_boundary_intersection(particle_old.get_ptr(), particle_new.get_ptr())
+        cdef vector[DTYPE_FLOAT_t] start_point = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef vector[DTYPE_FLOAT_t] end_point = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef vector[DTYPE_FLOAT_t] intersection = vector[DTYPE_FLOAT_t](2, -999.)
 
-    cdef Intersection get_boundary_intersection(self, Particle *particle_old,
-                                                Particle *particle_new):
+        self.get_boundary_intersection(particle_old.get_ptr(), particle_new.get_ptr(), start_point, end_point, intersection)
+
+        return start_point, end_point, intersection
+
+    cdef get_boundary_intersection(self,
+                                   Particle *particle_old,
+                                   Particle *particle_new,
+                                   vector[DTYPE_FLOAT_t] &start_point,
+                                   vector[DTYPE_FLOAT_t] &end_point,
+                                   vector[DTYPE_FLOAT_t] &intersection):
         raise NotImplementedError
 
     def set_default_location_wrapper(self, ParticleSmartPtr particle):

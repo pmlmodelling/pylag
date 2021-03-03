@@ -24,7 +24,6 @@ from pylag.math cimport inner_product_two as inner_product
 from pylag.math cimport rotate_axes, reverse_rotate_axes
 from pylag.math cimport cartesian_to_geographic_coords
 from pylag.math cimport geographic_to_cartesian_coords
-from pylag.math cimport Intersection
 from pylag.parameters cimport radians_to_deg
 
 
@@ -117,6 +116,11 @@ cdef class RefHorizCartesianBoundaryConditionCalculator(HorizBoundaryConditionCa
         iterations is imposed. If this limit is exceeded, a boundary error is 
         returned and the particle's position is not updated.
         """
+        # Vectors describing the intersection
+        cdef vector[DTYPE_FLOAT_t] start_point = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef vector[DTYPE_FLOAT_t] end_point = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef vector[DTYPE_FLOAT_t] intersection = vector[DTYPE_FLOAT_t](2, -999.)
+
         # 2D position vector for the reflected position
         cdef vector[DTYPE_FLOAT_t] x4_prime = vector[DTYPE_FLOAT_t](2, -999.)
 
@@ -151,9 +155,6 @@ cdef class RefHorizCartesianBoundaryConditionCalculator(HorizBoundaryConditionCa
         # Loop counters
         cdef DTYPE_INT_t counter_a, counter_b
 
-        # The intersection point
-        cdef Intersection intersection
-
         # Create copies of the two particles - these will be used to save
         # intermediate states
         particle_copy_a = particle_old[0]
@@ -163,26 +164,29 @@ cdef class RefHorizCartesianBoundaryConditionCalculator(HorizBoundaryConditionCa
         while counter_a < 10:
             # Compute coordinates for the side of the element the particle crossed
             # before exiting the domain
-            intersection = data_reader.get_boundary_intersection(&particle_copy_a,
-                                                                 &particle_copy_b)
+            data_reader.get_boundary_intersection(&particle_copy_a,
+                                                  &particle_copy_b,
+                                                  start_point,
+                                                  end_point,
+                                                  intersection)
 
             # Compute the direction vector pointing from the intersection point
             # to the position vector that lies outside of the model domain
-            d[0] = particle_copy_b.get_x1() - intersection.xi
-            d[1] = particle_copy_b.get_x2() - intersection.yi
+            d[0] = particle_copy_b.get_x1() - intersection[0]
+            d[1] = particle_copy_b.get_x2() - intersection[1]
 
             # Compute the normal to the element side that points back into the
             # element given the clockwise ordering of element vertices
-            n[0] = intersection.y2 - intersection.y1
-            n[1] = intersection.x1 - intersection.x2
+            n[0] = end_point[1] - start_point[1]
+            n[1] = start_point[0] - end_point[0]
 
             # Compute the reflection vector
             mult = 2.0 * inner_product(n, d) / inner_product(n, n)
             r[0] = d[0] - mult*n[0]
-            x4_prime[0] = intersection.xi + r[0]
+            x4_prime[0] = intersection[0] + r[0]
 
             r[1] = d[1] - mult*n[1]
-            x4_prime[1] = intersection.yi + r[1]
+            x4_prime[1] = intersection[1] + r[1]
 
             # Attempt to find the particle using a (cheap) local search
             # ---------------------------------------------------------
@@ -215,10 +219,10 @@ cdef class RefHorizCartesianBoundaryConditionCalculator(HorizBoundaryConditionCa
             counter_b = 0
             while counter_b < 3:
                 r_test[0] = r_test[0]/10.
-                x_test[0] = intersection.xi + r_test[0]
+                x_test[0] = intersection[0] + r_test[0]
 
                 r_test[1] = r_test[1]/10.
-                x_test[1] = intersection.yi + r_test[1]
+                x_test[1] = intersection[1] + r_test[1]
 
                 particle_copy_a.set_x1(x_test[0])
                 particle_copy_a.set_x2(x_test[1])
@@ -305,6 +309,11 @@ cdef class RefHorizGeographicBoundaryConditionCalculator(HorizBoundaryConditionC
         coordinates and rotated back to the original frame of reference. The
         whole process is iterative, as described above.
         """
+        # Vectors describing the intersection
+        cdef vector[DTYPE_FLOAT_t] start_point = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef vector[DTYPE_FLOAT_t] end_point = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef vector[DTYPE_FLOAT_t] intersection = vector[DTYPE_FLOAT_t](2, -999.)
+
         # Locations in Cartesian coordinates
         cdef vector[DTYPE_FLOAT_t] pi = vector[DTYPE_FLOAT_t](3, -999.)
         cdef vector[DTYPE_FLOAT_t] pa = vector[DTYPE_FLOAT_t](3, -999.)
@@ -348,8 +357,6 @@ cdef class RefHorizGeographicBoundaryConditionCalculator(HorizBoundaryConditionC
         # Loop counters
         cdef DTYPE_INT_t counter_a, counter_b
 
-        # The intersection point
-        cdef Intersection intersection
 
         # Create copies of the two particles - these will be used to save
         # intermediate states
@@ -360,22 +367,25 @@ cdef class RefHorizGeographicBoundaryConditionCalculator(HorizBoundaryConditionC
         while counter_a < 10:
             # Compute coordinates for the side of the element the particle crossed
             # before exiting the domain
-            intersection = data_reader.get_boundary_intersection(&particle_copy_a,
-                                                                 &particle_copy_b)
+            data_reader.get_boundary_intersection(&particle_copy_a,
+                                                  &particle_copy_b,
+                                                  start_point,
+                                                  end_point,
+                                                  intersection)
 
             # Convert to cartesian coordinates
-            pi = geographic_to_cartesian_coords(intersection.xi, intersection.yi, 1.0)
+            pi = geographic_to_cartesian_coords(intersection[0], intersection[1], 1.0)
             pa = geographic_to_cartesian_coords(particle_copy_a.get_x1(), particle_copy_a.get_x2(), 1.0)
             pb = geographic_to_cartesian_coords(particle_copy_b.get_x1(), particle_copy_b.get_x2(), 1.0)
-            p1 = geographic_to_cartesian_coords(intersection.x1, intersection.y1, 1.0)
-            p2 = geographic_to_cartesian_coords(intersection.x2, intersection.y2, 1.0)
+            p1 = geographic_to_cartesian_coords(start_point[0], start_point[1], 1.0)
+            p2 = geographic_to_cartesian_coords(end_point[0], end_point[1], 1.0)
 
             # Rotate axes to get the desired orientation as described above
-            pi = rotate_axes(pi, intersection.xi, intersection.yi)
-            pa = rotate_axes(pa, intersection.xi, intersection.yi)
-            pb = rotate_axes(pb, intersection.xi, intersection.yi)
-            p1 = rotate_axes(p1, intersection.xi, intersection.yi)
-            p2 = rotate_axes(p2, intersection.xi, intersection.yi)
+            pi = rotate_axes(pi, intersection[0], intersection[1])
+            pa = rotate_axes(pa, intersection[0], intersection[1])
+            pb = rotate_axes(pb, intersection[0], intersection[1])
+            p1 = rotate_axes(p1, intersection[0], intersection[1])
+            p2 = rotate_axes(p2, intersection[0], intersection[1])
 
             # Compute the direction vector pointing from the intersection point
             # to the position vector that lies outside of the model domain
@@ -400,7 +410,7 @@ cdef class RefHorizGeographicBoundaryConditionCalculator(HorizBoundaryConditionC
 
             # Attempt to find the particle using a (cheap) local search
             # ---------------------------------------------------------
-            x4_prime = reverse_rotate_axes(x4_prime, intersection.xi, intersection.yi)
+            x4_prime = reverse_rotate_axes(x4_prime, intersection[0], intersection[1])
             x4_prime_geog = cartesian_to_geographic_coords(x4_prime)
             particle_copy_b.set_x1(x4_prime_geog[0])
             particle_copy_b.set_x2(x4_prime_geog[1])
@@ -437,7 +447,7 @@ cdef class RefHorizGeographicBoundaryConditionCalculator(HorizBoundaryConditionC
                 r_test[1] = r_test[1]/10.
                 x_test[1] = pi[1] + r_test[1]
 
-                x_test = reverse_rotate_axes(x_test, intersection.xi, intersection.yi)
+                x_test = reverse_rotate_axes(x_test, intersection[0], intersection[1])
                 x_test_geog = cartesian_to_geographic_coords(x_test)
 
                 particle_copy_a.set_x1(x_test[0])
