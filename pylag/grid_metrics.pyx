@@ -1532,11 +1532,9 @@ cpdef compute_land_sea_element_mask(const DTYPE_INT_t [:,:] nv, const DTYPE_INT_
         elif counter > 0 and counter <= masked_vertices_per_element:
             # Boundary element
             element_mask[i] = BOUNDARY_ELEMENT
-        elif counter == 3:
+        else:
             # Land
             element_mask[i] = LAND
-        else:
-            raise RuntimeError('Invalid number of masked nodes flagged.')
 
 
 cpdef mask_elements_with_two_land_boundaries(const DTYPE_INT_t[:,:] nbe, DTYPE_INT_t[:] element_mask):
