@@ -870,7 +870,7 @@ class ArakawaCPlotter:
 
             # Try to read the element mask
             try:
-                self.maskc[grid_name] = ds.variables['mask_c_{}'.format(grid_name)][:]
+                self.maskc[grid_name] = ds.variables['mask_{}'.format(grid_name)][:]
             except KeyError:
                 self.maskc[grid_name] = None
 
