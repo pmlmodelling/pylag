@@ -153,20 +153,24 @@ extensions = [makeExtension(name, file_type) for name in ext_names]
 if file_type == '.pyx':
     if build_type == 'prod':
         ext_modules = cythonize(extensions, include_path=['include'],
-                          compiler_directives={'boundscheck': False,
-                          'initializedcheck': False, 'embedsignature': True,
-                          'language_level': '3str'})
+              compiler_directives={'boundscheck': False,
+                  'initializedcheck': False, 'cdivision': True,
+                  'nonecheck': False, 'embedsignature': True,
+                  'language_level': '3str'})
     elif build_type == 'prof':
         ext_modules = cythonize(extensions, include_path=['include'],
               compiler_directives={'profile': True, 'linetrace': True,
-                  'embedsignature': True, 'language_level': '3str'})
+                  'initializedcheck': False, 'cdivision': True,
+                  'nonecheck': False, 'embedsignature': True,
+                  'boundscheck': False, 'embedsignature': True,
+                  'language_level': '3str'})
     elif build_type == 'debug':
         ext_modules = cythonize(extensions, include_path=['include'],
               compiler_directives={'profile': True, 
-              'linetrace': True, 'boundscheck': True,
-              'cdivision_warnings': True, 'initializedcheck': True,
-              'nonecheck': True, 'embedsignature': True,
-              'language_level': '3str'}, gdb_debug=True, verbose=True)
+                  'linetrace': True, 'boundscheck': True,
+                  'cdivision_warnings': True, 'initializedcheck': True,
+                  'nonecheck': True, 'embedsignature': True,
+                  'language_level': '3str'}, gdb_debug=True, verbose=True)
     else:
         raise ValueError('Unknown build_type {}'.format(build_type))
 elif file_type == '.cpp':
