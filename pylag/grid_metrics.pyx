@@ -1008,7 +1008,7 @@ def create_roms_grid_metrics_file(file_name,
 
             # Fix up long name to reflect flipping of mask
             mask_attrs[grid_name] = {'standard_name': '{} mask'.format(grid_name),
-                                     'units': 1,
+                                     'units': '1',
                                      'long_name': "Land-sea mask: sea = 0 ; land = 1"}
 
             land_sea_mask_nodes[grid_name] = land_sea_mask_nodes[grid_name].reshape(np.prod(land_sea_mask_nodes[grid_name].shape), order='C')
@@ -1099,45 +1099,45 @@ def create_roms_grid_metrics_file(file_name,
 
         # Add longitude at nodes
         gm_file_creator.create_variable('longitude_{}'.format(grid_name), lon_nodes[grid_name],
-                                        ('node_{}'.format(grid_name),), float, attrs=lon_attrs[grid_name])
+                                        ('node_{}'.format(grid_name),), DTYPE_FLOAT, attrs=lon_attrs[grid_name])
 
         # Add longitude at element centres
         gm_file_creator.create_variable('longitude_c_{}'.format(grid_name), lon_elements[grid_name],
-                                        ('element_{}'.format(grid_name),), float, attrs=lon_attrs[grid_name])
+                                        ('element_{}'.format(grid_name),), DTYPE_FLOAT, attrs=lon_attrs[grid_name])
 
         # Add latitude at nodes
         gm_file_creator.create_variable('latitude_{}'.format(grid_name), lat_nodes[grid_name],
-                                        ('node_{}'.format(grid_name),), float, attrs=lat_attrs[grid_name])
+                                        ('node_{}'.format(grid_name),), DTYPE_FLOAT, attrs=lat_attrs[grid_name])
 
         # Add latitude at element centres
         gm_file_creator.create_variable('latitude_c_{}'.format(grid_name), lat_elements[grid_name],
-                                        ('element_{}'.format(grid_name),), float, attrs=lat_attrs[grid_name])
+                                        ('element_{}'.format(grid_name),), DTYPE_FLOAT, attrs=lat_attrs[grid_name])
 
         # Add simplices
         gm_file_creator.create_variable('nv_{}'.format(grid_name), nvs[grid_name],
-                                        ('three', 'element_{}'.format(grid_name),), int,
+                                        ('three', 'element_{}'.format(grid_name),), DTYPE_INT,
                                         attrs={'long_name': 'nodes surrounding each element'})
 
         # Add neighbours
         gm_file_creator.create_variable('nbe_{}'.format(grid_name), nbes[grid_name],
-                                        ('three', 'element_{}'.format(grid_name),), int,
+                                        ('three', 'element_{}'.format(grid_name),), DTYPE_INT,
                                         attrs={'long_name': 'elements surrounding each element'})
 
         # Add land sea mask - nodes
         if mask_var_names[grid_name] is not None:
-            gm_file_creator.create_variable('mask_{}'.format(grid_name), land_sea_mask_nodes[grid_name],
-                                            ('node_{}'.format(grid_name),), int, attrs=mask_attrs[grid_name])
+            gm_file_creator.create_variable('mask_nodes_{}'.format(grid_name), land_sea_mask_nodes[grid_name],
+                                            ('node_{}'.format(grid_name),), DTYPE_INT, attrs=mask_attrs[grid_name])
 
             # Add land sea mask - elements
-            gm_file_creator.create_variable('mask_c_{}'.format(grid_name), land_sea_mask_elements[grid_name],
-                                            ('element_{}'.format(grid_name),), int, attrs=mask_attrs[grid_name])
+            gm_file_creator.create_variable('mask_{}'.format(grid_name), land_sea_mask_elements[grid_name],
+                                            ('element_{}'.format(grid_name),), DTYPE_INT, attrs=mask_attrs[grid_name])
 
     # Bathymetry
-    gm_file_creator.create_variable('h', bathy, ('node_grid_rho',), float, attrs=bathy_attrs)
+    gm_file_creator.create_variable('h', bathy, ('node_grid_rho',), DTYPE_FLOAT, attrs=bathy_attrs)
 
     # Angles
     if angles_var_name is not None:
-        gm_file_creator.create_variable('angles_grid_rho', angles, ('node_grid_rho',), float, attrs=angles_attrs)
+        gm_file_creator.create_variable('angles_grid_rho', angles, ('node_grid_rho',), DTYPE_FLOAT, attrs=angles_attrs)
 
     # Add dimensions and variables describing the vertical grid. No transforms are done here.
     gm_file_creator.create_dimension('s_rho', input_dataset.dimensions['s_rho'].size)
@@ -1147,9 +1147,9 @@ def create_roms_grid_metrics_file(file_name,
         var = vertical_grid_vars[key]
         var_data = np.asarray(var[:])
         attrs = vertical_grid_var_attrs[key]
-        gm_file_creator.create_variable(key, var_data, var.dimensions, float, attrs=attrs)
+        gm_file_creator.create_variable(key, var_data, var.dimensions, DTYPE_FLOAT, attrs=attrs)
 
-    gm_file_creator.create_variable('vtransform', np.asarray(vtransform, dtype=float), (), float,
+    gm_file_creator.create_variable('vtransform', np.asarray(vtransform, dtype=DTYPE_FLOAT), (), DTYPE_FLOAT,
                                     attrs={'long_name': 'vertical terrain following transformation equation'})
 
     # Close input dataset

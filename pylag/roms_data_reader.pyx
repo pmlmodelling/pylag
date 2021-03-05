@@ -1223,12 +1223,12 @@ cdef class ROMSDataReader(DataReader):
         # Land sea mask - elements. Rho grid only for now. U/V grids initialised to all sea points.
         self._mask_c_grid_u = np.zeros(self._n_elems_grid_u, dtype=DTYPE_INT)
         self._mask_c_grid_v = np.zeros(self._n_elems_grid_v, dtype=DTYPE_INT)
-        self._mask_c_grid_rho = self.mediator.get_grid_variable('mask_c_grid_rho', (self._n_elems_grid_rho), DTYPE_INT)
+        self._mask_c_grid_rho = self.mediator.get_grid_variable('mask_grid_rho', (self._n_elems_grid_rho), DTYPE_INT)
 
         # Land sea mask - nodes. Rho grid only for now. U/V grids initialised to all sea points.
         self._mask_n_grid_u = np.zeros(self._n_nodes_grid_u, dtype=DTYPE_INT)
         self._mask_n_grid_v = np.zeros(self._n_nodes_grid_v, dtype=DTYPE_INT)
-        self._mask_n_grid_rho = self.mediator.get_grid_variable('mask_n_grid_rho', (self._n_nodes_grid_rho), DTYPE_INT)
+        self._mask_n_grid_rho = self.mediator.get_grid_variable('mask_nodes_grid_rho', (self._n_nodes_grid_rho), DTYPE_INT)
 
         # Initialise the unstructured grids objects
         if self._grid_type == 'rectilinear':
