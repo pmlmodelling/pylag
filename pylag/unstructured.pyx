@@ -241,7 +241,12 @@ cdef class Grid:
     cdef DTYPE_FLOAT_t interpolate_in_space(self, DTYPE_FLOAT_t[:] var_arr, Particle *particle) except FLOAT_ERR:
         raise NotImplementedError
 
-    def interpolate_in_time_and_space_wrapper(self, var_last_arr, var_next_arr, time_fraction, ParticleSmartPtr particle):
+    cdef DTYPE_FLOAT_t interpolate_in_time_and_space_2D(self, const DTYPE_FLOAT_t[:] &var_last_arr,
+                                                        const DTYPE_FLOAT_t[:] &var_next_arr,
+                                                        DTYPE_FLOAT_t time_fraction, Particle *particle) except FLOAT_ERR:
+        raise NotImplementedError
+
+    def interpolate_in_time_and_space_wrapper(self, var_last_arr, var_next_arr, k, time_fraction, ParticleSmartPtr particle):
         """ Python wrapper for interpolate in time and space
 
         Parameters
@@ -252,19 +257,24 @@ cdef class Grid:
         var_last_arr : numpy array
             Variable array of points defined at element nodes at the next time point.
 
+        k : int
+            k layer index.
+
         time_fraction : float
             Fraction position between the first and last time points.
 
         particle : pylag.particle_cpp_wrapper.ParticleSmartPtr
             The particle at its current position.
         """
-        return self.interpolate_in_time_and_space(var_last_arr, var_next_arr, time_fraction, particle.get_ptr())
+        return self.interpolate_in_time_and_space(var_last_arr, var_next_arr, k, time_fraction, particle.get_ptr())
 
-    cdef DTYPE_FLOAT_t interpolate_in_time_and_space(self, DTYPE_FLOAT_t[:] var_last_arr, DTYPE_FLOAT_t[:] var_next_arr,
+    cdef DTYPE_FLOAT_t interpolate_in_time_and_space(self, const DTYPE_FLOAT_t[:, :] &var_last_arr,
+                                                     const DTYPE_FLOAT_t[:, :] &var_next_arr, DTYPE_INT_t k,
                                                      DTYPE_FLOAT_t time_fraction, Particle *particle) except FLOAT_ERR:
         raise NotImplementedError
 
-    cdef void interpolate_grad_in_time_and_space(self, DTYPE_FLOAT_t[:] var_last_arr, DTYPE_FLOAT_t[:] var_next_arr,
+    cdef void interpolate_grad_in_time_and_space(self, const DTYPE_FLOAT_t[:, :] &var_last_arr,
+                                                 const DTYPE_FLOAT_t[:, :] &var_next_arr, DTYPE_INT_t k,
                                                  DTYPE_FLOAT_t time_fraction, Particle *particle,
                                                  DTYPE_FLOAT_t var_prime[2]) except *:
         raise NotImplementedError
@@ -1004,9 +1014,10 @@ cdef class UnstructuredCartesianGrid(Grid):
 
         return interp.interpolate_within_element(var_nodes, particle.get_phi(self.name))
 
-    cdef DTYPE_FLOAT_t interpolate_in_time_and_space(self, DTYPE_FLOAT_t[:] var_last_arr, DTYPE_FLOAT_t[:] var_next_arr,
-            DTYPE_FLOAT_t time_fraction, Particle* particle) except FLOAT_ERR:
-        """ Interpolate the given field in time and space
+    cdef DTYPE_FLOAT_t interpolate_in_time_and_space_2D(self, const DTYPE_FLOAT_t[:] &var_last_arr,
+                                                        const DTYPE_FLOAT_t[:] &var_next_arr,
+                                                        DTYPE_FLOAT_t time_fraction, Particle* particle) except FLOAT_ERR:
+        """ Interpolate the given field in time and space 2D
 
         Interpolate the given field in time and space on the horizontal grid. The supplied fields
         should be 1D arrays of values defined at element nodes.
@@ -1051,8 +1062,60 @@ cdef class UnstructuredCartesianGrid(Grid):
 
         return interp.interpolate_within_element(var_nodes, particle.get_phi(self.name))
 
-    cdef void interpolate_grad_in_time_and_space(self, DTYPE_FLOAT_t[:] var_last_arr, DTYPE_FLOAT_t[:] var_next_arr,
-            DTYPE_FLOAT_t time_fraction, Particle* particle, DTYPE_FLOAT_t var_prime[2]) except *:
+    cdef DTYPE_FLOAT_t interpolate_in_time_and_space(self, const DTYPE_FLOAT_t[:, :] &var_last_arr,
+                                                     const DTYPE_FLOAT_t[:, :] &var_next_arr, DTYPE_INT_t k,
+                                                     DTYPE_FLOAT_t time_fraction, Particle* particle) except FLOAT_ERR:
+        """ Interpolate the given field in time and space
+
+        Interpolate the given field in time and space on the horizontal grid. The supplied fields
+        should be 2D arrays of values defined at element nodes.
+
+        Parameters
+        ----------
+        var_last_arr : 2D MemoryView
+            Array of variable values at the last time index.
+
+        var_next_arr : 2D MemoryView
+            Array of variable values at the next time index.
+
+        k : int
+            k layer index.
+
+        time_fraction : float
+            Time interpolation coefficient
+
+        particle: *Particle
+            Pointer to a Particle object.
+
+        Returns
+        -------
+         : float
+            The interpolated value of the variable
+        """
+        cdef DTYPE_INT_t vertex # Vertex identifier
+        cdef DTYPE_FLOAT_t var_last, var_next
+        cdef vector[DTYPE_FLOAT_t] var_nodes = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+
+        # Host element
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self.name)
+
+        cdef DTYPE_INT_t i
+
+        for i in xrange(N_VERTICES):
+            vertex = self.nv[i, host_element]
+            var_last = var_last_arr[k, vertex]
+            var_next = var_next_arr[k, vertex]
+
+            if var_last != var_next:
+                var_nodes[i] = interp.linear_interp(time_fraction, var_last, var_next)
+            else:
+                var_nodes[i] = var_last
+
+        return interp.interpolate_within_element(var_nodes, particle.get_phi(self.name))
+
+    cdef void interpolate_grad_in_time_and_space(self, const DTYPE_FLOAT_t[:, :] &var_last_arr,
+                                                 const DTYPE_FLOAT_t[:, :] &var_next_arr, DTYPE_INT_t k,
+                                                 DTYPE_FLOAT_t time_fraction, Particle* particle, DTYPE_FLOAT_t var_prime[2]) except *:
         """ Interpolate the gradient in the given field in time and space
 
         Interpolate the gradient in the given field in time and space on the horizontal grid. The supplied fields
@@ -1065,6 +1128,9 @@ cdef class UnstructuredCartesianGrid(Grid):
 
         var_next_arr : 1D MemoryView
             Array of variable values at the next time index.
+
+        k : int
+            k layer index.
 
         time_fraction : float
             Time interpolation coefficient
@@ -1094,8 +1160,8 @@ cdef class UnstructuredCartesianGrid(Grid):
 
         for i in xrange(N_VERTICES):
             vertex = self.nv[i, host_element]
-            var_last = var_last_arr[vertex]
-            var_next = var_next_arr[vertex]
+            var_last = var_last_arr[k, vertex]
+            var_next = var_next_arr[k, vertex]
 
             if var_last != var_next:
                 var_nodes[i] = interp.linear_interp(time_fraction, var_last, var_next)
@@ -2030,9 +2096,10 @@ cdef class UnstructuredGeographicGrid(Grid):
         else:
             raise RuntimeError('Cannot interpolate within masked element `{}`.'.format(self.land_sea_mask[host_element]))
 
-    cdef DTYPE_FLOAT_t interpolate_in_time_and_space(self, DTYPE_FLOAT_t[:] var_last_arr, DTYPE_FLOAT_t[:] var_next_arr,
-            DTYPE_FLOAT_t time_fraction, Particle* particle) except FLOAT_ERR:
-        """ Interpolate the given field in time and space
+    cdef DTYPE_FLOAT_t interpolate_in_time_and_space_2D(self, const DTYPE_FLOAT_t[:] &var_last_arr,
+                                                        const DTYPE_FLOAT_t[:] &var_next_arr,
+                                                        DTYPE_FLOAT_t time_fraction, Particle* particle) except FLOAT_ERR:
+        """ Interpolate the given field in time and space 2D
 
         Interpolate the given field in time and space on the horizontal grid. The supplied fields
         should be 1D arrays of values defined at element nodes.
@@ -2090,6 +2157,70 @@ cdef class UnstructuredGeographicGrid(Grid):
         else:
             raise RuntimeError('Cannot interpolate within masked element `{}`.'.format(self.land_sea_mask[host_element]))
 
+    cdef DTYPE_FLOAT_t interpolate_in_time_and_space(self, const DTYPE_FLOAT_t[:, :] &var_last_arr,
+                                                     const DTYPE_FLOAT_t[:, :] &var_next_arr, DTYPE_INT_t k,
+                                                     DTYPE_FLOAT_t time_fraction, Particle* particle) except FLOAT_ERR:
+        """ Interpolate the given field in time and space
+
+        Interpolate the given field in time and space on the horizontal grid. The supplied fields
+        should be 2D arrays of values defined at element nodes.
+
+        Parameters
+        ----------
+        var_last_arr : 2D MemoryView
+            Array of variable values at the last time index.
+
+        var_next_arr : 2D MemoryView
+            Array of variable values at the next time index.
+
+        k : int
+            The depth layer index
+
+        time_fraction : float
+            Time interpolation coefficient
+
+        particle: *Particle
+            Pointer to a Particle object.
+
+        Returns
+        -------
+         : float
+            The interpolated value of the variable
+        """
+        cdef DTYPE_INT_t vertex # Vertex identifier
+        cdef DTYPE_FLOAT_t var_last, var_next
+        cdef vector[DTYPE_FLOAT_t] var_nodes = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+
+        # Adjusted interpolation weights if required
+        cdef vector[DTYPE_FLOAT_t] phi
+
+        # Host element
+        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self.name)
+
+        cdef DTYPE_INT_t i
+
+        for i in xrange(N_VERTICES):
+            vertex = self.nv[i, host_element]
+            var_last = var_last_arr[k, vertex]
+            var_next = var_next_arr[k, vertex]
+
+            if var_last != var_next:
+                var_nodes[i] = interp.linear_interp(time_fraction, var_last, var_next)
+            else:
+                var_nodes[i] = var_last
+
+        if self.land_sea_mask[host_element] == SEA:
+            # Normal sea element
+            return interp.interpolate_within_element(var_nodes, particle.get_phi(self.name))
+
+        elif self.land_sea_mask[host_element] == BOUNDARY_ELEMENT:
+            # Boundary element with masked nodes. Adjust interpolation coefficients.
+            phi = self._adjust_interpolation_coefficients(host_element, particle.get_phi(self.name))
+            return interp.interpolate_within_element(var_nodes, phi)
+
+        else:
+            raise RuntimeError('Cannot interpolate within masked element `{}`.'.format(self.land_sea_mask[host_element]))
+
 
     cdef vector[DTYPE_FLOAT_t] _adjust_interpolation_coefficients(self, const DTYPE_INT_t host,
                                                                   const vector[DTYPE_FLOAT_t]& phi):
@@ -2125,7 +2256,8 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         return phi_new
 
-    cdef void interpolate_grad_in_time_and_space(self, DTYPE_FLOAT_t[:] var_last_arr, DTYPE_FLOAT_t[:] var_next_arr,
+    cdef void interpolate_grad_in_time_and_space(self, const DTYPE_FLOAT_t[:, :] &var_last_arr,
+                                                 const DTYPE_FLOAT_t[:, :] &var_next_arr, DTYPE_INT_t k,
             DTYPE_FLOAT_t time_fraction, Particle* particle, DTYPE_FLOAT_t var_prime[2]) except *:
         """ Interpolate the gradient in the given field in time and space
 
@@ -2139,6 +2271,9 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         var_next_arr : 1D MemoryView
             Array of variable values at the next time index.
+
+        k : int
+            The depth layer index
 
         time_fraction : float
             Time interpolation coefficient
@@ -2168,8 +2303,8 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         for i in xrange(N_VERTICES):
             vertex = self.nv[i, host_element]
-            var_last = var_last_arr[vertex]
-            var_next = var_next_arr[vertex]
+            var_last = var_last_arr[k, vertex]
+            var_next = var_next_arr[k, vertex]
 
             if var_last != var_next:
                 var_nodes[i] = interp.linear_interp(time_fraction, var_last, var_next)

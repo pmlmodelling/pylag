@@ -487,13 +487,15 @@ cdef class ArakawaADataReader(DataReader):
 
         # Loop over all levels to find the host z layer
         for k in xrange(self._n_depth - 1):
-            depth_upper_level = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last[k, :],
-                                                                                      self._depth_levels_next[k, :],
+            depth_upper_level = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
+                                                                                      self._depth_levels_next,
+                                                                                      k,
                                                                                       time_fraction,
                                                                                       particle)
 
-            depth_lower_level = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last[k+1, :],
-                                                                                      self._depth_levels_next[k+1, :],
+            depth_lower_level = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
+                                                                                      self._depth_levels_next,
+                                                                                      k+1,
                                                                                       time_fraction,
                                                                                       particle)
 
@@ -526,8 +528,9 @@ cdef class ArakawaADataReader(DataReader):
 
         # Particle is below zeta but above the top depth level
         k = 0
-        depth_upper_level = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last[k, :],
-                                                                                  self._depth_levels_next[k, :],
+        depth_upper_level = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
+                                                                                  self._depth_levels_next,
+                                                                                  k,
                                                                                   time_fraction,
                                                                                   particle)
         if particle.get_x3() <= zeta and particle.get_x3() >= depth_lower_level:
@@ -542,8 +545,9 @@ cdef class ArakawaADataReader(DataReader):
 
         # Particle is above h but below the lowest depth level
         k = self._n_depth - 1
-        depth_upper_level = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last[k, :],
-                                                                                  self._depth_levels_next[k, :],
+        depth_upper_level = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
+                                                                                  self._depth_levels_next,
+                                                                                  k,
                                                                                   time_fraction,
                                                                                   particle)
         if particle.get_x3() >= h and particle.get_x3() <= depth_upper_level:
@@ -635,10 +639,10 @@ cdef class ArakawaADataReader(DataReader):
 
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
-        zeta = self._unstructured_grid.interpolate_in_time_and_space(self._zeta_last,
-                                                                     self._zeta_next,
-                                                                     time_fraction,
-                                                                     particle)
+        zeta = self._unstructured_grid.interpolate_in_time_and_space_2D(self._zeta_last,
+                                                                        self._zeta_next,
+                                                                        time_fraction,
+                                                                        particle)
 
         return zeta
 
@@ -1026,8 +1030,9 @@ cdef class ArakawaADataReader(DataReader):
 
         return 1
 
-    cdef DTYPE_FLOAT_t _get_variable(self, DTYPE_FLOAT_t[:, :] var_last, DTYPE_FLOAT_t[:, :] var_next,
-            DTYPE_FLOAT_t time, Particle* particle) except FLOAT_ERR:
+    cdef DTYPE_FLOAT_t _get_variable(self, const DTYPE_FLOAT_t[:, :] &var_last,
+                                     const DTYPE_FLOAT_t[:, :] &var_next,
+                                     const DTYPE_FLOAT_t &time, Particle* particle) except FLOAT_ERR:
         """ Returns the value of the variable through linear interpolation
 
         Private method for interpolating fields specified at element nodes on depth levels.
@@ -1064,18 +1069,21 @@ cdef class ArakawaADataReader(DataReader):
 
         # No vertical interpolation for particles near to the bottom
         if particle.get_in_vertical_boundary_layer() is True:
-            return self._unstructured_grid.interpolate_in_time_and_space(var_last[k_layer, :],
-                                                                         var_next[k_layer, :],
+            return self._unstructured_grid.interpolate_in_time_and_space(var_last,
+                                                                         var_next,
+                                                                         k_layer,
                                                                          time_fraction,
                                                                          particle)
         else:
-            var_level_1 = self._unstructured_grid.interpolate_in_time_and_space(var_last[k_layer+1, :],
-                                                                                var_next[k_layer+1, :],
+            var_level_1 = self._unstructured_grid.interpolate_in_time_and_space(var_last,
+                                                                                var_next,
+                                                                                k_layer+1,
                                                                                 time_fraction,
                                                                                 particle)
 
-            var_level_2 = self._unstructured_grid.interpolate_in_time_and_space(var_last[k_layer, :],
-                                                                                var_next[k_layer, :],
+            var_level_2 = self._unstructured_grid.interpolate_in_time_and_space(var_last,
+                                                                                var_next,
+                                                                                k_layer,
                                                                                 time_fraction,
                                                                                 particle)
 

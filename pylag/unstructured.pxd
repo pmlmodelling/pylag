@@ -40,10 +40,16 @@ cdef class Grid:
 
     cdef DTYPE_FLOAT_t interpolate_in_space(self, DTYPE_FLOAT_t[:] var_arr, Particle *particle) except FLOAT_ERR
 
-    cdef DTYPE_FLOAT_t interpolate_in_time_and_space(self, DTYPE_FLOAT_t[:] var_last_arr, DTYPE_FLOAT_t[:] var_next_arr,
+    cdef DTYPE_FLOAT_t interpolate_in_time_and_space_2D(self, const DTYPE_FLOAT_t[:] &var_last_arr,
+                                                        const DTYPE_FLOAT_t[:] &var_next_arr,
+                                                        DTYPE_FLOAT_t time_fraction, Particle *particle) except FLOAT_ERR
+
+    cdef DTYPE_FLOAT_t interpolate_in_time_and_space(self, const DTYPE_FLOAT_t[:, :] &var_last_arr,
+                                                     const DTYPE_FLOAT_t[:, :] &var_next_arr, DTYPE_INT_t k,
                                                      DTYPE_FLOAT_t time_fraction, Particle *particle) except FLOAT_ERR
 
-    cdef void interpolate_grad_in_time_and_space(self, DTYPE_FLOAT_t[:] var_last_arr, DTYPE_FLOAT_t[:] var_next_arr,
+    cdef void interpolate_grad_in_time_and_space(self, const DTYPE_FLOAT_t[:, :] &var_last_arr,
+                                                 const DTYPE_FLOAT_t[:, :] &var_next_arr, DTYPE_INT_t k,
                                                  DTYPE_FLOAT_t time_fraction, Particle *particle,
                                                  DTYPE_FLOAT_t var_prime[2]) except *
 
