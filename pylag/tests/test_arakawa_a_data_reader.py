@@ -178,7 +178,7 @@ class MockArakawaAMediator(Mediator):
         return self._t_next
 
     def get_grid_variable(self, var_name, var_dims, var_type):
-        return self._grid_vars[var_name][:].astype(var_type)
+        return np.ascontiguousarray(self._grid_vars[var_name][:].astype(var_type))
 
     def get_variable_dimensions(self, var_name):
         return self._time_dep_var_dimensions[var_name]
@@ -190,23 +190,23 @@ class MockArakawaAMediator(Mediator):
         var = self._time_dep_vars_last[var_name][:].astype(var_type)
 
         if np.ma.isMaskedArray(var):
-            return var.data
+            var = var.data
 
-        return var
+        return np.ascontiguousarray(var)
 
     def get_time_dependent_variable_at_next_time_index(self, var_name, var_dims, var_type):
         var = self._time_dep_vars_next[var_name][:].astype(var_type)
 
         if np.ma.isMaskedArray(var):
-            return var.data
+            var = var.data
 
-        return var
+        return np.ascontiguousarray(var)
 
     def get_mask_at_last_time_index(self, var_name, var_dims):
         var = self._time_dep_vars_last[var_name][:]
 
         if np.ma.isMaskedArray(var):
-            return var.mask.astype(DTYPE_INT)
+            return np.ascontiguousarray(var.mask.astype(DTYPE_INT))
 
         raise RuntimeError('Variable {} is not a masked array.'.format(var_name))
 
@@ -214,7 +214,7 @@ class MockArakawaAMediator(Mediator):
         var = self._time_dep_vars_next[var_name][:]
 
         if np.ma.isMaskedArray(var):
-            return var.mask.astype(DTYPE_INT)
+            return np.ascontiguousarray(var.mask.astype(DTYPE_INT))
 
         raise RuntimeError('Variable {} is not a masked array.'.format(var_name))
 

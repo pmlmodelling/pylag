@@ -25,14 +25,14 @@ class UnstructuredCartesianGrid_test(TestCase):
         self.name = b'test_grid'
         self.n_elems = 5
         self.n_nodes = 7
-        self.nv = np.array([[4, 0, 2, 4, 3], [3, 1, 4, 5, 6], [1, 3, 1, 3, 0]], dtype=DTYPE_INT)
-        self.nbe = np.array([[1, 0, 0, -1, -1], [2, 4, -1, 0, 1], [3, -1, -1, -1, -1]], dtype=DTYPE_INT)
-        self.x = np.array([2.0, 1.0, 0.0, 2.0, 1.0, 1.5, 3.0], dtype=DTYPE_FLOAT)
-        self.y = np.array([1.0, 1.0, 1.0, 2.0, 2.0, 3.0, 1.0], dtype=DTYPE_FLOAT)
-        self.xc = np.array([1.3333333333, 1.6666666667, 0.6666666667, 1.5000000000, 2.3333333333], dtype=DTYPE_FLOAT)
-        self.yc = np.array([1.6666666667, 1.3333333333, 1.3333333333, 2.3333333333, 1.3333333333], dtype=DTYPE_FLOAT)
-        self.mask_nodes = np.array([0, 0, 0, 0, 0], dtype=DTYPE_INT)
-        self.mask = np.array([0, 0, 2, 2, 2], dtype=DTYPE_INT)
+        self.nv = np.ascontiguousarray(np.array([[4, 0, 2, 4, 3], [3, 1, 4, 5, 6], [1, 3, 1, 3, 0]], dtype=DTYPE_INT))
+        self.nbe = np.ascontiguousarray(np.array([[1, 0, 0, -1, -1], [2, 4, -1, 0, 1], [3, -1, -1, -1, -1]], dtype=DTYPE_INT))
+        self.x = np.ascontiguousarray(np.array([2.0, 1.0, 0.0, 2.0, 1.0, 1.5, 3.0], dtype=DTYPE_FLOAT))
+        self.y = np.ascontiguousarray(np.array([1.0, 1.0, 1.0, 2.0, 2.0, 3.0, 1.0], dtype=DTYPE_FLOAT))
+        self.xc = np.ascontiguousarray(np.array([1.3333333333, 1.6666666667, 0.6666666667, 1.5000000000, 2.3333333333], dtype=DTYPE_FLOAT))
+        self.yc = np.ascontiguousarray(np.array([1.6666666667, 1.3333333333, 1.3333333333, 2.3333333333, 1.3333333333], dtype=DTYPE_FLOAT))
+        self.mask_nodes = np.ascontiguousarray(np.array([0, 0, 0, 0, 0], dtype=DTYPE_INT))
+        self.mask = np.ascontiguousarray(np.array([0, 0, 2, 2, 2], dtype=DTYPE_INT))
 
         # Create config
         config = configparser.ConfigParser()
@@ -209,14 +209,14 @@ class UnstructuredGeographicGrid_test(TestCase):
         self.name = b'test_grid'
         self.n_elems = n_elements
         self.n_nodes = n_nodes
-        self.nv = nv.astype(DTYPE_INT)
-        self.nbe = nbe.astype(DTYPE_INT)
-        self.x = lon_nodes.astype(DTYPE_FLOAT)
-        self.y = lat_nodes.astype(DTYPE_FLOAT)
-        self.xc = lon_elements.astype(DTYPE_FLOAT)
-        self.yc = lat_elements.astype(DTYPE_FLOAT)
-        self.land_sea_mask_elements = land_sea_mask_elements.astype(DTYPE_INT)
-        self.land_sea_mask_nodes = land_sea_mask_nodes.astype(DTYPE_INT)
+        self.nv = np.ascontiguousarray(nv.astype(DTYPE_INT))
+        self.nbe = np.ascontiguousarray(nbe.astype(DTYPE_INT))
+        self.x = np.ascontiguousarray(lon_nodes.astype(DTYPE_FLOAT))
+        self.y = np.ascontiguousarray(lat_nodes.astype(DTYPE_FLOAT))
+        self.xc = np.ascontiguousarray(lon_elements.astype(DTYPE_FLOAT))
+        self.yc = np.ascontiguousarray(lat_elements.astype(DTYPE_FLOAT))
+        self.land_sea_mask_elements = np.ascontiguousarray(land_sea_mask_elements.astype(DTYPE_INT))
+        self.land_sea_mask_nodes = np.ascontiguousarray(land_sea_mask_nodes.astype(DTYPE_INT))
 
         # Create config
         config = configparser.ConfigParser()

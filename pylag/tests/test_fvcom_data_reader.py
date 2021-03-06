@@ -110,13 +110,13 @@ class MockFVCOMMediator(Mediator):
         return self._t_next
 
     def get_grid_variable(self, var_name, var_dims, var_type):
-        return self._grid_vars[var_name][:].astype(var_type)
+        return np.ascontiguousarray(self._grid_vars[var_name][:].astype(var_type))
 
     def get_time_dependent_variable_at_last_time_index(self, var_name, var_dims, var_type):
-        return self._time_dep_vars_last[var_name][:].astype(var_type)
+        return np.ascontiguousarray(self._time_dep_vars_last[var_name][:].astype(var_type))
 
     def get_time_dependent_variable_at_next_time_index(self, var_name, var_dims, var_type):
-        return self._time_dep_vars_next[var_name][:].astype(var_type)
+        return np.ascontiguousarray(self._time_dep_vars_next[var_name][:].astype(var_type))
 
 class FVCOMDataReader_test(TestCase):
 
