@@ -31,7 +31,6 @@ from libcpp.vector cimport vector
 
 from pylag.parameters cimport seconds_per_day, radians_to_deg, deg_to_radians
 from pylag.data_reader cimport DataReader
-from pylag.math cimport sigma_to_cartesian_coords, cartesian_to_sigma_coords
 from pylag.numerics cimport NumMethod, ParticleStateNumMethod
 from pylag.particle cimport Particle
 from pylag.particle_cpp_wrapper cimport ParticleSmartPtr, copy, to_string
