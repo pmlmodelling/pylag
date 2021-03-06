@@ -7,8 +7,6 @@ include "constants.pxi"
 
 cimport cython
 
-# cython: wraparound=True
-
 # Data types used for constructing C data structures
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
@@ -175,7 +173,7 @@ class GridMetricsFileCreator(object):
         except:
             raise RuntimeError('Problem closing file')
 
-
+@cython.wraparound(True)
 def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_file_name = './grid_metrics.nc'):
     """Create FVCOM grid metrics file
 
@@ -275,6 +273,7 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_
     open_boundary_nodes = get_fvcom_open_boundary_nodes(obc_file_name)
     nbe_data = add_fvcom_open_boundary_flags(nv_data, nbe_data, open_boundary_nodes)
 
+
     # Add variable
     dtype = DTYPE_INT
     dimensions = list(nv_var.dimensions)
@@ -308,7 +307,7 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_
 
     return
 
-
+@cython.wraparound(True)
 def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_var_name='latitude',
                                        depth_var_name='depth', mask_var_name=None, reference_var_name=None,
                                        bathymetry_var_name=None, dim_names=None, is_global=False,
@@ -761,7 +760,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
 
     return
 
-
+@cython.wraparound(True)
 def create_roms_grid_metrics_file(file_name,
                                   process_grid_u=True, process_grid_v=True, process_grid_rho=True,
                                   lon_var_name_grid_u='lon_u', lat_var_name_grid_u='lat_u',
@@ -1165,6 +1164,7 @@ def create_roms_grid_metrics_file(file_name,
     return
 
 
+@cython.wraparound(True)
 def sort_axes(nc_var, time_name='time', depth_name='depth', lat_name='latitude',
               lon_name='longitude'):
     """ Sort variables axes
@@ -1302,7 +1302,7 @@ def _get_variable(dataset, var_name):
 
     raise RuntimeError("Variable `{}` not found in the supplied dataset")
 
-
+@cython.wraparound(True)
 cpdef identify_neighbour_simplices(stri, iterations=10, verbose=True):
     """ Identify neighbour simplices for all elements in the triangulation
 
@@ -1428,6 +1428,8 @@ cpdef identify_neighbour_simplices(stri, iterations=10, verbose=True):
 
     return nbe
 
+
+@cython.wraparound(True)
 cpdef sort_adjacency_array(DTYPE_INT_t [:, :] nv, DTYPE_INT_t [:, :] nbe):
     """Sort the adjacency array
 
@@ -1488,6 +1490,7 @@ cpdef sort_adjacency_array(DTYPE_INT_t [:, :] nv, DTYPE_INT_t [:, :] nbe):
         nbe[i, 2] = index_side3
 
 
+@cython.wraparound(True)
 cpdef compute_element_midpoints_in_geographic_coordinates(nv, lon_nodes, lat_nodes):
     # Convert to radians
     lon_nodes_radians = np.radians(lon_nodes)
@@ -1508,6 +1511,7 @@ cpdef compute_element_midpoints_in_geographic_coordinates(nv, lon_nodes, lat_nod
     return np.degrees(midlons), np.degrees(midlats)
 
 
+@cython.wraparound(True)
 cpdef compute_land_sea_element_mask(const DTYPE_INT_t [:,:] nv, const DTYPE_INT_t [:] nodal_mask,
                                     DTYPE_INT_t [:] element_mask, const DTYPE_INT_t masked_vertices_per_element):
     cdef DTYPE_INT_t node
@@ -1561,6 +1565,7 @@ cpdef mask_elements_with_two_land_boundaries(const DTYPE_INT_t[:,:] nbe, DTYPE_I
                 element_mask[i] = 1
 
 
+@cython.wraparound(True)
 def get_fvcom_open_boundary_nodes(file_name):
     """Read fvcom open boundary nodes from file
 
@@ -1633,6 +1638,7 @@ def add_fvcom_open_boundary_flags(nv, nbe, ob_nodes):
     return nbe_new
 
 
+@cython.wraparound(True)
 cpdef DTYPE_INT_t _get_number_of_matching_nodes(DTYPE_INT_t [:] array1, DTYPE_INT_t [:] array2):
     cdef DTYPE_INT_t i, j
     cdef DTYPE_INT_t matches
