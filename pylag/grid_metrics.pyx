@@ -5,6 +5,10 @@ grid metrics files.
 
 include "constants.pxi"
 
+cimport cython
+
+# cython: wraparound=True
+
 # Data types used for constructing C data structures
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
@@ -464,7 +468,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
     # Trim the poles if they have been included (we don't want duplicate points). Assumes
     # the poles are the first or last points and that they are given in geographic coordinates.
     lat_alpha = float(lat_var[0])
-    lat_omega = float(lat_var[lat_var.shape[0]-1])
+    lat_omega = float(lat_var[-1])
     trim_first_latitude = 0
     trim_last_latitude = 0
     if lat_alpha == float(-90.0) or lat_alpha == float(90.0):
@@ -473,7 +477,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
         trim_first_latitude = 1
     if lat_omega == float(-90.0) or lat_omega == float(90.0):
         print('Trimming last latitude which sits over a pole ({} deg.)'.format(lat_omega))
-        lat_var = lat_var[:lat_var.shape[0]-1]
+        lat_var = lat_var[:-1]
         trim_last_latitude = 1
 
     # Create points array
@@ -512,7 +516,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
         if trim_first_latitude == 1:
             ref_var = ref_var[:, :, :, 1:]
         if trim_last_latitude == 1:
-            ref_var = ref_var[:, :, :, :ref_var.shape[3]-1]
+            ref_var = ref_var[:, :, :, :-1]
 
     # Create the Triangulation
     print('\nCreating the triangulation ', end='... ')
@@ -564,7 +568,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
             if trim_first_latitude == 1:
                 bathy = bathy[:, 1:]
             if trim_last_latitude == 1:
-                bathy = bathy[:, :bathy.shape[1]-1]
+                bathy = bathy[:, :-1]
 
             # Reshape array
             bathy = bathy.reshape(np.prod(bathy.shape), order='C')
@@ -617,7 +621,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
         if trim_first_latitude == 1:
             land_sea_mask_nodes = land_sea_mask_nodes[:, 1:]
         if trim_last_latitude == 1:
-            land_sea_mask_nodes = land_sea_mask_nodes[:, :land_sea_mask_nodes.shape[1]-1]
+            land_sea_mask_nodes = land_sea_mask_nodes[:, :-1]
 
         # Fix up long name to reflect flipping of mask
         mask_attrs['long_name'] = "Land-sea mask: sea = 0 ; land = 1"
