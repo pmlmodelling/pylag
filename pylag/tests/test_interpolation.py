@@ -54,9 +54,9 @@ def test_interpolate_within_element():
     var = np.array([0.0, 1.0, 2.0])
 
     phi = np.array([0.0, 0.5, 0.5])
-    val = interp.interpolate_within_element(var, phi)
+    val = interp.interpolate_within_element_wrapper(var, phi)
     test.assert_almost_equal(val, 1.5)
 
     phi = np.array([0., 0., 1.])
-    val = interp.interpolate_within_element(var, phi)
+    val = interp.interpolate_within_element_wrapper(var, phi)
     test.assert_almost_equal(val, 2.0)
