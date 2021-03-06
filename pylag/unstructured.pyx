@@ -197,7 +197,7 @@ cdef class Grid:
     cdef set_local_coordinates(self, Particle *particle):
         raise NotImplementedError
 
-    cpdef vector[DTYPE_FLOAT_t] get_phi(self, DTYPE_FLOAT_t x1, DTYPE_FLOAT_t x2, DTYPE_INT_t host):
+    cpdef vector[DTYPE_FLOAT_t] get_phi(self, const DTYPE_FLOAT_t &x1, const DTYPE_FLOAT_t &x2, const DTYPE_INT_t &host):
         raise NotImplementedError
 
     def get_grad_phi_wrapper(self, host):
@@ -840,7 +840,7 @@ cdef class UnstructuredCartesianGrid(Grid):
         # Set phi
         particle.set_phi(self.name, phi)
 
-    cpdef vector[DTYPE_FLOAT_t] get_phi(self, DTYPE_FLOAT_t x1, DTYPE_FLOAT_t x2, DTYPE_INT_t host):
+    cpdef vector[DTYPE_FLOAT_t] get_phi(self, const DTYPE_FLOAT_t &x1, const DTYPE_FLOAT_t &x2, const DTYPE_INT_t &host):
         """ Get barycentric coordinates.
 
         Compute and return barycentric coordinates for the point (x,y) within the
@@ -1830,7 +1830,7 @@ cdef class UnstructuredGeographicGrid(Grid):
         # Set phi
         particle.set_phi(self.name, phi)
 
-    cpdef vector[DTYPE_FLOAT_t] get_phi(self, DTYPE_FLOAT_t x1, DTYPE_FLOAT_t x2, DTYPE_INT_t host):
+    cpdef vector[DTYPE_FLOAT_t] get_phi(self, const DTYPE_FLOAT_t &x1, const DTYPE_FLOAT_t &x2, const DTYPE_INT_t &host):
         """ Get normalised tetrahedral coordinates given a point's position and the host element
 
         Parameters
