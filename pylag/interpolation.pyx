@@ -186,6 +186,21 @@ cdef class CubicSpline1DInterpolator:
         """
         return self._spline.deriv(self._first_order, particle.get_x3())
 
+
+def interpolate_within_element_wrapper(const vector[DTYPE_FLOAT_t] &val, const vector[DTYPE_FLOAT_t] &phi):
+    cdef DTYPE_FLOAT_t _val[3]
+    cdef DTYPE_FLOAT_t _phi[3]
+    cdef DTYPE_INT_t i
+
+    if val.size() != 3 or phi.size() !=3:
+        raise ValueError('Input arrays should have size three')
+
+    for i in range(3):
+        _val[i] = val[i]
+        _phi[i] = phi[i]
+
+    return interpolate_within_element(_val, _phi)
+
 def get_interpolator(config, n_elems):
     """ Interpolator factory method
 

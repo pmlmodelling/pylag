@@ -215,14 +215,21 @@ cdef class Grid:
         """
         cdef vector[DTYPE_FLOAT_t] dphi_dx = vector[DTYPE_FLOAT_t](3, -999.)
         cdef vector[DTYPE_FLOAT_t] dphi_dy = vector[DTYPE_FLOAT_t](3, -999.)
+        cdef DTYPE_FLOAT_t _dphi_dx[3]
+        cdef DTYPE_FLOAT_t _dphi_dy[3]
+        cdef DTYPE_INT_t i
 
-        self.get_grad_phi(host, dphi_dx, dphi_dy)
+        self.get_grad_phi(host, _dphi_dx, _dphi_dy)
+
+        for i in range(3):
+            dphi_dx[i] = _dphi_dx[i]
+            dphi_dy[i] = _dphi_dy[i]
 
         return dphi_dx, dphi_dy
 
     cdef void get_grad_phi(self, DTYPE_INT_t host,
-                           vector[DTYPE_FLOAT_t] &dphi_dx,
-                           vector[DTYPE_FLOAT_t] &dphi_dy) except *:
+                           DTYPE_FLOAT_t dphi_dx[3],
+                           DTYPE_FLOAT_t dphi_dy[3]) except *:
         raise NotImplementedError
 
     def interpolate_in_space_wrapper(self, var_arr, ParticleSmartPtr particle):
@@ -913,8 +920,8 @@ cdef class UnstructuredCartesianGrid(Grid):
         return phi
 
     cdef void get_grad_phi(self, DTYPE_INT_t host,
-            vector[DTYPE_FLOAT_t] &dphi_dx,
-            vector[DTYPE_FLOAT_t] &dphi_dy) except *:
+                           DTYPE_FLOAT_t dphi_dx[3],
+                           DTYPE_FLOAT_t dphi_dy[3]) except *:
         """ Get gradient in phi with respect to x and y
 
         Gradients in phi are calculated as described in Lynch (2015), p. 232. As
@@ -940,23 +947,23 @@ cdef class UnstructuredCartesianGrid(Grid):
         host : int
             Host element
 
-        dphi_dx : vector, float
+        dphi_dx : C array, float
             Gradient with respect to x
 
-        dphi_dy : vector, float
+        dphi_dy : C array, float
             Gradient with respect to y
         """
 
-        cdef int i # Loop counters
-        cdef int vertex # Vertex identifier
+        cdef DTYPE_INT_t i # Loop counters
+        cdef DTYPE_INT_t vertex # Vertex identifier
 
         # Intermediate arrays
-        cdef vector[DTYPE_FLOAT_t] x_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-        cdef vector[DTYPE_FLOAT_t] y_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef DTYPE_FLOAT_t x_tri[3]
+        cdef DTYPE_FLOAT_t y_tri[3]
 
         cdef DTYPE_FLOAT_t a1, a2, a3, a4, twice_signed_element_area
 
-        for i in xrange(N_VERTICES):
+        for i in xrange(3):
             vertex = self.nv[i,host]
             x_tri[i] = self.x[vertex]
             y_tri[i] = self.y[vertex]
@@ -1001,7 +1008,11 @@ cdef class UnstructuredCartesianGrid(Grid):
             The interpolated value of the variable
         """
         cdef DTYPE_INT_t vertex # Vertex identifier
-        cdef vector[DTYPE_FLOAT_t] var_nodes = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef DTYPE_FLOAT_t var_nodes[3]
+        cdef DTYPE_FLOAT_t phi[3]
+
+        # Phi
+        cdef const vector[DTYPE_FLOAT_t] *_phi = &particle.get_phi(self.name)
 
         # Host element
         cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self.name)
@@ -1011,8 +1022,9 @@ cdef class UnstructuredCartesianGrid(Grid):
         for i in xrange(N_VERTICES):
             vertex = self.nv[i, host_element]
             var_nodes[i] = var_arr[vertex]
+            phi[i] = _phi.at(i)
 
-        return interp.interpolate_within_element(var_nodes, particle.get_phi(self.name))
+        return interp.interpolate_within_element(var_nodes, phi)
 
     cdef DTYPE_FLOAT_t interpolate_in_time_and_space_2D(self, DTYPE_FLOAT_t[::1] var_last_arr,
                                                         DTYPE_FLOAT_t[::1] var_next_arr,
@@ -1043,7 +1055,11 @@ cdef class UnstructuredCartesianGrid(Grid):
         """
         cdef DTYPE_INT_t vertex # Vertex identifier
         cdef DTYPE_FLOAT_t var_last, var_next
-        cdef vector[DTYPE_FLOAT_t] var_nodes = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef DTYPE_FLOAT_t var_nodes[3]
+        cdef DTYPE_FLOAT_t phi[3]
+
+        # Phi
+        cdef const vector[DTYPE_FLOAT_t] *_phi = &particle.get_phi(self.name)
 
         # Host element
         cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self.name)
@@ -1060,7 +1076,9 @@ cdef class UnstructuredCartesianGrid(Grid):
             else:
                 var_nodes[i] = var_last
 
-        return interp.interpolate_within_element(var_nodes, particle.get_phi(self.name))
+            phi[i] = _phi.at(i)
+
+        return interp.interpolate_within_element(var_nodes, phi)
 
     cdef DTYPE_FLOAT_t interpolate_in_time_and_space(self, DTYPE_FLOAT_t[:, ::1] var_last_arr,
                                                      DTYPE_FLOAT_t[:, ::1] var_next_arr, DTYPE_INT_t k,
@@ -1094,7 +1112,11 @@ cdef class UnstructuredCartesianGrid(Grid):
         """
         cdef DTYPE_INT_t vertex # Vertex identifier
         cdef DTYPE_FLOAT_t var_last, var_next
-        cdef vector[DTYPE_FLOAT_t] var_nodes = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef DTYPE_FLOAT_t var_nodes[3]
+        cdef DTYPE_FLOAT_t phi[3]
+
+        # Phi
+        cdef const vector[DTYPE_FLOAT_t] *_phi = &particle.get_phi(self.name)
 
         # Host element
         cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self.name)
@@ -1111,7 +1133,9 @@ cdef class UnstructuredCartesianGrid(Grid):
             else:
                 var_nodes[i] = var_last
 
-        return interp.interpolate_within_element(var_nodes, particle.get_phi(self.name))
+            phi[i] = _phi.at(i)
+
+        return interp.interpolate_within_element(var_nodes, phi)
 
     cdef void interpolate_grad_in_time_and_space(self, const DTYPE_FLOAT_t[:, :] &var_last_arr,
                                                  const DTYPE_FLOAT_t[:, :] &var_next_arr, DTYPE_INT_t k,
@@ -1142,13 +1166,15 @@ cdef class UnstructuredCartesianGrid(Grid):
             dvar_dx and dvar_dy components stored in a C array of length two.
 
         """
-                # Gradients in phi
-        cdef vector[DTYPE_FLOAT_t] dphi_dx = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-        cdef vector[DTYPE_FLOAT_t] dphi_dy = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        # Gradients in phi
+        cdef DTYPE_FLOAT_t dphi_dx[3]
+        cdef DTYPE_FLOAT_t dphi_dy[3]
 
         cdef DTYPE_INT_t vertex # Vertex identifier
+
+        # Intermediate values
         cdef DTYPE_FLOAT_t var_last, var_next
-        cdef vector[DTYPE_FLOAT_t] var_nodes = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef DTYPE_FLOAT_t var_nodes[3]
 
         # Host element
         cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self.name)
@@ -1946,8 +1972,8 @@ cdef class UnstructuredGeographicGrid(Grid):
         return s
 
     cdef void get_grad_phi(self, DTYPE_INT_t host,
-            vector[DTYPE_FLOAT_t] &dphi_dx,
-            vector[DTYPE_FLOAT_t] &dphi_dy) except *:
+                           DTYPE_FLOAT_t dphi_dx[3],
+                           DTYPE_FLOAT_t dphi_dy[3]) except *:
         """ Get gradient in phi with respect to x and y
 
         The gradient in phi is calculated by first converting to cartesian
@@ -1978,10 +2004,10 @@ cdef class UnstructuredGeographicGrid(Grid):
         host : int
             Host element
 
-        dphi_dx : vector, float
+        dphi_dx : C array, float
             Gradient with respect to x
 
-        dphi_dy : vector, float
+        dphi_dy : C array, float
             Gradient with respect to y
 
         """
@@ -1995,8 +2021,9 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         # Return cached values if they have been pre-computed
         if self.barycentric_gradients_have_been_cached[host] == 1:
-            dphi_dx[:] = self.dphi_dx[host][:]
-            dphi_dy[:] = self.dphi_dy[host][:]
+            for i in range(3):
+                dphi_dx[i] = self.dphi_dx[host][i]
+                dphi_dy[i] = self.dphi_dy[host][i]
             return
 
         # Element vertices
@@ -2042,8 +2069,9 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         # Cache values
         self.barycentric_gradients_have_been_cached[host] = 1
-        self.dphi_dx[host][:] = dphi_dx[:]
-        self.dphi_dy[host][:] = dphi_dy[:]
+        for i in range(3):
+            self.dphi_dx[host][i] = dphi_dx[i]
+            self.dphi_dy[host][i] = dphi_dy[i]
 
         return
 
@@ -2070,27 +2098,29 @@ cdef class UnstructuredGeographicGrid(Grid):
             The interpolated value of the variable
         """
         cdef DTYPE_INT_t vertex # Vertex identifier
-        cdef vector[DTYPE_FLOAT_t] var_nodes = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef DTYPE_FLOAT_t var_nodes[3]
+        cdef DTYPE_FLOAT_t phi[3]
+
+        # Phi
+        cdef const vector[DTYPE_FLOAT_t] *_phi = &particle.get_phi(self.name)
 
         # Host element
         cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self.name)
-
-        # Adjusted interpolation weights if required
-        cdef vector[DTYPE_FLOAT_t] phi
 
         cdef DTYPE_INT_t i
 
         for i in xrange(N_VERTICES):
             vertex = self.nv[i, host_element]
             var_nodes[i] = var_arr[vertex]
+            phi[i] = _phi.at(i)
 
         if self.land_sea_mask[host_element] == SEA:
             # Normal sea element
-            return interp.interpolate_within_element(var_nodes, particle.get_phi(self.name))
+            return interp.interpolate_within_element(var_nodes, phi)
 
         elif self.land_sea_mask[host_element] == BOUNDARY_ELEMENT:
             # Boundary element with masked nodes. Adjust interpolation coefficients.
-            phi = self._adjust_interpolation_coefficients(host_element, particle.get_phi(self.name))
+            self._adjust_interpolation_coefficients(host_element, phi)
             return interp.interpolate_within_element(var_nodes, phi)
 
         else:
@@ -2125,10 +2155,11 @@ cdef class UnstructuredGeographicGrid(Grid):
         """
         cdef DTYPE_INT_t vertex # Vertex identifier
         cdef DTYPE_FLOAT_t var_last, var_next
-        cdef vector[DTYPE_FLOAT_t] var_nodes = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef DTYPE_FLOAT_t var_nodes[3]
+        cdef DTYPE_FLOAT_t phi[3]
 
-        # Adjusted interpolation weights if required
-        cdef vector[DTYPE_FLOAT_t] phi
+        # Phi
+        cdef const vector[DTYPE_FLOAT_t] *_phi = &particle.get_phi(self.name)
 
         # Host element
         cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self.name)
@@ -2145,13 +2176,15 @@ cdef class UnstructuredGeographicGrid(Grid):
             else:
                 var_nodes[i] = var_last
 
+            phi[i] = _phi.at(i)
+
         if self.land_sea_mask[host_element] == SEA:
             # Normal sea element
-            return interp.interpolate_within_element(var_nodes, particle.get_phi(self.name))
+            return interp.interpolate_within_element(var_nodes, phi)
 
         elif self.land_sea_mask[host_element] == BOUNDARY_ELEMENT:
             # Boundary element with masked nodes. Adjust interpolation coefficients.
-            phi = self._adjust_interpolation_coefficients(host_element, particle.get_phi(self.name))
+            self._adjust_interpolation_coefficients(host_element, phi)
             return interp.interpolate_within_element(var_nodes, phi)
 
         else:
@@ -2189,10 +2222,11 @@ cdef class UnstructuredGeographicGrid(Grid):
         """
         cdef DTYPE_INT_t vertex # Vertex identifier
         cdef DTYPE_FLOAT_t var_last, var_next
-        cdef vector[DTYPE_FLOAT_t] var_nodes = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef DTYPE_FLOAT_t var_nodes[3]
+        cdef DTYPE_FLOAT_t phi[3]
 
-        # Adjusted interpolation weights if required
-        cdef vector[DTYPE_FLOAT_t] phi
+        # Phi
+        cdef const vector[DTYPE_FLOAT_t] *_phi = &particle.get_phi(self.name)
 
         # Host element
         cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self.name)
@@ -2209,13 +2243,15 @@ cdef class UnstructuredGeographicGrid(Grid):
             else:
                 var_nodes[i] = var_last
 
+            phi[i] = _phi.at(i)
+
         if self.land_sea_mask[host_element] == SEA:
             # Normal sea element
-            return interp.interpolate_within_element(var_nodes, particle.get_phi(self.name))
+            return interp.interpolate_within_element(var_nodes, phi)
 
         elif self.land_sea_mask[host_element] == BOUNDARY_ELEMENT:
             # Boundary element with masked nodes. Adjust interpolation coefficients.
-            phi = self._adjust_interpolation_coefficients(host_element, particle.get_phi(self.name))
+            self._adjust_interpolation_coefficients(host_element, phi)
             return interp.interpolate_within_element(var_nodes, phi)
 
         else:
@@ -2223,9 +2259,9 @@ cdef class UnstructuredGeographicGrid(Grid):
 
 
     cdef vector[DTYPE_FLOAT_t] _adjust_interpolation_coefficients(self, const DTYPE_INT_t host,
-                                                                  const vector[DTYPE_FLOAT_t]& phi):
+                                                                  DTYPE_FLOAT_t phi[3]):
 
-        cdef vector[DTYPE_FLOAT_t] phi_new = vector[DTYPE_FLOAT_t](N_VERTICES, 0.)
+        cdef DTYPE_FLOAT_t phi_new[3]
         cdef DTYPE_FLOAT_t phi_test
         cdef DTYPE_INT_t index
         cdef DTYPE_INT_t node
@@ -2254,11 +2290,14 @@ cdef class UnstructuredGeographicGrid(Grid):
         else:
             raise RuntimeError('Failed to adjust interpolation weights')
 
-        return phi_new
+        # Copy phi_new into phi
+        for i in range(N_VERTICES):
+            phi[i] = phi_new[i]
 
     cdef void interpolate_grad_in_time_and_space(self, const DTYPE_FLOAT_t[:, :] &var_last_arr,
                                                  const DTYPE_FLOAT_t[:, :] &var_next_arr, DTYPE_INT_t k,
-            DTYPE_FLOAT_t time_fraction, Particle* particle, DTYPE_FLOAT_t var_prime[2]) except *:
+                                                 DTYPE_FLOAT_t time_fraction, Particle* particle,
+                                                 DTYPE_FLOAT_t var_prime[2]) except *:
         """ Interpolate the gradient in the given field in time and space
 
         Interpolate the gradient in the given field in time and space on the horizontal grid. The supplied fields
@@ -2286,12 +2325,14 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         """
         # Gradients in phi
-        cdef vector[DTYPE_FLOAT_t] dphi_dx = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-        cdef vector[DTYPE_FLOAT_t] dphi_dy = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef DTYPE_FLOAT_t dphi_dx[3]
+        cdef DTYPE_FLOAT_t dphi_dy[3]
 
         cdef DTYPE_INT_t vertex # Vertex identifier
+
+        # Intermediate values
         cdef DTYPE_FLOAT_t var_last, var_next
-        cdef vector[DTYPE_FLOAT_t] var_nodes = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef DTYPE_FLOAT_t var_nodes[3]
 
         # Host element
         cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self.name)

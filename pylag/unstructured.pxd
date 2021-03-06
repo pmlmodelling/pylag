@@ -35,8 +35,8 @@ cdef class Grid:
     cpdef vector[DTYPE_FLOAT_t] get_phi(self, const DTYPE_FLOAT_t &x1, const DTYPE_FLOAT_t &x2, const DTYPE_INT_t &host)
 
     cdef void get_grad_phi(self, DTYPE_INT_t host,
-                           vector[DTYPE_FLOAT_t] &dphi_dx,
-                           vector[DTYPE_FLOAT_t] &dphi_dy) except *
+                           DTYPE_FLOAT_t dphi_dx[3],
+                           DTYPE_FLOAT_t dphi_dy[3]) except *
 
     cdef DTYPE_FLOAT_t interpolate_in_space(self, DTYPE_FLOAT_t[:] var_arr, Particle *particle) except FLOAT_ERR
 

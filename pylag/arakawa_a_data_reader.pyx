@@ -772,16 +772,16 @@ cdef class ArakawaADataReader(DataReader):
         cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
 
         # Gradients in phi
-        cdef vector[DTYPE_FLOAT_t] dphi_dx = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-        cdef vector[DTYPE_FLOAT_t] dphi_dy = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef DTYPE_FLOAT_t dphi_dx[3]
+        cdef DTYPE_FLOAT_t dphi_dy[3]
 
         # Intermediate arrays - ah
-        cdef vector[DTYPE_FLOAT_t] ah_tri_t_last_level_1 = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-        cdef vector[DTYPE_FLOAT_t] ah_tri_t_next_level_1 = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-        cdef vector[DTYPE_FLOAT_t] ah_tri_t_last_level_2 = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-        cdef vector[DTYPE_FLOAT_t] ah_tri_t_next_level_2 = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-        cdef vector[DTYPE_FLOAT_t] ah_tri_level_1 = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-        cdef vector[DTYPE_FLOAT_t] ah_tri_level_2 = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef DTYPE_FLOAT_t ah_tri_t_last_level_1[3]
+        cdef DTYPE_FLOAT_t ah_tri_t_next_level_1[3]
+        cdef DTYPE_FLOAT_t ah_tri_t_last_level_2[3]
+        cdef DTYPE_FLOAT_t ah_tri_t_next_level_2[3]
+        cdef DTYPE_FLOAT_t ah_tri_level_1[3]
+        cdef DTYPE_FLOAT_t ah_tri_level_2[3]
 
         # Gradients on lower and upper bounding sigma layers
         cdef DTYPE_FLOAT_t dah_dx_level_1
