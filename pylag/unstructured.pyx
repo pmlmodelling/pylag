@@ -241,8 +241,8 @@ cdef class Grid:
     cdef DTYPE_FLOAT_t interpolate_in_space(self, DTYPE_FLOAT_t[:] var_arr, Particle *particle) except FLOAT_ERR:
         raise NotImplementedError
 
-    cdef DTYPE_FLOAT_t interpolate_in_time_and_space_2D(self, const DTYPE_FLOAT_t[:] &var_last_arr,
-                                                        const DTYPE_FLOAT_t[:] &var_next_arr,
+    cdef DTYPE_FLOAT_t interpolate_in_time_and_space_2D(self, DTYPE_FLOAT_t[::1] var_last_arr,
+                                                        DTYPE_FLOAT_t[::1] var_next_arr,
                                                         DTYPE_FLOAT_t time_fraction, Particle *particle) except FLOAT_ERR:
         raise NotImplementedError
 
@@ -268,8 +268,8 @@ cdef class Grid:
         """
         return self.interpolate_in_time_and_space(var_last_arr, var_next_arr, k, time_fraction, particle.get_ptr())
 
-    cdef DTYPE_FLOAT_t interpolate_in_time_and_space(self, const DTYPE_FLOAT_t[:, :] &var_last_arr,
-                                                     const DTYPE_FLOAT_t[:, :] &var_next_arr, DTYPE_INT_t k,
+    cdef DTYPE_FLOAT_t interpolate_in_time_and_space(self, DTYPE_FLOAT_t[:, ::1] var_last_arr,
+                                                     DTYPE_FLOAT_t[:, ::1] var_next_arr, DTYPE_INT_t k,
                                                      DTYPE_FLOAT_t time_fraction, Particle *particle) except FLOAT_ERR:
         raise NotImplementedError
 
@@ -341,22 +341,22 @@ cdef class UnstructuredCartesianGrid(Grid):
     cdef DTYPE_INT_t n_elems, n_nodes
 
     # Element connectivity
-    cdef DTYPE_INT_t[:,:] nv
+    cdef DTYPE_INT_t[:,::1] nv
 
     # Element adjacency
-    cdef DTYPE_INT_t[:,:] nbe
+    cdef DTYPE_INT_t[:,::1] nbe
 
     # Nodal coordinates
-    cdef DTYPE_FLOAT_t[:] x
-    cdef DTYPE_FLOAT_t[:] y
+    cdef DTYPE_FLOAT_t[::1] x
+    cdef DTYPE_FLOAT_t[::1] y
 
     # Element centre coordinates
-    cdef DTYPE_FLOAT_t[:] xc
-    cdef DTYPE_FLOAT_t[:] yc
+    cdef DTYPE_FLOAT_t[::1] xc
+    cdef DTYPE_FLOAT_t[::1] yc
 
     # Land sea mask
-    cdef DTYPE_INT_t[:] land_sea_mask
-    cdef DTYPE_INT_t[:] land_sea_mask_nodes
+    cdef DTYPE_INT_t[::1] land_sea_mask
+    cdef DTYPE_INT_t[::1] land_sea_mask_nodes
 
     def __init__(self, config, name, n_nodes, n_elems, nv, nbe, x, y, xc, yc, land_sea_mask, land_sea_mask_nodes):
         self.config = config
@@ -364,14 +364,14 @@ cdef class UnstructuredCartesianGrid(Grid):
         self.name = name
         self.n_nodes = n_nodes
         self.n_elems = n_elems
-        self.nv = nv[:]
-        self.nbe = nbe[:]
-        self.x = x[:]
-        self.y = y[:]
-        self.xc = xc[:]
-        self.yc = yc[:]
-        self.land_sea_mask = land_sea_mask[:]
-        self.land_sea_mask_nodes = land_sea_mask_nodes[:]
+        self.nv = nv
+        self.nbe = nbe
+        self.x = x
+        self.y = y
+        self.xc = xc
+        self.yc = yc
+        self.land_sea_mask = land_sea_mask
+        self.land_sea_mask_nodes = land_sea_mask_nodes
 
     cdef DTYPE_INT_t find_host_using_local_search(self, Particle *particle) except INT_ERR:
         """ Returns the host horizontal element through local searching.
@@ -1014,8 +1014,8 @@ cdef class UnstructuredCartesianGrid(Grid):
 
         return interp.interpolate_within_element(var_nodes, particle.get_phi(self.name))
 
-    cdef DTYPE_FLOAT_t interpolate_in_time_and_space_2D(self, const DTYPE_FLOAT_t[:] &var_last_arr,
-                                                        const DTYPE_FLOAT_t[:] &var_next_arr,
+    cdef DTYPE_FLOAT_t interpolate_in_time_and_space_2D(self, DTYPE_FLOAT_t[::1] var_last_arr,
+                                                        DTYPE_FLOAT_t[::1] var_next_arr,
                                                         DTYPE_FLOAT_t time_fraction, Particle* particle) except FLOAT_ERR:
         """ Interpolate the given field in time and space 2D
 
@@ -1062,8 +1062,8 @@ cdef class UnstructuredCartesianGrid(Grid):
 
         return interp.interpolate_within_element(var_nodes, particle.get_phi(self.name))
 
-    cdef DTYPE_FLOAT_t interpolate_in_time_and_space(self, const DTYPE_FLOAT_t[:, :] &var_last_arr,
-                                                     const DTYPE_FLOAT_t[:, :] &var_next_arr, DTYPE_INT_t k,
+    cdef DTYPE_FLOAT_t interpolate_in_time_and_space(self, DTYPE_FLOAT_t[:, ::1] var_last_arr,
+                                                     DTYPE_FLOAT_t[:, ::1] var_next_arr, DTYPE_INT_t k,
                                                      DTYPE_FLOAT_t time_fraction, Particle* particle) except FLOAT_ERR:
         """ Interpolate the given field in time and space
 
@@ -1292,30 +1292,30 @@ cdef class UnstructuredGeographicGrid(Grid):
     cdef DTYPE_INT_t n_elems, n_nodes
 
     # Element connectivity
-    cdef DTYPE_INT_t[:,:] nv
+    cdef DTYPE_INT_t[:,::1] nv
 
     # Element adjacency
-    cdef DTYPE_INT_t[:,:] nbe
+    cdef DTYPE_INT_t[:,::1] nbe
 
     # Nodal coordinates in geographic coordinates. NB lon/lat in radians.
-    cdef DTYPE_FLOAT_t[:] lon_nodes
-    cdef DTYPE_FLOAT_t[:] lat_nodes
-    cdef DTYPE_FLOAT_t[:] r_nodes
+    cdef DTYPE_FLOAT_t[::1] lon_nodes
+    cdef DTYPE_FLOAT_t[::1] lat_nodes
+    cdef DTYPE_FLOAT_t[::1] r_nodes
 
     # Nodal coordinates in Cartesian coordinates
-    cdef DTYPE_FLOAT_t[:,:] points_nodes
+    cdef DTYPE_FLOAT_t[:,::1] points_nodes
 
     # Nodal coordinates in geographic coordinates. NB lon/lat in radians.
-    cdef DTYPE_FLOAT_t[:] lon_centres
-    cdef DTYPE_FLOAT_t[:] lat_centres
-    cdef DTYPE_FLOAT_t[:] r_centres
+    cdef DTYPE_FLOAT_t[::1] lon_centres
+    cdef DTYPE_FLOAT_t[::1] lat_centres
+    cdef DTYPE_FLOAT_t[::1] r_centres
 
     # Element centre coordinates in Cartesian coordinates
-    cdef DTYPE_FLOAT_t[:,:] points_centres
+    cdef DTYPE_FLOAT_t[:,::1] points_centres
 
     # Land sea element mask
-    cdef DTYPE_INT_t[:] land_sea_mask
-    cdef DTYPE_INT_t[:] land_sea_mask_nodes
+    cdef DTYPE_INT_t[::1] land_sea_mask
+    cdef DTYPE_INT_t[::1] land_sea_mask_nodes
 
     # Barycentric gradients
     cdef vector[DTYPE_INT_t] barycentric_gradients_have_been_cached
@@ -2096,8 +2096,8 @@ cdef class UnstructuredGeographicGrid(Grid):
         else:
             raise RuntimeError('Cannot interpolate within masked element `{}`.'.format(self.land_sea_mask[host_element]))
 
-    cdef DTYPE_FLOAT_t interpolate_in_time_and_space_2D(self, const DTYPE_FLOAT_t[:] &var_last_arr,
-                                                        const DTYPE_FLOAT_t[:] &var_next_arr,
+    cdef DTYPE_FLOAT_t interpolate_in_time_and_space_2D(self, DTYPE_FLOAT_t[::1] var_last_arr,
+                                                        DTYPE_FLOAT_t[::1] var_next_arr,
                                                         DTYPE_FLOAT_t time_fraction, Particle* particle) except FLOAT_ERR:
         """ Interpolate the given field in time and space 2D
 
@@ -2135,7 +2135,7 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         cdef DTYPE_INT_t i
 
-        for i in xrange(N_VERTICES):
+        for i in range(N_VERTICES):
             vertex = self.nv[i, host_element]
             var_last = var_last_arr[vertex]
             var_next = var_next_arr[vertex]
@@ -2157,8 +2157,8 @@ cdef class UnstructuredGeographicGrid(Grid):
         else:
             raise RuntimeError('Cannot interpolate within masked element `{}`.'.format(self.land_sea_mask[host_element]))
 
-    cdef DTYPE_FLOAT_t interpolate_in_time_and_space(self, const DTYPE_FLOAT_t[:, :] &var_last_arr,
-                                                     const DTYPE_FLOAT_t[:, :] &var_next_arr, DTYPE_INT_t k,
+    cdef DTYPE_FLOAT_t interpolate_in_time_and_space(self, DTYPE_FLOAT_t[:, ::1] var_last_arr,
+                                                     DTYPE_FLOAT_t[:, ::1] var_next_arr, DTYPE_INT_t k,
                                                      DTYPE_FLOAT_t time_fraction, Particle* particle) except FLOAT_ERR:
         """ Interpolate the given field in time and space
 
@@ -2199,7 +2199,7 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         cdef DTYPE_INT_t i
 
-        for i in xrange(N_VERTICES):
+        for i in range(N_VERTICES):
             vertex = self.nv[i, host_element]
             var_last = var_last_arr[k, vertex]
             var_next = var_next_arr[k, vertex]

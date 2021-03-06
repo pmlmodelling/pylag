@@ -90,7 +90,7 @@ cdef class Linear1DInterpolator:
         for i in xrange(1, self._n_elems - 1):
             self._fp_prime[i] = (self._fp[i+1] - self._fp[i-1]) / (self._xp[i+1] - self._xp[i-1])
         self._fp_prime[0] = (self._fp[1] - self._fp[0]) / (self._xp[1] - self._xp[0])
-        self._fp_prime[-1] = (self._fp[-1] - self._fp[-2]) / (self._xp[-1] - self._xp[-2])  
+        self._fp_prime[self._n_elems-1] = (self._fp[self._n_elems-1] - self._fp[self._n_elems-2]) / (self._xp[self._n_elems-1] - self._xp[self._n_elems-2])
 
     cdef DTYPE_FLOAT_t get_value(self, Particle* particle) except FLOAT_ERR:
         """ Evaluate the interpolating function at the particle's location
@@ -206,8 +206,8 @@ def get_interpolator(config, n_elems):
         raise ValueError('Unsupported vertical interpolation scheme.')
 
 
-cdef DTYPE_FLOAT_t get_linear_fraction_safe(DTYPE_FLOAT_t var, DTYPE_FLOAT_t var1,
-        DTYPE_FLOAT_t var2) except FLOAT_ERR:
+cdef DTYPE_FLOAT_t get_linear_fraction_safe(const DTYPE_FLOAT_t &var, const DTYPE_FLOAT_t &var1,
+        const DTYPE_FLOAT_t &var2) except FLOAT_ERR:
     """ Compute the fractional linear distance of a point between two numbers
     
     The function is deemed safe as it raises an exception if `var' does not lie

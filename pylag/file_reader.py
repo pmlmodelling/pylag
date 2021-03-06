@@ -509,7 +509,7 @@ class FileReader:
          : NDArray
              The the grid variable.
         """
-        return self.grid_file.variables[var_name][:].squeeze()
+        return np.ascontiguousarray(self.grid_file.variables[var_name][:].squeeze())
 
     def get_time_at_last_time_index(self):
         """ Get the time and the last time index
@@ -593,9 +593,9 @@ class FileReader:
         var = self.first_data_file.variables[var_name][self.tidx_first, :]
 
         if np.ma.isMaskedArray(var):
-            return var.filled(0.0)
+            var = var.filled(0.0)
 
-        return var
+        return np.ascontiguousarray(var)
 
     def get_time_dependent_variable_at_next_time_index(self, var_name):
         """ Get the variable at the next time index
@@ -614,9 +614,9 @@ class FileReader:
         var = self.second_data_file.variables[var_name][self.tidx_second, :]
 
         if np.ma.isMaskedArray(var):
-            return var.filled(0.0)
+            var = var.filled(0.0)
 
-        return var
+        return np.ascontiguousarray(var)
 
     def get_mask_at_last_time_index(self, var_name):
         """ Get the mask at the last time index
@@ -635,7 +635,7 @@ class FileReader:
         var = self.first_data_file.variables[var_name][self.tidx_first, :]
 
         if np.ma.isMaskedArray(var):
-            return var.mask
+            return np.ascontiguousarray(var.mask)
 
         raise RuntimeError('Variable {} is not a masked array.'.format(var_name))
 
@@ -656,7 +656,7 @@ class FileReader:
         var = self.second_data_file.variables[var_name][self.tidx_second, :]
 
         if np.ma.isMaskedArray(var):
-            return var.mask
+            return np.ascontiguousarray(var.mask)
 
         raise RuntimeError('Variable {} is not a masked array.'.format(var_name))
 

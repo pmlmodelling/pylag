@@ -99,17 +99,17 @@ cdef class ROMSDataReader(DataReader):
     cdef DTYPE_INT_t _n_longitude_grid_rho, _n_latitude_grid_rho, _n_elems_grid_rho, _n_nodes_grid_rho
     
     # Element connectivity
-    cdef DTYPE_INT_t[:,:] _nv_grid_u
-    cdef DTYPE_INT_t[:,:] _nv_grid_v
-    cdef DTYPE_INT_t[:,:] _nv_grid_rho
+    cdef DTYPE_INT_t[:,::1] _nv_grid_u
+    cdef DTYPE_INT_t[:,::1] _nv_grid_v
+    cdef DTYPE_INT_t[:,::1] _nv_grid_rho
     
     # Element adjacency
-    cdef DTYPE_INT_t[:,:] _nbe_grid_u
-    cdef DTYPE_INT_t[:,:] _nbe_grid_v
-    cdef DTYPE_INT_t[:,:] _nbe_grid_rho
+    cdef DTYPE_INT_t[:,::1] _nbe_grid_u
+    cdef DTYPE_INT_t[:,::1] _nbe_grid_v
+    cdef DTYPE_INT_t[:,::1] _nbe_grid_rho
 
     # Grid angles
-    cdef DTYPE_FLOAT_t[:] _rho_angles
+    cdef DTYPE_FLOAT_t[::1] _rho_angles
 
     # Minimum nodal x/y values
     cdef DTYPE_FLOAT_t _xmin
@@ -126,24 +126,26 @@ cdef class ROMSDataReader(DataReader):
     cdef DTYPE_FLOAT_t _hc
 
     # Actual depth levels, accounting for changes in sea surface elevation on rho and w grids
-    cdef DTYPE_FLOAT_t[:, :] _depth_levels_grid_rho_last, _depth_levels_grid_rho_next
-    cdef DTYPE_FLOAT_t[:, :] _depth_levels_grid_w_last, _depth_levels_grid_w_next
+    cdef DTYPE_FLOAT_t[:, ::1] _depth_levels_grid_rho_last
+    cdef DTYPE_FLOAT_t[:, ::1] _depth_levels_grid_rho_next
+    cdef DTYPE_FLOAT_t[:, ::1] _depth_levels_grid_w_last
+    cdef DTYPE_FLOAT_t[:, ::1] _depth_levels_grid_w_next
 
     # Bathymetry
-    cdef DTYPE_FLOAT_t[:] _h
+    cdef DTYPE_FLOAT_t[::1] _h
 
     # Land sea mask on nodes (1 - sea point, 0 - land point)
     #cdef DTYPE_INT_t[:] _mask_grid_u, _mask_grid_v, _mask_grid_rho
 
     # Land sea mask on rho grid elements (1 - sea point, 0 - land point)
-    cdef DTYPE_INT_t[:] _mask_c_grid_u
-    cdef DTYPE_INT_t[:] _mask_c_grid_v
-    cdef DTYPE_INT_t[:] _mask_c_grid_rho
+    cdef DTYPE_INT_t[::1] _mask_c_grid_u
+    cdef DTYPE_INT_t[::1] _mask_c_grid_v
+    cdef DTYPE_INT_t[::1] _mask_c_grid_rho
 
     # Land sea mask on rho grid nodes (1 - sea point, 0 - land point)
-    cdef DTYPE_INT_t[:] _mask_n_grid_u
-    cdef DTYPE_INT_t[:] _mask_n_grid_v
-    cdef DTYPE_INT_t[:] _mask_n_grid_rho
+    cdef DTYPE_INT_t[::1] _mask_n_grid_u
+    cdef DTYPE_INT_t[::1] _mask_n_grid_v
+    cdef DTYPE_INT_t[::1] _mask_n_grid_rho
 
     # Dictionary of dimension names
     cdef object _dimension_names
@@ -158,36 +160,36 @@ cdef class ROMSDataReader(DataReader):
     cdef object _variable_dimension_indices
 
     # Sea surface elevation
-    cdef DTYPE_FLOAT_t[:] _zeta_last
-    cdef DTYPE_FLOAT_t[:] _zeta_next
+    cdef DTYPE_FLOAT_t[::1] _zeta_last
+    cdef DTYPE_FLOAT_t[::1] _zeta_next
     
     # u/v/w velocity components
-    cdef DTYPE_FLOAT_t[:,:] _u_last
-    cdef DTYPE_FLOAT_t[:,:] _u_next
-    cdef DTYPE_FLOAT_t[:,:] _v_last
-    cdef DTYPE_FLOAT_t[:,:] _v_next
-    cdef DTYPE_FLOAT_t[:,:] _w_last
-    cdef DTYPE_FLOAT_t[:,:] _w_next
+    cdef DTYPE_FLOAT_t[:,::1] _u_last
+    cdef DTYPE_FLOAT_t[:,::1] _u_next
+    cdef DTYPE_FLOAT_t[:,::1] _v_last
+    cdef DTYPE_FLOAT_t[:,::1] _v_next
+    cdef DTYPE_FLOAT_t[:,::1] _w_last
+    cdef DTYPE_FLOAT_t[:,::1] _w_next
     
     # Vertical eddy diffusivities
-    cdef DTYPE_FLOAT_t[:,:] _kh_last
-    cdef DTYPE_FLOAT_t[:,:] _kh_next
+    cdef DTYPE_FLOAT_t[:,::1] _kh_last
+    cdef DTYPE_FLOAT_t[:,::1] _kh_next
 
     # Horizontal eddy viscosities
-    cdef DTYPE_FLOAT_t[:,:] _ah_last
-    cdef DTYPE_FLOAT_t[:,:] _ah_next
+    cdef DTYPE_FLOAT_t[:,::1] _ah_last
+    cdef DTYPE_FLOAT_t[:,::1] _ah_next
 
     # Wet/dry status of elements
-    cdef DTYPE_INT_t[:] _wet_cells_last
-    cdef DTYPE_INT_t[:] _wet_cells_next
+    cdef DTYPE_INT_t[::1] _wet_cells_last
+    cdef DTYPE_INT_t[::1] _wet_cells_next
 
     # Sea water potential temperature
-    cdef DTYPE_FLOAT_t[:,:] _thetao_last
-    cdef DTYPE_FLOAT_t[:,:] _thetao_next
+    cdef DTYPE_FLOAT_t[:,::1] _thetao_last
+    cdef DTYPE_FLOAT_t[:,::1] _thetao_next
 
     # Sea water salinity
-    cdef DTYPE_FLOAT_t[:,:] _so_last
-    cdef DTYPE_FLOAT_t[:,:] _so_next
+    cdef DTYPE_FLOAT_t[:,::1] _so_last
+    cdef DTYPE_FLOAT_t[:,::1] _so_next
 
     # Time direction
     cdef DTYPE_INT_t _time_direction
@@ -1306,7 +1308,7 @@ cdef class ROMSDataReader(DataReader):
 
         # Orientation of vertical variables
         self._flip_vertical_axis = False
-        if self._s_rho[0] < self._s_rho[-1]:
+        if self._s_rho[0] < self._s_rho[self._n_s_rho-1]:
             self._flip_vertical_axis = True
 
         # Bathymetry

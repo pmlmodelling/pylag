@@ -87,25 +87,25 @@ cdef class GOTMDataReader(DataReader):
     cdef DTYPE_FLOAT_t _zeta_last, _zeta_next, _zeta
 
     # Z layer depths
-    cdef DTYPE_FLOAT_t[:] _zlay_last, _zlay_next, _zlay
+    cdef DTYPE_FLOAT_t[::1] _zlay_last, _zlay_next, _zlay
 
     # Z level depths
-    cdef DTYPE_FLOAT_t[:] _zlev_last, _zlev_next, _zlev
+    cdef DTYPE_FLOAT_t[::1] _zlev_last, _zlev_next, _zlev
 
     # Eddy diffusivity at layer interfaces
-    cdef DTYPE_FLOAT_t[:] _kh_last, _kh_next, _kh
+    cdef DTYPE_FLOAT_t[::1] _kh_last, _kh_next, _kh
     
     # Eddy diffusivity derivative at layer interfaces
-    cdef DTYPE_FLOAT_t[:] _kh_prime
+    cdef DTYPE_FLOAT_t[::1] _kh_prime
 
     # Temperature
-    cdef DTYPE_FLOAT_t[:] _thetao_last, _thetao_next, _thetao
+    cdef DTYPE_FLOAT_t[::1] _thetao_last, _thetao_next, _thetao
 
     # Salinity
-    cdef DTYPE_FLOAT_t[:] _so_last, _so_next, _so
+    cdef DTYPE_FLOAT_t[::1] _so_last, _so_next, _so
 
     # Short wave downwelling irradiance
-    cdef DTYPE_FLOAT_t[:] _rsdo_last, _rsdo_next, _rsdo
+    cdef DTYPE_FLOAT_t[::1] _rsdo_last, _rsdo_next, _rsdo
 
     # Interpolator
     cdef interp.Interpolator _kh_interpolator

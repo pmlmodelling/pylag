@@ -84,18 +84,18 @@ cdef class FVCOMDataReader(DataReader):
     cdef DTYPE_INT_t _n_elems, _n_nodes, _n_siglay, _n_siglev
     
     # Element connectivity
-    cdef DTYPE_INT_t[:,:] _nv
+    cdef DTYPE_INT_t[:,::1] _nv
     
     # Element adjacency
-    cdef DTYPE_INT_t[:,:] _nbe
+    cdef DTYPE_INT_t[:,::1] _nbe
     
     # Nodal coordinates
-    cdef DTYPE_FLOAT_t[:] _x
-    cdef DTYPE_FLOAT_t[:] _y
+    cdef DTYPE_FLOAT_t[::1] _x
+    cdef DTYPE_FLOAT_t[::1] _y
 
     # Element centre coordinates
-    cdef DTYPE_FLOAT_t[:] _xc
-    cdef DTYPE_FLOAT_t[:] _yc
+    cdef DTYPE_FLOAT_t[::1] _xc
+    cdef DTYPE_FLOAT_t[::1] _yc
 
     # Minimum nodal x/y values
     cdef DTYPE_FLOAT_t _xmin
@@ -106,43 +106,43 @@ cdef class FVCOMDataReader(DataReader):
 #    cdef DTYPE_FLOAT_t[:,:] _a2u
     
     # Sigma layers and levels
-    cdef DTYPE_FLOAT_t[:,:] _siglev
-    cdef DTYPE_FLOAT_t[:,:] _siglay
+    cdef DTYPE_FLOAT_t[:,::1] _siglev
+    cdef DTYPE_FLOAT_t[:,::1] _siglay
     
     # Bathymetry
-    cdef DTYPE_FLOAT_t[:] _h
+    cdef DTYPE_FLOAT_t[::1] _h
     
     # Sea surface elevation
-    cdef DTYPE_FLOAT_t[:] _zeta_last
-    cdef DTYPE_FLOAT_t[:] _zeta_next
+    cdef DTYPE_FLOAT_t[::1] _zeta_last
+    cdef DTYPE_FLOAT_t[::1] _zeta_next
     
     # u/v/w velocity components
-    cdef DTYPE_FLOAT_t[:,:] _u_last
-    cdef DTYPE_FLOAT_t[:,:] _u_next
-    cdef DTYPE_FLOAT_t[:,:] _v_last
-    cdef DTYPE_FLOAT_t[:,:] _v_next
-    cdef DTYPE_FLOAT_t[:,:] _w_last
-    cdef DTYPE_FLOAT_t[:,:] _w_next
+    cdef DTYPE_FLOAT_t[:,::1] _u_last
+    cdef DTYPE_FLOAT_t[:,::1] _u_next
+    cdef DTYPE_FLOAT_t[:,::1] _v_last
+    cdef DTYPE_FLOAT_t[:,::1] _v_next
+    cdef DTYPE_FLOAT_t[:,::1] _w_last
+    cdef DTYPE_FLOAT_t[:,::1] _w_next
     
     # Vertical eddy diffusivities
-    cdef DTYPE_FLOAT_t[:,:] _kh_last
-    cdef DTYPE_FLOAT_t[:,:] _kh_next
+    cdef DTYPE_FLOAT_t[:,::1] _kh_last
+    cdef DTYPE_FLOAT_t[:,::1] _kh_next
     
     # Horizontal eddy viscosities
-    cdef DTYPE_FLOAT_t[:,:] _viscofh_last
-    cdef DTYPE_FLOAT_t[:,:] _viscofh_next
+    cdef DTYPE_FLOAT_t[:,::1] _viscofh_last
+    cdef DTYPE_FLOAT_t[:,::1] _viscofh_next
 
     # Wet/dry status of elements
-    cdef DTYPE_INT_t[:] _wet_cells_last
-    cdef DTYPE_INT_t[:] _wet_cells_next
+    cdef DTYPE_INT_t[::1] _wet_cells_last
+    cdef DTYPE_INT_t[::1] _wet_cells_next
 
     # Sea water potential temperature
-    cdef DTYPE_FLOAT_t[:,:] _thetao_last
-    cdef DTYPE_FLOAT_t[:,:] _thetao_next
+    cdef DTYPE_FLOAT_t[:,::1] _thetao_last
+    cdef DTYPE_FLOAT_t[:,::1] _thetao_next
 
     # Sea water salinity
-    cdef DTYPE_FLOAT_t[:,:] _so_last
-    cdef DTYPE_FLOAT_t[:,:] _so_next
+    cdef DTYPE_FLOAT_t[:,::1] _so_last
+    cdef DTYPE_FLOAT_t[:,::1] _so_next
 
     # Time direction
     cdef DTYPE_INT_t _time_direction
@@ -155,8 +155,8 @@ cdef class FVCOMDataReader(DataReader):
     cdef bint _has_Kh, _has_Ah, _has_is_wet
 
     # Land sea mask on elements (1 - sea point, 0 - land point)
-    cdef DTYPE_INT_t[:] _land_sea_mask
-    cdef DTYPE_INT_t[:] _land_sea_mask_nodes
+    cdef DTYPE_INT_t[::1] _land_sea_mask
+    cdef DTYPE_INT_t[::1] _land_sea_mask_nodes
 
     def __init__(self, config, mediator):
         self.config = config

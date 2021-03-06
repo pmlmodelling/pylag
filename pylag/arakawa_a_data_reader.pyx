@@ -87,35 +87,35 @@ cdef class ArakawaADataReader(DataReader):
     cdef DTYPE_INT_t _trim_first_latitude, _trim_last_latitude
 
     # Element connectivity
-    cdef DTYPE_INT_t[:,:] _nv
+    cdef DTYPE_INT_t[:,::1] _nv
     
     # Element adjacency
-    cdef DTYPE_INT_t[:,:] _nbe
+    cdef DTYPE_INT_t[:,::1] _nbe
 
     # Node permutation
-    cdef DTYPE_INT_t[:] _permutation
+    cdef DTYPE_INT_t[::1] _permutation
 
     # Minimum nodal x/y values
     cdef DTYPE_FLOAT_t _xmin
     cdef DTYPE_FLOAT_t _ymin
     
     # Reference depth levels, ignoring any changes in sea surface elevation
-    cdef DTYPE_FLOAT_t[:] _reference_depth_levels
+    cdef DTYPE_FLOAT_t[::1] _reference_depth_levels
 
     # Actual depth levels, accounting for changes in sea surface elevation
-    cdef DTYPE_FLOAT_t[:, :] _depth_levels_last
-    cdef DTYPE_FLOAT_t[:, :] _depth_levels_next
+    cdef DTYPE_FLOAT_t[:, ::1] _depth_levels_last
+    cdef DTYPE_FLOAT_t[:, ::1] _depth_levels_next
 
     # Bathymetry
-    cdef DTYPE_FLOAT_t[:] _h
+    cdef DTYPE_FLOAT_t[::1] _h
 
     # Land sea mask on elements (1 - sea point, 0 - land point)
-    cdef DTYPE_INT_t[:] _land_sea_mask
-    cdef DTYPE_INT_t[:] _land_sea_mask_nodes
+    cdef DTYPE_INT_t[::1] _land_sea_mask
+    cdef DTYPE_INT_t[::1] _land_sea_mask_nodes
 
     # Full depth mask (1 - sea point, 0 - land point)
-    cdef DTYPE_INT_t[:, :] _depth_mask_last
-    cdef DTYPE_INT_t[:, :] _depth_mask_next
+    cdef DTYPE_INT_t[:, ::1] _depth_mask_last
+    cdef DTYPE_INT_t[:, ::1] _depth_mask_next
 
     # Dictionary of dimension names
     cdef object _dimension_names
@@ -130,36 +130,36 @@ cdef class ArakawaADataReader(DataReader):
     cdef object _variable_dimension_indices
 
     # Sea surface elevation
-    cdef DTYPE_FLOAT_t[:] _zeta_last
-    cdef DTYPE_FLOAT_t[:] _zeta_next
+    cdef DTYPE_FLOAT_t[::1] _zeta_last
+    cdef DTYPE_FLOAT_t[::1] _zeta_next
     
     # u/v/w velocity components
-    cdef DTYPE_FLOAT_t[:,:] _u_last
-    cdef DTYPE_FLOAT_t[:,:] _u_next
-    cdef DTYPE_FLOAT_t[:,:] _v_last
-    cdef DTYPE_FLOAT_t[:,:] _v_next
-    cdef DTYPE_FLOAT_t[:,:] _w_last
-    cdef DTYPE_FLOAT_t[:,:] _w_next
+    cdef DTYPE_FLOAT_t[:,::1] _u_last
+    cdef DTYPE_FLOAT_t[:,::1] _u_next
+    cdef DTYPE_FLOAT_t[:,::1] _v_last
+    cdef DTYPE_FLOAT_t[:,::1] _v_next
+    cdef DTYPE_FLOAT_t[:,::1] _w_last
+    cdef DTYPE_FLOAT_t[:,::1] _w_next
     
     # Vertical eddy diffusivities
-    cdef DTYPE_FLOAT_t[:,:] _kh_last
-    cdef DTYPE_FLOAT_t[:,:] _kh_next
+    cdef DTYPE_FLOAT_t[:,::1] _kh_last
+    cdef DTYPE_FLOAT_t[:,::1] _kh_next
 
     # Horizontal eddy viscosities
-    cdef DTYPE_FLOAT_t[:,:] _ah_last
-    cdef DTYPE_FLOAT_t[:,:] _ah_next
+    cdef DTYPE_FLOAT_t[:,::1] _ah_last
+    cdef DTYPE_FLOAT_t[:,::1] _ah_next
 
     # Wet/dry status of elements
-    cdef DTYPE_INT_t[:] _wet_cells_last
-    cdef DTYPE_INT_t[:] _wet_cells_next
+    cdef DTYPE_INT_t[::1] _wet_cells_last
+    cdef DTYPE_INT_t[::1] _wet_cells_next
 
     # Sea water potential temperature
-    cdef DTYPE_FLOAT_t[:,:] _thetao_last
-    cdef DTYPE_FLOAT_t[:,:] _thetao_next
+    cdef DTYPE_FLOAT_t[:,::1] _thetao_last
+    cdef DTYPE_FLOAT_t[:,::1] _thetao_next
 
     # Sea water salinity
-    cdef DTYPE_FLOAT_t[:,:] _so_last
-    cdef DTYPE_FLOAT_t[:,:] _so_next
+    cdef DTYPE_FLOAT_t[:,::1] _so_last
+    cdef DTYPE_FLOAT_t[:,::1] _so_next
 
     # Time direction
     cdef DTYPE_INT_t _time_direction
@@ -1030,8 +1030,8 @@ cdef class ArakawaADataReader(DataReader):
 
         return 1
 
-    cdef DTYPE_FLOAT_t _get_variable(self, const DTYPE_FLOAT_t[:, :] &var_last,
-                                     const DTYPE_FLOAT_t[:, :] &var_next,
+    cdef DTYPE_FLOAT_t _get_variable(self, DTYPE_FLOAT_t[:, ::1] var_last,
+                                     DTYPE_FLOAT_t[:, ::1] var_next,
                                      const DTYPE_FLOAT_t &time, Particle* particle) except FLOAT_ERR:
         """ Returns the value of the variable through linear interpolation
 
@@ -1423,7 +1423,7 @@ cdef class ArakawaADataReader(DataReader):
             if self._trim_last_latitude == 1:
                 var = var[:, :, :-1]
 
-            return var.reshape(var.shape[0], np.prod(var.shape[1:]), order='C')[:, self._permutation]
+            return np.ascontiguousarray(var.reshape(var.shape[0], np.prod(var.shape[1:]), order='C')[:, self._permutation])
         else:
             raise ValueError('Unsupported number of dimensions {}.'.format(n_dimensions))
 
