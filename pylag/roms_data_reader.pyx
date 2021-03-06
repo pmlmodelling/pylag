@@ -1650,16 +1650,24 @@ cdef class ROMSDataReader(DataReader):
         u = np.ma.masked_where(u==0.0, u)
         shp = np.array(u.shape)
         nshp = shp.copy()
-        nshp[-1] = nshp[-1] + 1
+
+        # Define shape. Define index to avoid wraparound.
+        shp_minus_1_idx = len(u.shape) - 1
+        nshp[shp_minus_1_idx] = nshp[shp_minus_1_idx] + 1
         fore = np.product([shp[i] for i in np.arange(0, u.ndim - 1)]).astype(int)
-        nfld = np.ones([fore, nshp[-1]])
-        nfld[:, 1:-1] = 0.5 * \
-            (u.reshape([fore, shp[-1]])[:, 0:-1].filled(np.nan) +
-             u.reshape([fore, shp[-1]])[:, 1:].filled(np.nan))
+        nfld = np.ones([fore, nshp[shp_minus_1_idx]])
+
+        # Compute
+        nfld_minus_1_idx = nfld.shape[1] -1
+        nfld_minus_2_idx = nfld.shape[1] -2
+        nfld_minus_3_idx = nfld.shape[1] -3
+        nfld[:, 1:nfld_minus_1_idx] = 0.5 * \
+            (u.reshape([fore, shp[shp_minus_1_idx]])[:, 0:shp[shp_minus_1_idx] - 1].filled(np.nan) +
+             u.reshape([fore, shp[shp_minus_1_idx]])[:, 1:].filled(np.nan))
         nfld[:, 0] = nfld[:, 1] + (nfld[:, 2] - nfld[:, 3])
-        nfld[:, -1] = nfld[:, -2] + (nfld[:, -2] - nfld[:, -3])
+        nfld[:, nfld_minus_1_idx] = nfld[:, nfld_minus_2_idx] + (nfld[:, nfld_minus_2_idx] - nfld[:, nfld_minus_3_idx])
         u = np.ma.fix_invalid(nfld.reshape(nshp), copy=False, fill_value=1e+37)
-        return u.filled(0.0)
+        return np.ascontiguousarray(u.filled(0.0))
 
     def v_to_rho(self, v):
         """  Put the v field onto the rho field for the c-grid
@@ -1679,16 +1687,25 @@ cdef class ROMSDataReader(DataReader):
         v = np.ma.masked_where(v==0.0, v)
         shp = np.array(v.shape)
         nshp = shp.copy()
-        nshp[-2] = nshp[-2] + 1
+
+        # Define shape. Define indices to avoid wraparound.
+        shp_minus_1_idx = len(v.shape) - 1
+        shp_minus_2_idx = len(v.shape) - 2
+        nshp[shp_minus_2_idx] = nshp[shp_minus_2_idx] + 1
         fore = np.product([shp[i] for i in np.arange(0, v.ndim - 2)]).astype(int)
-        nfld = np.ones([fore, nshp[-2], nshp[-1]])
-        nfld[:, 1:-1, :] = 0.5 * \
-            (v.reshape([fore, shp[-2], shp[-1]])[:, 0:-1, :].filled(np.nan) +
-             v.reshape([fore, shp[-2], shp[-1]])[:, 1:, :].filled(np.nan))
+        nfld = np.ones([fore, nshp[shp_minus_2_idx], nshp[shp_minus_1_idx]])
+
+        # Compute
+        nfld_minus_1_idx = nfld.shape[1] -1
+        nfld_minus_2_idx = nfld.shape[1] -2
+        nfld_minus_3_idx = nfld.shape[1] -3
+        nfld[:, 1:nfld_minus_1_idx, :] = 0.5 * \
+            (v.reshape([fore, shp[shp_minus_2_idx], shp[shp_minus_1_idx]])[:, 0:shp[shp_minus_2_idx] - 1, :].filled(np.nan) +
+             v.reshape([fore, shp[shp_minus_2_idx], shp[shp_minus_1_idx]])[:, 1:, :].filled(np.nan))
         nfld[:, 0, :] = nfld[:, 1, :] + (nfld[:, 2, :] - nfld[:, 3, :])
-        nfld[:, -1, :] = nfld[:, -2, :] + (nfld[:, -2, :] - nfld[:, -3, :])
+        nfld[:, nfld_minus_1_idx, :] = nfld[:, nfld_minus_2_idx, :] + (nfld[:, nfld_minus_2_idx, :] - nfld[:, nfld_minus_3_idx, :])
         v = np.ma.fix_invalid(nfld.reshape(nshp), copy=False, fill_value=1e+37)
-        return v.filled(0.0)
+        return np.ascontiguousarray(v.filled(0.0))
 
     def rotate_vector(self, u, v, angle):
         """ Rotate a vector field by the given angle
@@ -1775,6 +1792,6 @@ cdef class ROMSDataReader(DataReader):
 
         # Apply vertical flip?
         if self._flip_vertical_axis == True:
-            return np.flip(z, axis=0)
+            z = np.flip(z, axis=0)
 
-        return z
+        return np.ascontiguousarray(z)
