@@ -573,8 +573,6 @@ cdef class ROMSDataReader(DataReader):
 
         cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name_grid_rho)
 
-        cdef vector[DTYPE_FLOAT_t] phi = particle.get_phi(self._name_grid_rho)
-
         cdef DTYPE_FLOAT_t x3 = particle.get_x3()
 
         cdef DTYPE_FLOAT_t depth_upper_level_grid_w, depth_lower_level_grid_w

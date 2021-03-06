@@ -54,7 +54,7 @@ namespace particles {
             double get_x3() const;
 
             void set_phi(const std::string& grid, const std::vector<double>& rhs);
-            std::vector<double> get_phi(const std::string& grid) const;
+            const std::vector<double>& get_phi(const std::string& grid) const;
 
             void set_omega_interfaces(const double& rhs);
             double get_omega_interfaces() const;

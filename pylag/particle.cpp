@@ -141,7 +141,7 @@ namespace particles {
         phis[grid] = rhs;
     }
 
-    std::vector<double> Particle::get_phi(const std::string& grid) const {
+    const std::vector<double>& Particle::get_phi(const std::string& grid) const {
         return phis.at(grid);
     }
 

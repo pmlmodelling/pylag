@@ -6,6 +6,7 @@ state and location within a given domain.
 """
 
 from cython.operator cimport dereference as deref
+from cython.operator cimport preincrement as preinc
 
 from libcpp.vector cimport vector
 from libcpp.string cimport string
@@ -129,9 +130,14 @@ cdef class ParticleSmartPtr:
         """
         grid_name = grid.encode() if type(grid) == str else grid
 
+        cdef const vector[DTYPE_FLOAT_t]* _phi = &self._particle.get_phi(grid_name)
+
+        cdef size_t i
+
         phi = []
-        for x in self._particle.get_phi(grid_name):
-            phi.append(x)
+        for i in range(_phi.size()):
+            phi.append(_phi.at(i))
+
         return phi
 
     def set_all_phis(self, phis):
@@ -385,6 +391,8 @@ cdef to_string(Particle* particle):
     """
     cdef vector[string] grids
     cdef vector[int] hosts
+    cdef const vector[DTYPE_FLOAT_t]* _phi
+    cdef size_t i
 
     s_base = "Particle properties \n"\
              "------------------- \n"\
@@ -426,9 +434,9 @@ cdef to_string(Particle* particle):
     for key, value in host_elements.items():
         s_hosts += "Host on grid {} = {} \n".format(key, value)
 
-        phis = particle.get_phi(key.encode())
-        for i, phi in enumerate(phis):
-            s_phis += "Phi {} on grid {} = {} \n".format(i, key, phi)
+        _phi = &particle.get_phi(key)
+        for i in range(_phi.size()):
+            s_phis += "Phi {} on grid {} = {} \n".format(i, key, _phi.at(i))
 
     s = s_base + s_hosts + s_phis
 
