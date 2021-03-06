@@ -154,13 +154,13 @@ if file_type == '.pyx':
     if build_type == 'prod':
         ext_modules = cythonize(extensions, include_path=['include'],
               compiler_directives={'boundscheck': False,
-                  'initializedcheck': False, 'cdivision': True,
+                  'initializedcheck': False, 'wraparound': False,
                   'nonecheck': False, 'embedsignature': True,
                   'language_level': '3str'})
     elif build_type == 'prof':
         ext_modules = cythonize(extensions, include_path=['include'],
               compiler_directives={'profile': True, 'linetrace': True,
-                  'initializedcheck': False, 'cdivision': True,
+                  'initializedcheck': False, 'wraparound': False,
                   'nonecheck': False, 'embedsignature': True,
                   'boundscheck': False, 'embedsignature': True,
                   'language_level': '3str'})
