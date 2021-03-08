@@ -249,9 +249,25 @@ cdef class Grid:
         """
         return self.interpolate_in_space(var_arr, particle.get_ptr())
 
-    # TODO ADD WRAPPER HERE!
     cdef DTYPE_FLOAT_t interpolate_in_space(self, DTYPE_FLOAT_t[::1] var_arr, Particle *particle) except FLOAT_ERR:
         raise NotImplementedError
+
+    def interpolate_in_time_and_space_2D_wrapper(self, var_last_arr, var_next_arr, time_fraction,
+                                                 ParticleSmartPtr particle):
+        """ Python wrapper for interpolate in time and space 2D
+
+        Parameters
+        ----------
+        var_last_arr : numpy array
+            Variable array of points defined at element nodes at the last time index.
+
+        var_next_arr : numpy array
+            Variable array of points defined at element nodes at the next time index.
+
+        particle : pylag.particle_cpp_wrapper.ParticleSmartPtr
+            The particle at its current position.
+        """
+        return self.interpolate_in_time_and_space_2D(var_last_arr, var_next_arr, time_fraction, particle.get_ptr())
 
     cdef DTYPE_FLOAT_t interpolate_in_time_and_space_2D(self, DTYPE_FLOAT_t[::1] var_last_arr,
                                                         DTYPE_FLOAT_t[::1] var_next_arr,
