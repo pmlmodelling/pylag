@@ -53,8 +53,8 @@ cpdef inline DTYPE_FLOAT_t linear_interp(const DTYPE_FLOAT_t &fraction,
         const DTYPE_FLOAT_t &val_last, const DTYPE_FLOAT_t &val_next):
     return (1.0 - fraction) * val_last + fraction * val_next
 
-cdef inline DTYPE_FLOAT_t interpolate_within_element(DTYPE_FLOAT_t var[3],
-        DTYPE_FLOAT_t phi[3]):
+cdef inline DTYPE_FLOAT_t interpolate_within_element(const DTYPE_FLOAT_t var[3],
+        const DTYPE_FLOAT_t phi[3]):
     return var[0] * phi[0] +  var[1] * phi[1] + var[2] * phi[2]
 
 cpdef inline DTYPE_FLOAT_t get_euclidian_distance(const DTYPE_FLOAT_t &x1,

@@ -118,8 +118,6 @@ cdef class Grid:
                                   ParticleSmartPtr particle_new):
         """ Python wrapper for finding the point no the boundary the particle intersected
 
-        This can be used when imposing horizontal boundary conditions.
-
         Parameters
         ----------
         particle_old : pylag.particle_cpp_wrapper.ParticleSmartPtr
@@ -128,32 +126,39 @@ cdef class Grid:
         particle_new : pylag.particle_cpp_wrapper.ParticleSmartPtr
             The particle at its new position.
 
-        start_point : vector[float]
-            Start coordinates of the side the particle crossed.
-
-        end_point : vector[float]
-            End coordinates of the side the particle crossed.
-
-        intersection : vector[float]
-            Coordinates of the intersection point.
-
         Returns
         -------
+        start_point : NumPy array
+            Start coordinates of the side the particle crossed.
+
+        end_point : NumPy array
+            End coordinates of the side the particle crossed.
+
+        intersection : NumPy array
+            Coordinates of the intersection point.
+
         """
-        cdef vector[DTYPE_FLOAT_t] start_point = vector[DTYPE_FLOAT_t](2, -999.)
-        cdef vector[DTYPE_FLOAT_t] end_point = vector[DTYPE_FLOAT_t](2, -999.)
-        cdef vector[DTYPE_FLOAT_t] intersection = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef DTYPE_FLOAT_t start_point_c[2]
+        cdef DTYPE_FLOAT_t end_point_c[2]
+        cdef DTYPE_FLOAT_t intersection_c[2]
 
-        self.get_boundary_intersection(particle_old.get_ptr(), particle_new.get_ptr(), start_point, end_point, intersection)
+        self.get_boundary_intersection(particle_old.get_ptr(), particle_new.get_ptr(), start_point_c,
+                                       end_point_c, intersection_c)
 
-        return start_point, end_point, intersection
+        start_point, end_point, intersection = [], [], []
+        for i in range(2):
+            start_point.append(start_point_c[i])
+            end_point.append(end_point_c[i])
+            intersection.append(intersection_c[i])
+
+        return np.array(start_point), np.array(end_point), np.array(intersection)
 
     cdef get_boundary_intersection(self,
                                    Particle *particle_old,
                                    Particle *particle_new,
-                                   vector[DTYPE_FLOAT_t] &start_point,
-                                   vector[DTYPE_FLOAT_t] &end_point,
-                                   vector[DTYPE_FLOAT_t] &intersection):
+                                   DTYPE_FLOAT_t start_point[2],
+                                   DTYPE_FLOAT_t end_point[2],
+                                   DTYPE_FLOAT_t intersection[2]):
         raise NotImplementedError
 
     def set_default_location_wrapper(self, ParticleSmartPtr particle):
@@ -213,19 +218,18 @@ cdef class Grid:
         dphi_dx, dphi_dy : NDArray
              Phi gradients in x and y.
         """
-        cdef vector[DTYPE_FLOAT_t] dphi_dx = vector[DTYPE_FLOAT_t](3, -999.)
-        cdef vector[DTYPE_FLOAT_t] dphi_dy = vector[DTYPE_FLOAT_t](3, -999.)
-        cdef DTYPE_FLOAT_t _dphi_dx[3]
-        cdef DTYPE_FLOAT_t _dphi_dy[3]
+        cdef DTYPE_FLOAT_t dphi_dx_c[3]
+        cdef DTYPE_FLOAT_t dphi_dy_c[3]
         cdef DTYPE_INT_t i
 
-        self.get_grad_phi(host, _dphi_dx, _dphi_dy)
+        self.get_grad_phi(host, dphi_dx_c, dphi_dy_c)
 
+        dphi_dx, dphi_dy = [], []
         for i in range(3):
-            dphi_dx[i] = _dphi_dx[i]
-            dphi_dy[i] = _dphi_dy[i]
+            dphi_dx.append(dphi_dx_c[i])
+            dphi_dy.append(dphi_dy_c[i])
 
-        return dphi_dx, dphi_dy
+        return np.array(dphi_dx), np.array(dphi_dy)
 
     cdef void get_grad_phi(self, DTYPE_INT_t host,
                            DTYPE_FLOAT_t dphi_dx[3],
@@ -245,6 +249,7 @@ cdef class Grid:
         """
         return self.interpolate_in_space(var_arr, particle.get_ptr())
 
+    # TODO ADD WRAPPER HERE!
     cdef DTYPE_FLOAT_t interpolate_in_space(self, DTYPE_FLOAT_t[:] var_arr, Particle *particle) except FLOAT_ERR:
         raise NotImplementedError
 
@@ -417,7 +422,7 @@ cdef class UnstructuredCartesianGrid(Grid):
             Integer flag that indicates whether or not the seach was successful.
         """
         # Intermediate arrays/variables
-        cdef vector[DTYPE_FLOAT_t] phi = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef vector[DTYPE_FLOAT_t] phi
         cdef DTYPE_FLOAT_t phi_test
 
         cdef bint host_found
@@ -526,33 +531,34 @@ cdef class UnstructuredCartesianGrid(Grid):
         cdef DTYPE_INT_t flag, host
 
         # Intermediate arrays/variables
-        cdef vector[DTYPE_FLOAT_t] x_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-        cdef vector[DTYPE_FLOAT_t] y_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef DTYPE_FLOAT_t x_tri[3]
+        cdef DTYPE_FLOAT_t y_tri[3]
 
         # 2D position vectors for the end points of the element's side
-        cdef vector[DTYPE_FLOAT_t] x1 = vector[DTYPE_FLOAT_t](2, -999.)
-        cdef vector[DTYPE_FLOAT_t] x2 = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef DTYPE_FLOAT_t x1[2]
+        cdef DTYPE_FLOAT_t x2[2]
 
         # 2D position vectors for the particle's previous and new position
-        cdef vector[DTYPE_FLOAT_t] x3 = vector[DTYPE_FLOAT_t](2, -999.)
-        cdef vector[DTYPE_FLOAT_t] x4 = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef DTYPE_FLOAT_t x3[2]
+        cdef DTYPE_FLOAT_t x4[2]
 
         # 2D position vector for the intersection point
-        cdef vector[DTYPE_FLOAT_t] xi = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef DTYPE_FLOAT_t xi[2]
 
         # Intermediate arrays
-        cdef vector[DTYPE_INT_t] x1_indices = vector[DTYPE_INT_t](3, -999)
-        cdef vector[DTYPE_INT_t] x2_indices = vector[DTYPE_INT_t](3, -999)
-        cdef vector[DTYPE_INT_t] nbe_indices = vector[DTYPE_INT_t](3, -999)
-
-        x1_indices = [0,1,2]
-        x2_indices = [1,2,0]
-        nbe_indices = [2,0,1]
+        cdef DTYPE_INT_t x1_indices[3]
+        cdef DTYPE_INT_t x2_indices[3]
+        cdef DTYPE_INT_t nbe_indices[3]
 
         # Array indices
         cdef int x1_idx
         cdef int x2_idx
         cdef int nbe_idx
+
+        # Initialise arrays
+        x1_indices[:] = [0,1,2]
+        x2_indices[:] = [1,2,0]
+        nbe_indices[:] = [2,0,1]
 
         # Construct arrays to hold the coordinates of the particle's previous
         # position vector and its new position vector
@@ -651,7 +657,7 @@ cdef class UnstructuredCartesianGrid(Grid):
             Integer flag that indicates whether or not the seach was successful.
         """
         # Intermediate arrays/variables
-        cdef vector[DTYPE_FLOAT_t] phi = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef vector[DTYPE_FLOAT_t] phi
         cdef DTYPE_FLOAT_t phi_test
 
         cdef bint host_found
@@ -685,9 +691,9 @@ cdef class UnstructuredCartesianGrid(Grid):
     cdef get_boundary_intersection(self,
                                    Particle *particle_old,
                                    Particle *particle_new,
-                                   vector[DTYPE_FLOAT_t] &start_point,
-                                   vector[DTYPE_FLOAT_t] &end_point,
-                                   vector[DTYPE_FLOAT_t] &intersection):
+                                   DTYPE_FLOAT_t start_point[2],
+                                   DTYPE_FLOAT_t end_point[2],
+                                   DTYPE_FLOAT_t intersection[2]):
         """ Find the boundary intersection point
 
         This function is primarily intended to assist in the application of
@@ -719,24 +725,24 @@ cdef class UnstructuredCartesianGrid(Grid):
         cdef int vertex # Vertex identifier
 
         # Intermediate arrays/variables
-        cdef vector[DTYPE_FLOAT_t] x_tri = vector[DTYPE_FLOAT_t](3, -999.)
-        cdef vector[DTYPE_FLOAT_t] y_tri = vector[DTYPE_FLOAT_t](3, -999.)
+        cdef DTYPE_FLOAT_t x_tri[3]
+        cdef DTYPE_FLOAT_t y_tri[3]
 
         # 2D position vectors for the end points of the element's side
-        cdef vector[DTYPE_FLOAT_t] x1 = vector[DTYPE_FLOAT_t](2, -999.)
-        cdef vector[DTYPE_FLOAT_t] x2 = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef DTYPE_FLOAT_t x1[2]
+        cdef DTYPE_FLOAT_t x2[2]
 
         # 2D position vectors for the particle's previous and new position
-        cdef vector[DTYPE_FLOAT_t] x3 = vector[DTYPE_FLOAT_t](2, -999.)
-        cdef vector[DTYPE_FLOAT_t] x4 = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef DTYPE_FLOAT_t x3[2]
+        cdef DTYPE_FLOAT_t x4[2]
 
         # 2D position vector for the intersection point
-        cdef vector[DTYPE_FLOAT_t] xi = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef DTYPE_FLOAT_t xi[2]
 
         # Intermediate arrays
-        cdef vector[DTYPE_INT_t] x1_indices = vector[DTYPE_INT_t](3, -999)
-        cdef vector[DTYPE_INT_t] x2_indices = vector[DTYPE_INT_t](3, -999)
-        cdef vector[DTYPE_INT_t] nbe_indices = vector[DTYPE_INT_t](3, -999)
+        cdef DTYPE_INT_t x1_indices[3]
+        cdef DTYPE_INT_t x2_indices[3]
+        cdef DTYPE_INT_t nbe_indices[3]
 
         # Array indices
         cdef int x1_idx
@@ -747,9 +753,10 @@ cdef class UnstructuredCartesianGrid(Grid):
         cdef DTYPE_INT_t n_land_boundaries
         cdef DTYPE_INT_t nbe
 
-        x1_indices = [0,1,2]
-        x2_indices = [1,2,0]
-        nbe_indices = [2,0,1]
+        # Initialise arrays
+        x1_indices[:] = [0,1,2]
+        x2_indices[:] = [1,2,0]
+        nbe_indices[:] = [2,0,1]
 
         # Construct arrays to hold the coordinates of the particle's previous
         # position vector and its new position vector
@@ -820,7 +827,7 @@ cdef class UnstructuredCartesianGrid(Grid):
         particle: *Particle
             Pointer to a Particle struct
         """
-        cdef vector[DTYPE_FLOAT_t] phi = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef vector[DTYPE_FLOAT_t] phi
 
         cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self.name)
 
@@ -891,8 +898,8 @@ cdef class UnstructuredCartesianGrid(Grid):
         cdef int vertex # Vertex identifier
 
         # Intermediate arrays
-        cdef vector[DTYPE_FLOAT_t] x_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-        cdef vector[DTYPE_FLOAT_t] y_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef DTYPE_FLOAT_t x_tri[3]
+        cdef DTYPE_FLOAT_t y_tri[3]
 
         cdef vector[DTYPE_FLOAT_t] phi = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
 
@@ -1017,7 +1024,7 @@ cdef class UnstructuredCartesianGrid(Grid):
         # Host element
         cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self.name)
 
-        cdef DTYPE_INT_t i
+        cdef int i
 
         for i in xrange(N_VERTICES):
             vertex = self.nv[i, host_element]
@@ -1425,8 +1432,8 @@ cdef class UnstructuredGeographicGrid(Grid):
             Integer flag that indicates whether or not the seach was successful.
         """
         # Intermediate arrays/variables
-        cdef vector[DTYPE_FLOAT_t] phi = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-        cdef vector[DTYPE_FLOAT_t] s = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef vector[DTYPE_FLOAT_t] phi
+        cdef DTYPE_FLOAT_t s[3]
         cdef DTYPE_FLOAT_t s_test
 
         cdef bint host_found
@@ -1447,7 +1454,7 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         while True:
             # Tetrahedral coordinates
-            s = self.get_tetrahedral_coords(particle.get_x1(), particle.get_x2(), guess)
+            self.get_tetrahedral_coords(particle.get_x1(), particle.get_x2(), guess, s)
 
             # Check to see if the particle is in the current element
             s_test = float_min(float_min(s[0], s[1]), s[2])
@@ -1536,31 +1543,38 @@ cdef class UnstructuredGeographicGrid(Grid):
         cdef DTYPE_INT_t flag, host
 
         # Intermediate arrays/variables
-        cdef vector[DTYPE_FLOAT_t] x_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-        cdef vector[DTYPE_FLOAT_t] y_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef DTYPE_FLOAT_t x_tri[3]
+        cdef DTYPE_FLOAT_t y_tri[3]
 
         # 2D position vectors for the end points of the element's side
-        cdef vector[DTYPE_FLOAT_t] x1 = vector[DTYPE_FLOAT_t](2, -999.)
-        cdef vector[DTYPE_FLOAT_t] x2 = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef DTYPE_FLOAT_t x1[2]
+        cdef DTYPE_FLOAT_t x2[2]
 
         # 2D position vectors for the particle's previous and new position
-        cdef vector[DTYPE_FLOAT_t] x3 = vector[DTYPE_FLOAT_t](2, -999.)
-        cdef vector[DTYPE_FLOAT_t] x4 = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef DTYPE_FLOAT_t x3[2]
+        cdef DTYPE_FLOAT_t x4[2]
 
         # Containers for tetrahedral coordinates
-        cdef vector[DTYPE_FLOAT_t] phi = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-        cdef vector[DTYPE_FLOAT_t] s = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef DTYPE_FLOAT_t s[3]
         cdef DTYPE_FLOAT_t s_test
 
+        # Normalalised tetrahedral coordinates
+        cdef vector[DTYPE_FLOAT_t] phi
+
         # Intermediate arrays
-        cdef DTYPE_INT_t[3] x1_indices = [0, 1, 2]
-        cdef DTYPE_INT_t[3] x2_indices = [1, 2, 0]
-        cdef DTYPE_INT_t[3] nbe_indices = [2, 0, 1]
+        cdef DTYPE_INT_t x1_indices[3]
+        cdef DTYPE_INT_t x2_indices[3]
+        cdef DTYPE_INT_t nbe_indices[3]
 
         # Array indices
         cdef int x1_idx
         cdef int x2_idx
         cdef int nbe_idx
+
+        # Initialise arrays
+        x1_indices[:] = [0,1,2]
+        x2_indices[:] = [1,2,0]
+        nbe_indices[:] = [2,0,1]
 
         # Construct arrays to hold the coordinates of the particle's previous
         # position vector and its new position vector
@@ -1636,7 +1650,7 @@ cdef class UnstructuredGeographicGrid(Grid):
             if current_elem == elem:
                 # The algorithm indicates the particle has not exited the current element; we
                 # check the tetrahedral coordinates to see if they are indeed all +ve.
-                s = self.get_tetrahedral_coords(particle_new.get_x1(), particle_new.get_x2(), current_elem)
+                self.get_tetrahedral_coords(particle_new.get_x1(), particle_new.get_x2(), current_elem, s)
                 s_test = float_min(float_min(s[0], s[1]), s[2])
                 if s_test >= 0.0:
                     # Methods agree. Flag particle as being in the domain.
@@ -1669,7 +1683,7 @@ cdef class UnstructuredGeographicGrid(Grid):
         """
         # Intermediate arrays/variables
         cdef vector[DTYPE_FLOAT_t] phi = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-        cdef vector[DTYPE_FLOAT_t] s = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef DTYPE_FLOAT_t s[3]
         cdef DTYPE_FLOAT_t s_test
 
         cdef bint host_found
@@ -1682,7 +1696,7 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         for guess in xrange(self.n_elems):
             # Barycentric coordinates
-            s = self.get_tetrahedral_coords(particle.get_x1(), particle.get_x2(), guess)
+            self.get_tetrahedral_coords(particle.get_x1(), particle.get_x2(), guess, s)
 
             # Check to see if the particle is in the current element
             s_test = float_min(float_min(s[0], s[1]), s[2])
@@ -1705,9 +1719,9 @@ cdef class UnstructuredGeographicGrid(Grid):
     cdef get_boundary_intersection(self,
                                    Particle *particle_old,
                                    Particle *particle_new,
-                                   vector[DTYPE_FLOAT_t] &start_point,
-                                   vector[DTYPE_FLOAT_t] &end_point,
-                                   vector[DTYPE_FLOAT_t] &intersection):
+                                   DTYPE_FLOAT_t start_point[2],
+                                   DTYPE_FLOAT_t end_point[2],
+                                   DTYPE_FLOAT_t intersection[2]):
         """ Find the boundary intersection point
 
         This function is primarily intended to assist in the application of
@@ -1723,13 +1737,13 @@ cdef class UnstructuredGeographicGrid(Grid):
         particle_new: *Particle
             The particle at its new position.
 
-        start_point : vector[float]
+        start_point : C array, [float, float]
             Start coordinates of the side the particle crossed.
 
-        end_point : vector[float]
+        end_point : C array, [float, float]
             End coordinates of the side the particle crossed.
 
-        intersection : vector[float]
+        intersection : C array [float, float]
             Coordinates of the intersection point.
 
         Returns
@@ -1739,24 +1753,24 @@ cdef class UnstructuredGeographicGrid(Grid):
         cdef int vertex # Vertex identifier
 
         # Intermediate arrays/variables
-        cdef vector[DTYPE_FLOAT_t] x_tri = vector[DTYPE_FLOAT_t](3, -999.)
-        cdef vector[DTYPE_FLOAT_t] y_tri = vector[DTYPE_FLOAT_t](3, -999.)
+        cdef DTYPE_FLOAT_t x_tri[3]
+        cdef DTYPE_FLOAT_t y_tri[3]
 
         # 2D position vectors for the end points of the element's side
-        cdef vector[DTYPE_FLOAT_t] x1 = vector[DTYPE_FLOAT_t](2, -999.)
-        cdef vector[DTYPE_FLOAT_t] x2 = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef DTYPE_FLOAT_t x1[2]
+        cdef DTYPE_FLOAT_t x2[2]
 
         # 2D position vectors for the particle's previous and new position
-        cdef vector[DTYPE_FLOAT_t] x3 = vector[DTYPE_FLOAT_t](2, -999.)
-        cdef vector[DTYPE_FLOAT_t] x4 = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef DTYPE_FLOAT_t x3[2]
+        cdef DTYPE_FLOAT_t x4[2]
 
         # 2D position vector for the intersection point
-        cdef vector[DTYPE_FLOAT_t] xi = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef DTYPE_FLOAT_t xi[2]
 
         # Intermediate arrays
-        cdef DTYPE_INT_t[3] x1_indices = [0, 1, 2]
-        cdef DTYPE_INT_t[3] x2_indices = [1, 2, 0]
-        cdef DTYPE_INT_t[3] nbe_indices = [2, 0, 1]
+        cdef DTYPE_INT_t x1_indices[3]
+        cdef DTYPE_INT_t x2_indices[3]
+        cdef DTYPE_INT_t nbe_indices[3]
 
         # Array indices
         cdef int x1_idx
@@ -1766,6 +1780,11 @@ cdef class UnstructuredGeographicGrid(Grid):
         # Variables for computing the number of land boundaries
         cdef DTYPE_INT_t n_land_boundaries
         cdef DTYPE_INT_t nbe
+
+        # Initialise arrays
+        x1_indices[:] = [0,1,2]
+        x2_indices[:] = [1,2,0]
+        nbe_indices[:] = [2,0,1]
 
         # Construct arrays to hold the coordinates of the particle's previous
         # position vector and its new position vector
@@ -1829,7 +1848,7 @@ cdef class UnstructuredGeographicGrid(Grid):
         particle: *Particle
             Pointer to a Particle struct
         """
-        cdef vector[DTYPE_FLOAT_t] phi = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef vector[DTYPE_FLOAT_t] phi
 
         cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self.name)
 
@@ -1875,18 +1894,18 @@ cdef class UnstructuredGeographicGrid(Grid):
         phi : vector[FLOAT]
             Three vector giving a point's normalised tetrahedral coordinates within a spherical triangle.
         """
-        cdef vector[DTYPE_FLOAT_t] s = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef DTYPE_FLOAT_t s[3]
 
-        s = self.get_tetrahedral_coords(x1, x2, host)
+        self.get_tetrahedral_coords(x1, x2, host, s)
 
         return self.get_normalised_tetrahedral_coords(s)
 
-    cpdef vector[DTYPE_FLOAT_t] get_normalised_tetrahedral_coords(self, const vector[DTYPE_FLOAT_t] &s):
+    cdef vector[DTYPE_FLOAT_t] get_normalised_tetrahedral_coords(self, const DTYPE_FLOAT_t s[3]):
         """ Get normalised tetrahedral coordinates given the tetrahedral coordinates
 
         Parameters
         ----------
-        s : vector[FLOAT]
+        s : C array, [FLOAT]
             Three vector giving a point's tetrahedral coordinates within a spherical triangle.
 
         Returns
@@ -1905,9 +1924,8 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         return phi
 
-    cpdef vector[DTYPE_FLOAT_t] get_tetrahedral_coords(self, const DTYPE_FLOAT_t &x1,
-                                                       const DTYPE_FLOAT_t &x2,
-                                                       const DTYPE_INT_t &host):
+    cdef get_tetrahedral_coords(self, const DTYPE_FLOAT_t &x1, const DTYPE_FLOAT_t &x2, const DTYPE_INT_t &host,
+                                DTYPE_FLOAT_t s[3]):
         """ Get tetrahedral coordinates given a point's position and the host element
 
         The method uses the approach described by Lawson (1984).
@@ -1923,9 +1941,7 @@ cdef class UnstructuredGeographicGrid(Grid):
         host : int
             Host element.
 
-        Returns
-        -------
-        s : vector[float]
+        s : C array, [float, float, float]
             Vector container in which the tetrahedral coordinates are saved.
 
         References
@@ -1941,16 +1957,13 @@ cdef class UnstructuredGeographicGrid(Grid):
         cdef DTYPE_INT_t vertex_0, vertex_1, vertex_2
 
         # Element vertex coordinates in cartesian coordinates
-        cdef vector[DTYPE_FLOAT_t] p = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-        cdef vector[DTYPE_FLOAT_t] p0 = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-        cdef vector[DTYPE_FLOAT_t] p1 = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-        cdef vector[DTYPE_FLOAT_t] p2 = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef DTYPE_FLOAT_t p[3]
+        cdef DTYPE_FLOAT_t p0[3]
+        cdef DTYPE_FLOAT_t p1[3]
+        cdef DTYPE_FLOAT_t p2[3]
 
         # x1 and x2 in radians
         cdef DTYPE_FLOAT_t x1_rad, x2_rad
-
-        # Tetrahedral coords
-        cdef vector[DTYPE_FLOAT_t] s = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
 
         # Extract nodal cartesian coordinates
         vertex_0 = self.nv[0, host]
@@ -1962,14 +1975,12 @@ cdef class UnstructuredGeographicGrid(Grid):
             p2[i] = self.points_nodes[vertex_2, i]
 
         # For the supplied point only, convert to cartesian coordinates on the unit sphere
-        p = geographic_to_cartesian_coords(x1, x2, 1.0)
+        geographic_to_cartesian_coords(x1, x2, 1.0, p)
 
         # Compute tetrahedral coordinates (NB clockwise point ordering)
         s[0] = det_third_order(p, p2, p1)
         s[1] = det_third_order(p2, p, p0)
         s[2] = det_third_order(p1, p0, p)
-
-        return s
 
     cdef void get_grad_phi(self, DTYPE_INT_t host,
                            DTYPE_FLOAT_t dphi_dx[3],
@@ -2015,9 +2026,23 @@ cdef class UnstructuredGeographicGrid(Grid):
         cdef int vertex # Vertex identifier
 
         # Intermediate arrays
-        cdef vector[DTYPE_FLOAT_t] x_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
-        cdef vector[DTYPE_FLOAT_t] y_tri = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
+        cdef DTYPE_FLOAT_t x_tri[3]
+        cdef DTYPE_FLOAT_t y_tri[3]
         cdef DTYPE_FLOAT_t xc, yc
+
+        # Element cartesian coordinates
+        cdef DTYPE_FLOAT_t pc[3]
+        cdef DTYPE_FLOAT_t p0[3]
+        cdef DTYPE_FLOAT_t p1[3]
+        cdef DTYPE_FLOAT_t p2[3]
+
+        # Rotated element cartesian coordinates
+        cdef DTYPE_FLOAT_t pc_rot[3]
+        cdef DTYPE_FLOAT_t p0_rot[3]
+        cdef DTYPE_FLOAT_t p1_rot[3]
+        cdef DTYPE_FLOAT_t p2_rot[3]
+
+        cdef DTYPE_FLOAT_t a1, a2, a3, a4, twice_signed_element_area
 
         # Return cached values if they have been pre-computed
         if self.barycentric_gradients_have_been_cached[host] == 1:
@@ -2027,7 +2052,7 @@ cdef class UnstructuredGeographicGrid(Grid):
             return
 
         # Element vertices
-        for i in xrange(N_VERTICES):
+        for i in xrange(3):
             vertex = self.nv[i,host]
             x_tri[i] = self.lon_nodes[vertex]
             y_tri[i] = self.lat_nodes[vertex]
@@ -2037,35 +2062,35 @@ cdef class UnstructuredGeographicGrid(Grid):
         yc = self.lat_centres[host]
 
         # Convert to cartesian coordinates
-        pc = geographic_to_cartesian_coords(xc, yc, earth_radius)
-        p0 = geographic_to_cartesian_coords(x_tri[0], y_tri[0], earth_radius)
-        p1 = geographic_to_cartesian_coords(x_tri[1], y_tri[1], earth_radius)
-        p2 = geographic_to_cartesian_coords(x_tri[2], y_tri[2], earth_radius)
+        geographic_to_cartesian_coords(xc, yc, earth_radius, pc)
+        geographic_to_cartesian_coords(x_tri[0], y_tri[0], earth_radius, p0)
+        geographic_to_cartesian_coords(x_tri[1], y_tri[1], earth_radius, p1)
+        geographic_to_cartesian_coords(x_tri[2], y_tri[2], earth_radius, p2)
 
         # Rotate axes to get the desired orientation as described above
-        pc = rotate_axes(pc, xc, yc)
-        p0 = rotate_axes(p0, xc, yc)
-        p1 = rotate_axes(p1, xc, yc)
-        p2 = rotate_axes(p2, xc, yc)
+        rotate_axes(pc, xc, yc, pc_rot)
+        rotate_axes(p0, xc, yc, p0_rot)
+        rotate_axes(p1, xc, yc, p1_rot)
+        rotate_axes(p2, xc, yc, p2_rot)
 
         # Now calculate gradients within the projected planar triangle
 
         # Intermediate terms
-        a1 = p1[0] - p0[0]
-        a2 = p2[1] - p0[1]
-        a3 = p1[1] - p0[1]
-        a4 = p2[0] - p0[0]
+        a1 = p1_rot[0] - p0_rot[0]
+        a2 = p2_rot[1] - p0_rot[1]
+        a3 = p1_rot[1] - p0_rot[1]
+        a4 = p2_rot[0] - p0_rot[0]
 
         # Evaluate the vector cross product
         twice_signed_element_area = a1 * a2 - a3 * a4
 
-        dphi_dx[0] = (p1[1] - p2[1])/twice_signed_element_area
-        dphi_dx[1] = (p2[1] - p0[1])/twice_signed_element_area
-        dphi_dx[2] = (p0[1] - p1[1])/twice_signed_element_area
+        dphi_dx[0] = (p1_rot[1] - p2_rot[1])/twice_signed_element_area
+        dphi_dx[1] = (p2_rot[1] - p0_rot[1])/twice_signed_element_area
+        dphi_dx[2] = (p0_rot[1] - p1_rot[1])/twice_signed_element_area
 
-        dphi_dy[0] = (p2[0] - p1[0])/twice_signed_element_area
-        dphi_dy[1] = (p0[0] - p2[0])/twice_signed_element_area
-        dphi_dy[2] = (p1[0] - p0[0])/twice_signed_element_area
+        dphi_dy[0] = (p2_rot[0] - p1_rot[0])/twice_signed_element_area
+        dphi_dy[1] = (p0_rot[0] - p2_rot[0])/twice_signed_element_area
+        dphi_dy[2] = (p1_rot[0] - p0_rot[0])/twice_signed_element_area
 
         # Cache values
         self.barycentric_gradients_have_been_cached[host] = 1
@@ -2262,13 +2287,15 @@ cdef class UnstructuredGeographicGrid(Grid):
                                                                   DTYPE_FLOAT_t phi[3]):
 
         cdef DTYPE_FLOAT_t phi_new[3]
-        cdef DTYPE_FLOAT_t phi_test
-        cdef DTYPE_INT_t index
+        cdef DTYPE_FLOAT_t phi_test = 0.0
+        cdef DTYPE_INT_t index = -999
         cdef DTYPE_INT_t node
         cdef DTYPE_INT_t i
 
+        phi_new[:] = [0.0,0.0,0.0]
         phi_test = 0.0
         index = -999
+
         for i in range(N_VERTICES):
             node = self.nv[i, host]
             if self.land_sea_mask_nodes[node] == 0:

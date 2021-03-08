@@ -502,12 +502,12 @@ cdef class ROMSDataReader(DataReader):
     cdef get_boundary_intersection(self,
                                    Particle *particle_old,
                                    Particle *particle_new,
-                                   vector[DTYPE_FLOAT_t] &start_point,
-                                   vector[DTYPE_FLOAT_t] &end_point,
-                                   vector[DTYPE_FLOAT_t] &intersection):
+                                   DTYPE_FLOAT_t start_point[2],
+                                   DTYPE_FLOAT_t end_point[2],
+                                   DTYPE_FLOAT_t intersection[2]):
         """ Find the boundary intersection point
 
-        Applied to the rho-grid only.
+        This function is a wrapper for the same function implemented in UnstructuredGrid.
 
         Parameters
         ----------
@@ -517,13 +517,13 @@ cdef class ROMSDataReader(DataReader):
         particle_new: *Particle
             The particle at its new position.
 
-        start_point : vector[float]
+        start_point : C array, float
             Start coordinates of the side the particle crossed.
 
-        end_point : vector[float]
+        end_point : C array, float
             End coordinates of the side the particle crossed.
 
-        intersection : vector[float]
+        intersection : C array, float
             Coordinates of the intersection point.
 
         Returns

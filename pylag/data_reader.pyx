@@ -4,6 +4,8 @@ Abstract base class for PyLag DataReaders.
 
 include "constants.pxi"
 
+import numpy as np
+
 from pylag.particle_cpp_wrapper cimport ParticleSmartPtr
 
 cdef class DataReader:
@@ -140,32 +142,38 @@ cdef class DataReader:
         particle_new : pylag.particle_cpp_wrapper.ParticleSmartPtr
             The particle at its new position.
 
-        start_point : vector[float]
-            Start coordinates of the side the particle crossed.
-
-        end_point : vector[float]
-            End coordinates of the side the particle crossed.
-
-        intersection : vector[float]
-            Coordinates of the intersection point.
-
         Returns
         -------
+        start_point : NumPy array
+            Start coordinates of the side the particle crossed.
+
+        end_point : NumPy array
+            End coordinates of the side the particle crossed.
+
+        intersection : NumPy array
+            Coordinates of the intersection point.
+
         """
-        cdef vector[DTYPE_FLOAT_t] start_point = vector[DTYPE_FLOAT_t](2, -999.)
-        cdef vector[DTYPE_FLOAT_t] end_point = vector[DTYPE_FLOAT_t](2, -999.)
-        cdef vector[DTYPE_FLOAT_t] intersection = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef DTYPE_FLOAT_t start_point_c[2]
+        cdef DTYPE_FLOAT_t end_point_c[2]
+        cdef DTYPE_FLOAT_t intersection_c[2]
 
-        self.get_boundary_intersection(particle_old.get_ptr(), particle_new.get_ptr(), start_point, end_point, intersection)
+        self.get_boundary_intersection(particle_old.get_ptr(), particle_new.get_ptr(), start_point_c, end_point_c, intersection_c)
 
-        return start_point, end_point, intersection
+        start_point, end_point, intersection = [], [], []
+        for i in range(2):
+            start_point.append(start_point_c[i])
+            end_point.append(end_point_c[i])
+            intersection.append(intersection_c[i])
+
+        return np.array(start_point), np.array(end_point), np.array(intersection)
 
     cdef get_boundary_intersection(self,
                                    Particle *particle_old,
                                    Particle *particle_new,
-                                   vector[DTYPE_FLOAT_t] &start_point,
-                                   vector[DTYPE_FLOAT_t] &end_point,
-                                   vector[DTYPE_FLOAT_t] &intersection):
+                                   DTYPE_FLOAT_t start_point[2],
+                                   DTYPE_FLOAT_t end_point[2],
+                                   DTYPE_FLOAT_t intersection[2]):
         raise NotImplementedError
 
     def set_default_location_wrapper(self, ParticleSmartPtr particle):

@@ -20,7 +20,7 @@ except ImportError:
 
 # PyLag cimports
 from pylag.particle_cpp_wrapper cimport ParticleSmartPtr
-from pylag.math cimport inner_product_two as inner_product
+from pylag.math cimport inner_product_two
 from pylag.math cimport rotate_axes, reverse_rotate_axes
 from pylag.math cimport cartesian_to_geographic_coords
 from pylag.math cimport geographic_to_cartesian_coords
@@ -117,27 +117,27 @@ cdef class RefHorizCartesianBoundaryConditionCalculator(HorizBoundaryConditionCa
         returned and the particle's position is not updated.
         """
         # Vectors describing the intersection
-        cdef vector[DTYPE_FLOAT_t] start_point = vector[DTYPE_FLOAT_t](2, -999.)
-        cdef vector[DTYPE_FLOAT_t] end_point = vector[DTYPE_FLOAT_t](2, -999.)
-        cdef vector[DTYPE_FLOAT_t] intersection = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef DTYPE_FLOAT_t start_point[2]
+        cdef DTYPE_FLOAT_t end_point[2]
+        cdef DTYPE_FLOAT_t intersection[2]
 
         # 2D position vector for the reflected position
-        cdef vector[DTYPE_FLOAT_t] x4_prime = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef DTYPE_FLOAT_t x4_prime[2]
 
         # 2D position and directon vectors used for locating lost particles
-        cdef vector[DTYPE_FLOAT_t] x_test = vector[DTYPE_FLOAT_t](2, -999.)
-        cdef vector[DTYPE_FLOAT_t] r_test = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef DTYPE_FLOAT_t x_test[2]
+        cdef DTYPE_FLOAT_t r_test[2]
         
         # 2D directoion vector normal to the element side, pointing into the
         # element
-        cdef vector[DTYPE_FLOAT_t] n = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef DTYPE_FLOAT_t n[2]
         
         # 2D direction vector pointing from xi to the new position
-        cdef vector[DTYPE_FLOAT_t] d = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef DTYPE_FLOAT_t d[2]
         
         # 2D direction vector pointing from xi to x4', where x4' is the
         # reflected point that we ultimately trying to find
-        cdef vector[DTYPE_FLOAT_t] r = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef DTYPE_FLOAT_t r[2]
         
         # Intermediate variable
         cdef DTYPE_FLOAT_t mult
@@ -181,7 +181,7 @@ cdef class RefHorizCartesianBoundaryConditionCalculator(HorizBoundaryConditionCa
             n[1] = start_point[0] - end_point[0]
 
             # Compute the reflection vector
-            mult = 2.0 * inner_product(n, d) / inner_product(n, n)
+            mult = 2.0 * inner_product_two(n, d) / inner_product_two(n, n)
             r[0] = d[0] - mult*n[0]
             x4_prime[0] = intersection[0] + r[0]
 
@@ -310,36 +310,43 @@ cdef class RefHorizGeographicBoundaryConditionCalculator(HorizBoundaryConditionC
         whole process is iterative, as described above.
         """
         # Vectors describing the intersection
-        cdef vector[DTYPE_FLOAT_t] start_point = vector[DTYPE_FLOAT_t](2, -999.)
-        cdef vector[DTYPE_FLOAT_t] end_point = vector[DTYPE_FLOAT_t](2, -999.)
-        cdef vector[DTYPE_FLOAT_t] intersection = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef DTYPE_FLOAT_t start_point[2]
+        cdef DTYPE_FLOAT_t end_point[2]
+        cdef DTYPE_FLOAT_t intersection[2]
 
         # Locations in Cartesian coordinates
-        cdef vector[DTYPE_FLOAT_t] pi = vector[DTYPE_FLOAT_t](3, -999.)
-        cdef vector[DTYPE_FLOAT_t] pa = vector[DTYPE_FLOAT_t](3, -999.)
-        cdef vector[DTYPE_FLOAT_t] pb = vector[DTYPE_FLOAT_t](3, -999.)
-        cdef vector[DTYPE_FLOAT_t] p1 = vector[DTYPE_FLOAT_t](3, -999.)
-        cdef vector[DTYPE_FLOAT_t] p2 = vector[DTYPE_FLOAT_t](3, -999.)
+        cdef DTYPE_FLOAT_t pi[3]
+        cdef DTYPE_FLOAT_t pa[3]
+        cdef DTYPE_FLOAT_t pb[3]
+        cdef DTYPE_FLOAT_t p1[3]
+        cdef DTYPE_FLOAT_t p2[3]
+        cdef DTYPE_FLOAT_t pi_rot[3]
+        cdef DTYPE_FLOAT_t pa_rot[3]
+        cdef DTYPE_FLOAT_t pb_rot[3]
+        cdef DTYPE_FLOAT_t p1_rot[3]
+        cdef DTYPE_FLOAT_t p2_rot[3]
 
         # Position vectors for the reflected position
-        cdef vector[DTYPE_FLOAT_t] x4_prime = vector[DTYPE_FLOAT_t](3, -999.)
-        cdef vector[DTYPE_FLOAT_t] x4_prime_geog = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef DTYPE_FLOAT_t x4_prime[3]
+        cdef DTYPE_FLOAT_t x4_prime_rot[3]
+        cdef DTYPE_FLOAT_t x4_prime_geog[2]
 
         # 2D position and direction vectors used for locating lost particles
-        cdef vector[DTYPE_FLOAT_t] r_test = vector[DTYPE_FLOAT_t](3, -999.)
-        cdef vector[DTYPE_FLOAT_t] x_test = vector[DTYPE_FLOAT_t](3, -999.)
-        cdef vector[DTYPE_FLOAT_t] x_test_geog = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef DTYPE_FLOAT_t r_test[3]
+        cdef DTYPE_FLOAT_t x_test[3]
+        cdef DTYPE_FLOAT_t x_test_rot[3]
+        cdef DTYPE_FLOAT_t x_test_geog[2]
 
         # 2D directoion vector normal to the element side, pointing into the
         # element
-        cdef vector[DTYPE_FLOAT_t] n = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef DTYPE_FLOAT_t n[2]
 
         # 2D direction vector pointing from xi to the new position
-        cdef vector[DTYPE_FLOAT_t] d = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef DTYPE_FLOAT_t d[2]
 
         # 2D direction vector pointing from xi to x4', where x4' is the
         # reflected point that we ultimately trying to find
-        cdef vector[DTYPE_FLOAT_t] r = vector[DTYPE_FLOAT_t](2, -999.)
+        cdef DTYPE_FLOAT_t r[2]
 
         # Intermediate variable
         cdef DTYPE_FLOAT_t mult
@@ -374,44 +381,44 @@ cdef class RefHorizGeographicBoundaryConditionCalculator(HorizBoundaryConditionC
                                                   intersection)
 
             # Convert to cartesian coordinates
-            pi = geographic_to_cartesian_coords(intersection[0], intersection[1], 1.0)
-            pa = geographic_to_cartesian_coords(particle_copy_a.get_x1(), particle_copy_a.get_x2(), 1.0)
-            pb = geographic_to_cartesian_coords(particle_copy_b.get_x1(), particle_copy_b.get_x2(), 1.0)
-            p1 = geographic_to_cartesian_coords(start_point[0], start_point[1], 1.0)
-            p2 = geographic_to_cartesian_coords(end_point[0], end_point[1], 1.0)
+            geographic_to_cartesian_coords(intersection[0], intersection[1], 1.0, pi)
+            geographic_to_cartesian_coords(particle_copy_a.get_x1(), particle_copy_a.get_x2(), 1.0, pa)
+            geographic_to_cartesian_coords(particle_copy_b.get_x1(), particle_copy_b.get_x2(), 1.0, pb)
+            geographic_to_cartesian_coords(start_point[0], start_point[1], 1.0, p1)
+            geographic_to_cartesian_coords(end_point[0], end_point[1], 1.0, p2)
 
             # Rotate axes to get the desired orientation as described above
-            pi = rotate_axes(pi, intersection[0], intersection[1])
-            pa = rotate_axes(pa, intersection[0], intersection[1])
-            pb = rotate_axes(pb, intersection[0], intersection[1])
-            p1 = rotate_axes(p1, intersection[0], intersection[1])
-            p2 = rotate_axes(p2, intersection[0], intersection[1])
+            rotate_axes(pi, intersection[0], intersection[1], pi_rot)
+            rotate_axes(pa, intersection[0], intersection[1], pa_rot)
+            rotate_axes(pb, intersection[0], intersection[1], pb_rot)
+            rotate_axes(p1, intersection[0], intersection[1], p1_rot)
+            rotate_axes(p2, intersection[0], intersection[1], p2_rot)
 
             # Compute the direction vector pointing from the intersection point
             # to the position vector that lies outside of the model domain
-            d[0] = pb[0] - pi[0]
-            d[1] = pb[1] - pi[1]
+            d[0] = pb_rot[0] - pi_rot[0]
+            d[1] = pb_rot[1] - pi_rot[1]
 
             # Compute the normal to the element side that points back into the
             # element given the clockwise ordering of element vertices
-            n[0] = p2[1] - p1[1]
-            n[1] = p1[0] - p2[0]
+            n[0] = p2_rot[1] - p1_rot[1]
+            n[1] = p1_rot[0] - p2_rot[0]
 
             # Compute the reflection vector
-            mult = 2.0 * inner_product(n, d) / inner_product(n, n)
+            mult = 2.0 * inner_product_two(n, d) / inner_product_two(n, n)
             r[0] = d[0] - mult*n[0]
-            x4_prime[0] = pi[0] + r[0]
+            x4_prime[0] = pi_rot[0] + r[0]
 
             r[1] = d[1] - mult*n[1]
-            x4_prime[1] = pi[1] + r[1]
+            x4_prime[1] = pi_rot[1] + r[1]
 
             # Set z to 1.0
             x4_prime[2] = 1.0
 
             # Attempt to find the particle using a (cheap) local search
             # ---------------------------------------------------------
-            x4_prime = reverse_rotate_axes(x4_prime, intersection[0], intersection[1])
-            x4_prime_geog = cartesian_to_geographic_coords(x4_prime)
+            reverse_rotate_axes(x4_prime, intersection[0], intersection[1], x4_prime_rot)
+            cartesian_to_geographic_coords(x4_prime_rot, x4_prime_geog)
             particle_copy_b.set_x1(x4_prime_geog[0])
             particle_copy_b.set_x2(x4_prime_geog[1])
             flag = data_reader.find_host_using_local_search(&particle_copy_b)
@@ -442,16 +449,16 @@ cdef class RefHorizGeographicBoundaryConditionCalculator(HorizBoundaryConditionC
             counter_b = 0
             while counter_b < 3:
                 r_test[0] = r_test[0]/10.
-                x_test[0] = pi[0] + r_test[0]
+                x_test[0] = pi_rot[0] + r_test[0]
 
                 r_test[1] = r_test[1]/10.
-                x_test[1] = pi[1] + r_test[1]
+                x_test[1] = pi_rot[1] + r_test[1]
 
-                x_test = reverse_rotate_axes(x_test, intersection[0], intersection[1])
-                x_test_geog = cartesian_to_geographic_coords(x_test)
+                reverse_rotate_axes(x_test, intersection[0], intersection[1], x_test_rot)
+                cartesian_to_geographic_coords(x_test_rot, x_test_geog)
 
-                particle_copy_a.set_x1(x_test[0])
-                particle_copy_a.set_x2(x_test[1])
+                particle_copy_a.set_x1(x_test_geog[0])
+                particle_copy_a.set_x2(x_test_geog[1])
 
                 flag = data_reader.find_host_using_global_search(&particle_copy_a)
 

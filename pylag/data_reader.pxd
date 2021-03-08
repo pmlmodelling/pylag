@@ -28,9 +28,9 @@ cdef class DataReader:
     cdef get_boundary_intersection(self,
                                    Particle *particle_old,
                                    Particle *particle_new,
-                                   vector[DTYPE_FLOAT_t] &elem_side,
-                                   vector[DTYPE_FLOAT_t] &particle_pathline,
-                                   vector[DTYPE_FLOAT_t] &intersection)
+                                   DTYPE_FLOAT_t elem_side[2],
+                                   DTYPE_FLOAT_t particle_pathline[2],
+                                   DTYPE_FLOAT_t intersection[2])
 
     cdef set_default_location(self, Particle *particle)
 
