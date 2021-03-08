@@ -250,7 +250,7 @@ cdef class Grid:
         return self.interpolate_in_space(var_arr, particle.get_ptr())
 
     # TODO ADD WRAPPER HERE!
-    cdef DTYPE_FLOAT_t interpolate_in_space(self, DTYPE_FLOAT_t[:] var_arr, Particle *particle) except FLOAT_ERR:
+    cdef DTYPE_FLOAT_t interpolate_in_space(self, DTYPE_FLOAT_t[::1] var_arr, Particle *particle) except FLOAT_ERR:
         raise NotImplementedError
 
     cdef DTYPE_FLOAT_t interpolate_in_time_and_space_2D(self, DTYPE_FLOAT_t[::1] var_last_arr,
@@ -285,8 +285,8 @@ cdef class Grid:
                                                      DTYPE_FLOAT_t time_fraction, Particle *particle) except FLOAT_ERR:
         raise NotImplementedError
 
-    cdef void interpolate_grad_in_time_and_space(self, const DTYPE_FLOAT_t[:, :] &var_last_arr,
-                                                 const DTYPE_FLOAT_t[:, :] &var_next_arr, DTYPE_INT_t k,
+    cdef void interpolate_grad_in_time_and_space(self, const DTYPE_FLOAT_t[:, ::1] &var_last_arr,
+                                                 const DTYPE_FLOAT_t[:, ::1] &var_next_arr, DTYPE_INT_t k,
                                                  DTYPE_FLOAT_t time_fraction, Particle *particle,
                                                  DTYPE_FLOAT_t var_prime[2]) except *:
         raise NotImplementedError
@@ -992,7 +992,7 @@ cdef class UnstructuredCartesianGrid(Grid):
         dphi_dy[1] = (x_tri[0] - x_tri[2])/twice_signed_element_area
         dphi_dy[2] = (x_tri[1] - x_tri[0])/twice_signed_element_area
 
-    cdef DTYPE_FLOAT_t interpolate_in_space(self, DTYPE_FLOAT_t[:] var_arr,  Particle* particle) except FLOAT_ERR:
+    cdef DTYPE_FLOAT_t interpolate_in_space(self, DTYPE_FLOAT_t[::1] var_arr,  Particle* particle) except FLOAT_ERR:
         """ Interpolate the given field in space
 
         Interpolate the given field on the horizontal grid. The supplied fields
@@ -1144,8 +1144,8 @@ cdef class UnstructuredCartesianGrid(Grid):
 
         return interp.interpolate_within_element(var_nodes, phi)
 
-    cdef void interpolate_grad_in_time_and_space(self, const DTYPE_FLOAT_t[:, :] &var_last_arr,
-                                                 const DTYPE_FLOAT_t[:, :] &var_next_arr, DTYPE_INT_t k,
+    cdef void interpolate_grad_in_time_and_space(self, const DTYPE_FLOAT_t[:, ::1] &var_last_arr,
+                                                 const DTYPE_FLOAT_t[:, ::1] &var_next_arr, DTYPE_INT_t k,
                                                  DTYPE_FLOAT_t time_fraction, Particle* particle, DTYPE_FLOAT_t var_prime[2]) except *:
         """ Interpolate the gradient in the given field in time and space
 
@@ -2100,7 +2100,7 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         return
 
-    cdef DTYPE_FLOAT_t interpolate_in_space(self, DTYPE_FLOAT_t[:] var_arr,  Particle* particle) except FLOAT_ERR:
+    cdef DTYPE_FLOAT_t interpolate_in_space(self, DTYPE_FLOAT_t[::1] var_arr,  Particle* particle) except FLOAT_ERR:
         """ Interpolate the given field in space
 
         Interpolate the given field on the horizontal grid. The supplied fields
@@ -2321,8 +2321,8 @@ cdef class UnstructuredGeographicGrid(Grid):
         for i in range(N_VERTICES):
             phi[i] = phi_new[i]
 
-    cdef void interpolate_grad_in_time_and_space(self, const DTYPE_FLOAT_t[:, :] &var_last_arr,
-                                                 const DTYPE_FLOAT_t[:, :] &var_next_arr, DTYPE_INT_t k,
+    cdef void interpolate_grad_in_time_and_space(self, const DTYPE_FLOAT_t[:, ::1] &var_last_arr,
+                                                 const DTYPE_FLOAT_t[:, ::1] &var_next_arr, DTYPE_INT_t k,
                                                  DTYPE_FLOAT_t time_fraction, Particle* particle,
                                                  DTYPE_FLOAT_t var_prime[2]) except *:
         """ Interpolate the gradient in the given field in time and space
