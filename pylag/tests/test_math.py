@@ -10,7 +10,7 @@ from pylag import math
 def test_det_second_order():
     a = [1.0, 2.0]
     b = [3.0, 4.0]
-    det = math.det_second_order(a, b)
+    det = math.det_second_order_wrapper(a, b)
     test.assert_array_almost_equal(det, -2.0)
 
 
@@ -18,47 +18,47 @@ def test_det_third_order():
     a = [1.0, 2.0, -1.0]
     b = [3.0, 6.0, 0.0]
     c = [0.0, 4.0, 2.0]
-    det = math.det_third_order(a, b, c)
+    det = math.det_third_order_wrapper(a, b, c)
     test.assert_array_almost_equal(det, -12.0)
 
 
 def test_euclidian_norm():
     a = [3.0, 4.0, 0.0]
-    norm = math.euclidian_norm(a)
+    norm = math.euclidian_norm_wrapper(a)
     test.assert_almost_equal(norm, 5.)
 
 
 def test_angle_between_two_vectors():
     a = [0.0, 0.0, 1.0]
     b = [0.0, 1.0, 0.0]
-    angle = math.angle_between_two_vectors(a, b)
+    angle = math.angle_between_two_vectors_wrapper(a, b)
     test.assert_almost_equal(angle, np.pi/2.)
 
 
 def test_unit_vector():
     a = [1., 1., 1.]
-    a_unit = math.unit_vector(a)
+    a_unit = math.unit_vector_wrapper(a)
     test.assert_array_almost_equal(a_unit, [1./np.sqrt(3), 1./np.sqrt(3), 1./np.sqrt(3)])
 
 
 def test_inner_product_two():
     a = [1.0, 2.0]
     b = [3.0, 4.0]
-    c = math.inner_product_two(a, b)
+    c = math.inner_product_two_wrapper(a, b)
     test.assert_almost_equal(c, 11.0)
 
 
 def test_inner_product_three():
     a = [1.0, 2.0, 3.0]
     b = [3.0, 4.0, 1.0]
-    c = math.inner_product_three(a, b)
+    c = math.inner_product_three_wrapper(a, b)
     test.assert_almost_equal(c, 14.0)
 
 
 def test_vector_product():
     a = [1., 1., 0.]
     b = [3., 0., 0.]
-    c = math.vector_product(a, b)
+    c = math.vector_product_wrapper(a, b)
     test.assert_array_almost_equal(c, [0., 0., -3.])
 
 
@@ -67,28 +67,28 @@ def test_great_circle_arc_segments_intersect():
     b = [np.radians(91.), np.radians(0.)]
     c = [np.radians(90.), np.radians(-1.)]
     d = [np.radians(90.), np.radians(1.)]
-    intersection_is_valid = math.great_circle_arc_segments_intersect(a, b, c, d)
+    intersection_is_valid = math.great_circle_arc_segments_intersect_wrapper(a, b, c, d)
     test.assert_equal(intersection_is_valid, 1)
 
 
 def test_rotate_x():
     p = [0., 10., 0.]
     angle = -np.pi/2
-    p_rot = math.rotate_x(p, angle)
+    p_rot = math.rotate_x_wrapper(p, angle)
     test.assert_array_almost_equal(p_rot, [0., 0., 10.])
 
 
 def test_rotate_y():
     p = [10., 0., 0.]
     angle = np.pi/2
-    p_rot = math.rotate_y(p, angle)
+    p_rot = math.rotate_y_wrapper(p, angle)
     test.assert_array_almost_equal(p_rot, [0., 0., 10.])
 
 
 def test_rotate_z():
     p = [0., 10., 0.]
     angle = np.pi/2
-    p_rot = math.rotate_z(p, angle)
+    p_rot = math.rotate_z_wrapper(p, angle)
     test.assert_array_almost_equal(p_rot, [10., 0., 0.])
 
 
@@ -96,7 +96,7 @@ def test_rotate_axes():
     p = [0., 10., 0.]
     lon_rad = np.pi/2
     lat_rad = 0.0
-    p_rot = math.rotate_axes(p, lon_rad, lat_rad)
+    p_rot = math.rotate_axes_wrapper(p, lon_rad, lat_rad)
     test.assert_array_almost_equal(p_rot, [0., 0., 10.])
 
 
@@ -116,14 +116,14 @@ def test_geographic_to_cartesian_coords():
     lat = 0.0
     r = 10.0
 
-    coords = math.geographic_to_cartesian_coords(lon, lat, r)
+    coords = math.geographic_to_cartesian_coords_wrapper(lon, lat, r)
     test.assert_array_almost_equal(coords, [0., 10., 0.])
 
 
 def test_cartesian_to_geographic_coords():
     coords_cart = [0., 1., 0.]
 
-    coords_geog = math.cartesian_to_geographic_coords(coords_cart)
+    coords_geog = math.cartesian_to_geographic_coords_wrapper(coords_cart)
 
     test.assert_array_almost_equal(coords_geog, [np.pi/2., 0.0])
 

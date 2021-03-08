@@ -15,6 +15,261 @@ from libc.math cimport sin, cos, asin, acos, atan2, sqrt, abs
 from pylag.parameters cimport pi, earth_radius, radians_to_deg
 
 
+
+def det_second_order_wrapper(const vector[DTYPE_FLOAT_t] &p1, const vector[DTYPE_FLOAT_t] &p2):
+    cdef DTYPE_FLOAT_t p1_c[2]
+    cdef DTYPE_FLOAT_t p2_c[2]
+
+    cdef int i
+
+    if p1.size() != 2 or p2.size() != 2:
+       raise ValueError('Input arrays must be of length two.')
+
+    for i in range(2):
+        p1_c[i] = p1[i]
+        p2_c[i] = p2[i]
+
+    return det_second_order(p1_c, p2_c)
+
+
+def det_third_order_wrapper(const vector[DTYPE_FLOAT_t] &p1, const vector[DTYPE_FLOAT_t] &p2, const vector[DTYPE_FLOAT_t] &p3):
+    cdef DTYPE_FLOAT_t p1_c[3]
+    cdef DTYPE_FLOAT_t p2_c[3]
+    cdef DTYPE_FLOAT_t p3_c[3]
+
+    cdef int i
+
+    if p1.size() != 3 or p2.size() != 3 or p3.size() != 3:
+       raise ValueError('Input arrays must be of length three.')
+
+    for i in range(3):
+        p1_c[i] = p1[i]
+        p2_c[i] = p2[i]
+        p3_c[i] = p3[i]
+
+    return det_third_order(p1_c, p2_c, p3_c)
+
+
+def euclidian_norm_wrapper(const vector[DTYPE_FLOAT_t] &p1):
+    cdef DTYPE_FLOAT_t p1_c[3]
+
+    cdef int i
+
+    for i in range(3):
+        p1_c[i] = p1[i]
+
+    return euclidian_norm(p1_c)
+
+
+def rotate_x_wrapper(const vector[DTYPE_FLOAT_t] &p, const DTYPE_FLOAT_t &angle):
+    cdef DTYPE_FLOAT_t p_c[3]
+    cdef DTYPE_FLOAT_t p_new_c[3]
+    cdef vector[DTYPE_FLOAT_t] p_new
+    cdef int i
+
+    for i in range(3):
+        p_c[i] = p[i]
+
+    rotate_x(p_c, angle, p_new_c)
+
+    for i in range(3):
+        p_new.push_back(p_new_c[i])
+
+    return p_new
+
+
+def rotate_y_wrapper(const vector[DTYPE_FLOAT_t] &p, const DTYPE_FLOAT_t &angle):
+    cdef DTYPE_FLOAT_t p_c[3]
+    cdef DTYPE_FLOAT_t p_new_c[3]
+    cdef vector[DTYPE_FLOAT_t] p_new
+    cdef int i
+
+    for i in range(3):
+        p_c[i] = p[i]
+
+    rotate_y(p_c, angle, p_new_c)
+
+    for i in range(3):
+        p_new.push_back(p_new_c[i])
+
+    return p_new
+
+
+def rotate_z_wrapper(const vector[DTYPE_FLOAT_t] &p, const DTYPE_FLOAT_t &angle):
+    cdef DTYPE_FLOAT_t p_c[3]
+    cdef DTYPE_FLOAT_t p_new_c[3]
+    cdef vector[DTYPE_FLOAT_t] p_new
+    cdef int i
+
+    for i in range(3):
+        p_c[i] = p[i]
+
+    rotate_z(p_c, angle, p_new_c)
+
+    for i in range(3):
+        p_new.push_back(p_new_c[i])
+
+    return p_new
+
+
+def angle_between_two_vectors_wrapper(const vector[DTYPE_FLOAT_t] &a,
+                                      const vector[DTYPE_FLOAT_t] &b):
+    cdef DTYPE_FLOAT_t a_c[3]
+    cdef DTYPE_FLOAT_t b_c[3]
+
+    cdef int i
+
+    if a.size() != 3 or b.size() != 3:
+       raise ValueError('Input arrays must be of length three.')
+
+    for i in range(3):
+        a_c[i] = a[i]
+        b_c[i] = b[i]
+
+    return angle_between_two_vectors(a_c, b_c)
+
+
+def unit_vector_wrapper(const vector[DTYPE_FLOAT_t] &a):
+    cdef DTYPE_FLOAT_t a_c[3]
+    cdef DTYPE_FLOAT_t a_unit_c[3]
+    cdef vector[DTYPE_FLOAT_t] a_unit
+
+    cdef int i
+
+    if a.size() != 3:
+       raise ValueError('Input array must be of length three.')
+
+    for i in range(3):
+        a_c[i] = a[i]
+
+    unit_vector(a_c, a_unit_c)
+
+    for i in range(3):
+        a_unit.push_back(a_unit_c[i])
+
+    return a_unit
+
+
+def inner_product_two_wrapper(const vector[DTYPE_FLOAT_t] &p1, const vector[DTYPE_FLOAT_t] &p2):
+    cdef DTYPE_FLOAT_t p1_c[2]
+    cdef DTYPE_FLOAT_t p2_c[2]
+
+    cdef DTYPE_FLOAT_t x
+
+    cdef int i
+
+    if p1.size() != 2 or p2.size() != 2:
+       raise ValueError('Input arrays must be of length two.')
+
+    for i in range(2):
+        p1_c[i] = p1[i]
+        p2_c[i] = p2[i]
+
+    x = inner_product_two(p1_c, p2_c)
+
+    return x
+
+def inner_product_three_wrapper(const vector[DTYPE_FLOAT_t] &p1, const vector[DTYPE_FLOAT_t] &p2):
+    cdef DTYPE_FLOAT_t p1_c[3]
+    cdef DTYPE_FLOAT_t p2_c[3]
+
+    cdef DTYPE_FLOAT_t x
+
+    cdef int i
+
+    if p1.size() != 3 or p2.size() != 3:
+       raise ValueError('Input arrays must be of length three.')
+
+    for i in range(3):
+        p1_c[i] = p1[i]
+        p2_c[i] = p2[i]
+
+    x = inner_product_three(p1_c, p2_c)
+
+    return x
+
+
+def vector_product_wrapper(const vector[DTYPE_FLOAT_t] &a, const vector[DTYPE_FLOAT_t] &b):
+
+    cdef DTYPE_FLOAT_t a_c[3]
+    cdef DTYPE_FLOAT_t b_c[3]
+    cdef DTYPE_FLOAT_t c_c[3]
+
+    cdef vector[DTYPE_FLOAT_t] c
+
+    cdef int i
+
+    for i in range(3):
+        a_c[i] = a[i]
+        b_c[i] = b[i]
+
+    vector_product(a_c, b_c, c_c)
+
+    for i in range(3):
+        c.push_back(c_c[i])
+
+    return c
+
+
+def geographic_to_cartesian_coords_wrapper(const DTYPE_FLOAT_t &lon_rad,
+                                    const DTYPE_FLOAT_t &lat_rad,
+                                    const DTYPE_FLOAT_t &r):
+
+    cdef DTYPE_FLOAT_t cart_c[3]
+    cdef vector[DTYPE_FLOAT_t] cart
+    cdef int i
+
+    geographic_to_cartesian_coords(lon_rad, lat_rad, r, cart_c)
+
+    for i in range(3):
+        cart.push_back(cart_c[i])
+
+    return cart
+
+
+def cartesian_to_geographic_coords_wrapper(const vector[DTYPE_FLOAT_t] &coords_cart):
+
+    cdef DTYPE_FLOAT_t coords_cart_c[3], coords_geog_c[2]
+    cdef vector[DTYPE_FLOAT_t] coords_geog
+    cdef int i
+
+    if coords_cart.size() != 3:
+       raise ValueError('Input array must be of length three.')
+
+    for i in range(3):
+        coords_cart_c[i] = coords_cart[i]
+
+    cartesian_to_geographic_coords(coords_cart_c, coords_geog_c)
+
+    for i in range(2):
+        coords_geog.push_back(coords_geog_c[i])
+
+    return coords_geog
+
+
+def rotate_axes_wrapper(const vector[DTYPE_FLOAT_t] &p,
+                        const DTYPE_FLOAT_t &lon_rad,
+                        const DTYPE_FLOAT_t &lat_rad):
+
+    cdef DTYPE_FLOAT_t p_c[3]
+    cdef DTYPE_FLOAT_t p_new_c[3]
+    cdef vector[DTYPE_FLOAT_t] p_new
+    cdef int i
+
+    if p.size() != 3:
+       raise ValueError('Input array must be of length three.')
+
+    for i in range(3):
+        p_c[i] = p[i]
+
+    rotate_axes(p_c, lon_rad, lat_rad, p_new_c)
+
+    for i in range(3):
+        p_new.push_back(p_new_c[i])
+
+    return p_new
+
+
 def get_intersection_point_wrapper(const vector[DTYPE_FLOAT_t] &x1,
                                    const vector[DTYPE_FLOAT_t] &x2,
                                    const vector[DTYPE_FLOAT_t] &x3,
@@ -196,6 +451,28 @@ cdef DTYPE_INT_t get_intersection_point_in_geographic_coordinates(const DTYPE_FL
     # Intersection was not found!
     return 0
 
+
+def great_circle_arc_segments_intersect_wrapper(const vector[DTYPE_FLOAT_t] &x1,
+                                                const vector[DTYPE_FLOAT_t] &x2,
+                                                const vector[DTYPE_FLOAT_t] &x3,
+                                                const vector[DTYPE_FLOAT_t] &x4):
+    cdef DTYPE_FLOAT_t x1_c[2]
+    cdef DTYPE_FLOAT_t x2_c[2]
+    cdef DTYPE_FLOAT_t x3_c[2]
+    cdef DTYPE_FLOAT_t x4_c[2]
+
+    cdef int i
+
+    if x1.size() != 2 or x2.size() != 2 or x3.size() != 2 or x4.size() != 2:
+        raise ValueError('Input arrays should be of length two.')
+
+    for i in range(2):
+        x1_c[i] = x1[i]
+        x2_c[i] = x2[i]
+        x3_c[i] = x3[i]
+        x4_c[i] = x4[i]
+
+    return great_circle_arc_segments_intersect(x1_c, x2_c, x3_c, x4_c)
 
 cdef DTYPE_INT_t great_circle_arc_segments_intersect(const DTYPE_FLOAT_t x1[3],
                                                      const DTYPE_FLOAT_t x2[3],
