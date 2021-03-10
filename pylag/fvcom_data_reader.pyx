@@ -696,96 +696,45 @@ cdef class FVCOMDataReader(DataReader):
         applications. Cambridge: Cambridge University Press.
         doi.org/10.1017/CBO9781107449336
         """
-        # No. of vertices and a temporary object used for determining variable
-        # values at the host element's nodes
-        cdef int i # Loop counters
-        cdef int vertex # Vertex identifier
-
-        # Variables used in interpolation in time      
+        # Variable used in interpolation in time
         cdef DTYPE_FLOAT_t time_fraction
 
-        # Gradients in phi
-        cdef DTYPE_FLOAT_t dphi_dx[3]
-        cdef DTYPE_FLOAT_t dphi_dy[3]
-
-        # Intermediate arrays - viscofh
-        cdef DTYPE_FLOAT_t viscofh_tri_t_last_layer_1[3]
-        cdef DTYPE_FLOAT_t viscofh_tri_t_next_layer_1[3]
-        cdef DTYPE_FLOAT_t viscofh_tri_t_last_layer_2[3]
-        cdef DTYPE_FLOAT_t viscofh_tri_t_next_layer_2[3]
-        cdef DTYPE_FLOAT_t viscofh_tri_layer_1[3]
-        cdef DTYPE_FLOAT_t viscofh_tri_layer_2[3]
-        
-        # Particle k_layer
+        # Particle k_layers
         cdef DTYPE_INT_t k_layer = particle.get_k_layer()
         cdef DTYPE_INT_t k_lower_layer = particle.get_k_lower_layer()
         cdef DTYPE_INT_t k_upper_layer = particle.get_k_upper_layer()
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
 
-        # Gradients on lower and upper bounding sigma layers
-        cdef DTYPE_FLOAT_t dviscofh_dx_layer_1
-        cdef DTYPE_FLOAT_t dviscofh_dy_layer_1
-        cdef DTYPE_FLOAT_t dviscofh_dx_layer_2
-        cdef DTYPE_FLOAT_t dviscofh_dy_layer_2
-        
-        # Gradient 
-        cdef DTYPE_FLOAT_t dviscofh_dx
-        cdef DTYPE_FLOAT_t dviscofh_dy
+        # Ah on upper and lower layers
+        cdef DTYPE_FLOAT_t Ah_prime_lower_layer[2]
+        cdef DTYPE_FLOAT_t Ah_prime_upper_layer[2]
+
+        # Loop counter
+        cdef int i
 
         # Time fraction
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
-        # Get gradient in phi
-        self._unstructured_grid.get_grad_phi(host_element, dphi_dx, dphi_dy)
-
-        # No vertical interpolation for particles near to the surface or bottom, 
+        # No vertical interpolation for particles near to the surface or bottom,
         # i.e. above or below the top or bottom sigma layer depths respectively.
         if particle.get_in_vertical_boundary_layer() is True:
-            # Extract viscofh near to the boundary
-            for i in xrange(N_VERTICES):
-                vertex = self._nv[i,host_element]
-                viscofh_tri_t_last_layer_1[i] = self._viscofh_last[k_layer, vertex]
-                viscofh_tri_t_next_layer_1[i] = self._viscofh_next[k_layer, vertex]
-
-            # Interpolate in time
-            for i in xrange(N_VERTICES):
-                viscofh_tri_layer_1[i] = interp.linear_interp(time_fraction, 
-                                            viscofh_tri_t_last_layer_1[i],
-                                            viscofh_tri_t_next_layer_1[i])
-
-            # Interpolate d{}/dx and d{}/dy within the host element
-            Ah_prime[0] = interp.interpolate_within_element(viscofh_tri_layer_1, dphi_dx)
-            Ah_prime[1] = interp.interpolate_within_element(viscofh_tri_layer_1, dphi_dy)
+            self._unstructured_grid.interpolate_grad_in_time_and_space(self._viscofh_last, self._viscofh_next,
+                                                                       k_layer, time_fraction, particle,
+                                                                       Ah_prime)
             return
-        else:
-            # Extract viscofh on the lower and upper bounding sigma layers
-            for i in xrange(N_VERTICES):
-                vertex = self._nv[i,host_element]
-                viscofh_tri_t_last_layer_1[i] = self._viscofh_last[k_lower_layer, vertex]
-                viscofh_tri_t_next_layer_1[i] = self._viscofh_next[k_lower_layer, vertex]
-                viscofh_tri_t_last_layer_2[i] = self._viscofh_last[k_upper_layer, vertex]
-                viscofh_tri_t_next_layer_2[i] = self._viscofh_next[k_upper_layer, vertex]
 
-            # Interpolate in time
-            for i in xrange(N_VERTICES):
-                viscofh_tri_layer_1[i] = interp.linear_interp(time_fraction, 
-                                            viscofh_tri_t_last_layer_1[i],
-                                            viscofh_tri_t_next_layer_1[i])
-                viscofh_tri_layer_2[i] = interp.linear_interp(time_fraction, 
-                                            viscofh_tri_t_last_layer_2[i],
-                                            viscofh_tri_t_next_layer_2[i])
+        # Interpolate between layers
+        self._unstructured_grid.interpolate_grad_in_time_and_space(self._viscofh_last, self._viscofh_next,
+                                                           k_lower_layer, time_fraction, particle,
+                                                           Ah_prime_lower_layer)
 
-            # Interpolate d{}/dx and d{}/dy within the host element on the upper
-            # and lower bounding sigma layers
-            dviscofh_dx_layer_1 = interp.interpolate_within_element(viscofh_tri_layer_1, dphi_dx)
-            dviscofh_dy_layer_1 = interp.interpolate_within_element(viscofh_tri_layer_1, dphi_dy)
-            dviscofh_dx_layer_2 = interp.interpolate_within_element(viscofh_tri_layer_2, dphi_dx)
-            dviscofh_dy_layer_2 = interp.interpolate_within_element(viscofh_tri_layer_2, dphi_dy)
+        self._unstructured_grid.interpolate_grad_in_time_and_space(self._viscofh_last, self._viscofh_next,
+                                                           k_upper_layer, time_fraction, particle,
+                                                           Ah_prime_upper_layer)
 
-            # Interpolate d{}/dx and d{}/dy between bounding sigma layers and
-            # save in the array Ah_prime
-            Ah_prime[0] = interp.linear_interp(particle.get_omega_layers(), dviscofh_dx_layer_1, dviscofh_dx_layer_2)
-            Ah_prime[1] = interp.linear_interp(particle.get_omega_layers(), dviscofh_dy_layer_1, dviscofh_dy_layer_2)
+        # Interpolate d{}/dx and d{}/dy between bounding sigma layers and
+        # save in the array Ah_prime
+        for i in range(2):
+            Ah_prime[i] = interp.linear_interp(particle.get_omega_layers(), Ah_prime_lower_layer[i], Ah_prime_upper_layer[i])
 
     cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time,
             Particle* particle) except FLOAT_ERR:
@@ -812,15 +761,28 @@ cdef class FVCOMDataReader(DataReader):
         # Particle k_layer
         cdef DTYPE_INT_t k_layer = particle.get_k_layer()
 
+        # Time fraction
+        cdef DTYPE_FLOAT_t time_fraction
+
         # Interpolated diffusivities on lower and upper bounding sigma levels
         cdef DTYPE_FLOAT_t kh_lower_level
         cdef DTYPE_FLOAT_t kh_upper_level
         
-        # NB The index corresponding to the layer the particle presently resides
-        # in is used to calculate the index of the under and over lying k levels 
-        kh_lower_level = self._get_vertical_eddy_diffusivity_on_level(time, particle, k_layer+1)
-        kh_upper_level = self._get_vertical_eddy_diffusivity_on_level(time, particle, k_layer)
+        # Time fraction
+        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
+        # NB The index corresponding to the layer the particle presently resides
+        # in is used to calculate the index of the under and over lying k levels
+        kh_lower_level = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
+                                                                               self._kh_next,
+                                                                               k_layer+1,
+                                                                               time_fraction,
+                                                                               particle)
+        kh_upper_level = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
+                                                                               self._kh_next,
+                                                                               k_layer,
+                                                                               time_fraction,
+                                                                               particle)
         return interp.linear_interp(particle.get_omega_interfaces(), kh_lower_level, kh_upper_level)
 
 
@@ -870,21 +832,33 @@ cdef class FVCOMDataReader(DataReader):
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
         if k_layer == 0:
-            kh_0 = self._get_vertical_eddy_diffusivity_on_level(time, particle, k_layer)
+            kh_0 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
+                                                                         self._kh_next,
+                                                                         k_layer,
+                                                                         time_fraction,
+                                                                         particle)
             z_0 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
                                                                         self._depth_levels_next,
                                                                         k_layer,
                                                                         time_fraction,
                                                                         particle)
 
-            kh_1 = self._get_vertical_eddy_diffusivity_on_level(time, particle, k_layer+1)
+            kh_1 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
+                                                                         self._kh_next,
+                                                                         k_layer+1,
+                                                                         time_fraction,
+                                                                         particle)
             z_1 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
                                                                         self._depth_levels_next,
                                                                         k_layer+1,
                                                                         time_fraction,
                                                                         particle)
 
-            kh_2 = self._get_vertical_eddy_diffusivity_on_level(time, particle, k_layer+2)
+            kh_2 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
+                                                                         self._kh_next,
+                                                                         k_layer+2,
+                                                                         time_fraction,
+                                                                         particle)
             z_2 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
                                                                         self._depth_levels_next,
                                                                         k_layer+2,
@@ -895,21 +869,33 @@ cdef class FVCOMDataReader(DataReader):
             dkh_upper_level = (kh_0 - kh_1) / (z_0 - z_1)
             
         elif k_layer == self._n_siglay - 1:
-            kh_0 = self._get_vertical_eddy_diffusivity_on_level(time, particle, k_layer-1)
+            kh_0 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
+                                                                         self._kh_next,
+                                                                         k_layer-1,
+                                                                         time_fraction,
+                                                                         particle)
             z_0 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
                                                                         self._depth_levels_next,
                                                                         k_layer-1,
                                                                         time_fraction,
                                                                         particle)
 
-            kh_1 = self._get_vertical_eddy_diffusivity_on_level(time, particle, k_layer)
+            kh_1 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
+                                                                         self._kh_next,
+                                                                         k_layer,
+                                                                         time_fraction,
+                                                                         particle)
             z_1 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
                                                                         self._depth_levels_next,
                                                                         k_layer,
                                                                         time_fraction,
                                                                         particle)
 
-            kh_2 = self._get_vertical_eddy_diffusivity_on_level(time, particle, k_layer+1)
+            kh_2 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
+                                                                         self._kh_next,
+                                                                         k_layer+1,
+                                                                         time_fraction,
+                                                                         particle)
             z_2 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
                                                                         self._depth_levels_next,
                                                                         k_layer+1,
@@ -920,28 +906,44 @@ cdef class FVCOMDataReader(DataReader):
             dkh_upper_level = (kh_0 - kh_2) / (z_0 - z_2)
             
         else:
-            kh_0 = self._get_vertical_eddy_diffusivity_on_level(time, particle, k_layer-1)
+            kh_0 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
+                                                                         self._kh_next,
+                                                                         k_layer-1,
+                                                                         time_fraction,
+                                                                         particle)
             z_0 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
                                                                         self._depth_levels_next,
                                                                         k_layer-1,
                                                                         time_fraction,
                                                                         particle)
 
-            kh_1 = self._get_vertical_eddy_diffusivity_on_level(time, particle, k_layer)
+            kh_1 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
+                                                                         self._kh_next,
+                                                                         k_layer,
+                                                                         time_fraction,
+                                                                         particle)
             z_1 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
                                                                         self._depth_levels_next,
                                                                         k_layer,
                                                                         time_fraction,
                                                                         particle)
 
-            kh_2 = self._get_vertical_eddy_diffusivity_on_level(time, particle, k_layer+1)
+            kh_2 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
+                                                                         self._kh_next,
+                                                                         k_layer+1,
+                                                                         time_fraction,
+                                                                         particle)
             z_2 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
                                                                         self._depth_levels_next,
                                                                         k_layer+1,
                                                                         time_fraction,
                                                                         particle)
 
-            kh_3 = self._get_vertical_eddy_diffusivity_on_level(time, particle, k_layer+2)
+            kh_3 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
+                                                                         self._kh_next,
+                                                                         k_layer+2,
+                                                                         time_fraction,
+                                                                         particle)
             z_3 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
                                                                         self._depth_levels_next,
                                                                         k_layer+2,
@@ -1057,79 +1059,6 @@ cdef class FVCOMDataReader(DataReader):
                                                                                 particle)
 
             return interp.linear_interp(particle.get_omega_interfaces(), var_layer_1, var_layer_2)
-
-    cdef DTYPE_FLOAT_t _get_vertical_eddy_diffusivity_on_level(self,
-            DTYPE_FLOAT_t time, Particle* particle,
-            DTYPE_INT_t k_level) except FLOAT_ERR:
-        """ Returns the vertical eddy diffusivity on a level
-        
-        The vertical eddy diffusivity is defined at element nodes on sigma
-        levels. Interpolation is performed first in time, then in x and y to
-        give the eddy diffusivity on the specified depth level.
-        
-        For internal use only.
-        
-        Parameters:
-        -----------
-        time : float
-            Time at which to interpolate.
-        
-        particle : *Particle
-            Pointer to a Particle object.
-        
-        k_level : int
-            The dpeth level on which to interpolate.
-        
-        Returns:
-        --------
-        kh : float
-            The vertical eddy diffusivity at the particle's position on the
-            specified level.
-        
-        """
-        # Loop counter
-        cdef int i
-        
-        # Vertex identifier
-        cdef int vertex
-
-        # Host element
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
-
-        # Time fraction used for interpolation in time        
-        cdef DTYPE_FLOAT_t time_fraction
-
-        # Intermediate arrays - kh
-        cdef DTYPE_FLOAT_t kh_tri_t_last[3]
-        cdef DTYPE_FLOAT_t kh_tri_t_next[3]
-        cdef DTYPE_FLOAT_t kh_tri[3]
-        
-        # Interpolated diffusivities on the specified level
-        cdef DTYPE_FLOAT_t kh
-
-        # Local coordinates
-        cdef DTYPE_FLOAT_t phi[3]
-        cdef const vector[DTYPE_FLOAT_t] *_phi = &particle.get_phi(self._name)
-
-        # Shift local coordinates into an array
-        for i in range(3):
-            phi[i] = _phi.at(i)
-
-        # Extract kh on the lower and upper bounding sigma levels, h and zeta
-        for i in xrange(N_VERTICES):
-            vertex = self._nv[i,host_element]
-            kh_tri_t_last[i] = self._kh_last[k_level, vertex]
-            kh_tri_t_next[i] = self._kh_next[k_level, vertex]
-
-        # Interpolate kh and zeta in time
-        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
-        for i in xrange(N_VERTICES):
-            kh_tri[i] = interp.linear_interp(time_fraction, kh_tri_t_last[i], kh_tri_t_next[i])
-
-        # Interpolate kh, zeta and h within the host
-        kh = interp.interpolate_within_element(kh_tri, phi)
-
-        return kh
 
     cdef _get_velocity_using_shepard_interpolation(self, DTYPE_FLOAT_t time,
             Particle* particle, DTYPE_FLOAT_t vel[3]):
