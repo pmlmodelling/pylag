@@ -421,6 +421,11 @@ cdef class UnstructuredCartesianGrid(Grid):
     cdef DTYPE_INT_t[::1] land_sea_mask
     cdef DTYPE_INT_t[::1] land_sea_mask_nodes
 
+    # Barycentric gradients
+    cdef DTYPE_INT_t[:] barycentric_gradients_have_been_cached
+    cdef DTYPE_FLOAT_t[:, ::1] dphi_dx
+    cdef DTYPE_FLOAT_t[:, ::1] dphi_dy
+
     def __init__(self, config, name, n_nodes, n_elems, nv, nbe, x, y, xc, yc, land_sea_mask, land_sea_mask_nodes):
         self.config = config
 
@@ -435,6 +440,11 @@ cdef class UnstructuredCartesianGrid(Grid):
         self.yc = yc
         self.land_sea_mask = land_sea_mask
         self.land_sea_mask_nodes = land_sea_mask_nodes
+
+        # Containers for preserving the value of gradient calculations
+        self.barycentric_gradients_have_been_cached = np.zeros(self.n_elems, dtype=DTYPE_INT, order='C')
+        self.dphi_dx = np.ones((self.n_elems, 3), dtype=DTYPE_FLOAT, order='C') * -999.
+        self.dphi_dy = np.ones((self.n_elems, 3), dtype=DTYPE_FLOAT, order='C') * -999.
 
     cdef DTYPE_INT_t find_host_using_local_search(self, Particle *particle) except INT_ERR:
         """ Returns the host horizontal element through local searching.
@@ -1021,6 +1031,13 @@ cdef class UnstructuredCartesianGrid(Grid):
 
         cdef DTYPE_FLOAT_t a1, a2, a3, a4, twice_signed_element_area
 
+        # Return cached values if they have been pre-computed
+        if self.barycentric_gradients_have_been_cached[host] == 1:
+            for i in range(3):
+                dphi_dx[i] = self.dphi_dx[host, i]
+                dphi_dy[i] = self.dphi_dy[host, i]
+            return
+
         for i in xrange(3):
             vertex = self.nv[i,host]
             x_tri[i] = self.x[vertex]
@@ -1042,6 +1059,12 @@ cdef class UnstructuredCartesianGrid(Grid):
         dphi_dy[0] = (x_tri[2] - x_tri[1])/twice_signed_element_area
         dphi_dy[1] = (x_tri[0] - x_tri[2])/twice_signed_element_area
         dphi_dy[2] = (x_tri[1] - x_tri[0])/twice_signed_element_area
+
+        # Cache values
+        self.barycentric_gradients_have_been_cached[host] = 1
+        for i in range(3):
+            self.dphi_dx[host, i] = dphi_dx[i]
+            self.dphi_dy[host, i] = dphi_dy[i]
 
     cdef DTYPE_FLOAT_t interpolate_in_space(self, DTYPE_FLOAT_t[::1] var_arr,  Particle* particle) except FLOAT_ERR:
         """ Interpolate the given field in space
