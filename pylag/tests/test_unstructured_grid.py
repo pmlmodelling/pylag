@@ -129,10 +129,10 @@ class UnstructuredCartesianGrid_test(TestCase):
         ypts = np.array([-2.0, -1.0, 1.0, 2.0], dtype=DTYPE_FLOAT)
         vals = np.array([0.0, 0.0, 1.0, 0.0], dtype=DTYPE_FLOAT)
 
-        val = self.unstructured_grid.shepard_interpolation(1.0, 1.0, xpts, ypts, vals)
+        val = self.unstructured_grid.shepard_interpolation_wrapper(1.0, 1.0, xpts, ypts, vals)
         test.assert_almost_equal(val, 1.0)
 
-        val = self.unstructured_grid.shepard_interpolation(0.0, 0.0, xpts, ypts, vals)
+        val = self.unstructured_grid.shepard_interpolation_wrapper(0.0, 0.0, xpts, ypts, vals)
         test.assert_almost_equal(val, 0.4)
 
 

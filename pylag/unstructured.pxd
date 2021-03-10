@@ -53,6 +53,6 @@ cdef class Grid:
                                                  DTYPE_FLOAT_t time_fraction, Particle *particle,
                                                  DTYPE_FLOAT_t var_prime[2]) except *
 
-    cpdef DTYPE_FLOAT_t shepard_interpolation(self, const DTYPE_FLOAT_t &x,
-            const DTYPE_FLOAT_t &y, const vector[DTYPE_FLOAT_t] &xpts, const vector[DTYPE_FLOAT_t] &ypts,
-            const vector[DTYPE_FLOAT_t] &vals) except FLOAT_ERR
+    cdef DTYPE_FLOAT_t shepard_interpolation(self, const DTYPE_FLOAT_t &x,
+            const DTYPE_FLOAT_t &y, const DTYPE_FLOAT_t xpts[4], const DTYPE_FLOAT_t ypts[4],
+            const DTYPE_FLOAT_t vals[4]) except FLOAT_ERR

@@ -307,9 +307,44 @@ cdef class Grid:
                                                  DTYPE_FLOAT_t var_prime[2]) except *:
         raise NotImplementedError
 
-    cpdef DTYPE_FLOAT_t shepard_interpolation(self, const DTYPE_FLOAT_t &x,
-            const DTYPE_FLOAT_t &y, const vector[DTYPE_FLOAT_t] &xpts, const vector[DTYPE_FLOAT_t] &ypts,
-            const vector[DTYPE_FLOAT_t] &vals) except FLOAT_ERR:
+    def shepard_interpolation_wrapper(self, const DTYPE_FLOAT_t &x,
+            const DTYPE_FLOAT_t &y, const vector[DTYPE_FLOAT_t] &xpts,
+            const vector[DTYPE_FLOAT_t] &ypts, const vector[DTYPE_FLOAT_t] &vals):
+        """ Python wrapper for shepard interpolation
+
+        Parameters
+        ----------
+        x : float
+            x-position
+
+        y - float
+            y-position
+
+        xpts : numpy array
+            x-coordinates of values.
+
+        ypts : numpy array
+            y-coordinates of values.
+
+        vals : numpy array
+            Values at x/y coordinates.
+        """
+        cdef DTYPE_FLOAT_t xpts_c[4], ypts_c[4], vals_c[4]
+        cdef int i
+
+        if xpts.size() != 4 or ypts.size() != 4 or vals.size() != 4:
+            raise ValueError('Input arrays should be of length 4.')
+
+        for i in range(4):
+            xpts_c[i] = xpts[i]
+            ypts_c[i] = ypts[i]
+            vals_c[i] = vals[i]
+
+        return self.shepard_interpolation(x, y, xpts_c, ypts_c, vals_c)
+
+    cdef DTYPE_FLOAT_t shepard_interpolation(self, const DTYPE_FLOAT_t &x,
+            const DTYPE_FLOAT_t &y, const DTYPE_FLOAT_t xpts[4], const DTYPE_FLOAT_t ypts[4],
+            const DTYPE_FLOAT_t vals[4]) except FLOAT_ERR:
         raise NotImplementedError
 
 
@@ -1223,9 +1258,9 @@ cdef class UnstructuredCartesianGrid(Grid):
 
         return
 
-    cpdef DTYPE_FLOAT_t shepard_interpolation(self, const DTYPE_FLOAT_t &x,
-            const DTYPE_FLOAT_t &y, const vector[DTYPE_FLOAT_t] &xpts, const vector[DTYPE_FLOAT_t] &ypts,
-            const vector[DTYPE_FLOAT_t] &vals) except FLOAT_ERR:
+    cdef DTYPE_FLOAT_t shepard_interpolation(self, const DTYPE_FLOAT_t &x,
+            const DTYPE_FLOAT_t &y, const DTYPE_FLOAT_t xpts[4], const DTYPE_FLOAT_t ypts[4],
+            const DTYPE_FLOAT_t vals[4]) except FLOAT_ERR:
         """ Shepard interpolation in cartesian coordinates
 
         Distances are euclidian distances in the plane
@@ -1238,13 +1273,13 @@ cdef class UnstructuredCartesianGrid(Grid):
         y : float
             y-coordinate of the point at which data will be interpolated in m
 
-        xpts : vector[float]
+        xpts : C array, float
             x-coordinates of the points at which we have data (in m)
 
-        ypts : vector[float]
+        ypts : C array, float
             y-coordinates of the points at which we have data (in m)
 
-        vals : vector[float]
+        vals : C array, float
             Values at the points where data is specified
 
         Returns
@@ -1263,20 +1298,12 @@ cdef class UnstructuredCartesianGrid(Grid):
         cdef DTYPE_FLOAT_t sumw
 
         # For looping
-        cdef DTYPE_INT_t i, npts
-
-        # Don't like this much. Would be better to use a cython equivalent to
-        # `zip'. The boost C++ libraries provide something like this, but using
-        # it would build in a new dependency.
-        if xpts.size() == ypts.size() == vals.size():
-            n_pts = xpts.size()
-        else:
-            raise ValueError('Array lengths do not match.')
+        cdef int i
 
         # Loop over all reference points
         sum = 0.0
         sumw = 0.0
-        for i in xrange(n_pts):
+        for i in xrange(4):
             r = interp.get_euclidian_distance(x, y, xpts[i], ypts[i])
             if r == 0.0: return vals[i]
             w = 1.0/(r*r) # hardoced p value of -2
@@ -2401,9 +2428,9 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         return
 
-    cpdef DTYPE_FLOAT_t shepard_interpolation(self, const DTYPE_FLOAT_t &x,
-            const DTYPE_FLOAT_t &y, const vector[DTYPE_FLOAT_t] &xpts, const vector[DTYPE_FLOAT_t] &ypts,
-            const vector[DTYPE_FLOAT_t] &vals) except FLOAT_ERR:
+    cdef DTYPE_FLOAT_t shepard_interpolation(self, const DTYPE_FLOAT_t &x,
+            const DTYPE_FLOAT_t &y, const DTYPE_FLOAT_t xpts[4], const DTYPE_FLOAT_t ypts[4],
+            const DTYPE_FLOAT_t vals[4]) except FLOAT_ERR:
         """ Shepard interpolation in geographic coordinates
 
         Distances are here calculated as segments of great circles joining two points
@@ -2417,13 +2444,13 @@ cdef class UnstructuredGeographicGrid(Grid):
         y : float
             Latitude of the point at which data will be interpolated in radians.
 
-        xpts : vector[float]
+        xpts : C array, float
             Longitudes of the points at which we have data in radians.
 
-        ypts : vector[float]
+        ypts : C array, float
             Latitude of the points at which we have data in radians.
 
-        vals : vector[float]
+        vals : C array, float
             Values at the points where data is specified
 
         Returns
@@ -2442,20 +2469,12 @@ cdef class UnstructuredGeographicGrid(Grid):
         cdef DTYPE_FLOAT_t sumw
 
         # For looping
-        cdef DTYPE_INT_t i, npts
-
-        # Don't like this much. Would be better to use a cython equivalent to
-        # `zip'. The boost C++ libraries provide something like this, but using
-        # it would build in a new dependency.
-        if xpts.size() == ypts.size() == vals.size():
-            n_pts = xpts.size()
-        else:
-            raise ValueError('Array lengths do not match.')
+        cdef int i
 
         # Loop over all reference points
         sum = 0.0
         sumw = 0.0
-        for i in xrange(n_pts):
+        for i in xrange(4):
             r = haversine(x, y, xpts[i], ypts[i])
             if r == 0.0: return vals[i]
             w = 1.0/(r*r) # hardoced p value of -2
