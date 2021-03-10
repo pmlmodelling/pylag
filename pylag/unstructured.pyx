@@ -1201,14 +1201,14 @@ cdef class UnstructuredCartesianGrid(Grid):
         """ Interpolate the gradient in the given field in time and space
 
         Interpolate the gradient in the given field in time and space on the horizontal grid. The supplied fields
-        should be 1D arrays of values defined at element nodes.
+        should be 2D arrays of values defined at element nodes.
 
         Parameters
         ----------
-        var_last_arr : 1D MemoryView
+        var_last_arr : 2D MemoryView
             Array of variable values at the last time index.
 
-        var_next_arr : 1D MemoryView
+        var_next_arr : 2D MemoryView
             Array of variable values at the next time index.
 
         k : int
@@ -2371,14 +2371,14 @@ cdef class UnstructuredGeographicGrid(Grid):
         """ Interpolate the gradient in the given field in time and space
 
         Interpolate the gradient in the given field in time and space on the horizontal grid. The supplied fields
-        should be 1D arrays of values defined at element nodes.
+        should be 2D arrays of values defined at element nodes.
 
         Parameters
         ----------
-        var_last_arr : 1D MemoryView
+        var_last_arr : 2D MemoryView
             Array of variable values at the last time index.
 
-        var_next_arr : 1D MemoryView
+        var_next_arr : 2D MemoryView
             Array of variable values at the next time index.
 
         k : int
