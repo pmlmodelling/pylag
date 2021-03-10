@@ -990,7 +990,7 @@ cdef class FVCOMDataReader(DataReader):
                 return 0
         return 1
         
-    cdef _get_variable(self, DTYPE_FLOAT_t[:, :] var_last, DTYPE_FLOAT_t[:, :] var_next,
+    cdef _get_variable(self, DTYPE_FLOAT_t[:, ::1] var_last, DTYPE_FLOAT_t[:, ::1] var_next,
             DTYPE_FLOAT_t time, Particle* particle):
         """ Returns the value of the variable through linear interpolation
 
@@ -1019,21 +1019,8 @@ cdef class FVCOMDataReader(DataReader):
         var : float
             The interpolated value of the variable at the specified point in time and space.
         """
-        # No. of vertices and a temporary object used for determining variable
-        # values at the host element's nodes
-        cdef int i # Loop counters
-        cdef int vertex # Vertex identifier
-
-        # Variables used in interpolation in time      
+        # Variables used in interpolation in time
         cdef DTYPE_FLOAT_t time_fraction
-        
-        # Intermediate arrays - var
-        cdef DTYPE_FLOAT_t var_tri_t_last_layer_1[3]
-        cdef DTYPE_FLOAT_t var_tri_t_next_layer_1[3]
-        cdef DTYPE_FLOAT_t var_tri_t_last_layer_2[3]
-        cdef DTYPE_FLOAT_t var_tri_t_next_layer_2[3]
-        cdef DTYPE_FLOAT_t var_tri_layer_1[3]
-        cdef DTYPE_FLOAT_t var_tri_layer_2[3]
         
         # Interpolated values on lower and upper bounding sigma layers
         cdef DTYPE_FLOAT_t var_layer_1
@@ -1043,15 +1030,6 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_INT_t k_layer = particle.get_k_layer()
         cdef DTYPE_INT_t k_lower_layer = particle.get_k_lower_layer()
         cdef DTYPE_INT_t k_upper_layer = particle.get_k_upper_layer()
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
-
-        # Local coordinates
-        cdef DTYPE_FLOAT_t phi[3]
-        cdef const vector[DTYPE_FLOAT_t] *_phi = &particle.get_phi(self._name)
-
-        # Shift local coordinates into an array
-        for i in range(3):
-            phi[i] = _phi.at(i)
 
         # Time fraction
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
@@ -1059,45 +1037,26 @@ cdef class FVCOMDataReader(DataReader):
         # No vertical interpolation for particles near to the surface or bottom, 
         # i.e. above or below the top or bottom sigma layer depths respectively.
         if particle.get_in_vertical_boundary_layer() is True:
-            # Extract values near to the boundary
-            for i in xrange(N_VERTICES):
-                vertex = self._nv[i,host_element]
-                var_tri_t_last_layer_1[i] = var_last[k_layer, vertex]
-                var_tri_t_next_layer_1[i] = var_next[k_layer, vertex]
-
-            # Interpolate in time
-            for i in xrange(N_VERTICES):
-                var_tri_layer_1[i] = interp.linear_interp(time_fraction,
-                                            var_tri_t_last_layer_1[i],
-                                            var_tri_t_next_layer_1[i])
-
-            # Interpolate var within the host element
-            return interp.interpolate_within_element(var_tri_layer_1, phi)
+            return self._unstructured_grid.interpolate_in_time_and_space(var_last,
+                                                                         var_next,
+                                                                         k_layer,
+                                                                         time_fraction,
+                                                                         particle)
 
         else:
-            # Extract var on the lower and upper bounding sigma layers
-            for i in xrange(N_VERTICES):
-                vertex = self._nv[i,host_element]
-                var_tri_t_last_layer_1[i] = var_last[k_lower_layer, vertex]
-                var_tri_t_next_layer_1[i] = var_next[k_lower_layer, vertex]
-                var_tri_t_last_layer_2[i] = var_last[k_upper_layer, vertex]
-                var_tri_t_next_layer_2[i] = var_next[k_upper_layer, vertex]
+            var_layer_1 = self._unstructured_grid.interpolate_in_time_and_space(var_last,
+                                                                                var_next,
+                                                                                k_lower_layer,
+                                                                                time_fraction,
+                                                                                particle)
 
-            # Interpolate in time
-            for i in xrange(N_VERTICES):
-                var_tri_layer_1[i] = interp.linear_interp(time_fraction,
-                                            var_tri_t_last_layer_1[i],
-                                            var_tri_t_next_layer_1[i])
-                var_tri_layer_2[i] = interp.linear_interp(time_fraction,
-                                            var_tri_t_last_layer_2[i],
-                                            var_tri_t_next_layer_2[i])
+            var_layer_2 = self._unstructured_grid.interpolate_in_time_and_space(var_last,
+                                                                                var_next,
+                                                                                k_upper_layer,
+                                                                                time_fraction,
+                                                                                particle)
 
-            # Interpolate var within the host element on the upper and lower
-            # bounding sigma layers
-            var_layer_1 = interp.interpolate_within_element(var_tri_layer_1, phi)
-            var_layer_2 = interp.interpolate_within_element(var_tri_layer_2, phi)
-
-            return interp.linear_interp(particle.get_omega_layers(), var_layer_1, var_layer_2)
+            return interp.linear_interp(particle.get_omega_interfaces(), var_layer_1, var_layer_2)
 
     cdef DTYPE_FLOAT_t _get_vertical_eddy_diffusivity_on_level(self,
             DTYPE_FLOAT_t time, Particle* particle,
