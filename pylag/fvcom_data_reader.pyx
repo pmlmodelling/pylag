@@ -37,12 +37,12 @@ from pylag.data_reader cimport DataReader
 from pylag.unstructured cimport Grid
 cimport pylag.interpolation as interp
 from pylag.math cimport int_min, float_min
-from pylag.math cimport cartesian_to_sigma_coords, sigma_to_cartesian_coords
 
 # PyLag python imports
 from pylag import variable_library
 from pylag.numerics import get_time_direction
 from pylag.unstructured import get_unstructured_grid
+
 
 cdef class FVCOMDataReader(DataReader):
     """ DataReader for FVCOM input data
@@ -104,11 +104,19 @@ cdef class FVCOMDataReader(DataReader):
 #    # Interpolation coefficients
 #    cdef DTYPE_FLOAT_t[:,:] _a1u
 #    cdef DTYPE_FLOAT_t[:,:] _a2u
-    
+
     # Sigma layers and levels
-    cdef DTYPE_FLOAT_t[:,::1] _siglev
-    cdef DTYPE_FLOAT_t[:,::1] _siglay
-    
+    cdef DTYPE_FLOAT_t[:, ::1] _siglev
+    cdef DTYPE_FLOAT_t[:, ::1] _siglay
+
+    # Depth of layer interfaces (i.e. levels), accounting for changes in sea surface elevation
+    cdef DTYPE_FLOAT_t[:, ::1] _depth_levels_last
+    cdef DTYPE_FLOAT_t[:, ::1] _depth_levels_next
+
+    # Depth of layer centres, accounting for changes in sea surface elevation
+    cdef DTYPE_FLOAT_t[:, ::1] _depth_layers_last
+    cdef DTYPE_FLOAT_t[:, ::1] _depth_layers_next
+
     # Bathymetry
     cdef DTYPE_FLOAT_t[::1] _h
     
@@ -415,47 +423,62 @@ cdef class FVCOMDataReader(DataReader):
         up from 0 starting at the surface, where sigma = 0, and moving downwards
         to the sea floor where sigma = -1. The current sigma layer is
         found by determining the two sigma levels that bound the given z
-        position.
+        position. The computation works in terms of depths rather than sigma
+        directly.
         """
-        cdef DTYPE_FLOAT_t sigma, sigma_upper_level, sigma_lower_level
-        
-        cdef DTYPE_FLOAT_t sigma_test, sigma_upper_layer, sigma_lower_layer
+        cdef DTYPE_FLOAT_t depth_upper_level, depth_lower_level
+        cdef DTYPE_FLOAT_t depth_upper_layer, depth_lower_layer
+        cdef DTYPE_FLOAT_t depth_test
+        cdef DTYPE_FLOAT_t depth_particle
 
-        cdef DTYPE_FLOAT_t h, zeta
+        cdef DTYPE_FLOAT_t time_fraction
 
         cdef DTYPE_INT_t k
 
-        # Compute sigma
-        h = self.get_zmin(time, particle)
-        zeta = self.get_zmax(time, particle)
-        sigma = cartesian_to_sigma_coords(particle.get_x3(), h, zeta)
+        # Time fraction
+        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
-        # Loop over all levels to find the host z layer
-        sigma_lower_level = self._interp_on_sigma_level(particle, 0)
+        # Particle depth
+        depth_particle = particle.get_x3()
+
+        # Loop over all levels
+        depth_lower_level = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
+                                                                                  self._depth_levels_next,
+                                                                                  0,
+                                                                                  time_fraction,
+                                                                                  particle)
         for k in xrange(self._n_siglay):
-            sigma_upper_level = sigma_lower_level
-            sigma_lower_level = self._interp_on_sigma_level(particle, k+1)
+            depth_upper_level = depth_lower_level
+            depth_lower_level = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
+                                                                                      self._depth_levels_next,
+                                                                                      k+1,
+                                                                                      time_fraction,
+                                                                                      particle)
 
-            if sigma <= sigma_upper_level and sigma >= sigma_lower_level:
+            if depth_particle <= depth_upper_level and depth_particle >= depth_lower_level:
                 # Host layer found
                 particle.set_k_layer(k)
 
                 # Set the sigma level interpolation coefficient
-                particle.set_omega_interfaces(interp.get_linear_fraction(sigma, sigma_lower_level, sigma_upper_level))
+                particle.set_omega_interfaces(interp.get_linear_fraction(depth_particle, depth_lower_level, depth_upper_level))
 
-                # Set variables describing which half of the sigma layer the
+                # Set variables describing which half of the depth layer the
                 # particle sits in and whether or not it resides in a boundary
                 # layer
-                sigma_test = self._interp_on_sigma_layer(particle, k)
+                depth_test = self._unstructured_grid.interpolate_in_time_and_space(self._depth_layers_last,
+                                                                                   self._depth_layers_next,
+                                                                                   k,
+                                                                                   time_fraction,
+                                                                                   particle)
 
                 # Is x3 in the top or bottom boundary layer?
-                if (k == 0 and sigma >= sigma_test) or (k == self._n_siglay - 1 and sigma <= sigma_test):
+                if (k == 0 and depth_particle >= depth_test) or (k == self._n_siglay - 1 and depth_particle <= depth_test):
                         particle.set_in_vertical_boundary_layer(True)
                         return IN_DOMAIN
 
-                # x3 bounded by upper and lower sigma layers
+                # x3 bounded by upper and lower depth layers
                 particle.set_in_vertical_boundary_layer(False)
-                if sigma >= sigma_test:
+                if depth_particle >= depth_test:
                     particle.set_k_upper_layer(k - 1)
                     particle.set_k_lower_layer(k)
                 else:
@@ -463,9 +486,18 @@ cdef class FVCOMDataReader(DataReader):
                     particle.set_k_lower_layer(k + 1)
 
                 # Set the sigma layer interpolation coefficient
-                sigma_lower_layer = self._interp_on_sigma_layer(particle, particle.get_k_lower_layer())
-                sigma_upper_layer = self._interp_on_sigma_layer(particle, particle.get_k_upper_layer())
-                particle.set_omega_layers(interp.get_linear_fraction(sigma, sigma_lower_layer, sigma_upper_layer))
+                depth_lower_layer = self._unstructured_grid.interpolate_in_time_and_space(self._depth_layers_last,
+                                                                                   self._depth_layers_next,
+                                                                                   particle.get_k_lower_layer(),
+                                                                                   time_fraction,
+                                                                                   particle)
+
+                depth_upper_layer = self._unstructured_grid.interpolate_in_time_and_space(self._depth_layers_last,
+                                                                                   self._depth_layers_next,
+                                                                                   particle.get_k_upper_layer(),
+                                                                                   time_fraction,
+                                                                                   particle)
+                particle.set_omega_layers(interp.get_linear_fraction(depth_particle, depth_lower_layer, depth_upper_layer))
 
                 return IN_DOMAIN
 
@@ -824,71 +856,97 @@ cdef class FVCOMDataReader(DataReader):
             Gradient in the vertical eddy diffusivity field.
         """
         cdef DTYPE_FLOAT_t kh_0, kh_1, kh_2, kh_3
-        cdef DTYPE_FLOAT_t sigma_0, sigma_1, sigma_2, sigma_3
         cdef DTYPE_FLOAT_t z_0, z_1, z_2, z_3
         cdef DTYPE_FLOAT_t dkh_lower_level, dkh_upper_level
-        cdef DTYPE_FLOAT_t h, zeta
+
+        # Time fraction
+        cdef DTYPE_FLOAT_t time_fraction
 
         # Particle k_layer
-        cdef DTYPE_INT_t k_layer = particle.get_k_layer()
+        cdef DTYPE_INT_t k_layer
 
-        h = self.get_zmin(time, particle)
-        zeta = self.get_zmax(time, particle)
+        # Pre-compute k_layer, time fraction
+        k_layer = particle.get_k_layer()
+        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
         if k_layer == 0:
             kh_0 = self._get_vertical_eddy_diffusivity_on_level(time, particle, k_layer)
-            sigma_0 = self._interp_on_sigma_level(particle, k_layer)
+            z_0 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
+                                                                        self._depth_levels_next,
+                                                                        k_layer,
+                                                                        time_fraction,
+                                                                        particle)
 
             kh_1 = self._get_vertical_eddy_diffusivity_on_level(time, particle, k_layer+1)
-            sigma_1 = self._interp_on_sigma_level(particle, k_layer+1)
+            z_1 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
+                                                                        self._depth_levels_next,
+                                                                        k_layer+1,
+                                                                        time_fraction,
+                                                                        particle)
 
             kh_2 = self._get_vertical_eddy_diffusivity_on_level(time, particle, k_layer+2)
-            sigma_2 = self._interp_on_sigma_level(particle, k_layer+2)
-
-            # Convert to cartesian coordinates
-            z_0 = sigma_to_cartesian_coords(sigma_0, h, zeta)
-            z_1 = sigma_to_cartesian_coords(sigma_1, h, zeta)
-            z_2 = sigma_to_cartesian_coords(sigma_2, h, zeta)
+            z_2 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
+                                                                        self._depth_levels_next,
+                                                                        k_layer+2,
+                                                                        time_fraction,
+                                                                        particle)
 
             dkh_lower_level = (kh_0 - kh_2) / (z_0 - z_2)
             dkh_upper_level = (kh_0 - kh_1) / (z_0 - z_1)
             
         elif k_layer == self._n_siglay - 1:
             kh_0 = self._get_vertical_eddy_diffusivity_on_level(time, particle, k_layer-1)
-            sigma_0 = self._interp_on_sigma_level(particle, k_layer-1)
+            z_0 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
+                                                                        self._depth_levels_next,
+                                                                        k_layer-1,
+                                                                        time_fraction,
+                                                                        particle)
 
             kh_1 = self._get_vertical_eddy_diffusivity_on_level(time, particle, k_layer)
-            sigma_1 = self._interp_on_sigma_level(particle, k_layer)
+            z_1 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
+                                                                        self._depth_levels_next,
+                                                                        k_layer,
+                                                                        time_fraction,
+                                                                        particle)
 
             kh_2 = self._get_vertical_eddy_diffusivity_on_level(time, particle, k_layer+1)
-            sigma_2 = self._interp_on_sigma_level(particle, k_layer+1)
-
-            # Convert to cartesian coordinates
-            z_0 = sigma_to_cartesian_coords(sigma_0, h, zeta)
-            z_1 = sigma_to_cartesian_coords(sigma_1, h, zeta)
-            z_2 = sigma_to_cartesian_coords(sigma_2, h, zeta)
+            z_2 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
+                                                                        self._depth_levels_next,
+                                                                        k_layer+1,
+                                                                        time_fraction,
+                                                                        particle)
 
             dkh_lower_level = (kh_1 - kh_2) / (z_1 - z_2)
             dkh_upper_level = (kh_0 - kh_2) / (z_0 - z_2)
             
         else:
             kh_0 = self._get_vertical_eddy_diffusivity_on_level(time, particle, k_layer-1)
-            sigma_0 = self._interp_on_sigma_level(particle, k_layer-1)
+            z_0 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
+                                                                        self._depth_levels_next,
+                                                                        k_layer-1,
+                                                                        time_fraction,
+                                                                        particle)
 
             kh_1 = self._get_vertical_eddy_diffusivity_on_level(time, particle, k_layer)
-            sigma_1 = self._interp_on_sigma_level(particle, k_layer)
+            z_1 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
+                                                                        self._depth_levels_next,
+                                                                        k_layer,
+                                                                        time_fraction,
+                                                                        particle)
 
             kh_2 = self._get_vertical_eddy_diffusivity_on_level(time, particle, k_layer+1)
-            sigma_2 = self._interp_on_sigma_level(particle, k_layer+1)
+            z_2 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
+                                                                        self._depth_levels_next,
+                                                                        k_layer+1,
+                                                                        time_fraction,
+                                                                        particle)
 
             kh_3 = self._get_vertical_eddy_diffusivity_on_level(time, particle, k_layer+2)
-            sigma_3 = self._interp_on_sigma_level(particle, k_layer+2)
-
-            # Convert to cartesian coordinates
-            z_0 = sigma_to_cartesian_coords(sigma_0, h, zeta)
-            z_1 = sigma_to_cartesian_coords(sigma_1, h, zeta)
-            z_2 = sigma_to_cartesian_coords(sigma_2, h, zeta)
-            z_3 = sigma_to_cartesian_coords(sigma_3, h, zeta)
+            z_3 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
+                                                                        self._depth_levels_next,
+                                                                        k_layer+2,
+                                                                        time_fraction,
+                                                                        particle)
 
             dkh_lower_level = (kh_1 - kh_3) / (z_1 - z_3)
             dkh_upper_level = (kh_0 - kh_2) / (z_0 - z_2)
@@ -1307,7 +1365,7 @@ cdef class FVCOMDataReader(DataReader):
 
         # Sigma levels at nodal coordinates
         self._siglev = self.mediator.get_grid_variable('siglev', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)
-        
+
         # Sigma layers at nodal coordinates
         self._siglay = self.mediator.get_grid_variable('siglay', (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
 
@@ -1339,7 +1397,13 @@ cdef class FVCOMDataReader(DataReader):
         # Update memory views for zeta
         self._zeta_last = self.mediator.get_time_dependent_variable_at_last_time_index('zeta', (self._n_nodes), DTYPE_FLOAT)
         self._zeta_next = self.mediator.get_time_dependent_variable_at_next_time_index('zeta', (self._n_nodes), DTYPE_FLOAT)
-        
+
+        # Update memory views for sigma layer and level depths. These are computed using sigma, h and zeta.
+        self._depth_levels_last = sigma_to_z(self._siglev, self._h, self._zeta_last)
+        self._depth_levels_next = sigma_to_z(self._siglev, self._h, self._zeta_next)
+        self._depth_layers_last = sigma_to_z(self._siglay, self._h, self._zeta_last)
+        self._depth_layers_next = sigma_to_z(self._siglay, self._h, self._zeta_next)
+
         # Update memory views for u, v and w
         self._u_last = self.mediator.get_time_dependent_variable_at_last_time_index('u', (self._n_siglay, self._n_elems), DTYPE_FLOAT)
         self._u_next = self.mediator.get_time_dependent_variable_at_next_time_index('u', (self._n_siglay, self._n_elems), DTYPE_FLOAT)
@@ -1376,89 +1440,26 @@ cdef class FVCOMDataReader(DataReader):
 
         return
 
-    cdef DTYPE_FLOAT_t _interp_on_sigma_layer(self,
-            Particle *particle, DTYPE_INT_t kidx)  except FLOAT_ERR:
-        """ Return the linearly interpolated value of sigma on the sigma layer.
-        
-        Compute sigma on the specified sigma layer within the given host 
-        element.
-        
-        Parameters
-        ----------
-        particle: *Particle
-            Pointer to a Particle object.
 
-        kidx : int
-            Sigma layer on which to interpolate
+cpdef sigma_to_z(const DTYPE_FLOAT_t[:, ::1] sigma, const DTYPE_FLOAT_t[::1] h, const DTYPE_FLOAT_t[::1] zeta):
+    cdef DTYPE_FLOAT_t[:, ::1] z_view
 
-        Returns
-        -------
-         : float
-            Interpolated value of sigma.
-        """
-        cdef DTYPE_INT_t vertex # Vertex identifier
-        cdef DTYPE_INT_t i
+    cdef size_t n, m
+    cdef size_t i, j
 
-        # Sigma
-        cdef DTYPE_FLOAT_t sigma_nodes[3]
+    n = sigma.shape[0]
+    m = sigma.shape[1]
 
-        # Host element
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
+    if h.shape[0] != m or zeta.shape[0] != m:
+        raise ValueError('Array sizes do not match')
 
-        # Local coordinates
-        cdef DTYPE_FLOAT_t phi[3]
-        cdef const vector[DTYPE_FLOAT_t] *_phi = &particle.get_phi(self._name)
+    z = np.empty((n, m), dtype=DTYPE_FLOAT, order='C')
+    z_view = z
 
-        # Shift local coordinates into an array
-        for i in range(3):
-            phi[i] = _phi.at(i)
+    for i in range(n):
+        for j in range(m):
+            z_view[i,j] = zeta[j] + sigma[i, j] * (zeta[j] + h[j])
 
-        for i in xrange(3):
-            vertex = self._nv[i, host_element]
-            sigma_nodes[i] = self._siglay[kidx, vertex]
+    return z
 
-        return interp.interpolate_within_element(sigma_nodes, phi)
-
-    cdef DTYPE_FLOAT_t _interp_on_sigma_level(self,
-            Particle *particle, DTYPE_INT_t kidx) except FLOAT_ERR:
-        """ Return the linearly interpolated value of sigma.
-        
-        Compute sigma on the specified sigma level within the given host 
-        element.
-        
-        Parameters:
-        -----------
-        particle: *Particle
-            Pointer to a Particle object.
-
-        kidx : int
-            Sigma layer on which to interpolate.
-
-        Returns:
-        --------
-        sigma: float
-            Interpolated value of sigma.
-        """
-        cdef DTYPE_INT_t vertex # Vertex identifier
-        cdef DTYPE_INT_t i
-
-        # Sigma
-        cdef DTYPE_FLOAT_t sigma_nodes[3]
-
-        # Host element
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
-
-        # Local coordinates
-        cdef DTYPE_FLOAT_t phi[3]
-        cdef const vector[DTYPE_FLOAT_t] *_phi = &particle.get_phi(self._name)
-
-        # Shift local coordinates into an array
-        for i in range(3):
-            phi[i] = _phi.at(i)
-
-        for i in xrange(3):
-            vertex = self._nv[i, host_element]
-            sigma_nodes[i] = self._siglev[kidx, vertex]                  
-
-        return interp.interpolate_within_element(sigma_nodes, phi)
 

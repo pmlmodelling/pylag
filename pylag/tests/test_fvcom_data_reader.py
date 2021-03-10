@@ -39,9 +39,9 @@ class MockFVCOMMediator(Mediator):
         y = np.array([1.0, 1.0, 1.0, 2.0, 2.0, 3.0, 1.0], dtype=float)
         xc = np.array([1.3333333333, 1.6666666667, 0.6666666667, 1.5000000000, 2.3333333333], dtype=float)
         yc = np.array([1.6666666667, 1.3333333333, 1.3333333333, 2.3333333333, 1.3333333333], dtype=float)
-        siglay = np.array([[-.1,-.5,-.9],]*n_nodes, dtype=float).transpose()
-        siglev = np.array([[0., -.2,-.8,-1.],]*n_nodes, dtype=float).transpose()
-        h = np.array([10., 11., 10., 11., 11., 10.], dtype=float)
+        siglay = np.array([[-.1, -.5, -.9], ]*n_nodes, dtype=float).transpose()
+        siglev = np.array([[0., -.2, -.8, -1.], ]*n_nodes, dtype=float).transpose()
+        h = np.array([10., 11., 10., 11., 11., 10., 10.], dtype=float)
         mask = np.array([0, 0, 2, 2, 2], dtype=int)
         mask_nodes = np.array([0, 0, 0, 0, 0, 0, 0], dtype=int)
         self._grid_vars = {'nv': nv, 'nbe': nbe, 'x': x, 'y': y, 'xc': xc,
@@ -49,11 +49,11 @@ class MockFVCOMMediator(Mediator):
                            'h': h, 'mask': mask, 'mask_nodes': mask_nodes}
         
         # Dictionaries holding the value of time dependent and time independent variables
-        zeta = np.array([[0.,1.,0.,1.,1.,0.],[0.,2.,0.,2.,2.,0.]],dtype=float)
+        zeta = np.array([[0., 1., 0., 1., 1., 0., 0.], [0., 2., 0., 2., 2., 0., 0.]], dtype=float)
         
         # u/v/w are imposed, equal across elements, decreasing with depth and increasing in time
-        uvw_t0 = np.array([[2.]*n_elems,[1.]*n_elems,[0.]*n_elems], dtype=float)
-        uvw_t1 = np.array([[4.]*n_elems,[2.]*n_elems,[0.]*n_elems], dtype=float)
+        uvw_t0 = np.array([[2.]*n_elems, [1.]*n_elems, [0.]*n_elems], dtype=float)
+        uvw_t1 = np.array([[4.]*n_elems, [2.]*n_elems, [0.]*n_elems], dtype=float)
         u = np.array([uvw_t0, uvw_t1], dtype=float)
         v = np.array([uvw_t0, uvw_t1], dtype=float)
         ww = np.array([uvw_t0, uvw_t1], dtype=float)
