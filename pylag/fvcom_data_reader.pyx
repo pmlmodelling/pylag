@@ -1104,6 +1104,9 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_FLOAT_t uc2[4]
         cdef DTYPE_FLOAT_t vc2[4]
         cdef DTYPE_FLOAT_t wc2[4]
+
+        # Flag for valid points
+        cdef DTYPE_INT_t valid_points[4]
         
         # Particle k layers
         cdef DTYPE_INT_t k_layer = particle.get_k_layer()
@@ -1132,18 +1135,29 @@ cdef class FVCOMDataReader(DataReader):
             uc1[0] = interp.linear_interp(time_fraction, self._u_last[k_layer, host_element], self._u_next[k_layer, host_element])
             vc1[0] = interp.linear_interp(time_fraction, self._v_last[k_layer, host_element], self._v_next[k_layer, host_element])
             wc1[0] = interp.linear_interp(time_fraction, self._w_last[k_layer, host_element], self._w_next[k_layer, host_element])
+            valid_points[0] = 1
             for i in xrange(3):
                 neighbour = self._nbe[i, host_element]
+                j = i + 1
                 if neighbour >= 0:
-                    xc[i+1] = self._xc[neighbour]
-                    yc[i+1] = self._yc[neighbour]
-                    uc1[i+1] = interp.linear_interp(time_fraction, self._u_last[k_layer, neighbour], self._u_next[k_layer, neighbour])
-                    vc1[i+1] = interp.linear_interp(time_fraction, self._v_last[k_layer, neighbour], self._v_next[k_layer, neighbour])
-                    wc1[i+1] = interp.linear_interp(time_fraction, self._w_last[k_layer, neighbour], self._w_next[k_layer, neighbour])
+                    xc[j] = self._xc[neighbour]
+                    yc[j] = self._yc[neighbour]
+                    uc1[j] = interp.linear_interp(time_fraction, self._u_last[k_layer, neighbour], self._u_next[k_layer, neighbour])
+                    vc1[j] = interp.linear_interp(time_fraction, self._v_last[k_layer, neighbour], self._v_next[k_layer, neighbour])
+                    wc1[j] = interp.linear_interp(time_fraction, self._w_last[k_layer, neighbour], self._w_next[k_layer, neighbour])
+                    valid_points[j] = 1
+                else:
+                    # Set all values to zero and flag as an invalid point so that it is not used in the interpolation
+                    xc[j] = 0.0
+                    yc[j] = 0.0
+                    uc1[j] = 0.0
+                    vc1[j] = 0.0
+                    wc1[j] = 0.0
+                    valid_points[j] = 0
 
-            vel[0] = self._unstructured_grid.shepard_interpolation(particle.get_x1(), particle.get_x2(), xc, yc, uc1)
-            vel[1] = self._unstructured_grid.shepard_interpolation(particle.get_x1(), particle.get_x2(), xc, yc, vc1)
-            vel[2] = self._unstructured_grid.shepard_interpolation(particle.get_x1(), particle.get_x2(), xc, yc, wc1)
+            vel[0] = self._unstructured_grid.shepard_interpolation(particle.get_x1(), particle.get_x2(), xc, yc, uc1, valid_points)
+            vel[1] = self._unstructured_grid.shepard_interpolation(particle.get_x1(), particle.get_x2(), xc, yc, vc1, valid_points)
+            vel[2] = self._unstructured_grid.shepard_interpolation(particle.get_x1(), particle.get_x2(), xc, yc, wc1, valid_points)
 
             return  
 
@@ -1156,10 +1170,11 @@ cdef class FVCOMDataReader(DataReader):
         uc2[0] = interp.linear_interp(time_fraction, self._u_last[k_upper_layer, host_element], self._u_next[k_upper_layer, host_element])
         vc2[0] = interp.linear_interp(time_fraction, self._v_last[k_upper_layer, host_element], self._v_next[k_upper_layer, host_element])
         wc2[0] = interp.linear_interp(time_fraction, self._w_last[k_upper_layer, host_element], self._w_next[k_upper_layer, host_element])
+        valid_points[0] = 1
         for i in xrange(3):
             neighbour = self._nbe[i, host_element]
+            j = i + 1
             if neighbour >= 0:
-                j = i + 1
                 xc[j] = self._xc[neighbour]
                 yc[j] = self._yc[neighbour]
                 uc1[j] = interp.linear_interp(time_fraction, self._u_last[k_lower_layer, neighbour], self._u_next[k_lower_layer, neighbour])
@@ -1168,16 +1183,27 @@ cdef class FVCOMDataReader(DataReader):
                 uc2[j] = interp.linear_interp(time_fraction, self._u_last[k_upper_layer, neighbour], self._u_next[k_upper_layer, neighbour])
                 vc2[j] = interp.linear_interp(time_fraction, self._v_last[k_upper_layer, neighbour], self._v_next[k_upper_layer, neighbour])
                 wc2[j] = interp.linear_interp(time_fraction, self._w_last[k_upper_layer, neighbour], self._w_next[k_upper_layer, neighbour])
+                valid_points[j] = 1
+            else:
+                xc[j] = 0.0
+                yc[j] = 0.0
+                uc1[j] = 0.0
+                vc1[j] = 0.0
+                wc1[j] = 0.0
+                uc2[j] = 0.0
+                vc2[j] = 0.0
+                wc2[j] = 0.0
+                valid_points[j] = 0
 
         # ... lower bounding sigma layer
-        up1 = self._unstructured_grid.shepard_interpolation(particle.get_x1(), particle.get_x2(), xc, yc, uc1)
-        vp1 = self._unstructured_grid.shepard_interpolation(particle.get_x1(), particle.get_x2(), xc, yc, vc1)
-        wp1 = self._unstructured_grid.shepard_interpolation(particle.get_x1(), particle.get_x2(), xc, yc, wc1)
+        up1 = self._unstructured_grid.shepard_interpolation(particle.get_x1(), particle.get_x2(), xc, yc, uc1, valid_points)
+        vp1 = self._unstructured_grid.shepard_interpolation(particle.get_x1(), particle.get_x2(), xc, yc, vc1, valid_points)
+        wp1 = self._unstructured_grid.shepard_interpolation(particle.get_x1(), particle.get_x2(), xc, yc, wc1, valid_points)
 
         # ... upper bounding sigma layer
-        up2 = self._unstructured_grid.shepard_interpolation(particle.get_x1(), particle.get_x2(), xc, yc, uc2)
-        vp2 = self._unstructured_grid.shepard_interpolation(particle.get_x1(), particle.get_x2(), xc, yc, vc2)
-        wp2 = self._unstructured_grid.shepard_interpolation(particle.get_x1(), particle.get_x2(), xc, yc, wc2)
+        up2 = self._unstructured_grid.shepard_interpolation(particle.get_x1(), particle.get_x2(), xc, yc, uc2, valid_points)
+        vp2 = self._unstructured_grid.shepard_interpolation(particle.get_x1(), particle.get_x2(), xc, yc, vc2, valid_points)
+        wp2 = self._unstructured_grid.shepard_interpolation(particle.get_x1(), particle.get_x2(), xc, yc, wc2, valid_points)
 
         # Vertical interpolation
         vel[0] = interp.linear_interp(particle.get_omega_layers(), up1, up2)

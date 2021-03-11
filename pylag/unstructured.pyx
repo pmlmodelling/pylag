@@ -309,7 +309,8 @@ cdef class Grid:
 
     def shepard_interpolation_wrapper(self, const DTYPE_FLOAT_t &x,
             const DTYPE_FLOAT_t &y, const vector[DTYPE_FLOAT_t] &xpts,
-            const vector[DTYPE_FLOAT_t] &ypts, const vector[DTYPE_FLOAT_t] &vals):
+            const vector[DTYPE_FLOAT_t] &ypts, const vector[DTYPE_FLOAT_t] &vals,
+            const vector[DTYPE_INT_t] &valid_points):
         """ Python wrapper for shepard interpolation
 
         Parameters
@@ -328,23 +329,28 @@ cdef class Grid:
 
         vals : numpy array
             Values at x/y coordinates.
+
+        valid_points : numpy array
+            Array of 1/0 flags which signify which values to use (1) and which to ignore (0).
         """
         cdef DTYPE_FLOAT_t xpts_c[4], ypts_c[4], vals_c[4]
+        cdef DTYPE_INT_t valid_points_c[4]
         cdef int i
 
-        if xpts.size() != 4 or ypts.size() != 4 or vals.size() != 4:
+        if xpts.size() != 4 or ypts.size() != 4 or vals.size() != 4 or valid_points.size() != 4:
             raise ValueError('Input arrays should be of length 4.')
 
         for i in range(4):
             xpts_c[i] = xpts[i]
             ypts_c[i] = ypts[i]
             vals_c[i] = vals[i]
+            valid_points_c[i] = valid_points[i]
 
-        return self.shepard_interpolation(x, y, xpts_c, ypts_c, vals_c)
+        return self.shepard_interpolation(x, y, xpts_c, ypts_c, vals_c, valid_points_c)
 
     cdef DTYPE_FLOAT_t shepard_interpolation(self, const DTYPE_FLOAT_t &x,
             const DTYPE_FLOAT_t &y, const DTYPE_FLOAT_t xpts[4], const DTYPE_FLOAT_t ypts[4],
-            const DTYPE_FLOAT_t vals[4]) except FLOAT_ERR:
+            const DTYPE_FLOAT_t vals[4], const DTYPE_INT_t valid_points[4]) except FLOAT_ERR:
         raise NotImplementedError
 
 
@@ -1283,7 +1289,7 @@ cdef class UnstructuredCartesianGrid(Grid):
 
     cdef DTYPE_FLOAT_t shepard_interpolation(self, const DTYPE_FLOAT_t &x,
             const DTYPE_FLOAT_t &y, const DTYPE_FLOAT_t xpts[4], const DTYPE_FLOAT_t ypts[4],
-            const DTYPE_FLOAT_t vals[4]) except FLOAT_ERR:
+            const DTYPE_FLOAT_t vals[4], const DTYPE_INT_t valid_points[4]) except FLOAT_ERR:
         """ Shepard interpolation in cartesian coordinates
 
         Distances are euclidian distances in the plane
@@ -1304,6 +1310,9 @@ cdef class UnstructuredCartesianGrid(Grid):
 
         vals : C array, float
             Values at the points where data is specified
+
+        valid_points : C array, int
+            Flags signifying which points to use (1) and not use (0).
 
         Returns
         -------
@@ -1327,11 +1336,12 @@ cdef class UnstructuredCartesianGrid(Grid):
         sum = 0.0
         sumw = 0.0
         for i in xrange(4):
-            r = interp.get_euclidian_distance(x, y, xpts[i], ypts[i])
-            if r == 0.0: return vals[i]
-            w = 1.0/(r*r) # hardoced p value of -2
-            sum = sum + w
-            sumw = sumw + w*vals[i]
+            if valid_points[i] != 0:
+                r = interp.get_euclidian_distance(x, y, xpts[i], ypts[i])
+                if r == 0.0: return vals[i]
+                w = 1.0/(r*r) # hardoced p value of -2
+                sum = sum + w
+                sumw = sumw + w*vals[i]
 
         return sumw/sum
 
@@ -2452,7 +2462,7 @@ cdef class UnstructuredGeographicGrid(Grid):
 
     cdef DTYPE_FLOAT_t shepard_interpolation(self, const DTYPE_FLOAT_t &x,
             const DTYPE_FLOAT_t &y, const DTYPE_FLOAT_t xpts[4], const DTYPE_FLOAT_t ypts[4],
-            const DTYPE_FLOAT_t vals[4]) except FLOAT_ERR:
+            const DTYPE_FLOAT_t vals[4], const DTYPE_INT_t valid_points[4]) except FLOAT_ERR:
         """ Shepard interpolation in geographic coordinates
 
         Distances are here calculated as segments of great circles joining two points
@@ -2474,6 +2484,9 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         vals : C array, float
             Values at the points where data is specified
+
+        valid_points : C array, int
+            Flags signifying which points to use (1) and not use (0).
 
         Returns
         -------
@@ -2497,11 +2510,12 @@ cdef class UnstructuredGeographicGrid(Grid):
         sum = 0.0
         sumw = 0.0
         for i in xrange(4):
-            r = haversine(x, y, xpts[i], ypts[i])
-            if r == 0.0: return vals[i]
-            w = 1.0/(r*r) # hardoced p value of -2
-            sum = sum + w
-            sumw = sumw + w*vals[i]
+            if valid_points[i] != 0:
+                r = haversine(x, y, xpts[i], ypts[i])
+                if r == 0.0: return vals[i]
+                w = 1.0/(r*r) # hardoced p value of -2
+                sum = sum + w
+                sumw = sumw + w*vals[i]
 
         return sumw / sum
 

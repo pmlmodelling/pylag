@@ -55,4 +55,4 @@ cdef class Grid:
 
     cdef DTYPE_FLOAT_t shepard_interpolation(self, const DTYPE_FLOAT_t &x,
             const DTYPE_FLOAT_t &y, const DTYPE_FLOAT_t xpts[4], const DTYPE_FLOAT_t ypts[4],
-            const DTYPE_FLOAT_t vals[4]) except FLOAT_ERR
+            const DTYPE_FLOAT_t vals[4], const DTYPE_INT_t valid_points[4]) except FLOAT_ERR

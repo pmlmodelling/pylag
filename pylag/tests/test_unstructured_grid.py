@@ -128,13 +128,25 @@ class UnstructuredCartesianGrid_test(TestCase):
         xpts = np.array([-2.0, -1.0, 1.0, 2.0], dtype=DTYPE_FLOAT)
         ypts = np.array([-2.0, -1.0, 1.0, 2.0], dtype=DTYPE_FLOAT)
         vals = np.array([0.0, 0.0, 1.0, 0.0], dtype=DTYPE_FLOAT)
+        valid_points = np.array([1, 1, 1, 1], dtype=DTYPE_INT)
 
-        val = self.unstructured_grid.shepard_interpolation_wrapper(1.0, 1.0, xpts, ypts, vals)
+        val = self.unstructured_grid.shepard_interpolation_wrapper(1.0, 1.0, xpts, ypts, vals, valid_points)
         test.assert_almost_equal(val, 1.0)
 
-        val = self.unstructured_grid.shepard_interpolation_wrapper(0.0, 0.0, xpts, ypts, vals)
+        val = self.unstructured_grid.shepard_interpolation_wrapper(0.0, 0.0, xpts, ypts, vals, valid_points)
         test.assert_almost_equal(val, 0.4)
 
+    def test_shephard_interpolation_with_invalid_points(self):
+        xpts = np.array([-2.0, -1.0, 1.0, -999.0], dtype=DTYPE_FLOAT)
+        ypts = np.array([-2.0, -1.0, 1.0, -999.0], dtype=DTYPE_FLOAT)
+        vals = np.array([0.0, 0.0, 1.0, -999.0], dtype=DTYPE_FLOAT)
+        valid_points = np.array([1, 1, 1, 0], dtype=DTYPE_INT)
+
+        val = self.unstructured_grid.shepard_interpolation_wrapper(1.0, 1.0, xpts, ypts, vals, valid_points)
+        test.assert_almost_equal(val, 1.0)
+
+        val = self.unstructured_grid.shepard_interpolation_wrapper(0.0, 0.0, xpts, ypts, vals, valid_points)
+        test.assert_almost_equal(val, 0.44444444444)
 
 class UnstructuredGeographicGrid_test(TestCase):
     """ Unit tests for unstructured Geographic grids
