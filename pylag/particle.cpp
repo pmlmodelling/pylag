@@ -145,6 +145,13 @@ namespace particles {
         return phis.at(grid);
     }
 
+    void Particle::get_all_phis(std::vector<std::string>& rhs_grids, std::vector<std::vector<double>>& rhs_phis) const {
+        for (auto& x: phis) {
+            rhs_grids.push_back(x.first);
+            rhs_phis.push_back(x.second);
+        }
+    }
+
     void Particle::set_omega_interfaces(const double& rhs) {
         omega_interfaces = rhs;
     }

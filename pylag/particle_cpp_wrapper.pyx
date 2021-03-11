@@ -375,6 +375,12 @@ cdef ParticleSmartPtr copy(ParticleSmartPtr particle_smart_ptr):
     return ParticleSmartPtr(particle_smart_ptr=particle_smart_ptr)
 
 
+def to_string_wrapper(ParticleSmartPtr particle):
+    """ Python wrapper for to_string
+    """
+    return to_string(particle.get_ptr())
+
+
 cdef to_string(Particle* particle):
     """ Return a string object that describes a particle
 
@@ -389,9 +395,10 @@ cdef to_string(Particle* particle):
         String describing the particle
 
     """
-    cdef vector[string] grids
-    cdef vector[int] hosts
-    cdef const vector[DTYPE_FLOAT_t]* _phi
+    cdef vector[string] host_grids_c
+    cdef vector[int] host_elements_c
+    cdef vector[string] phi_grids_c
+    cdef vector[vector[DTYPE_FLOAT_t]] phis_c
     cdef size_t i
 
     s_base = "Particle properties \n"\
@@ -423,20 +430,30 @@ cdef to_string(Particle* particle):
                                                    particle.get_age())
 
     # Get host elements
-    particle.get_all_host_horizontal_elems(grids, hosts)
+    particle.get_all_host_horizontal_elems(host_grids_c, host_elements_c)
     host_elements = {}
-    for grid, host in zip(grids, hosts):
+    for grid, host in zip(host_grids_c, host_elements_c):
+        # Host element
         host_elements[grid.decode()] = host
+
+    # Get phis
+    particle.get_all_phis(phi_grids_c, phis_c)
+    phis = {}
+    for grid, phi in zip(phi_grids_c, phis_c):
+        grid_name = grid.decode()
+        phis[grid_name] = []
+        for i in range(3):
+            phis[grid_name].append(phi[i])
 
     # Add hosts and phis
     s_hosts = ""
-    s_phis = ""
     for key, value in host_elements.items():
         s_hosts += "Host on grid {} = {} \n".format(key, value)
 
-        _phi = &particle.get_phi(key)
-        for i in range(_phi.size()):
-            s_phis += "Phi {} on grid {} = {} \n".format(i, key, _phi.at(i))
+    s_phis = ""
+    for key, value in phis.items():
+        for i in range(3):
+            s_phis += "Phi {} on grid {} = {} \n".format(i, key, value[i])
 
     s = s_base + s_hosts + s_phis
 

@@ -40,6 +40,7 @@ cdef extern from "particle.h" namespace "particles":
 
         void set_phi(const string&, const vector[DTYPE_FLOAT_t]&) except +
         const vector[DTYPE_FLOAT_t]& get_phi(const string&) except +
+        void get_all_phis(vector[string]&, vector[vector[DTYPE_FLOAT_t]]&) except +
 
         void set_omega_interfaces(const DTYPE_FLOAT_t&) except +
         DTYPE_FLOAT_t get_omega_interfaces() except +
