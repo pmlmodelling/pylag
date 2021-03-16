@@ -1042,8 +1042,8 @@ cdef class FVCOMDataReader(DataReader):
                 return 0
         return 1
         
-    cdef _get_variable(self, DTYPE_FLOAT_t[:, ::1] var_last, DTYPE_FLOAT_t[:, ::1] var_next,
-            DTYPE_FLOAT_t time, Particle* particle):
+    cdef DTYPE_FLOAT_t _get_variable(self, DTYPE_FLOAT_t[:, ::1] var_last, DTYPE_FLOAT_t[:, ::1] var_next,
+            DTYPE_FLOAT_t time, Particle* particle) except FLOAT_ERR:
         """ Returns the value of the variable through linear interpolation
 
         Private method for interpolating fields specified at element nodes on sigma layers.
