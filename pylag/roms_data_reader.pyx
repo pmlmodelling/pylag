@@ -199,8 +199,12 @@ cdef class ROMSDataReader(DataReader):
     cdef DTYPE_FLOAT_t _time_last
     cdef DTYPE_FLOAT_t _time_next
 
+    # Options controlling the reading of eddy diffusivities
+    cdef object _Kh_method_name, _Ah_method_name
+    cdef DTYPE_INT_t _Kh_method, _Ah_method
+
     # Flags that identify whether a given variable should be read in
-    cdef bint _has_w, _has_Kh, _has_Ah, _has_is_wet,  _has_zeta
+    cdef bint _has_w, _has_is_wet,  _has_zeta
 
     def __init__(self, config, mediator):
         self.config = config
@@ -253,8 +257,37 @@ cdef class ROMSDataReader(DataReader):
         # Set boolean flags
         self._has_zeta = True if 'zos' in self._variable_names else False
         self._has_w = True if 'wo' in self._variable_names else False
-        self._has_Kh = True if 'Kh' in self._variable_names else False
-        self._has_Ah = True if 'Ah' in self._variable_names else False
+
+        # Set options for handling the vertical eddy diffusivity
+        self._Kh_method_name = self.config.get('OCEAN_CIRCULATION_MODEL', 'Kh_method').strip().lower()
+        if self._Kh_method_name not in ['none', 'file']:
+            raise RuntimeError('Invalid option for `Kh_method` ({})'.format(self._Kh_method_name))
+
+        if self._Kh_method_name == "none":
+            self._Kh_method = 0
+        elif self._Kh_method_name == "file":
+            # Make sure a value for `Kh_var_name` has been provided.
+            if 'Kh' not in self._variable_names:
+                raise RuntimeError('The configuration file states that Kh data should be read from file \n'
+                                    'yet a name for the Kh variable (`Kh_var_name`) has not been given \n'
+                                    'or the config option was not included.')
+            self._Kh_method = 1
+
+
+        # Set options for handling the horizontal eddy diffusivity
+        self._Ah_method_name = self.config.get('OCEAN_CIRCULATION_MODEL', 'Ah_method').strip().lower()
+        if self._Ah_method_name not in ['none', 'file']:
+            raise RuntimeError('Invalid option for `Ah_method` ({})'.format(self._Ah_method_name))
+
+        if self._Ah_method_name == "none":
+            self._Ah_method = 0
+        elif self._Ah_method_name == "file":
+            # Make sure a value for `Ah_var_name` has been provided.
+            if 'Ah' not in self._variable_names:
+                raise RuntimeError('The configuration file states that Ah data should be read from file \n'
+                                    'yet a name for the Ah variable (`Ah_var_name`) has not been given \n'
+                                    'or the config option was not included.')
+            self._Ah_method = 1
 
         # Has is wet flag?
         self._has_is_wet = self.config.getboolean("OCEAN_CIRCULATION_MODEL", "has_is_wet")
@@ -918,26 +951,34 @@ cdef class ROMSDataReader(DataReader):
         cdef DTYPE_FLOAT_t var_lower_layer
         cdef DTYPE_FLOAT_t var_upper_layer
 
-        # Time fraction
-        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
+        # The value of Ah to be returned
+        cdef DTYPE_FLOAT_t Ah
 
-        if particle.get_in_vertical_boundary_layer() is True:
-            return self._unstructured_grid_rho.interpolate_in_time_and_space(self._ah_last,
-                                                                             self._ah_next,
-                                                                             k_layer,
-                                                                             time_fraction, particle)
+        if self._Ah_method == 1:
+            # Time fraction
+            time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
+
+            if particle.get_in_vertical_boundary_layer() is True:
+                Ah = self._unstructured_grid_rho.interpolate_in_time_and_space(self._ah_last,
+                                                                                 self._ah_next,
+                                                                                 k_layer,
+                                                                                 time_fraction, particle)
+            else:
+                var_lower_layer = self._unstructured_grid_rho.interpolate_in_time_and_space(self._ah_last,
+                                                                                            self._ah_next,
+                                                                                            k_lower_layer,
+                                                                                            time_fraction, particle)
+
+                var_upper_layer = self._unstructured_grid_rho.interpolate_in_time_and_space(self._ah_last,
+                                                                                            self._ah_next,
+                                                                                            k_upper_layer,
+                                                                                            time_fraction, particle)
+
+                Ah = interp.linear_interp(particle.get_omega_layers(), var_lower_layer, var_upper_layer)
         else:
-            var_lower_layer = self._unstructured_grid_rho.interpolate_in_time_and_space(self._ah_last,
-                                                                                        self._ah_next,
-                                                                                        k_lower_layer,
-                                                                                        time_fraction, particle)
+            raise RuntimeError('This dataset does not contain horizontal eddy viscosities.')
 
-            var_upper_layer = self._unstructured_grid_rho.interpolate_in_time_and_space(self._ah_last,
-                                                                                        self._ah_next,
-                                                                                        k_upper_layer,
-                                                                                        time_fraction, particle)
-
-        return interp.linear_interp(particle.get_omega_layers(), var_lower_layer, var_upper_layer)
+        return Ah
 
     cdef void get_horizontal_eddy_viscosity_derivative(self, DTYPE_FLOAT_t time,
             Particle* particle, DTYPE_FLOAT_t Ah_prime[2]) except +:
@@ -971,32 +1012,35 @@ cdef class ROMSDataReader(DataReader):
         # Gradients on lower and upper layers
         cdef DTYPE_FLOAT_t grad_lower_layer[2], grad_upper_layer[2]
 
-        # Time fraction
-        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
+        if self._Ah_method == 1:
+            # Time fraction
+            time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
-        # No vertical interpolation for particles near to the surface or bottom,
-        # i.e. above or below the top or bottom sigma layer depths respectively.
-        if particle.get_in_vertical_boundary_layer() is True:
-            self._unstructured_grid_rho.interpolate_grad_in_time_and_space(self._ah_last,
-                                                                           self._ah_next,
-                                                                           k_layer,
-                                                                           time_fraction, particle,
-                                                                           Ah_prime)
+            # No vertical interpolation for particles near to the surface or bottom,
+            # i.e. above or below the top or bottom sigma layer depths respectively.
+            if particle.get_in_vertical_boundary_layer() is True:
+                self._unstructured_grid_rho.interpolate_grad_in_time_and_space(self._ah_last,
+                                                                               self._ah_next,
+                                                                               k_layer,
+                                                                               time_fraction, particle,
+                                                                               Ah_prime)
+            else:
+                self._unstructured_grid_rho.interpolate_grad_in_time_and_space(self._ah_last,
+                                                                               self._ah_next,
+                                                                               k_lower_layer,
+                                                                               time_fraction, particle,
+                                                                               grad_lower_layer)
+
+                self._unstructured_grid_rho.interpolate_grad_in_time_and_space(self._ah_last,
+                                                                               self._ah_next,
+                                                                               k_upper_layer,
+                                                                               time_fraction, particle,
+                                                                               grad_upper_layer)
+
+                Ah_prime[0] = interp.linear_interp(particle.get_omega_layers(), grad_lower_layer[0], grad_upper_layer[0])
+                Ah_prime[1] = interp.linear_interp(particle.get_omega_layers(), grad_lower_layer[1], grad_upper_layer[1])
         else:
-            self._unstructured_grid_rho.interpolate_grad_in_time_and_space(self._ah_last,
-                                                                           self._ah_next,
-                                                                           k_lower_layer,
-                                                                           time_fraction, particle,
-                                                                           grad_lower_layer)
-
-            self._unstructured_grid_rho.interpolate_grad_in_time_and_space(self._ah_last,
-                                                                           self._ah_next,
-                                                                           k_upper_layer,
-                                                                           time_fraction, particle,
-                                                                           grad_upper_layer)
-
-            Ah_prime[0] = interp.linear_interp(particle.get_omega_layers(), grad_lower_layer[0], grad_upper_layer[0])
-            Ah_prime[1] = interp.linear_interp(particle.get_omega_layers(), grad_lower_layer[1], grad_upper_layer[1])
+            raise RuntimeError('This dataset does not contain horizontal eddy viscosities.')
 
         return
 
@@ -1029,24 +1073,34 @@ cdef class ROMSDataReader(DataReader):
         cdef DTYPE_FLOAT_t var_lower_level
         cdef DTYPE_FLOAT_t var_upper_level
 
-        # Time fraction
-        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
+        # The value of Kh to be returned
+        cdef DTYPE_FLOAT_t Kh
 
-        # Variable on bounding levels
-        var_level_1 = self._unstructured_grid_rho.interpolate_in_time_and_space(self._kh_last,
-                                                                                self._kh_next,
-                                                                                k_layer+1,
-                                                                                time_fraction, particle)
+        if self._Kh_method == 1:
 
-        var_level_2 = self._unstructured_grid_rho.interpolate_in_time_and_space(self._kh_last,
-                                                                                self._kh_next,
-                                                                                k_layer,
-                                                                                time_fraction, particle)
+            # Time fraction
+            time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
-        return interp.linear_interp(particle.get_omega_interfaces(), var_level_1, var_level_2)
+            # Variable on bounding levels
+            var_level_1 = self._unstructured_grid_rho.interpolate_in_time_and_space(self._kh_last,
+                                                                                    self._kh_next,
+                                                                                    k_layer+1,
+                                                                                    time_fraction, particle)
+
+            var_level_2 = self._unstructured_grid_rho.interpolate_in_time_and_space(self._kh_last,
+                                                                                    self._kh_next,
+                                                                                    k_layer,
+                                                                                    time_fraction, particle)
+
+            Kh = interp.linear_interp(particle.get_omega_interfaces(), var_level_1, var_level_2)
+        else:
+            raise RuntimeError('This dataset does not contain vertical eddy diffusivities.')
+
+        return Kh
+
 
     cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity_derivative(self,
-            DTYPE_FLOAT_t time, Particle* particle) except FLOAT_ERR:
+        DTYPE_FLOAT_t time, Particle* particle) except FLOAT_ERR:
         """ Returns the gradient in the vertical eddy diffusivity.
         
         Return a numerical approximation of the gradient in the vertical eddy 
@@ -1090,55 +1144,63 @@ cdef class ROMSDataReader(DataReader):
         cdef DTYPE_INT_t k_layer = particle.get_k_layer()
         cdef DTYPE_INT_t k, layer
 
-        # Time fraction
-        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
+        # The value of dKh_dz to be returned
+        cdef DTYPE_FLOAT_t dKh_dz
 
-        if k_layer == 0:
-            for k in xrange(3):
-                kh.push_back(self._unstructured_grid_rho.interpolate_in_time_and_space(self._kh_last,
-                                                                                       self._kh_next,
-                                                                                       k_layer+k,
-                                                                                       time_fraction, particle))
+        if self._Kh_method == 1:
+            # Time fraction
+            time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
-                z.push_back(self._unstructured_grid_rho.interpolate_in_time_and_space(self._depth_levels_grid_w_last,
-                                                                                      self._depth_levels_grid_w_next,
-                                                                                      k_layer+k,
-                                                                                      time_fraction, particle))
+            if k_layer == 0:
+                for k in xrange(3):
+                    kh.push_back(self._unstructured_grid_rho.interpolate_in_time_and_space(self._kh_last,
+                                                                                           self._kh_next,
+                                                                                           k_layer+k,
+                                                                                           time_fraction, particle))
 
-            dkh_lower_level = (kh[0] - kh[2]) / (z[0] - z[2])
-            dkh_upper_level = (kh[0] - kh[1]) / (z[0] - z[1])
+                    z.push_back(self._unstructured_grid_rho.interpolate_in_time_and_space(self._depth_levels_grid_w_last,
+                                                                                          self._depth_levels_grid_w_next,
+                                                                                          k_layer+k,
+                                                                                          time_fraction, particle))
 
-        elif k_layer == self._n_s_rho - 1:
-            for k in xrange(3):
-                kh.push_back(self._unstructured_grid_rho.interpolate_in_time_and_space(self._kh_last,
-                                                                                       self._kh_next,
-                                                                                       k_layer - 1 + k,
-                                                                                       time_fraction, particle))
+                dkh_lower_level = (kh[0] - kh[2]) / (z[0] - z[2])
+                dkh_upper_level = (kh[0] - kh[1]) / (z[0] - z[1])
 
-                z.push_back(self._unstructured_grid_rho.interpolate_in_time_and_space(self._depth_levels_grid_w_last,
-                                                                                      self._depth_levels_grid_w_next,
-                                                                                      k_layer - 1 + k,
-                                                                                      time_fraction, particle))
+            elif k_layer == self._n_s_rho - 1:
+                for k in xrange(3):
+                    kh.push_back(self._unstructured_grid_rho.interpolate_in_time_and_space(self._kh_last,
+                                                                                           self._kh_next,
+                                                                                           k_layer - 1 + k,
+                                                                                           time_fraction, particle))
 
-            dkh_lower_level = (kh[1] - kh[2]) / (z[1] - z[2])
-            dkh_upper_level = (kh[0] - kh[2]) / (z[0] - z[2])
+                    z.push_back(self._unstructured_grid_rho.interpolate_in_time_and_space(self._depth_levels_grid_w_last,
+                                                                                          self._depth_levels_grid_w_next,
+                                                                                          k_layer - 1 + k,
+                                                                                          time_fraction, particle))
 
+                dkh_lower_level = (kh[1] - kh[2]) / (z[1] - z[2])
+                dkh_upper_level = (kh[0] - kh[2]) / (z[0] - z[2])
+
+            else:
+                for k in xrange(4):
+                    kh.push_back(self._unstructured_grid_rho.interpolate_in_time_and_space(self._kh_last,
+                                                                                           self._kh_next,
+                                                                                           k_layer - 1 + k,
+                                                                                           time_fraction, particle))
+
+                    z.push_back(self._unstructured_grid_rho.interpolate_in_time_and_space(self._depth_levels_grid_w_last,
+                                                                                          self._depth_levels_grid_w_next,
+                                                                                          k_layer - 1 + k,
+                                                                                          time_fraction, particle))
+
+                dkh_lower_level = (kh[1] - kh[3]) / (z[1] - z[3])
+                dkh_upper_level = (kh[0] - kh[2]) / (z[0] - z[2])
+
+            dKh_dz = interp.linear_interp(particle.get_omega_interfaces(), dkh_lower_level, dkh_upper_level)
         else:
-            for k in xrange(4):
-                kh.push_back(self._unstructured_grid_rho.interpolate_in_time_and_space(self._kh_last,
-                                                                                       self._kh_next,
-                                                                                       k_layer - 1 + k,
-                                                                                       time_fraction, particle))
+            raise RuntimeError('This dataset does not contain vertical eddy diffusivities.')
 
-                z.push_back(self._unstructured_grid_rho.interpolate_in_time_and_space(self._depth_levels_grid_w_last,
-                                                                                      self._depth_levels_grid_w_next,
-                                                                                      k_layer - 1 + k,
-                                                                                      time_fraction, particle))
-
-            dkh_lower_level = (kh[1] - kh[3]) / (z[1] - z[3])
-            dkh_upper_level = (kh[0] - kh[2]) / (z[0] - z[2])
-
-        return interp.linear_interp(particle.get_omega_interfaces(), dkh_lower_level, dkh_upper_level)
+        return dKh_dz
 
     cdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, Particle *particle) except INT_ERR:
         """ Return an integer indicating whether `host' is wet or dry
@@ -1344,13 +1406,13 @@ cdef class ROMSDataReader(DataReader):
             depth_grid_names.append('grid_w')
 
         # Vertical diffusion coefficient
-        if self._has_Kh:
+        if self._Kh_method == 1:
             var_names.append('Kh')
             grid_names.append('grid_rho')
             depth_grid_names.append('grid_w')
 
         # Horizontal diffusion coefficient
-        if self._has_Ah:
+        if self._Ah_method == 1:
             var_names.append('Ah')
             grid_names.append('grid_rho')
             depth_grid_names.append('grid_rho')
@@ -1477,7 +1539,7 @@ cdef class ROMSDataReader(DataReader):
             self._w_next = self._reshape_var(w_next, self._variable_dimension_indices['wo'])
 
         # Update memory views for kh
-        if self._has_Kh:
+        if self._Kh_method == 1:
             kh_var_name = self._variable_names['Kh']
             kh_last = self.mediator.get_time_dependent_variable_at_last_time_index(kh_var_name,
                     self._variable_shapes['Kh'], DTYPE_FLOAT)
@@ -1488,7 +1550,7 @@ cdef class ROMSDataReader(DataReader):
             self._kh_next = self._reshape_var(kh_next, self._variable_dimension_indices['Kh'])
 
         # Update memory views for Ah
-        if self._has_Ah:
+        if self._Ah_method == 1:
             ah_var_name = self._variable_names['Ah']
             ah_last = self.mediator.get_time_dependent_variable_at_last_time_index(ah_var_name,
                     self._variable_shapes['Ah'], DTYPE_FLOAT)
