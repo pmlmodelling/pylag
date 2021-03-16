@@ -420,8 +420,8 @@ cdef class GOTMDataReader(DataReader):
         
         return interp.linear_interp(self._time_fraction, self._zeta_last, self._zeta_next)
 
-    cdef get_velocity(self, DTYPE_FLOAT_t time, Particle* particle,
-            DTYPE_FLOAT_t vel[3]):
+    cdef void get_velocity(self, DTYPE_FLOAT_t time, Particle* particle,
+            DTYPE_FLOAT_t vel[3]) except +:
         """ Returns the velocity u(t,x,y,z)
         
         For now, simply return a zeroed array.

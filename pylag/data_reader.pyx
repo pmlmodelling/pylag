@@ -352,8 +352,8 @@ cdef class DataReader:
 
         return
 
-    cdef get_velocity(self, DTYPE_FLOAT_t time, Particle *particle,
-            DTYPE_FLOAT_t vel[3]):
+    cdef void get_velocity(self, DTYPE_FLOAT_t time, Particle *particle,
+            DTYPE_FLOAT_t vel[3]) except +:
         raise NotImplementedError
 
     def get_horizontal_velocity_wrapper(self, DTYPE_FLOAT_t time, ParticleSmartPtr particle,
@@ -393,11 +393,11 @@ cdef class DataReader:
 
         return
 
-    cdef get_horizontal_velocity(self, DTYPE_FLOAT_t time, Particle *particle,
-            DTYPE_FLOAT_t vel[2]):
+    cdef void get_horizontal_velocity(self, DTYPE_FLOAT_t time, Particle *particle,
+            DTYPE_FLOAT_t vel[2]) except +:
         raise NotImplementedError
     
-    cdef get_vertical_velocity(self, DTYPE_FLOAT_t time, Particle *particle):
+    cdef DTYPE_FLOAT_t get_vertical_velocity(self, DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR:
         raise NotImplementedError
 
     def get_horizontal_eddy_viscosity_wrapper(self, DTYPE_FLOAT_t time,
@@ -422,8 +422,8 @@ cdef class DataReader:
         """
         return self.get_horizontal_eddy_viscosity(time, particle.get_ptr())
 
-    cdef get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
-            Particle *particle):
+    cdef DTYPE_FLOAT_t get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
+            Particle *particle) except FLOAT_ERR:
         raise NotImplementedError
 
     def get_horizontal_eddy_viscosity_derivative_wrapper(self, DTYPE_FLOAT_t time,
@@ -460,8 +460,8 @@ cdef class DataReader:
 
         return
 
-    cdef get_horizontal_eddy_viscosity_derivative(self, DTYPE_FLOAT_t time,
-            Particle *particle, DTYPE_FLOAT_t Ah_prime[2]):
+    cdef void get_horizontal_eddy_viscosity_derivative(self, DTYPE_FLOAT_t time,
+            Particle *particle, DTYPE_FLOAT_t Ah_prime[2]) except +:
         raise NotImplementedError
 
     def get_vertical_eddy_diffusivity_wrapper(self, DTYPE_FLOAT_t time,

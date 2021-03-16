@@ -723,8 +723,8 @@ cdef class ROMSDataReader(DataReader):
 
         return zeta
 
-    cdef get_velocity(self, DTYPE_FLOAT_t time, Particle* particle,
-            DTYPE_FLOAT_t vel[3]):
+    cdef void get_velocity(self, DTYPE_FLOAT_t time, Particle* particle,
+            DTYPE_FLOAT_t vel[3]) except +:
         """ Returns the velocity u(t,x,y,z) through interpolation
         
         Returns the velocity u(t,x,y,z) through interpolation.
@@ -889,8 +889,8 @@ cdef class ROMSDataReader(DataReader):
         else:
             raise ValueError("Invalid variable name `{}'".format(var_name))
 
-    cdef get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
-            Particle* particle):
+    cdef DTYPE_FLOAT_t get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
+            Particle* particle) except FLOAT_ERR:
         """ Returns the horizontal eddy viscosity through interpolation
 
         Parameters
@@ -939,8 +939,8 @@ cdef class ROMSDataReader(DataReader):
 
         return interp.linear_interp(particle.get_omega_layers(), var_lower_layer, var_upper_layer)
 
-    cdef get_horizontal_eddy_viscosity_derivative(self, DTYPE_FLOAT_t time,
-            Particle* particle, DTYPE_FLOAT_t Ah_prime[2]):
+    cdef void get_horizontal_eddy_viscosity_derivative(self, DTYPE_FLOAT_t time,
+            Particle* particle, DTYPE_FLOAT_t Ah_prime[2]) except +:
         """ Returns the gradient in the horizontal eddy viscosity
 
         Parameters

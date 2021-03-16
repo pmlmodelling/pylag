@@ -76,8 +76,8 @@ cdef class MockVelocityDataReader(DataReader):
     cdef DTYPE_INT_t set_vertical_grid_vars(self, DTYPE_FLOAT_t time, Particle *particle) except INT_ERR:
         return IN_DOMAIN
 
-    cdef get_velocity(self, DTYPE_FLOAT_t time, Particle* particle, 
-            DTYPE_FLOAT_t vel[3]):
+    cdef void get_velocity(self, DTYPE_FLOAT_t time, Particle* particle,
+            DTYPE_FLOAT_t vel[3]) except +:
         """ Return velocity field array for the given space/time coordinates.
         
         """  
@@ -85,15 +85,15 @@ cdef class MockVelocityDataReader(DataReader):
         vel[1] = self._get_v_component(particle.get_x2())
         vel[2] = self._get_w_component(particle.get_x3())
 
-    cdef get_horizontal_velocity(self, DTYPE_FLOAT_t time, Particle* particle,
-            DTYPE_FLOAT_t vel[2]):
+    cdef void get_horizontal_velocity(self, DTYPE_FLOAT_t time, Particle* particle,
+            DTYPE_FLOAT_t vel[2]) except +:
         """ Return horizontal velocity for the given space/time coordinates.
         
         """  
         vel[0] = self._get_u_component(particle.get_x1())
         vel[1] = self._get_v_component(particle.get_x2())
 
-    cdef get_vertical_velocity(self, DTYPE_FLOAT_t time, Particle* particle):
+    cdef DTYPE_FLOAT_t get_vertical_velocity(self, DTYPE_FLOAT_t time, Particle* particle) except FLOAT_ERR:
         """ Return vertical velocity field for the given space/time coordinates.
         
         """ 
@@ -201,8 +201,8 @@ cdef class MockVerticalDiffusivityDataReader(DataReader):
 
         return BDY_ERROR
 
-    cdef get_velocity(self, DTYPE_FLOAT_t time, Particle* particle,
-            DTYPE_FLOAT_t vel[3]):
+    cdef void get_velocity(self, DTYPE_FLOAT_t time, Particle* particle,
+            DTYPE_FLOAT_t vel[3]) except +:
         """ Returns a zeroed velocity vector
         
         The advective velocity is used by random displacement models adapted to
@@ -308,8 +308,8 @@ cdef class MockHorizontalEddyViscosityDataReader(DataReader):
     cdef DTYPE_INT_t set_vertical_grid_vars(self, DTYPE_FLOAT_t time, Particle *particle) except INT_ERR:
         return IN_DOMAIN
 
-    cdef get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
-            Particle* particle):
+    cdef DTYPE_FLOAT_t get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
+            Particle* particle) except FLOAT_ERR:
         """ Returns the horizontal eddy viscosity
         
         Parameters
@@ -327,8 +327,8 @@ cdef class MockHorizontalEddyViscosityDataReader(DataReader):
         """
         return particle.get_x1()**2 + particle.get_x2()**2 + self._C
 
-    cdef get_horizontal_eddy_viscosity_derivative(self, DTYPE_FLOAT_t time,
-            Particle* particle, DTYPE_FLOAT_t Ah_prime[2]):
+    cdef void get_horizontal_eddy_viscosity_derivative(self, DTYPE_FLOAT_t time,
+            Particle* particle, DTYPE_FLOAT_t Ah_prime[2]) except +:
         """ Returns the gradient in the horizontal eddy viscosity
 
         This is computed by taking the derivate of eqn (1) wrt x and y.
@@ -422,8 +422,8 @@ cdef class MockVelocityEddyViscosityDataReader(DataReader):
     cdef DTYPE_INT_t set_vertical_grid_vars(self, DTYPE_FLOAT_t time, Particle *particle) except INT_ERR:
         return IN_DOMAIN
 
-    cdef get_velocity(self, DTYPE_FLOAT_t time, Particle* particle, 
-            DTYPE_FLOAT_t vel[3]):
+    cdef void get_velocity(self, DTYPE_FLOAT_t time, Particle* particle,
+            DTYPE_FLOAT_t vel[3]) except +:
         """ Return velocity field array for the given space/time coordinates.
         
         """  
@@ -439,14 +439,14 @@ cdef class MockVelocityEddyViscosityDataReader(DataReader):
             DTYPE_FLOAT_t time, Particle* particle) except FLOAT_ERR:
         return 0.0
 
-    cdef get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
-            Particle* particle):
+    cdef DTYPE_FLOAT_t get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
+            Particle* particle) except FLOAT_ERR:
         """ Returns the horizontal eddy viscosity
         """
         return self._Ah
 
-    cdef get_horizontal_eddy_viscosity_derivative(self, DTYPE_FLOAT_t time,
-            Particle* particle, DTYPE_FLOAT_t Ah_prime[2]):
+    cdef void get_horizontal_eddy_viscosity_derivative(self, DTYPE_FLOAT_t time,
+            Particle* particle, DTYPE_FLOAT_t Ah_prime[2]) except +:
         """ Returns the gradient in the horizontal eddy viscosity
         """
         Ah_prime[0] = 0.0

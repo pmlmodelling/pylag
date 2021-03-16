@@ -588,8 +588,8 @@ cdef class FVCOMDataReader(DataReader):
 
         return zeta
 
-    cdef get_velocity(self, DTYPE_FLOAT_t time, Particle* particle,
-            DTYPE_FLOAT_t vel[3]):
+    cdef void get_velocity(self, DTYPE_FLOAT_t time, Particle* particle,
+            DTYPE_FLOAT_t vel[3]) except +:
         """ Returns the velocity u(t,x,y,z) through linear interpolation
         
         Returns the velocity u(t,x,y,z) through interpolation for a particle.
@@ -657,8 +657,8 @@ cdef class FVCOMDataReader(DataReader):
         else:
             raise ValueError("Invalid variable name `{}'".format(var_name))
 
-    cdef get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
-            Particle* particle):
+    cdef DTYPE_FLOAT_t get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
+            Particle* particle) except FLOAT_ERR:
         """ Returns the horizontal eddy viscosity through linear interpolation
 
         viscofh is defined at element nodes on sigma layers. Above and below the
@@ -690,8 +690,8 @@ cdef class FVCOMDataReader(DataReader):
 
         return var
 
-    cdef get_horizontal_eddy_viscosity_derivative(self, DTYPE_FLOAT_t time,
-            Particle* particle, DTYPE_FLOAT_t Ah_prime[2]):
+    cdef void get_horizontal_eddy_viscosity_derivative(self, DTYPE_FLOAT_t time,
+            Particle* particle, DTYPE_FLOAT_t Ah_prime[2]) except +:
         """ Returns the gradient in the horizontal eddy viscosity
         
         The gradient is first computed on sigma layers bounding the particle's
@@ -1110,8 +1110,8 @@ cdef class FVCOMDataReader(DataReader):
 
             return interp.linear_interp(particle.get_omega_interfaces(), var_layer_1, var_layer_2)
 
-    cdef _get_velocity_using_shepard_interpolation(self, DTYPE_FLOAT_t time,
-            Particle* particle, DTYPE_FLOAT_t vel[3]):
+    cdef void _get_velocity_using_shepard_interpolation(self, DTYPE_FLOAT_t time,
+            Particle* particle, DTYPE_FLOAT_t vel[3]) except +:
         """ Return (u,v,w) velocities at a point using Shepard interpolation
         
         In FVCOM, the u, v, and w velocity components are defined at element

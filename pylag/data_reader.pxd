@@ -47,19 +47,19 @@ cdef class DataReader:
 
     cdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR
 
-    cdef get_velocity(self, DTYPE_FLOAT_t time, Particle *particle,
-            DTYPE_FLOAT_t vel[3])
+    cdef void get_velocity(self, DTYPE_FLOAT_t time, Particle *particle,
+            DTYPE_FLOAT_t vel[3]) except +
 
-    cdef get_horizontal_velocity(self, DTYPE_FLOAT_t time, Particle *particle,
-            DTYPE_FLOAT_t vel[2])
+    cdef void get_horizontal_velocity(self, DTYPE_FLOAT_t time, Particle *particle,
+            DTYPE_FLOAT_t vel[2]) except +
 
-    cdef get_vertical_velocity(self, DTYPE_FLOAT_t time, Particle *particle)
+    cdef DTYPE_FLOAT_t get_vertical_velocity(self, DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR
 
-    cdef get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
-            Particle *particle)
+    cdef DTYPE_FLOAT_t get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
+            Particle *particle) except FLOAT_ERR
 
-    cdef get_horizontal_eddy_viscosity_derivative(self, DTYPE_FLOAT_t time,
-            Particle *particle, DTYPE_FLOAT_t Ah_prime[2])
+    cdef void get_horizontal_eddy_viscosity_derivative(self, DTYPE_FLOAT_t time,
+            Particle *particle, DTYPE_FLOAT_t Ah_prime[2]) except +
 
     cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time,
             Particle* particle) except FLOAT_ERR
