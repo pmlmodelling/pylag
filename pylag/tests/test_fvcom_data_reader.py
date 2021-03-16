@@ -128,10 +128,10 @@ class FVCOMDataReader_test(TestCase):
         config.add_section("SIMULATION")
         config.set('SIMULATION', 'time_direction', 'forward')
         config.add_section("OCEAN_CIRCULATION_MODEL")
-        config.set('OCEAN_CIRCULATION_MODEL', 'has_Kh', 'True')
-        config.set('OCEAN_CIRCULATION_MODEL', 'has_Ah', 'True')
-        config.set('OCEAN_CIRCULATION_MODEL', 'has_is_wet', 'True')
         config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'cartesian')
+        config.set('OCEAN_CIRCULATION_MODEL', 'has_is_wet', 'True')
+        config.set('OCEAN_CIRCULATION_MODEL', 'Kh_method', 'File')
+        config.set('OCEAN_CIRCULATION_MODEL', 'Ah_method', 'File')
         config.add_section("OUTPUT")
         config.set('OUTPUT', 'environmental_variables', 'thetao, so')
         # Create mediator
@@ -614,9 +614,9 @@ class FVCOMReflectingHorizBoundaryCondition_test(TestCase):
         config.set('SIMULATION', 'time_direction', 'forward')
         config.add_section("OCEAN_CIRCULATION_MODEL")
         config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'cartesian')
-        config.set('OCEAN_CIRCULATION_MODEL', 'has_Kh', 'True')
-        config.set('OCEAN_CIRCULATION_MODEL', 'has_Ah', 'True')
         config.set('OCEAN_CIRCULATION_MODEL', 'has_is_wet', 'True')
+        config.set('OCEAN_CIRCULATION_MODEL', 'Kh_method', 'File')
+        config.set('OCEAN_CIRCULATION_MODEL', 'Ah_method', 'File')
 
         # Create mediator
         mediator = MockFVCOMMediator()
@@ -687,9 +687,9 @@ class FVCOMReflectingVertBoundaryCondition_test(TestCase):
         config.set('SIMULATION', 'time_direction', 'forward')
         config.add_section("OCEAN_CIRCULATION_MODEL")
         config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'cartesian')
-        config.set('OCEAN_CIRCULATION_MODEL', 'has_Kh', 'True')
-        config.set('OCEAN_CIRCULATION_MODEL', 'has_Ah', 'True')
         config.set('OCEAN_CIRCULATION_MODEL', 'has_is_wet', 'True')
+        config.set('OCEAN_CIRCULATION_MODEL', 'Kh_method', 'File')
+        config.set('OCEAN_CIRCULATION_MODEL', 'Ah_method', 'File')
 
         # Create mediator
         mediator = MockFVCOMMediator()

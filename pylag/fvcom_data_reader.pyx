@@ -159,8 +159,12 @@ cdef class FVCOMDataReader(DataReader):
     cdef DTYPE_FLOAT_t _time_last
     cdef DTYPE_FLOAT_t _time_next
 
+    # Options controlling the reading of eddy diffusivities
+    cdef object _Kh_method_name, _Ah_method_name
+    cdef DTYPE_INT_t _Kh_method, _Ah_method
+
     # Flags that identify whether a given variable should be read in
-    cdef bint _has_Kh, _has_Ah, _has_is_wet
+    cdef bint _has_is_wet
 
     # Land sea mask on elements (1 - sea point, 0 - land point)
     cdef DTYPE_INT_t[::1] _land_sea_mask
@@ -184,9 +188,27 @@ cdef class FVCOMDataReader(DataReader):
         else:
             raise ValueError("Unsupported model coordinate system `{}'".format(coordinate_system))
 
+        # Set options for handling the vertical eddy diffusivity
+        self._Kh_method_name = self.config.get('OCEAN_CIRCULATION_MODEL', 'Kh_method').strip().lower()
+        if self._Kh_method_name not in ['none', 'file']:
+            raise RuntimeError('Invalid option for `Kh_method` ({})'.format(self._Kh_method_name))
+
+        if self._Kh_method_name == "none":
+            self._Kh_method = 0
+        elif self._Kh_method_name == "file":
+            self._Kh_method = 1
+
+        # Set options for handling the horizontal eddy diffusivity
+        self._Ah_method_name = self.config.get('OCEAN_CIRCULATION_MODEL', 'Ah_method').strip().lower()
+        if self._Ah_method_name not in ['none', 'file']:
+            raise RuntimeError('Invalid option for `Ah_method` ({})'.format(self._Ah_method_name))
+
+        if self._Ah_method_name == "none":
+            self._Ah_method = 0
+        elif self._Ah_method_name == "file":
+            self._Ah_method = 1
+
         # Set flags from config
-        self._has_Kh = self.config.getboolean("OCEAN_CIRCULATION_MODEL", "has_Kh")
-        self._has_Ah = self.config.getboolean("OCEAN_CIRCULATION_MODEL", "has_Ah")
         self._has_is_wet = self.config.getboolean("OCEAN_CIRCULATION_MODEL", "has_is_wet")
 
         # Check to see if any environmental variables are being saved.
@@ -661,7 +683,10 @@ cdef class FVCOMDataReader(DataReader):
         """
         cdef DTYPE_FLOAT_t var # viscofh at (t, x1, x2, x3)
 
-        var = self._get_variable(self._viscofh_last, self._viscofh_next, time, particle)
+        if self._Ah_method == 1:
+            var = self._get_variable(self._viscofh_last, self._viscofh_next, time, particle)
+        else:
+            raise RuntimeError('This dataset does not contain horizontal eddy viscosities.')
 
         return var
 
@@ -711,30 +736,38 @@ cdef class FVCOMDataReader(DataReader):
         # Loop counter
         cdef int i
 
-        # Time fraction
-        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
+        if self._Ah_method == 1:
+            # Time fraction
+            time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
-        # No vertical interpolation for particles near to the surface or bottom,
-        # i.e. above or below the top or bottom sigma layer depths respectively.
-        if particle.get_in_vertical_boundary_layer() is True:
+            # No vertical interpolation for particles near to the surface or bottom,
+            # i.e. above or below the top or bottom sigma layer depths respectively.
+            if particle.get_in_vertical_boundary_layer() is True:
+                self._unstructured_grid.interpolate_grad_in_time_and_space(self._viscofh_last, self._viscofh_next,
+                                                                           k_layer, time_fraction, particle,
+                                                                           Ah_prime)
+                return
+
+            # Interpolate between layers
             self._unstructured_grid.interpolate_grad_in_time_and_space(self._viscofh_last, self._viscofh_next,
-                                                                       k_layer, time_fraction, particle,
-                                                                       Ah_prime)
+                                                               k_lower_layer, time_fraction, particle,
+                                                               Ah_prime_lower_layer)
+
+            self._unstructured_grid.interpolate_grad_in_time_and_space(self._viscofh_last, self._viscofh_next,
+                                                               k_upper_layer, time_fraction, particle,
+                                                               Ah_prime_upper_layer)
+
+            # Interpolate d{}/dx and d{}/dy between bounding sigma layers and
+            # save in the array Ah_prime
+            for i in range(2):
+                Ah_prime[i] = interp.linear_interp(particle.get_omega_layers(), Ah_prime_lower_layer[i], Ah_prime_upper_layer[i])
+
             return
 
-        # Interpolate between layers
-        self._unstructured_grid.interpolate_grad_in_time_and_space(self._viscofh_last, self._viscofh_next,
-                                                           k_lower_layer, time_fraction, particle,
-                                                           Ah_prime_lower_layer)
+        else:
+            raise RuntimeError('This dataset does not contain horizontal eddy viscosities.')
 
-        self._unstructured_grid.interpolate_grad_in_time_and_space(self._viscofh_last, self._viscofh_next,
-                                                           k_upper_layer, time_fraction, particle,
-                                                           Ah_prime_upper_layer)
-
-        # Interpolate d{}/dx and d{}/dy between bounding sigma layers and
-        # save in the array Ah_prime
-        for i in range(2):
-            Ah_prime[i] = interp.linear_interp(particle.get_omega_layers(), Ah_prime_lower_layer[i], Ah_prime_upper_layer[i])
+        return
 
     cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time,
             Particle* particle) except FLOAT_ERR:
@@ -767,24 +800,32 @@ cdef class FVCOMDataReader(DataReader):
         # Interpolated diffusivities on lower and upper bounding sigma levels
         cdef DTYPE_FLOAT_t kh_lower_level
         cdef DTYPE_FLOAT_t kh_upper_level
-        
-        # Time fraction
-        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
-        # NB The index corresponding to the layer the particle presently resides
-        # in is used to calculate the index of the under and over lying k levels
-        kh_lower_level = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
-                                                                               self._kh_next,
-                                                                               k_layer+1,
-                                                                               time_fraction,
-                                                                               particle)
-        kh_upper_level = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
-                                                                               self._kh_next,
-                                                                               k_layer,
-                                                                               time_fraction,
-                                                                               particle)
-        return interp.linear_interp(particle.get_omega_interfaces(), kh_lower_level, kh_upper_level)
+        # Variable
+        cdef DTYPE_FLOAT_t kh
 
+        if self._Kh_method == 1:
+            # Time fraction
+            time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
+
+            # NB The index corresponding to the layer the particle presently resides
+            # in is used to calculate the index of the under and over lying k levels
+            kh_lower_level = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
+                                                                                   self._kh_next,
+                                                                                   k_layer+1,
+                                                                                   time_fraction,
+                                                                                   particle)
+            kh_upper_level = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
+                                                                                   self._kh_next,
+                                                                                   k_layer,
+                                                                                   time_fraction,
+                                                                                   particle)
+            kh = interp.linear_interp(particle.get_omega_interfaces(), kh_lower_level, kh_upper_level)
+
+        else:
+           raise RuntimeError('This dataset does not contain vertical eddy diffusivities.')
+
+        return kh
 
     cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity_derivative(self,
             DTYPE_FLOAT_t time, Particle* particle) except FLOAT_ERR:
@@ -827,133 +868,142 @@ cdef class FVCOMDataReader(DataReader):
         # Particle k_layer
         cdef DTYPE_INT_t k_layer
 
-        # Pre-compute k_layer, time fraction
-        k_layer = particle.get_k_layer()
-        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
+        # dkh_dz
+        cdef DTYPE_FLOAT_t dkh_dz
 
-        if k_layer == 0:
-            kh_0 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
-                                                                         self._kh_next,
-                                                                         k_layer,
-                                                                         time_fraction,
-                                                                         particle)
-            z_0 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
-                                                                        self._depth_levels_next,
-                                                                        k_layer,
-                                                                        time_fraction,
-                                                                        particle)
+        if self._Kh_method == 1:
+            # Pre-compute k_layer, time fraction
+            k_layer = particle.get_k_layer()
+            time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
-            kh_1 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
-                                                                         self._kh_next,
-                                                                         k_layer+1,
-                                                                         time_fraction,
-                                                                         particle)
-            z_1 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
-                                                                        self._depth_levels_next,
-                                                                        k_layer+1,
-                                                                        time_fraction,
-                                                                        particle)
+            if k_layer == 0:
+                kh_0 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
+                                                                             self._kh_next,
+                                                                             k_layer,
+                                                                             time_fraction,
+                                                                             particle)
+                z_0 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
+                                                                            self._depth_levels_next,
+                                                                            k_layer,
+                                                                            time_fraction,
+                                                                            particle)
 
-            kh_2 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
-                                                                         self._kh_next,
-                                                                         k_layer+2,
-                                                                         time_fraction,
-                                                                         particle)
-            z_2 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
-                                                                        self._depth_levels_next,
-                                                                        k_layer+2,
-                                                                        time_fraction,
-                                                                        particle)
+                kh_1 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
+                                                                             self._kh_next,
+                                                                             k_layer+1,
+                                                                             time_fraction,
+                                                                             particle)
+                z_1 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
+                                                                            self._depth_levels_next,
+                                                                            k_layer+1,
+                                                                            time_fraction,
+                                                                            particle)
 
-            dkh_lower_level = (kh_0 - kh_2) / (z_0 - z_2)
-            dkh_upper_level = (kh_0 - kh_1) / (z_0 - z_1)
-            
-        elif k_layer == self._n_siglay - 1:
-            kh_0 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
-                                                                         self._kh_next,
-                                                                         k_layer-1,
-                                                                         time_fraction,
-                                                                         particle)
-            z_0 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
-                                                                        self._depth_levels_next,
-                                                                        k_layer-1,
-                                                                        time_fraction,
-                                                                        particle)
+                kh_2 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
+                                                                             self._kh_next,
+                                                                             k_layer+2,
+                                                                             time_fraction,
+                                                                             particle)
+                z_2 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
+                                                                            self._depth_levels_next,
+                                                                            k_layer+2,
+                                                                            time_fraction,
+                                                                            particle)
 
-            kh_1 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
-                                                                         self._kh_next,
-                                                                         k_layer,
-                                                                         time_fraction,
-                                                                         particle)
-            z_1 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
-                                                                        self._depth_levels_next,
-                                                                        k_layer,
-                                                                        time_fraction,
-                                                                        particle)
+                dkh_lower_level = (kh_0 - kh_2) / (z_0 - z_2)
+                dkh_upper_level = (kh_0 - kh_1) / (z_0 - z_1)
 
-            kh_2 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
-                                                                         self._kh_next,
-                                                                         k_layer+1,
-                                                                         time_fraction,
-                                                                         particle)
-            z_2 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
-                                                                        self._depth_levels_next,
-                                                                        k_layer+1,
-                                                                        time_fraction,
-                                                                        particle)
+            elif k_layer == self._n_siglay - 1:
+                kh_0 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
+                                                                             self._kh_next,
+                                                                             k_layer-1,
+                                                                             time_fraction,
+                                                                             particle)
+                z_0 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
+                                                                            self._depth_levels_next,
+                                                                            k_layer-1,
+                                                                            time_fraction,
+                                                                            particle)
 
-            dkh_lower_level = (kh_1 - kh_2) / (z_1 - z_2)
-            dkh_upper_level = (kh_0 - kh_2) / (z_0 - z_2)
-            
+                kh_1 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
+                                                                             self._kh_next,
+                                                                             k_layer,
+                                                                             time_fraction,
+                                                                             particle)
+                z_1 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
+                                                                            self._depth_levels_next,
+                                                                            k_layer,
+                                                                            time_fraction,
+                                                                            particle)
+
+                kh_2 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
+                                                                             self._kh_next,
+                                                                             k_layer+1,
+                                                                             time_fraction,
+                                                                             particle)
+                z_2 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
+                                                                            self._depth_levels_next,
+                                                                            k_layer+1,
+                                                                            time_fraction,
+                                                                            particle)
+
+                dkh_lower_level = (kh_1 - kh_2) / (z_1 - z_2)
+                dkh_upper_level = (kh_0 - kh_2) / (z_0 - z_2)
+
+            else:
+                kh_0 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
+                                                                             self._kh_next,
+                                                                             k_layer-1,
+                                                                             time_fraction,
+                                                                             particle)
+                z_0 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
+                                                                            self._depth_levels_next,
+                                                                            k_layer-1,
+                                                                            time_fraction,
+                                                                            particle)
+
+                kh_1 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
+                                                                             self._kh_next,
+                                                                             k_layer,
+                                                                             time_fraction,
+                                                                             particle)
+                z_1 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
+                                                                            self._depth_levels_next,
+                                                                            k_layer,
+                                                                            time_fraction,
+                                                                            particle)
+
+                kh_2 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
+                                                                             self._kh_next,
+                                                                             k_layer+1,
+                                                                             time_fraction,
+                                                                             particle)
+                z_2 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
+                                                                            self._depth_levels_next,
+                                                                            k_layer+1,
+                                                                            time_fraction,
+                                                                            particle)
+
+                kh_3 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
+                                                                             self._kh_next,
+                                                                             k_layer+2,
+                                                                             time_fraction,
+                                                                             particle)
+                z_3 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
+                                                                            self._depth_levels_next,
+                                                                            k_layer+2,
+                                                                            time_fraction,
+                                                                            particle)
+
+                dkh_lower_level = (kh_1 - kh_3) / (z_1 - z_3)
+                dkh_upper_level = (kh_0 - kh_2) / (z_0 - z_2)
+
+            dkh_dz = interp.linear_interp(particle.get_omega_interfaces(), dkh_lower_level, dkh_upper_level)
+
         else:
-            kh_0 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
-                                                                         self._kh_next,
-                                                                         k_layer-1,
-                                                                         time_fraction,
-                                                                         particle)
-            z_0 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
-                                                                        self._depth_levels_next,
-                                                                        k_layer-1,
-                                                                        time_fraction,
-                                                                        particle)
+            raise RuntimeError('This dataset does not contain vertical eddy diffusivities.')
 
-            kh_1 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
-                                                                         self._kh_next,
-                                                                         k_layer,
-                                                                         time_fraction,
-                                                                         particle)
-            z_1 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
-                                                                        self._depth_levels_next,
-                                                                        k_layer,
-                                                                        time_fraction,
-                                                                        particle)
-
-            kh_2 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
-                                                                         self._kh_next,
-                                                                         k_layer+1,
-                                                                         time_fraction,
-                                                                         particle)
-            z_2 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
-                                                                        self._depth_levels_next,
-                                                                        k_layer+1,
-                                                                        time_fraction,
-                                                                        particle)
-
-            kh_3 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
-                                                                         self._kh_next,
-                                                                         k_layer+2,
-                                                                         time_fraction,
-                                                                         particle)
-            z_3 = self._unstructured_grid.interpolate_in_time_and_space(self._depth_levels_last,
-                                                                        self._depth_levels_next,
-                                                                        k_layer+2,
-                                                                        time_fraction,
-                                                                        particle)
-
-            dkh_lower_level = (kh_1 - kh_3) / (z_1 - z_3)
-            dkh_upper_level = (kh_0 - kh_2) / (z_0 - z_2)
-            
-        return interp.linear_interp(particle.get_omega_interfaces(), dkh_lower_level, dkh_upper_level)
+        return dkh_dz
 
     cdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, Particle *particle) except INT_ERR:
         """ Return an integer indicating whether `host' is wet or dry
@@ -1327,12 +1377,12 @@ cdef class FVCOMDataReader(DataReader):
         self._w_next = self.mediator.get_time_dependent_variable_at_next_time_index('ww', (self._n_siglay, self._n_elems), DTYPE_FLOAT)
         
         # Update memory views for kh
-        if self._has_Kh:
+        if self._Kh_method == 1:
             self._kh_last = self.mediator.get_time_dependent_variable_at_last_time_index('kh', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)
             self._kh_next = self.mediator.get_time_dependent_variable_at_next_time_index('kh', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)
 
         # Update memory views for viscofh
-        if self._has_Ah:
+        if self._Ah_method == 1:
             self._viscofh_last = self.mediator.get_time_dependent_variable_at_last_time_index('viscofh', (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
             self._viscofh_next = self.mediator.get_time_dependent_variable_at_next_time_index('viscofh', (self._n_siglay, self._n_nodes), DTYPE_FLOAT)
 

@@ -168,11 +168,15 @@ cdef class ArakawaADataReader(DataReader):
     cdef DTYPE_FLOAT_t _time_last
     cdef DTYPE_FLOAT_t _time_next
 
+    # Options controlling the reading of eddy diffusivities
+    cdef object _Kh_method_name, _Ah_method_name
+    cdef DTYPE_INT_t _Kh_method, _Ah_method
+
     # Flag for surface only or full 3D transport
     cdef bint _surface_only
 
     # Flags that identify whether a given variable should be read in
-    cdef bint _has_w, _has_Kh, _has_Ah, _has_is_wet,  _has_zeta
+    cdef bint _has_w, _has_is_wet,  _has_zeta
 
     def __init__(self, config, mediator):
         self.config = config
@@ -213,8 +217,37 @@ cdef class ArakawaADataReader(DataReader):
         # Set boolean flags
         self._has_zeta = True if 'zos' in self._variable_names else False
         self._has_w = True if 'wo' in self._variable_names else False
-        self._has_Kh = True if 'Kh' in self._variable_names else False
-        self._has_Ah = True if 'Ah' in self._variable_names else False
+
+        # Set options for handling the vertical eddy diffusivity
+        self._Kh_method_name = self.config.get('OCEAN_CIRCULATION_MODEL', 'Kh_method').strip().lower()
+        if self._Kh_method_name not in ['none', 'file']:
+            raise RuntimeError('Invalid option for `Kh_method` ({})'.format(self._Kh_method_name))
+
+        if self._Kh_method_name == "none":
+            self._Kh_method = 0
+        elif self._Kh_method_name == "file":
+            # Make sure a value for `Kh_var_name` has been provided.
+            if 'Kh' not in self._variable_names:
+                raise RuntimeError('The configuration file states that Kh data should be read from file \n'
+                                    'yet a name for the Kh variable (`Kh_var_name`) has not been given \n'
+                                    'or the config option was not included.')
+            self._Kh_method = 1
+
+
+        # Set options for handling the horizontal eddy diffusivity
+        self._Ah_method_name = self.config.get('OCEAN_CIRCULATION_MODEL', 'Ah_method').strip().lower()
+        if self._Ah_method_name not in ['none', 'file']:
+            raise RuntimeError('Invalid option for `Ah_method` ({})'.format(self._Ah_method_name))
+
+        if self._Ah_method_name == "none":
+            self._Ah_method = 0
+        elif self._Ah_method_name == "file":
+            # Make sure a value for `Ah_var_name` has been provided.
+            if 'Ah' not in self._variable_names:
+                raise RuntimeError('The configuration file states that Ah data should be read from file \n'
+                                    'yet a name for the Ah variable (`Ah_var_name`) has not been given \n'
+                                    'or the config option was not included.')
+            self._Ah_method = 1
 
         # Has is wet flag?
         self._has_is_wet = self.config.getboolean("OCEAN_CIRCULATION_MODEL", "has_is_wet")
@@ -730,7 +763,10 @@ cdef class ArakawaADataReader(DataReader):
         """
         cdef DTYPE_FLOAT_t var  # ah at (t, x1, x2, x3)
 
-        var = self._get_variable(self._ah_last, self._ah_next, time, particle)
+        if self._Ah_method == 1:
+            var = self._get_variable(self._ah_last, self._ah_next, time, particle)
+        else:
+            raise RuntimeError('This dataset does not contain horizontal eddy viscosities.')
 
         return var
 
@@ -793,59 +829,65 @@ cdef class ArakawaADataReader(DataReader):
         cdef DTYPE_FLOAT_t dah_dx
         cdef DTYPE_FLOAT_t dah_dy
 
-        # Time fraction
-        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
+        if self._Ah_method == 1:
+            # Time fraction
+            time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
-        # Get gradient in phi
-        self._unstructured_grid.get_grad_phi(host_element, dphi_dx, dphi_dy)
+            # Get gradient in phi
+            self._unstructured_grid.get_grad_phi(host_element, dphi_dx, dphi_dy)
 
-        # No vertical interpolation for particles near to the bottom,
-        if particle.get_in_vertical_boundary_layer() is True:
-            # Extract ah near to the boundary
-            for i in xrange(N_VERTICES):
-                vertex = self._nv[i, host_element]
-                ah_tri_t_last_level_1[i] = self._ah_last[k_layer, vertex]
-                ah_tri_t_next_level_1[i] = self._ah_next[k_layer, vertex]
+            # No vertical interpolation for particles near to the bottom,
+            if particle.get_in_vertical_boundary_layer() is True:
+                # Extract ah near to the boundary
+                for i in xrange(N_VERTICES):
+                    vertex = self._nv[i, host_element]
+                    ah_tri_t_last_level_1[i] = self._ah_last[k_layer, vertex]
+                    ah_tri_t_next_level_1[i] = self._ah_next[k_layer, vertex]
 
-            # Interpolate in time
-            for i in xrange(N_VERTICES):
-                ah_tri_level_1[i] = interp.linear_interp(time_fraction,
-                                            ah_tri_t_last_level_1[i],
-                                            ah_tri_t_next_level_1[i])
+                # Interpolate in time
+                for i in xrange(N_VERTICES):
+                    ah_tri_level_1[i] = interp.linear_interp(time_fraction,
+                                                ah_tri_t_last_level_1[i],
+                                                ah_tri_t_next_level_1[i])
 
-            # Interpolate d{}/dx and d{}/dy within the host element
-            Ah_prime[0] = interp.interpolate_within_element(ah_tri_level_1, dphi_dx)
-            Ah_prime[1] = interp.interpolate_within_element(ah_tri_level_1, dphi_dy)
-            return
+                # Interpolate d{}/dx and d{}/dy within the host element
+                Ah_prime[0] = interp.interpolate_within_element(ah_tri_level_1, dphi_dx)
+                Ah_prime[1] = interp.interpolate_within_element(ah_tri_level_1, dphi_dy)
+                return
+            else:
+                # Extract ah on the lower and upper bounding depth levels
+                for i in xrange(N_VERTICES):
+                    vertex = self._nv[i,host_element]
+                    ah_tri_t_last_level_1[i] = self._ah_last[k_layer+1, vertex]
+                    ah_tri_t_next_level_1[i] = self._ah_next[k_layer+1, vertex]
+                    ah_tri_t_last_level_2[i] = self._ah_last[k_layer, vertex]
+                    ah_tri_t_next_level_2[i] = self._ah_next[k_layer, vertex]
+
+                # Interpolate in time
+                for i in xrange(N_VERTICES):
+                    ah_tri_level_1[i] = interp.linear_interp(time_fraction,
+                                                ah_tri_t_last_level_1[i],
+                                                ah_tri_t_next_level_1[i])
+                    ah_tri_level_2[i] = interp.linear_interp(time_fraction,
+                                                ah_tri_t_last_level_2[i],
+                                                ah_tri_t_next_level_2[i])
+
+                # Interpolate d{}/dx and d{}/dy within the host element on the upper
+                # and lower bounding depth levels
+                dah_dx_level_1 = interp.interpolate_within_element(ah_tri_level_1, dphi_dx)
+                dah_dy_level_1 = interp.interpolate_within_element(ah_tri_level_1, dphi_dy)
+                dah_dx_level_2 = interp.interpolate_within_element(ah_tri_level_2, dphi_dx)
+                dah_dy_level_2 = interp.interpolate_within_element(ah_tri_level_2, dphi_dy)
+
+                # Interpolate d{}/dx and d{}/dy between bounding depth levels and
+                # save in the array Ah_prime
+                Ah_prime[0] = interp.linear_interp(particle.get_omega_interfaces(), dah_dx_level_1, dah_dx_level_2)
+                Ah_prime[1] = interp.linear_interp(particle.get_omega_interfaces(), dah_dy_level_1, dah_dy_level_2)
+
         else:
-            # Extract ah on the lower and upper bounding depth levels
-            for i in xrange(N_VERTICES):
-                vertex = self._nv[i,host_element]
-                ah_tri_t_last_level_1[i] = self._ah_last[k_layer+1, vertex]
-                ah_tri_t_next_level_1[i] = self._ah_next[k_layer+1, vertex]
-                ah_tri_t_last_level_2[i] = self._ah_last[k_layer, vertex]
-                ah_tri_t_next_level_2[i] = self._ah_next[k_layer, vertex]
+            raise RuntimeError('This dataset does not contain horizontal eddy viscosities.')
 
-            # Interpolate in time
-            for i in xrange(N_VERTICES):
-                ah_tri_level_1[i] = interp.linear_interp(time_fraction,
-                                            ah_tri_t_last_level_1[i],
-                                            ah_tri_t_next_level_1[i])
-                ah_tri_level_2[i] = interp.linear_interp(time_fraction,
-                                            ah_tri_t_last_level_2[i],
-                                            ah_tri_t_next_level_2[i])
-
-            # Interpolate d{}/dx and d{}/dy within the host element on the upper
-            # and lower bounding depth levels
-            dah_dx_level_1 = interp.interpolate_within_element(ah_tri_level_1, dphi_dx)
-            dah_dy_level_1 = interp.interpolate_within_element(ah_tri_level_1, dphi_dy)
-            dah_dx_level_2 = interp.interpolate_within_element(ah_tri_level_2, dphi_dx)
-            dah_dy_level_2 = interp.interpolate_within_element(ah_tri_level_2, dphi_dy)
-
-            # Interpolate d{}/dx and d{}/dy between bounding depth levels and
-            # save in the array Ah_prime
-            Ah_prime[0] = interp.linear_interp(particle.get_omega_interfaces(), dah_dx_level_1, dah_dx_level_2)
-            Ah_prime[1] = interp.linear_interp(particle.get_omega_interfaces(), dah_dy_level_1, dah_dy_level_2)
+        return
 
     cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time,
             Particle* particle) except FLOAT_ERR:
@@ -867,10 +909,13 @@ cdef class ArakawaADataReader(DataReader):
         """
         cdef DTYPE_FLOAT_t var  # kh at (t, x1, x2, x3)
 
-        if not self._surface_only:
-            var = self._get_variable(self._kh_last, self._kh_next, time, particle)
+        if self._Kh_method == 1:
+            if not self._surface_only:
+                var = self._get_variable(self._kh_last, self._kh_next, time, particle)
+            else:
+                var = 0.0
         else:
-            var = 0.0
+            raise RuntimeError('This dataset does not contain vertical eddy diffusivities.')
 
         return var
 
@@ -919,10 +964,18 @@ cdef class ArakawaADataReader(DataReader):
         # Particle k_layer
         cdef DTYPE_INT_t k_layer = particle.get_k_layer()
 
-        if self._surface_only:
-            return 0.0
+        # The value of the derivative
+        cdef DTYPE_FLOAT_t dkh_dz
 
-        raise NotImplementedError('Implementation is under development')
+        if self._Kh_method == 1:
+            if self._surface_only:
+                dkh_dz = 0.0
+            else:
+                raise NotImplementedError('Implementation is under development')
+        else:
+            raise RuntimeError('This dataset does not contain vertical eddy diffusivities.')
+
+        return dkh_dz
 
 #        if particle.get_in_vertical_boundary_layer() == True:
 #            kh_0 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, k_layer-1)
@@ -1184,8 +1237,8 @@ cdef class ArakawaADataReader(DataReader):
         # Add 3D vars to shape and dimension indices dictionaries
         var_names = ['uo', 'vo']
         if self._has_w: var_names.append('wo')
-        if self._has_Kh: var_names.append('Kh')
-        if self._has_Ah: var_names.append('Ah')
+        if self._Kh_method == 1: var_names.append('Kh')
+        if self._Ah_method == 1: var_names.append('Ah')
         if 'thetao' in self.env_var_names: var_names.append('thetao')
         if 'so' in self.env_var_names: var_names.append('so')
         for var_name in var_names:
@@ -1291,7 +1344,7 @@ cdef class ArakawaADataReader(DataReader):
                     self._depth_levels_next[k, i] = self._reference_depth_levels[k] + self._zeta_next[i]
 
         # Update memory views for kh
-        if self._has_Kh:
+        if self._Kh_method == 1:
             kh_var_name = self._variable_names['Kh']
             kh_last = self.mediator.get_time_dependent_variable_at_last_time_index(kh_var_name,
                     self._variable_shapes['Kh'], DTYPE_FLOAT)
@@ -1304,7 +1357,7 @@ cdef class ArakawaADataReader(DataReader):
             del(kh_next)
 
         # Update memory views for Ah
-        if self._has_Ah:
+        if self._Ah_method == 1:
             ah_var_name = self._variable_names['Ah']
             ah_last = self.mediator.get_time_dependent_variable_at_last_time_index(ah_var_name,
                     self._variable_shapes['Ah'], DTYPE_FLOAT)

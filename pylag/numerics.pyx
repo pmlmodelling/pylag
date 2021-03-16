@@ -1855,27 +1855,6 @@ def get_iterative_method(config):
     if "Diff" in iterative_method and _get_time_direction_string(config) == "reverse":
         raise ValueError("The use of RDMs when reverse tracking is prohibited")
 
-    if "Diff" in iterative_method:
-        # Prevent the use of vertical diffusion schemes if the data files don't have the vertical eddy diffusivity
-        if config.has_option("OCEAN_CIRCULATION_MODEL", "has_Kh"):
-            has_Kh = config.getboolean("OCEAN_CIRCULATION_MODEL", "has_Kh")
-            if has_Kh is False:
-                if "1D" in iterative_method or "3D" in iterative_method:
-                    raise ValueError("Incompatible configuration options specified. PyLag cannot run with vertical \n" \
-                                     "diffusion if the vertical eddy diffusivity variable is not present \n"\
-                                     "(i.e. `has_Kh = False`). Please select a different iterative method; for example \n"\
-                                     "a deterministic scheme.")
-
-        # Prevent the use of horizontal diffusion schemes if the data files don't have the horizontal eddy diffusivity
-        if config.has_option("OCEAN_CIRCULATION_MODEL", "has_Ah"):
-            has_Ah = config.getboolean("OCEAN_CIRCULATION_MODEL", "has_Ah")
-            if has_Ah is False:
-                if "2D" in iterative_method or "3D" in iterative_method:
-                    raise ValueError("Incompatible configuration options specified. PyLag cannot run with horizontal \n" \
-                                     "diffusion if the horizontal eddy diffusivity variable is not present \n"\
-                                     "(i.e. `has_Ah = False`). Please select a different iterative method; for example \n"\
-                                     "a deterministic scheme.")
-
     # Return the specified iterative method
     if iterative_method == "Adv_RK4_2D":
         return AdvRK42DItMethod(config)
@@ -1952,26 +1931,6 @@ def get_diff_iterative_method(config):
     # Prevent backtracking when using a RDM
     if _get_time_direction_string(config) == "reverse":
         raise ValueError("The use of RDMs when reverse tracking is prohibited")
-
-    # Prevent the use of vertical diffusion schemes if the data files don't have the vertical eddy diffusivity
-    if config.has_option("OCEAN_CIRCULATION_MODEL", "has_Kh"):
-        has_Kh = config.getboolean("OCEAN_CIRCULATION_MODEL", "has_Kh")
-        if has_Kh is False:
-            if "1D" in iterative_method or "3D" in iterative_method:
-                raise ValueError("Incompatible configuration options specified. PyLag cannot run with vertical \n" \
-                                   "diffusion if the vertical eddy diffusivity variable is not present \n"\
-                                   "(i.e. `has_Kh = False`). Please select a different iterative method; for example \n"\
-                                   "a deterministic scheme.")
-
-    # Prevent the use of horizontal diffusion schemes if the data files don't have the horizontal eddy diffusivity
-    if "Const" not in iterative_method and config.has_option("OCEAN_CIRCULATION_MODEL", "has_Ah"):
-        has_Ah = config.getboolean("OCEAN_CIRCULATION_MODEL", "has_Ah")
-        if has_Ah is False:
-            if "2D" in iterative_method or "3D" in iterative_method:
-                raise ValueError("Incompatible configuration options specified. PyLag cannot run with horizontal \n" \
-                                   "diffusion if the horizontal eddy diffusivity variable is not present \n"\
-                                   "(i.e. `has_Ah = False`). Please select a different iterative method; for example \n"\
-                                   "a deterministic scheme.")
 
     # Return the specified numerical integrator.
     if iterative_method == "Diff_Const_2D":
