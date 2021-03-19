@@ -293,15 +293,27 @@ cdef class ParticleSmartPtr:
         """ The particle's x1-coordinate """
         return self._particle.get_x1()
 
+    @x1.setter
+    def x1(self, value):
+        self._particle.set_x1(value)
+
     @property
     def x2(self):
         """ The particle's x2-coordinate """
         return self._particle.get_x2()
 
+    @x2.setter
+    def x2(self, value):
+        self._particle.set_x2(value)
+
     @property
     def x3(self):
         """ The particle's x1-coordinate """
         return self._particle.get_x3()
+
+    @x3.setter
+    def x3(self, value):
+        self._particle.set_x3(value)
 
     @property
     def omega_interfaces(self):
