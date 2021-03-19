@@ -871,11 +871,7 @@ cdef class ArakawaADataReader(DataReader):
             Pointer to a Particle object.
 
         Ah_prime : C array, float
-            dAh_dx and dH_dy components stored in a C array of length two.  
-
-        TODO
-        ----
-        1) Test this.
+            dAh_dx and dAh_dy components stored in a C array of length two.
 
         References
         ----------
@@ -883,94 +879,34 @@ cdef class ArakawaADataReader(DataReader):
         applications. Cambridge: Cambridge University Press.
         doi.org/10.1017/CBO9781107449336
         """
-        cdef int i # Loop counters
-        cdef int vertex # Vertex identifier
-
         # Variables used in interpolation in time
         cdef DTYPE_FLOAT_t time_fraction
 
         # Particle k_layer
-        cdef DTYPE_INT_t k_layer = particle.get_k_layer()
+        cdef DTYPE_INT_t k_layer
 
-        # Host element
-        cdef DTYPE_INT_t host_element = particle.get_host_horizontal_elem(self._name)
-
-        # Gradients in phi
-        cdef DTYPE_FLOAT_t dphi_dx[3]
-        cdef DTYPE_FLOAT_t dphi_dy[3]
-
-        # Intermediate arrays - ah
-        cdef DTYPE_FLOAT_t ah_tri_t_last_level_1[3]
-        cdef DTYPE_FLOAT_t ah_tri_t_next_level_1[3]
-        cdef DTYPE_FLOAT_t ah_tri_t_last_level_2[3]
-        cdef DTYPE_FLOAT_t ah_tri_t_next_level_2[3]
-        cdef DTYPE_FLOAT_t ah_tri_level_1[3]
-        cdef DTYPE_FLOAT_t ah_tri_level_2[3]
-
-        # Gradients on lower and upper bounding sigma layers
-        cdef DTYPE_FLOAT_t dah_dx_level_1
-        cdef DTYPE_FLOAT_t dah_dy_level_1
-        cdef DTYPE_FLOAT_t dah_dx_level_2
-        cdef DTYPE_FLOAT_t dah_dy_level_2
-
-        # Gradient
-        cdef DTYPE_FLOAT_t dah_dx
-        cdef DTYPE_FLOAT_t dah_dy
+        # Gradients in Ah on lower and upper bounding levels
+        cdef DTYPE_FLOAT_t Ah_prime_level_1[2]
+        cdef DTYPE_FLOAT_t Ah_prime_level_2[2]
 
         if self._Ah_method == 1:
             # Time fraction
             time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
-            # Get gradient in phi
-            self._unstructured_grid.get_grad_phi(host_element, dphi_dx, dphi_dy)
+            # K layer
+            k_layer = particle.get_k_layer()
 
             # No vertical interpolation for particles near to the bottom,
             if particle.get_in_vertical_boundary_layer() is True:
-                # Extract ah near to the boundary
-                for i in xrange(N_VERTICES):
-                    vertex = self._nv[i, host_element]
-                    ah_tri_t_last_level_1[i] = self._ah_last[k_layer, vertex]
-                    ah_tri_t_next_level_1[i] = self._ah_next[k_layer, vertex]
-
-                # Interpolate in time
-                for i in xrange(N_VERTICES):
-                    ah_tri_level_1[i] = interp.linear_interp(time_fraction,
-                                                ah_tri_t_last_level_1[i],
-                                                ah_tri_t_next_level_1[i])
-
-                # Interpolate d{}/dx and d{}/dy within the host element
-                Ah_prime[0] = interp.interpolate_within_element(ah_tri_level_1, dphi_dx)
-                Ah_prime[1] = interp.interpolate_within_element(ah_tri_level_1, dphi_dy)
-                return
+                self._unstructured_grid.interpolate_grad_in_time_and_space(self._ah_last, self._ah_next, k_layer,
+                                                                           time_fraction, particle, Ah_prime)
             else:
-                # Extract ah on the lower and upper bounding depth levels
-                for i in xrange(N_VERTICES):
-                    vertex = self._nv[i,host_element]
-                    ah_tri_t_last_level_1[i] = self._ah_last[k_layer+1, vertex]
-                    ah_tri_t_next_level_1[i] = self._ah_next[k_layer+1, vertex]
-                    ah_tri_t_last_level_2[i] = self._ah_last[k_layer, vertex]
-                    ah_tri_t_next_level_2[i] = self._ah_next[k_layer, vertex]
-
-                # Interpolate in time
-                for i in xrange(N_VERTICES):
-                    ah_tri_level_1[i] = interp.linear_interp(time_fraction,
-                                                ah_tri_t_last_level_1[i],
-                                                ah_tri_t_next_level_1[i])
-                    ah_tri_level_2[i] = interp.linear_interp(time_fraction,
-                                                ah_tri_t_last_level_2[i],
-                                                ah_tri_t_next_level_2[i])
-
-                # Interpolate d{}/dx and d{}/dy within the host element on the upper
-                # and lower bounding depth levels
-                dah_dx_level_1 = interp.interpolate_within_element(ah_tri_level_1, dphi_dx)
-                dah_dy_level_1 = interp.interpolate_within_element(ah_tri_level_1, dphi_dy)
-                dah_dx_level_2 = interp.interpolate_within_element(ah_tri_level_2, dphi_dx)
-                dah_dy_level_2 = interp.interpolate_within_element(ah_tri_level_2, dphi_dy)
-
-                # Interpolate d{}/dx and d{}/dy between bounding depth levels and
-                # save in the array Ah_prime
-                Ah_prime[0] = interp.linear_interp(particle.get_omega_interfaces(), dah_dx_level_1, dah_dx_level_2)
-                Ah_prime[1] = interp.linear_interp(particle.get_omega_interfaces(), dah_dy_level_1, dah_dy_level_2)
+                self._unstructured_grid.interpolate_grad_in_time_and_space(self._ah_last, self._ah_next, k_layer+1,
+                                                                           time_fraction, particle, Ah_prime_level_1)
+                self._unstructured_grid.interpolate_grad_in_time_and_space(self._ah_last, self._ah_next, k_layer,
+                                                                           time_fraction, particle, Ah_prime_level_2)
+                Ah_prime[0] = interp.linear_interp(particle.get_omega_interfaces(), Ah_prime_level_1[0], Ah_prime_level_2[0])
+                Ah_prime[1] = interp.linear_interp(particle.get_omega_interfaces(), Ah_prime_level_1[1], Ah_prime_level_2[1])
 
         elif self._Ah_method == 2:
             # With C0 continuity, Ah is constant within an element when computed from velocity component derivatives.
