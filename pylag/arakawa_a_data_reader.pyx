@@ -29,6 +29,7 @@ from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 from libcpp.string cimport string
 from libcpp.vector cimport vector
+from libc.math cimport sqrt
 
 # PyLag cython imports
 from pylag.parameters cimport deg_to_radians
@@ -178,6 +179,9 @@ cdef class ArakawaADataReader(DataReader):
     # Flags that identify whether a given variable should be read in
     cdef bint _has_w, _has_is_wet,  _has_zeta
 
+    # Smagorinsky parameters
+    cdef DTYPE_FLOAT_t _C_smag
+
     def __init__(self, config, mediator):
         self.config = config
         self.mediator = mediator
@@ -233,10 +237,9 @@ cdef class ArakawaADataReader(DataReader):
                                     'or the config option was not included.')
             self._Kh_method = 1
 
-
         # Set options for handling the horizontal eddy diffusivity
         self._Ah_method_name = self.config.get('OCEAN_CIRCULATION_MODEL', 'Ah_method').strip().lower()
-        if self._Ah_method_name not in ['none', 'file']:
+        if self._Ah_method_name not in ['none', 'file', 'smagorinsky']:
             raise RuntimeError('Invalid option for `Ah_method` ({})'.format(self._Ah_method_name))
 
         if self._Ah_method_name == "none":
@@ -248,6 +251,11 @@ cdef class ArakawaADataReader(DataReader):
                                     'yet a name for the Ah variable (`Ah_var_name`) has not been given \n'
                                     'or the config option was not included.')
             self._Ah_method = 1
+        elif self._Ah_method_name == "smagorinsky":
+            self._Ah_method = 2
+
+            # Read in Smagorinsky parameters
+            self._C_smag = self.config.getfloat('SMAGORINSKY', 'constant')
 
         # Has is wet flag?
         self._has_is_wet = self.config.getboolean("OCEAN_CIRCULATION_MODEL", "has_is_wet")
@@ -765,10 +773,90 @@ cdef class ArakawaADataReader(DataReader):
 
         if self._Ah_method == 1:
             var = self._get_variable(self._ah_last, self._ah_next, time, particle)
+        elif self._Ah_method == 2:
+            var = self._compute_smagorinsky_eddy_diffusivity(time, particle)
         else:
             raise RuntimeError('This dataset does not contain horizontal eddy viscosities.')
 
         return var
+
+    cdef DTYPE_FLOAT_t _compute_smagorinsky_eddy_diffusivity(self, const DTYPE_FLOAT_t &time,
+                                                             Particle* particle) except FLOAT_ERR:
+        """ Compute horizontal eddy diffusivity term from Smagorinsky expression
+
+        The approach here is to compute the eddy diffusivity from the velocity field
+        using the Smagorinsky. The diffusivity is assumed to be isotropic is x and y.
+
+        Parameters
+        ----------
+        time : float
+            Time at which to interpolate.
+
+        particle: *Particle
+            Pointer to a Particle object.
+
+        Returns
+        -------
+         : float
+             The horizontal eddy diffusivity coefficient.
+        """
+
+            # Interpolated values on lower and upper bounding depth levels
+        cdef DTYPE_FLOAT_t Kh_level_1
+        cdef DTYPE_FLOAT_t Kh_level_2
+        cdef DTYPE_FLOAT_t Kh
+
+        # Particle k_layer
+        cdef DTYPE_INT_t k_layer = particle.get_k_layer()
+
+        cdef DTYPE_FLOAT_t time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
+
+        # No vertical interpolation for particles near to the bottom
+        if particle.get_in_vertical_boundary_layer() is True:
+            Kh = self._compute_smagorinsky_eddy_diffusivity_on_level(time_fraction, k_layer, particle)
+
+        else:
+            Kh_level_1 = self._compute_smagorinsky_eddy_diffusivity_on_level(time_fraction, k_layer+1, particle)
+            Kh_level_2 = self._compute_smagorinsky_eddy_diffusivity_on_level(time_fraction, k_layer, particle)
+
+            Kh = interp.linear_interp(particle.get_omega_interfaces(), Kh_level_1, Kh_level_2)
+
+        return Kh
+
+    cdef DTYPE_FLOAT_t _compute_smagorinsky_eddy_diffusivity_on_level(self, const DTYPE_FLOAT_t &time_fraction,
+                                                                      const DTYPE_INT_t k,
+                                                                      Particle* particle) except FLOAT_ERR:
+        """ Compute horizontal eddy diffusivity using Smagorinsky expression on level k
+
+        Kh = A_e * (1/Pr) * C * sqrt((du/dx)^2 + (dv/dy)^2 + 0.5*(du/dy + dv/dx)^2)
+
+        where A_e is the area of the element within which the particle resides, Pr is the Prandtl number and
+        C is a constant parameter. The Prandtl number is taken as 1.0.
+        """
+        # Gradients in u and v ([du/dx, du/dy] and [dv/dx, dv/dy])
+        cdef DTYPE_FLOAT_t u_prime[2]
+        cdef DTYPE_FLOAT_t v_prime[2]
+
+        # Element area
+        cdef DTYPE_FLOAT_t A_e
+
+        # Intermediate terms
+        cdef DTYPE_FLOAT_t term_1, term_2
+
+        # Get the element's area
+        A_e = self._unstructured_grid.get_element_area(particle)
+
+        # Compute velocity gradient terms
+        self._unstructured_grid.interpolate_grad_in_time_and_space(self._u_last, self._u_next, k, time_fraction,
+                                                                   particle, u_prime)
+        self._unstructured_grid.interpolate_grad_in_time_and_space(self._v_last, self._v_next, k, time_fraction,
+                                                                   particle, v_prime)
+
+        # Compute Smagorinsky term and return
+        term_1 = u_prime[0]**2 + v_prime[1]**2
+        term_2 = 0.5 * (u_prime[1] + v_prime[0])**2
+
+        return self._C_smag * A_e * sqrt(term_1 + term_2)
 
     cdef void get_horizontal_eddy_viscosity_derivative(self, DTYPE_FLOAT_t time,
             Particle* particle, DTYPE_FLOAT_t Ah_prime[2]) except +:
@@ -883,6 +971,13 @@ cdef class ArakawaADataReader(DataReader):
                 # save in the array Ah_prime
                 Ah_prime[0] = interp.linear_interp(particle.get_omega_interfaces(), dah_dx_level_1, dah_dx_level_2)
                 Ah_prime[1] = interp.linear_interp(particle.get_omega_interfaces(), dah_dy_level_1, dah_dy_level_2)
+
+        elif self._Ah_method == 2:
+            # With C0 continuity, Ah is constant within an element when computed from velocity component derivatives.
+            # To improve this, will need to compute derivatives in a different way (e.g. using a least squares method).
+            # Note this is really an issue for UnstructuredGrid, which is responsible for computing derivatives.
+            Ah_prime[0] = 0.0
+            Ah_prime[1] = 0.0
 
         else:
             raise RuntimeError('This dataset does not contain horizontal eddy viscosities.')
