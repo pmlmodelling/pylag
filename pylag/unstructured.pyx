@@ -11,6 +11,7 @@ API is exposed in Python with accompanying documentation.
 include "constants.pxi"
 
 from libcpp.vector cimport vector
+from libc.math cimport fabs
 
 import logging
 
@@ -41,7 +42,7 @@ from pylag.math cimport geographic_to_cartesian_coords, rotate_axes, det_third_o
 from pylag.math cimport great_circle_arc_segments_intersect
 from pylag.math cimport haversine
 from pylag.math cimport int_min, float_min, get_intersection_point, get_intersection_point_in_geographic_coordinates
-
+from pylag.math cimport area_of_a_triangle, area_of_a_spherical_triangle
 
 cdef class Grid:
     """ Base class for grid objects
@@ -200,6 +201,24 @@ cdef class Grid:
         return self.set_local_coordinates(particle.get_ptr())
 
     cdef set_local_coordinates(self, Particle *particle):
+        raise NotImplementedError
+
+    def get_element_area_wrapper(self, ParticleSmartPtr particle):
+        """ Python wrapper for returning the area of the element in which the particle resides.
+
+        Parameters
+        ----------
+        particle : pylag.particle_cpp_wrapper.ParticleSmartPtr
+            The particle at its current position.
+
+        Returns
+        -------
+         : float
+            The element area.
+        """
+        return self.get_element_area(particle.get_ptr())
+
+    cdef DTYPE_FLOAT_t get_element_area(self, Particle *particle) except FLOAT_ERR:
         raise NotImplementedError
 
     cpdef vector[DTYPE_FLOAT_t] get_phi(self, const DTYPE_FLOAT_t &x1, const DTYPE_FLOAT_t &x2, const DTYPE_INT_t &host):
@@ -921,6 +940,43 @@ cdef class UnstructuredCartesianGrid(Grid):
         # Set phi
         particle.set_phi(self.name, phi)
 
+    cdef DTYPE_FLOAT_t get_element_area(self, Particle *particle) except FLOAT_ERR:
+        """ Return the element's area within which the particle resides
+
+        Parameters
+        ----------
+        particle: *Particle
+            Pointer to a Particle object
+        """
+        # Vertex identifies
+        cdef int vertex_1, vertex_2, vertex_3
+
+        # Nodal coordinates [x, y]
+        cdef DTYPE_FLOAT_t x1[2]
+        cdef DTYPE_FLOAT_t x2[2]
+        cdef DTYPE_FLOAT_t x3[2]
+
+        cdef DTYPE_INT_t host
+
+        cdef DTYPE_FLOAT_t area
+
+        host = particle.get_host_horizontal_elem(self.name)
+
+        # Extract nodal cartesian coordinates
+        vertex_1 = self.nv[0, host]
+        vertex_2 = self.nv[1, host]
+        vertex_3 = self.nv[2, host]
+        x1[0] = self.x[vertex_1]
+        x1[1] = self.y[vertex_1]
+        x2[0] = self.x[vertex_2]
+        x2[1] = self.y[vertex_2]
+        x3[0] = self.x[vertex_3]
+        x3[1] = self.y[vertex_3]
+
+        area = area_of_a_triangle(x1, x2, x3)
+
+        return area
+
     cpdef vector[DTYPE_FLOAT_t] get_phi(self, const DTYPE_FLOAT_t &x1, const DTYPE_FLOAT_t &x2, const DTYPE_INT_t &host):
         """ Get barycentric coordinates.
 
@@ -960,7 +1016,6 @@ cdef class UnstructuredCartesianGrid(Grid):
         phi : C array, float
             Barycentric coordinates.
         """
-
         cdef int i # Loop counters
         cdef int vertex # Vertex identifier
 
@@ -1949,6 +2004,47 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         # Set phi
         particle.set_phi(self.name, phi)
+
+    cdef DTYPE_FLOAT_t get_element_area(self, Particle *particle) except FLOAT_ERR:
+        """ Return the element's area within which the particle resides
+
+        Parameters
+        ----------
+        particle: *Particle
+            Pointer to a Particle object
+        """
+        # Loop counter
+        cdef int i
+
+        # Vertex identifiers
+        cdef DTYPE_INT_t vertex_0, vertex_1, vertex_2
+
+        # The host element
+        cdef DTYPE_INT_t host
+
+        # Element vertex coordinates in cartesian coordinates
+        cdef DTYPE_FLOAT_t p0[3]
+        cdef DTYPE_FLOAT_t p1[3]
+        cdef DTYPE_FLOAT_t p2[3]
+
+        # Element area
+        cdef DTYPE_FLOAT_t area
+
+        # Get the host
+        host = particle.get_host_horizontal_elem(self.name)
+
+        # Extract nodal cartesian coordinates
+        vertex_0 = self.nv[0, host]
+        vertex_1 = self.nv[1, host]
+        vertex_2 = self.nv[2, host]
+        for i in range(3):
+            p0[i] = self.points_nodes[vertex_0, i]
+            p1[i] = self.points_nodes[vertex_1, i]
+            p2[i] = self.points_nodes[vertex_2, i]
+
+        area = area_of_a_spherical_triangle(p0, p1, p2, earth_radius)
+
+        return area
 
     cpdef vector[DTYPE_FLOAT_t] get_phi(self, const DTYPE_FLOAT_t &x1, const DTYPE_FLOAT_t &x2, const DTYPE_INT_t &host):
         """ Get normalised tetrahedral coordinates given a point's position and the host element

@@ -32,6 +32,8 @@ cdef class Grid:
 
     cdef set_local_coordinates(self, Particle *particle)
 
+    cdef DTYPE_FLOAT_t get_element_area(self, Particle *particle) except FLOAT_ERR
+
     cpdef vector[DTYPE_FLOAT_t] get_phi(self, const DTYPE_FLOAT_t &x1, const DTYPE_FLOAT_t &x2, const DTYPE_INT_t &host)
 
     cdef void get_grad_phi(self, DTYPE_INT_t host,
