@@ -856,7 +856,7 @@ cdef class ArakawaADataReader(DataReader):
         term_1 = u_prime[0]**2 + v_prime[1]**2
         term_2 = 0.5 * (u_prime[1] + v_prime[0])**2
 
-        return self._C_smag * A_e * sqrt(term_1 + term_2)
+        return 0.5 * self._C_smag * A_e * sqrt(term_1 + term_2)
 
     cdef void get_horizontal_eddy_viscosity_derivative(self, DTYPE_FLOAT_t time,
             Particle* particle, DTYPE_FLOAT_t Ah_prime[2]) except +:
