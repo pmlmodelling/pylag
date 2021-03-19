@@ -124,6 +124,9 @@ class MockArakawaAMediator(Mediator):
         land_sea_mask_elements = np.empty(n_elements, dtype=DTYPE_INT)
         gm.compute_land_sea_element_mask(nv, land_sea_mask_nodes, land_sea_mask_elements, 2)
 
+        # Save dummy array of element areas
+        areas = np.ones(n_elements, dtype=DTYPE_FLOAT)
+
         # Transpose arrays
         nv = nv.T
         nbe = nbe.T
@@ -143,7 +146,7 @@ class MockArakawaAMediator(Mediator):
                            'latitude': lat_nodes, 'latitude_c': lat_elements, 'depth': depth, 'h': h,
                            'mask': land_sea_mask_elements, 'mask_nodes': land_sea_mask_nodes,
                            'permutation': permutation, 'trim_first_latitude': trim_first_latitude,
-                           'trim_last_latitude': trim_last_latitude}
+                           'trim_last_latitude': trim_last_latitude, 'area': areas}
 
         # Set dimensions
         zos_dimensions = ('time', 'latitude', 'longitude')

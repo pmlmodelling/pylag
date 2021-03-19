@@ -451,7 +451,10 @@ cdef class UnstructuredCartesianGrid(Grid):
     cdef DTYPE_FLOAT_t[:, ::1] dphi_dx
     cdef DTYPE_FLOAT_t[:, ::1] dphi_dy
 
-    def __init__(self, config, name, n_nodes, n_elems, nv, nbe, x, y, xc, yc, land_sea_mask, land_sea_mask_nodes):
+    # Cell areas
+    cdef DTYPE_FLOAT_t[::1] areas
+
+    def __init__(self, config, name, n_nodes, n_elems, nv, nbe, x, y, xc, yc, land_sea_mask, land_sea_mask_nodes, areas=None):
         self.config = config
 
         self.name = name
@@ -465,6 +468,8 @@ cdef class UnstructuredCartesianGrid(Grid):
         self.yc = yc
         self.land_sea_mask = land_sea_mask
         self.land_sea_mask_nodes = land_sea_mask_nodes
+        if areas is not None:
+            self.areas = areas
 
         # Containers for preserving the value of gradient calculations
         self.barycentric_gradients_have_been_cached = np.zeros(self.n_elems, dtype=DTYPE_INT, order='C')
@@ -962,18 +967,21 @@ cdef class UnstructuredCartesianGrid(Grid):
 
         host = particle.get_host_horizontal_elem(self.name)
 
-        # Extract nodal cartesian coordinates
-        vertex_1 = self.nv[0, host]
-        vertex_2 = self.nv[1, host]
-        vertex_3 = self.nv[2, host]
-        x1[0] = self.x[vertex_1]
-        x1[1] = self.y[vertex_1]
-        x2[0] = self.x[vertex_2]
-        x2[1] = self.y[vertex_2]
-        x3[0] = self.x[vertex_3]
-        x3[1] = self.y[vertex_3]
+        if self.areas is not None:
+            area = self.areas[host]
+        else:
+            # Extract nodal cartesian coordinates
+            vertex_1 = self.nv[0, host]
+            vertex_2 = self.nv[1, host]
+            vertex_3 = self.nv[2, host]
+            x1[0] = self.x[vertex_1]
+            x1[1] = self.y[vertex_1]
+            x2[0] = self.x[vertex_2]
+            x2[1] = self.y[vertex_2]
+            x3[0] = self.x[vertex_3]
+            x3[1] = self.y[vertex_3]
 
-        area = area_of_a_triangle(x1, x2, x3)
+            area = area_of_a_triangle(x1, x2, x3)
 
         return area
 
@@ -1486,7 +1494,10 @@ cdef class UnstructuredGeographicGrid(Grid):
     cdef DTYPE_FLOAT_t[:, ::1] dphi_dx
     cdef DTYPE_FLOAT_t[:, ::1] dphi_dy
 
-    def __init__(self, config, name, n_nodes, n_elems, nv, nbe, x, y, xc, yc, land_sea_mask, land_sea_mask_nodes):
+    # Element areas
+    cdef DTYPE_FLOAT_t[::1] areas
+
+    def __init__(self, config, name, n_nodes, n_elems, nv, nbe, x, y, xc, yc, land_sea_mask, land_sea_mask_nodes, areas=None):
 
         self.config = config
 
@@ -1519,6 +1530,10 @@ cdef class UnstructuredGeographicGrid(Grid):
         # Masks
         self.land_sea_mask = land_sea_mask[:]
         self.land_sea_mask_nodes = land_sea_mask_nodes[:]
+
+        # Element areas
+        if areas is not None:
+            self.areas = areas
 
         # Containers for preserving the value of gradient calculations
         self.barycentric_gradients_have_been_cached = np.zeros(self.n_elems, dtype=DTYPE_INT, order='C')
@@ -2033,16 +2048,19 @@ cdef class UnstructuredGeographicGrid(Grid):
         # Get the host
         host = particle.get_host_horizontal_elem(self.name)
 
-        # Extract nodal cartesian coordinates
-        vertex_0 = self.nv[0, host]
-        vertex_1 = self.nv[1, host]
-        vertex_2 = self.nv[2, host]
-        for i in range(3):
-            p0[i] = self.points_nodes[vertex_0, i]
-            p1[i] = self.points_nodes[vertex_1, i]
-            p2[i] = self.points_nodes[vertex_2, i]
+        if self.areas is not None:
+            area = self.areas[host]
+        else:
+            # Extract nodal cartesian coordinates
+            vertex_0 = self.nv[0, host]
+            vertex_1 = self.nv[1, host]
+            vertex_2 = self.nv[2, host]
+            for i in range(3):
+                p0[i] = self.points_nodes[vertex_0, i]
+                p1[i] = self.points_nodes[vertex_1, i]
+                p2[i] = self.points_nodes[vertex_2, i]
 
-        area = area_of_a_spherical_triangle(p0, p1, p2, earth_radius)
+            area = area_of_a_spherical_triangle(p0, p1, p2, earth_radius)
 
         return area
 
@@ -2615,7 +2633,7 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         return sumw / sum
 
-def get_unstructured_grid(config, *args):
+def get_unstructured_grid(config, *args, **kwargs):
     """ Factory method for unstructured grid types
 
     The factory method is used to distinguish between geographic and cartesian
@@ -2629,8 +2647,8 @@ def get_unstructured_grid(config, *args):
     """
     coordinate_system = config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system")
     if coordinate_system == "cartesian":
-        return UnstructuredCartesianGrid(config, *args)
+        return UnstructuredCartesianGrid(config, *args, **kwargs)
     elif coordinate_system == "geographic":
-        return UnstructuredGeographicGrid(config, *args)
+        return UnstructuredGeographicGrid(config, *args, **kwargs)
     else:
         raise ValueError("Unsupported coordinate_system `{}` specified".format(coordinate_system))
