@@ -633,15 +633,20 @@ class ArakawaAPlotter(PyLagPlotter):
             if len(field.shape) != 1:
                 raise ValueError('Expected 1D array')
 
-            if field.shape[0] != self.n_nodes:
-                raise ValueError('The size of the `field` array does not match the number of nodes')
+            if not (field.shape[0] == self.n_nodes or field.shape[0] == self.n_elems):
+                raise ValueError('The size of the `field` array ({}) does not match the number of nodes or elements'.format(field.shape[0]))
 
             _field = field
         else:
+            if field.shape[0] != self.n_nodes:
+                raise ValueError('Preprocessing of data defined at elements is not supported.')
             _field = self.preprocess_array(field)
 
         # Compute field value at face centre of ocean triangles
-        _field = _field[self.ocean_simplices].mean(axis=1)
+        if _field.shape[0] == self.n_nodes:
+            _field = _field[self.ocean_simplices].mean(axis=1)
+        elif _field.shape[0] == self.n_elems:
+            _field = _field[self.ocean_elements]
 
         if update is True:
             for collection in ax.collections:
