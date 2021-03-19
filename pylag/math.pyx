@@ -10,7 +10,7 @@ include "constants.pxi"
 
 import numpy as np
 
-from libc.math cimport sin, cos, asin, acos, atan2, sqrt, abs
+from libc.math cimport sin, cos, asin, acos, atan2, sqrt, fabs
 
 from pylag.parameters cimport pi, earth_radius, radians_to_deg
 
@@ -207,6 +207,39 @@ def vector_product_wrapper(const vector[DTYPE_FLOAT_t] &a, const vector[DTYPE_FL
         c.push_back(c_c[i])
 
     return c
+
+
+def area_of_a_triangle_wrapper(const vector[DTYPE_FLOAT_t] &x1, const vector[DTYPE_FLOAT_t] &x2,
+                               const vector[DTYPE_FLOAT_t] &x3):
+    cdef DTYPE_FLOAT_t x1_c[2]
+    cdef DTYPE_FLOAT_t x2_c[2]
+    cdef DTYPE_FLOAT_t x3_c[2]
+
+    cdef int i
+
+    for i in range(2):
+        x1_c[i] = x1[i]
+        x2_c[i] = x2[i]
+        x3_c[i] = x3[i]
+
+    area = area_of_a_triangle(x1_c, x2_c, x3_c)
+
+    return area
+
+
+cdef DTYPE_FLOAT_t area_of_a_triangle(const DTYPE_FLOAT_t &x1[2], const DTYPE_FLOAT_t &x2[2],
+                                      const DTYPE_FLOAT_t &x3[2]) except FLOAT_ERR:
+        cdef DTYPE_FLOAT_t a1, a2, a3, a4, area
+
+        # Intermediate terms
+        a1 = x2[0] - x1[0]
+        a2 = x3[1] - x1[1]
+        a3 = x2[1] - x1[1]
+        a4 = x3[0] - x1[0]
+
+        area = 0.5 * (a1 * a2 - a3 * a4)
+
+        return fabs(area)
 
 
 def area_of_a_spherical_triangle_wrapper(const vector[DTYPE_FLOAT_t] &x1, const vector[DTYPE_FLOAT_t] &x2,
@@ -721,7 +754,7 @@ cdef DTYPE_INT_t intersection_is_within_arc_segment(const DTYPE_FLOAT_t x1[3],
     theta_2 = angle_between_two_vectors(x2, xi)
 
     # Compute the difference
-    difference = abs(theta_arc - theta_1 - theta_2)
+    difference = fabs(theta_arc - theta_1 - theta_2)
 
     if difference > EPSILON:
         return 0

@@ -61,6 +61,9 @@ cdef geographic_to_cartesian_coords(const DTYPE_FLOAT_t &lon_rad,
 
 cdef cartesian_to_geographic_coords(const DTYPE_FLOAT_t coords_cart[3], DTYPE_FLOAT_t coords_geog[2])
 
+cdef DTYPE_FLOAT_t area_of_a_triangle(const DTYPE_FLOAT_t &x1[2], const DTYPE_FLOAT_t &x2[2],
+                                      const DTYPE_FLOAT_t &x3[2]) except FLOAT_ERR
+
 cdef DTYPE_FLOAT_t area_of_a_spherical_triangle(const DTYPE_FLOAT_t &x1[3], const DTYPE_FLOAT_t &x2[3],
                                                 const DTYPE_FLOAT_t &x3[3], const DTYPE_FLOAT_t &r) except FLOAT_ERR
 

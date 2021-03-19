@@ -62,6 +62,16 @@ def test_vector_product():
     test.assert_array_almost_equal(c, [0., 0., -3.])
 
 
+def test_area_of_a_triangle():
+    a = [0., 0.]
+    b = [1., 0.]
+    c = [0., 1.]
+
+    area = math.area_of_a_triangle_wrapper(a, b, c)
+
+    test.assert_almost_equal(area, 0.5)
+
+
 def test_area_of_a_spherical_triangle():
     a = [1., 0., 0.]
     b = [0., 1., 0.]
