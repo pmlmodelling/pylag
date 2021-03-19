@@ -20,6 +20,9 @@ from collections import OrderedDict
 from netCDF4 import Dataset
 import time
 
+from pylag.parameters cimport earth_radius
+from pylag.math cimport area_of_a_triangle, area_of_a_spherical_triangle
+
 from pylag import version
 from pylag.math import geographic_to_cartesian_coords_python
 from pylag.math import cartesian_to_geographic_coords_python
@@ -658,6 +661,14 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
         lon_elements, lat_elements = compute_element_midpoints_in_geographic_coordinates(nv, lon_nodes, lat_nodes)
     print('done')
 
+    # Save element areas
+    print('\nCalculating element areas ', end='... ')
+    areas = compute_element_areas(nv, lon_nodes, lat_nodes, coordinate_system='geographic')
+    area_attrs = {'standard_name' : 'areas',
+                  'units' : 'm^2',
+                  'long_name' : 'Element areas'}
+    print('done')
+
     # Generate the land-sea mask at elements
     print('\nGenerating land sea mask at element centres ', end='... ')
     land_sea_mask_elements = np.empty(n_elems, dtype=DTYPE_INT)
@@ -749,6 +760,9 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
 
     # Add land sea mask
     gm_file_creator.create_variable('mask_nodes', land_sea_mask_nodes, ('node',), DTYPE_INT, attrs=mask_attrs)
+
+    # Compute element areas
+    gm_file_creator.create_variable('area', areas, ('element',), DTYPE_FLOAT, attrs=area_attrs)
 
     # Close input dataset
     input_dataset.close()
@@ -1488,6 +1502,74 @@ cpdef sort_adjacency_array(DTYPE_INT_t [:, :] nv, DTYPE_INT_t [:, :] nbe):
         nbe[i, 0] = index_side1
         nbe[i, 1] = index_side2
         nbe[i, 2] = index_side3
+
+
+@cython.wraparound(True)
+cpdef compute_element_areas(nv, x_nodes, y_nodes, coordinate_system='geographic'):
+    cdef DTYPE_INT_t vertex_0, vertex_1, vertex_2
+
+    # Cartesian node coordinates for geographic case
+    cdef DTYPE_FLOAT_t p0[3]
+    cdef DTYPE_FLOAT_t p1[3]
+    cdef DTYPE_FLOAT_t p2[3]
+    cdef DTYPE_FLOAT_t[:, :] points_view
+
+    # Cartesian node coordinates for cartesian case
+    cdef DTYPE_FLOAT_t x1[2]
+    cdef DTYPE_FLOAT_t x2[2]
+    cdef DTYPE_FLOAT_t x3[2]
+
+    cdef DTYPE_FLOAT_t[:] areas_view
+
+    cdef DTYPE_INT_t n_elements
+    cdef DTYPE_INT_t i, j
+
+    # Number of elements
+    n_elements = nv.shape[0]
+
+    # Create array in which to store areas
+    areas = np.zeros(n_elements, dtype=DTYPE_FLOAT)
+    areas_view = areas
+
+    if coordinate_system == 'geographic':
+        # Convert to radians
+        lon_nodes_radians = np.radians(x_nodes)
+        lat_nodes_radians = np.radians(y_nodes)
+
+        # Convert to Cartesian coordinates
+        x, y, z = geographic_to_cartesian_coords_python(lon_nodes_radians, lat_nodes_radians)
+        points_view = np.ascontiguousarray(np.column_stack([x, y, z]))
+
+        for i in range(n_elements):
+            # Extract nodal cartesian coordinates
+            vertex_0 = nv[i, 0]
+            vertex_1 = nv[i, 1]
+            vertex_2 = nv[i, 2]
+            for j in range(3):
+                p0[j] = points_view[vertex_0, j]
+                p1[j] = points_view[vertex_1, j]
+                p2[j] = points_view[vertex_2, j]
+
+            areas_view[i] = area_of_a_spherical_triangle(p0, p1, p2, earth_radius)
+
+    elif coordinate_system == 'cartesian':
+        for i in range(n_elements):
+            # Extract nodal cartesian coordinates
+            vertex_1 = nv[i, 0]
+            vertex_2 = nv[i, 1]
+            vertex_3 = nv[i, 2]
+            x1[0] = x_nodes[vertex_1]
+            x1[1] = y_nodes[vertex_1]
+            x2[0] = x_nodes[vertex_2]
+            x2[1] = y_nodes[vertex_2]
+            x3[0] = x_nodes[vertex_3]
+            x3[1] = y_nodes[vertex_3]
+
+            areas_view[i] = area_of_a_triangle(x1, x2, x3)
+    else:
+        raise RuntimeError('Unknown coordinate system {}'.format(coordinate_system))
+
+    return areas
 
 
 @cython.wraparound(True)
