@@ -400,9 +400,9 @@ cdef class DataReader:
     cdef DTYPE_FLOAT_t get_vertical_velocity(self, DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR:
         raise NotImplementedError
 
-    def get_horizontal_eddy_viscosity_wrapper(self, DTYPE_FLOAT_t time,
+    def get_horizontal_eddy_diffusivity_wrapper(self, DTYPE_FLOAT_t time,
                                               ParticleSmartPtr particle):
-        """ Python wrapper for getting the horizontal eddy viscosity at the particle's position
+        """ Python wrapper for getting the horizontal eddy diffusivity at the particle's position
 
         Parameters
         ----------
@@ -418,18 +418,18 @@ cdef class DataReader:
         Returns
         -------
          : float
-            The horizontal eddy viscosity
+            The horizontal eddy diffusivity
         """
-        return self.get_horizontal_eddy_viscosity(time, particle.get_ptr())
+        return self.get_horizontal_eddy_diffusivity(time, particle.get_ptr())
 
-    cdef DTYPE_FLOAT_t get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
+    cdef DTYPE_FLOAT_t get_horizontal_eddy_diffusivity(self, DTYPE_FLOAT_t time,
             Particle *particle) except FLOAT_ERR:
         raise NotImplementedError
 
-    def get_horizontal_eddy_viscosity_derivative_wrapper(self, DTYPE_FLOAT_t time,
+    def get_horizontal_eddy_diffusivity_derivative_wrapper(self, DTYPE_FLOAT_t time,
                                                           ParticleSmartPtr particle,
                                                           Ah_prime):
-        """ Python wrapper for getting the horizontal eddy viscosity at the particle's position
+        """ Python wrapper for getting the horizontal eddy diffusivity at the particle's position
 
         Parameters
         ----------
@@ -440,7 +440,7 @@ cdef class DataReader:
             The particle at its current position.
 
         Ah_prime : 1D NumPy array of length two.
-            The derivative of the horizontal eddy viscosity
+            The derivative of the horizontal eddy diffusivity
 
         Returns
         -------
@@ -453,14 +453,14 @@ cdef class DataReader:
 
         Ah_prime_c[:] = Ah_prime[:]
 
-        self.get_horizontal_eddy_viscosity_derivative(time, particle.get_ptr(), Ah_prime_c)
+        self.get_horizontal_eddy_diffusivity_derivative(time, particle.get_ptr(), Ah_prime_c)
 
         for i in xrange(2):
             Ah_prime[i] = Ah_prime_c[i]
 
         return
 
-    cdef void get_horizontal_eddy_viscosity_derivative(self, DTYPE_FLOAT_t time,
+    cdef void get_horizontal_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
             Particle *particle, DTYPE_FLOAT_t Ah_prime[2]) except +:
         raise NotImplementedError
 

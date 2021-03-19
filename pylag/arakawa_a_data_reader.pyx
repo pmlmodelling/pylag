@@ -752,9 +752,9 @@ cdef class ArakawaADataReader(DataReader):
         else:
             raise ValueError("Invalid variable name `{}'".format(var_name))
 
-    cdef DTYPE_FLOAT_t get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
+    cdef DTYPE_FLOAT_t get_horizontal_eddy_diffusivity(self, DTYPE_FLOAT_t time,
             Particle* particle) except FLOAT_ERR:
-        """ Returns the horizontal eddy viscosity through linear interpolation
+        """ Returns the horizontal eddy diffusivity through linear interpolation
 
         Parameters
         ----------
@@ -767,7 +767,7 @@ cdef class ArakawaADataReader(DataReader):
         Returns
         -------
         viscofh : float
-            The interpolated value of the horizontal eddy viscosity at the specified point in time and space.
+            The interpolated value of the horizontal eddy diffusivity at the specified point in time and space.
         """
         cdef DTYPE_FLOAT_t var  # ah at (t, x1, x2, x3)
 
@@ -858,9 +858,9 @@ cdef class ArakawaADataReader(DataReader):
 
         return 0.5 * self._C_smag * A_e * sqrt(term_1 + term_2)
 
-    cdef void get_horizontal_eddy_viscosity_derivative(self, DTYPE_FLOAT_t time,
+    cdef void get_horizontal_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
             Particle* particle, DTYPE_FLOAT_t Ah_prime[2]) except +:
-        """ Returns the gradient in the horizontal eddy viscosity
+        """ Returns the gradient in the horizontal eddy diffusivity
 
         Parameters
         ----------

@@ -561,7 +561,7 @@ class FVCOMDataReader_test(TestCase):
         test.assert_equal(flag, 0)
         test.assert_almost_equal(diffusivity_gradient, -0.0026042)
 
-    def test_get_horizontal_eddy_viscosity(self):
+    def test_get_horizontal_eddy_diffusivity(self):
         x1 = 1.3333333333-self.xmin
         x2 = 1.6666666667-self.ymin
         host_elements={'fvcom': 0}
@@ -571,11 +571,11 @@ class FVCOMDataReader_test(TestCase):
         particle = ParticleSmartPtr(x1=x1, x2=x2, x3=x3, host_elements=host_elements)
         self.data_reader.set_local_coordinates_wrapper(particle)
         flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
-        viscosity = self.data_reader.get_horizontal_eddy_viscosity_wrapper(time, particle)
+        diffusivity = self.data_reader.get_horizontal_eddy_diffusivity_wrapper(time, particle)
         test.assert_equal(flag, 0)
-        test.assert_almost_equal(viscosity,  0.01)
+        test.assert_almost_equal(diffusivity,  0.01)
 
-    def test_get_horizontal_eddy_viscosity_derivative(self):
+    def test_get_horizontal_eddy_diffusivity_derivative(self):
         x1 = 1.3333333333-self.xmin
         x2 = 1.6666666667-self.ymin
         host_elements={'fvcom': 0}
@@ -587,7 +587,7 @@ class FVCOMDataReader_test(TestCase):
         flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
 
         Ah_prime = np.empty(2, dtype=DTYPE_FLOAT)
-        self.data_reader.get_horizontal_eddy_viscosity_derivative_wrapper(time, particle, Ah_prime)
+        self.data_reader.get_horizontal_eddy_diffusivity_derivative_wrapper(time, particle, Ah_prime)
         test.assert_equal(flag, 0)
         test.assert_array_almost_equal(Ah_prime, [0.0, 0.0])
 

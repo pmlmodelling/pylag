@@ -922,9 +922,9 @@ cdef class ROMSDataReader(DataReader):
         else:
             raise ValueError("Invalid variable name `{}'".format(var_name))
 
-    cdef DTYPE_FLOAT_t get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
+    cdef DTYPE_FLOAT_t get_horizontal_eddy_diffusivity(self, DTYPE_FLOAT_t time,
             Particle* particle) except FLOAT_ERR:
-        """ Returns the horizontal eddy viscosity through interpolation
+        """ Returns the horizontal eddy diffusivity through interpolation
 
         Parameters
         ----------
@@ -937,7 +937,7 @@ cdef class ROMSDataReader(DataReader):
         Returns
         -------
         viscofh : float
-            The interpolated value of the horizontal eddy viscosity at the specified point in time and space.
+            The interpolated value of the horizontal eddy diffusivity at the specified point in time and space.
         """
                # Variables used in interpolation in time
         cdef DTYPE_FLOAT_t time_fraction
@@ -980,9 +980,9 @@ cdef class ROMSDataReader(DataReader):
 
         return Ah
 
-    cdef void get_horizontal_eddy_viscosity_derivative(self, DTYPE_FLOAT_t time,
+    cdef void get_horizontal_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
             Particle* particle, DTYPE_FLOAT_t Ah_prime[2]) except +:
-        """ Returns the gradient in the horizontal eddy viscosity
+        """ Returns the gradient in the horizontal eddy diffusivity
 
         Parameters
         ----------

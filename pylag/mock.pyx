@@ -247,8 +247,8 @@ cdef class MockVerticalDiffusivityDataReader(DataReader):
         """
         return 1
 
-cdef class MockHorizontalEddyViscosityDataReader(DataReader):
-    """Test data reader for reading in the horizontal eddy viscosity
+cdef class MockHorizontalEddyDiffusivityDataReader(DataReader):
+    """Test data reader for reading in the horizontal eddy diffusivity
     
     The data reader returns horizontal eddy viscosities using the analytic
     formula:
@@ -308,9 +308,9 @@ cdef class MockHorizontalEddyViscosityDataReader(DataReader):
     cdef DTYPE_INT_t set_vertical_grid_vars(self, DTYPE_FLOAT_t time, Particle *particle) except INT_ERR:
         return IN_DOMAIN
 
-    cdef DTYPE_FLOAT_t get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
+    cdef DTYPE_FLOAT_t get_horizontal_eddy_diffusivity(self, DTYPE_FLOAT_t time,
             Particle* particle) except FLOAT_ERR:
-        """ Returns the horizontal eddy viscosity
+        """ Returns the horizontal eddy diffusivity
         
         Parameters
         ----------
@@ -323,13 +323,13 @@ cdef class MockHorizontalEddyViscosityDataReader(DataReader):
         Returns
         -------
         Ah : float
-            The horizontal eddy viscosity. 
+            The horizontal eddy diffusivity. 
         """
         return particle.get_x1()**2 + particle.get_x2()**2 + self._C
 
-    cdef void get_horizontal_eddy_viscosity_derivative(self, DTYPE_FLOAT_t time,
+    cdef void get_horizontal_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
             Particle* particle, DTYPE_FLOAT_t Ah_prime[2]) except +:
-        """ Returns the gradient in the horizontal eddy viscosity
+        """ Returns the gradient in the horizontal eddy diffusivity
 
         This is computed by taking the derivate of eqn (1) wrt x and y.
 
@@ -355,14 +355,14 @@ cdef class MockHorizontalEddyViscosityDataReader(DataReader):
         """
         return 1
 
-cdef class MockVelocityEddyViscosityDataReader(DataReader):
+cdef class MockVelocityEddyDiffusivityDataReader(DataReader):
     """ Test data reader for reading in horizontal velocity and eddy viscosities
     
     The data reader represents a very simple 2D advection-diffusion test case
     based upon the point release of a tracer into an environment with a
     time independent, spatially homogeneous horizontal velocity field
     described by the variables u and v; and a time independent, spatially homogeneous,
-    isotropic horizontal eddy viscosity field described by the variable Ah.
+    isotropic horizontal eddy diffusivity field described by the variable Ah.
     
     Under these conditions, the evolution of the tracer C (units kg m-2) is 
     described by the equation:
@@ -382,7 +382,7 @@ cdef class MockVelocityEddyViscosityDataReader(DataReader):
     _v : float
         y velocity component in Cartesian space.
     _Ah : float
-        Horizontal eddy viscosity.
+        Horizontal eddy diffusivity.
     M : float
         Mass of tracer released at t = t0
     """
@@ -439,15 +439,15 @@ cdef class MockVelocityEddyViscosityDataReader(DataReader):
             DTYPE_FLOAT_t time, Particle* particle) except FLOAT_ERR:
         return 0.0
 
-    cdef DTYPE_FLOAT_t get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
+    cdef DTYPE_FLOAT_t get_horizontal_eddy_diffusivity(self, DTYPE_FLOAT_t time,
             Particle* particle) except FLOAT_ERR:
-        """ Returns the horizontal eddy viscosity
+        """ Returns the horizontal eddy diffusivity
         """
         return self._Ah
 
-    cdef void get_horizontal_eddy_viscosity_derivative(self, DTYPE_FLOAT_t time,
+    cdef void get_horizontal_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
             Particle* particle, DTYPE_FLOAT_t Ah_prime[2]) except +:
-        """ Returns the gradient in the horizontal eddy viscosity
+        """ Returns the gradient in the horizontal eddy diffusivity
         """
         Ah_prime[0] = 0.0
         Ah_prime[1] = 0.0

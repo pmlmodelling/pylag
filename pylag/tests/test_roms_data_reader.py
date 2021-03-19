@@ -464,7 +464,7 @@ class ROMSReader_test(TestCase):
     #     diffusivity_derivative = self.data_reader.get_vertical_eddy_diffusivity_derivative_wrapper(time, particle)
     #     test.assert_almost_equal(diffusivity_derivative, 0.0)
     #
-    # def test_get_horizontal_eddy_viscosity(self):
+    # def test_get_horizontal_eddy_diffusivity(self):
     #     particle = ParticleSmartPtr(x1=3.-self.xmin, x2=13.-self.ymin, x3=1.0,
     #                                 host_elements={'grid_rho': 0, 'grid_u': 0, 'grid_v': 0})
     #
@@ -474,10 +474,10 @@ class ROMSReader_test(TestCase):
     #     flag = self.data_reader.set_vertical_grid_vars_wrapper(time, particle)
     #     test.assert_equal(flag, 0)
     #
-    #     diffusivity = self.data_reader.get_horizontal_eddy_viscosity_wrapper(time, particle)
+    #     diffusivity = self.data_reader.get_horizontal_eddy_diffusivity_wrapper(time, particle)
     #     test.assert_almost_equal(diffusivity,  6.0)
     #
-    # def test_get_horizontal_eddy_viscosity_derivative(self):
+    # def test_get_horizontal_eddy_diffusivity_derivative(self):
     #     particle = ParticleSmartPtr(x1=3. - self.xmin, x2=13. - self.ymin, x3=1.0,
     #                                 host_elements={'grid_rho': 0, 'grid_u': 0, 'grid_v': 0})
     #
@@ -488,7 +488,7 @@ class ROMSReader_test(TestCase):
     #     test.assert_equal(flag, 0)
     #
     #     Ah_prime = np.empty(2, dtype=DTYPE_FLOAT)
-    #     self.data_reader.get_horizontal_eddy_viscosity_derivative_wrapper(time, particle, Ah_prime)
+    #     self.data_reader.get_horizontal_eddy_diffusivity_derivative_wrapper(time, particle, Ah_prime)
     #     test.assert_equal(flag, 0)
     #     test.assert_array_almost_equal(Ah_prime, [0.0, 0.0])
     #

@@ -657,9 +657,9 @@ cdef class FVCOMDataReader(DataReader):
         else:
             raise ValueError("Invalid variable name `{}'".format(var_name))
 
-    cdef DTYPE_FLOAT_t get_horizontal_eddy_viscosity(self, DTYPE_FLOAT_t time,
+    cdef DTYPE_FLOAT_t get_horizontal_eddy_diffusivity(self, DTYPE_FLOAT_t time,
             Particle* particle) except FLOAT_ERR:
-        """ Returns the horizontal eddy viscosity through linear interpolation
+        """ Returns the horizontal eddy diffusivity through linear interpolation
 
         viscofh is defined at element nodes on sigma layers. Above and below the
         top and bottom sigma layers respectively viscofh is extrapolated, taking
@@ -679,7 +679,7 @@ cdef class FVCOMDataReader(DataReader):
         Returns:
         --------
         viscofh : float
-            The interpolated value of the horizontal eddy viscosity at the specified point in time and space.
+            The interpolated value of the horizontal eddy diffusivity at the specified point in time and space.
         """
         cdef DTYPE_FLOAT_t var # viscofh at (t, x1, x2, x3)
 
@@ -690,9 +690,9 @@ cdef class FVCOMDataReader(DataReader):
 
         return var
 
-    cdef void get_horizontal_eddy_viscosity_derivative(self, DTYPE_FLOAT_t time,
+    cdef void get_horizontal_eddy_diffusivity_derivative(self, DTYPE_FLOAT_t time,
             Particle* particle, DTYPE_FLOAT_t Ah_prime[2]) except +:
-        """ Returns the gradient in the horizontal eddy viscosity
+        """ Returns the gradient in the horizontal eddy diffusivity
         
         The gradient is first computed on sigma layers bounding the particle's
         position, or simply on the nearest layer if the particle lies above or
