@@ -62,6 +62,17 @@ def test_vector_product():
     test.assert_array_almost_equal(c, [0., 0., -3.])
 
 
+def test_area_of_a_spherical_triangle():
+    a = [1., 0., 0.]
+    b = [0., 1., 0.]
+    c = [0., 0., 1.]
+    r = 1.0
+
+    area = math.area_of_a_spherical_triangle_wrapper(a, b, c, r)
+
+    test.assert_almost_equal(area, np.pi/2.)
+
+
 def test_great_circle_arc_segments_intersect():
     a = [np.radians(89.), np.radians(0.)]
     b = [np.radians(91.), np.radians(0.)]

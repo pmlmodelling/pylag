@@ -15,7 +15,6 @@ from libc.math cimport sin, cos, asin, acos, atan2, sqrt, abs
 from pylag.parameters cimport pi, earth_radius, radians_to_deg
 
 
-
 def det_second_order_wrapper(const vector[DTYPE_FLOAT_t] &p1, const vector[DTYPE_FLOAT_t] &p2):
     cdef DTYPE_FLOAT_t p1_c[2]
     cdef DTYPE_FLOAT_t p2_c[2]
@@ -190,7 +189,6 @@ def inner_product_three_wrapper(const vector[DTYPE_FLOAT_t] &p1, const vector[DT
 
 
 def vector_product_wrapper(const vector[DTYPE_FLOAT_t] &a, const vector[DTYPE_FLOAT_t] &b):
-
     cdef DTYPE_FLOAT_t a_c[3]
     cdef DTYPE_FLOAT_t b_c[3]
     cdef DTYPE_FLOAT_t c_c[3]
@@ -209,6 +207,121 @@ def vector_product_wrapper(const vector[DTYPE_FLOAT_t] &a, const vector[DTYPE_FL
         c.push_back(c_c[i])
 
     return c
+
+
+def area_of_a_spherical_triangle_wrapper(const vector[DTYPE_FLOAT_t] &x1, const vector[DTYPE_FLOAT_t] &x2,
+                                         const vector[DTYPE_FLOAT_t] &x3, DTYPE_FLOAT_t &r):
+    cdef DTYPE_FLOAT_t x1_c[3]
+    cdef DTYPE_FLOAT_t x2_c[3]
+    cdef DTYPE_FLOAT_t x3_c[3]
+
+    cdef int i
+
+    for i in range(3):
+        x1_c[i] = x1[i]
+        x2_c[i] = x2[i]
+        x3_c[i] = x3[i]
+
+    area = area_of_a_spherical_triangle(x1_c, x2_c, x3_c, r)
+
+    return area
+
+
+cdef DTYPE_FLOAT_t area_of_a_spherical_triangle(const DTYPE_FLOAT_t &x1[3], const DTYPE_FLOAT_t &x2[3],
+                                                const DTYPE_FLOAT_t &x3[3], const DTYPE_FLOAT_t &r ) except FLOAT_ERR:
+    """ Compute area of a spherical triangle on a sphere of radius r
+
+    Area is computed according to the formula:
+
+    area = r^2 * (A_1 + A_2 + A_3 - PI)
+
+    where A_i are the interior angles of the spherical triangle. x1, x2 and x3 are Cartesian
+    coordinates of unit vectors of the vertices in any order.
+
+    Parameters
+    ----------
+    x1, x2, x3 : C array, float
+        Cartesian coordinates of vertices of a spherical triangle on the unit sphere.
+
+    r : float
+        The radius of the sphere in meters.
+
+    Returns
+    -------
+    area : float
+        The area of the spherical triangle in m2.
+
+    References
+    ----------
+    Algorithm adapted from:
+
+    Robert Renka,
+    Algorithm 772: STRIPACK,
+    Delaunay Triangulation and Voronoi Diagram on the Surface of a Sphere,
+    ACM Transactions on Mathematical Software,
+    Volume 23, Number 3, September 1997, pages 416-434.
+
+    as provided with the python package `stripy`:
+
+    Moresi, L. and Mather, B.R., (2019). Stripy: A Python module for (constrained)
+    triangulation in Cartesian coordinates and on a sphere. Journal of Open Source
+    Software, 4(38), 1410, https://doi.org/10.21105/joss.01410
+    """
+    cdef DTYPE_INT_t i
+
+    cdef DTYPE_FLOAT_t u12[3]
+    cdef DTYPE_FLOAT_t u23[3]
+    cdef DTYPE_FLOAT_t u31[3]
+
+    cdef DTYPE_FLOAT_t s12, s23, s31
+    cdef DTYPE_FLOAT_t ca1, ca2, ca3
+    cdef DTYPE_FLOAT_t a1, a2, a3
+    cdef DTYPE_FLOAT_t area
+
+    # Compute vector products
+    vector_product(x1, x2, u12)
+    vector_product(x2, x3, u23)
+    vector_product(x3, x1, u31)
+
+    # Normalise Uij unit vectors
+    s12 = inner_product_three(u12, u12)
+    s23 = inner_product_three(u23, u23)
+    s31 = inner_product_three(u31, u31)
+
+    # Test for a degenerate triangles associated with collinear vertices.
+    if s12 == 0.0 or s23 == 0.0 or s31 == 0.0:
+        return 0.0
+
+    s12 = sqrt(s12)
+    s23 = sqrt(s23)
+    s31 = sqrt(s31)
+
+    for i in range(3):
+        u12[i] = u12[i] / s12
+        u23[i] = u23[i] / s23
+        u31[i] = u31[i] / s31
+
+    # Compute interior angles A_i as the dihedral angles between planes
+    ca1 = - inner_product_three(u12, u31)
+    ca2 = - inner_product_three(u23, u12)
+    ca3 = - inner_product_three(u31, u23)
+
+    ca1 = float_max(ca1, -1.0)
+    ca1 = float_min(ca1, 1.0)
+    ca2 = float_max(ca2, -1.0)
+    ca2 = float_min(ca2, 1.0)
+    ca3 = float_max(ca3, -1.0)
+    ca3 = float_min(ca3, 1.0)
+
+    a1 = acos(ca1)
+    a2 = acos(ca2)
+    a3 = acos(ca3)
+
+    area = a1 + a2 + a3 - pi
+
+    area = float_max(area, 0.0)
+
+    return area * r * r
 
 
 def geographic_to_cartesian_coords_wrapper(const DTYPE_FLOAT_t &lon_rad,
