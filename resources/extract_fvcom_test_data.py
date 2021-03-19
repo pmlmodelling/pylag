@@ -38,7 +38,7 @@ ncfile.createDimension(four_dimname, nfour)
 
 # Extract variable attribute data
 vars_to_extract = ['x', 'y', 'xc', 'yc', 'lat', 'lon', 'latc', 'lonc', 'siglay', 'siglev', 'h',
-                   'nv', 'nbe', 'time', 'zeta', 'a1u', 'a2u', 'u', 'v', 'ww', 'kh',
+                   'nv', 'nbe', 'time', 'zeta', 'a1u', 'a2u', 'u', 'v', 'ww', 'Kz',
                    'viscofh', 'wet_cells'] 
 ds = Dataset('irish_sea_v20_0001.nc','r')
 
@@ -165,13 +165,13 @@ for i, uvw in enumerate(uvw_t1):
     test_vars['v'][1, i, :] = uvw
     test_vars['ww'][1, i, :] = uvw
 
-# kh is imposed, equal across nodes, variable with depth and increasing in time
-kh_t0 = [0.0, 0.01, 0.01, 0.0]
-kh_t1 = [0.0, 0.1, 0.1, 0.0]
-for i, kh in enumerate(kh_t0): 
-    test_vars['kh'][0, i, :] = kh
-for i, kh in enumerate(kh_t1): 
-    test_vars['kh'][1, i, :] = kh
+# Kz is imposed, equal across nodes, variable with depth and increasing in time
+Kz_t0 = [0.0, 0.01, 0.01, 0.0]
+Kz_t1 = [0.0, 0.1, 0.1, 0.0]
+for i, Kz in enumerate(Kz_t0): 
+    test_vars['Kz'][0, i, :] = Kz
+for i, Kz in enumerate(Kz_t1): 
+    test_vars['Kz'][1, i, :] = Kz
 
 # viscofh is imposed, equal across nodes, variable with depth and increasing in time
 viscofh_t0 = [0.01, 0.01, 0.0]

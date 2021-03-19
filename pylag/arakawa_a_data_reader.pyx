@@ -143,8 +143,8 @@ cdef class ArakawaADataReader(DataReader):
     cdef DTYPE_FLOAT_t[:,::1] _w_next
     
     # Vertical eddy diffusivities
-    cdef DTYPE_FLOAT_t[:,::1] _kh_last
-    cdef DTYPE_FLOAT_t[:,::1] _kh_next
+    cdef DTYPE_FLOAT_t[:,::1] _Kz_last
+    cdef DTYPE_FLOAT_t[:,::1] _Kz_next
 
     # Horizontal eddy viscosities
     cdef DTYPE_FLOAT_t[:,::1] _ah_last
@@ -170,8 +170,8 @@ cdef class ArakawaADataReader(DataReader):
     cdef DTYPE_FLOAT_t _time_next
 
     # Options controlling the reading of eddy diffusivities
-    cdef object _Kh_method_name, _Ah_method_name
-    cdef DTYPE_INT_t _Kh_method, _Ah_method
+    cdef object _Kz_method_name, _Ah_method_name
+    cdef DTYPE_INT_t _Kz_method, _Ah_method
 
     # Flag for surface only or full 3D transport
     cdef bint _surface_only
@@ -204,7 +204,7 @@ cdef class ArakawaADataReader(DataReader):
         # Setup variable name mappings
         self._variable_names = {}
         var_config_names = {'uo': 'uo_var_name', 'vo': 'vo_var_name', 'wo': 'wo_var_name', 'zos': 'zos_var_name',
-                            'Kh': 'Kh_var_name', 'Ah': 'Ah_var_name', 'thetao': 'thetao_var_name',
+                            'Kz': 'Kz_var_name', 'Ah': 'Ah_var_name', 'thetao': 'thetao_var_name',
                             'so': 'so_var_name'}
         for var_name, config_name in var_config_names.items():
             try:
@@ -223,19 +223,19 @@ cdef class ArakawaADataReader(DataReader):
         self._has_w = True if 'wo' in self._variable_names else False
 
         # Set options for handling the vertical eddy diffusivity
-        self._Kh_method_name = self.config.get('OCEAN_CIRCULATION_MODEL', 'Kh_method').strip().lower()
-        if self._Kh_method_name not in ['none', 'file']:
-            raise RuntimeError('Invalid option for `Kh_method` ({})'.format(self._Kh_method_name))
+        self._Kz_method_name = self.config.get('OCEAN_CIRCULATION_MODEL', 'Kz_method').strip().lower()
+        if self._Kz_method_name not in ['none', 'file']:
+            raise RuntimeError('Invalid option for `Kz_method` ({})'.format(self._Kz_method_name))
 
-        if self._Kh_method_name == "none":
-            self._Kh_method = 0
-        elif self._Kh_method_name == "file":
-            # Make sure a value for `Kh_var_name` has been provided.
-            if 'Kh' not in self._variable_names:
-                raise RuntimeError('The configuration file states that Kh data should be read from file \n'
-                                    'yet a name for the Kh variable (`Kh_var_name`) has not been given \n'
+        if self._Kz_method_name == "none":
+            self._Kz_method = 0
+        elif self._Kz_method_name == "file":
+            # Make sure a value for `Kz_var_name` has been provided.
+            if 'Kz' not in self._variable_names:
+                raise RuntimeError('The configuration file states that Kz data should be read from file \n'
+                                    'yet a name for the Kz variable (`Kz_var_name`) has not been given \n'
                                     'or the config option was not included.')
-            self._Kh_method = 1
+            self._Kz_method = 1
 
         # Set options for handling the horizontal eddy diffusivity
         self._Ah_method_name = self.config.get('OCEAN_CIRCULATION_MODEL', 'Ah_method').strip().lower()
@@ -802,9 +802,9 @@ cdef class ArakawaADataReader(DataReader):
         """
 
             # Interpolated values on lower and upper bounding depth levels
-        cdef DTYPE_FLOAT_t Kh_level_1
-        cdef DTYPE_FLOAT_t Kh_level_2
-        cdef DTYPE_FLOAT_t Kh
+        cdef DTYPE_FLOAT_t Kz_level_1
+        cdef DTYPE_FLOAT_t Kz_level_2
+        cdef DTYPE_FLOAT_t Kz
 
         # Particle k_layer
         cdef DTYPE_INT_t k_layer = particle.get_k_layer()
@@ -813,22 +813,22 @@ cdef class ArakawaADataReader(DataReader):
 
         # No vertical interpolation for particles near to the bottom
         if particle.get_in_vertical_boundary_layer() is True:
-            Kh = self._compute_smagorinsky_eddy_diffusivity_on_level(time_fraction, k_layer, particle)
+            Kz = self._compute_smagorinsky_eddy_diffusivity_on_level(time_fraction, k_layer, particle)
 
         else:
-            Kh_level_1 = self._compute_smagorinsky_eddy_diffusivity_on_level(time_fraction, k_layer+1, particle)
-            Kh_level_2 = self._compute_smagorinsky_eddy_diffusivity_on_level(time_fraction, k_layer, particle)
+            Kz_level_1 = self._compute_smagorinsky_eddy_diffusivity_on_level(time_fraction, k_layer+1, particle)
+            Kz_level_2 = self._compute_smagorinsky_eddy_diffusivity_on_level(time_fraction, k_layer, particle)
 
-            Kh = interp.linear_interp(particle.get_omega_interfaces(), Kh_level_1, Kh_level_2)
+            Kz = interp.linear_interp(particle.get_omega_interfaces(), Kz_level_1, Kz_level_2)
 
-        return Kh
+        return Kz
 
     cdef DTYPE_FLOAT_t _compute_smagorinsky_eddy_diffusivity_on_level(self, const DTYPE_FLOAT_t &time_fraction,
                                                                       const DTYPE_INT_t k,
                                                                       Particle* particle) except FLOAT_ERR:
         """ Compute horizontal eddy diffusivity using Smagorinsky expression on level k
 
-        Kh = A_e * (1/Pr) * C * sqrt((du/dx)^2 + (dv/dy)^2 + 0.5*(du/dy + dv/dx)^2)
+        Kz = A_e * (1/Pr) * C * sqrt((du/dx)^2 + (dv/dy)^2 + 0.5*(du/dy + dv/dx)^2)
 
         where A_e is the area of the element within which the particle resides, Pr is the Prandtl number and
         C is a constant parameter. The Prandtl number is taken as 1.0.
@@ -934,15 +934,15 @@ cdef class ArakawaADataReader(DataReader):
         
         Returns
         -------
-        kh : float
+        Kz : float
             The vertical eddy diffusivity.        
         
         """
-        cdef DTYPE_FLOAT_t var  # kh at (t, x1, x2, x3)
+        cdef DTYPE_FLOAT_t var  # Kz at (t, x1, x2, x3)
 
-        if self._Kh_method == 1:
+        if self._Kz_method == 1:
             if not self._surface_only:
-                var = self._get_variable(self._kh_last, self._kh_next, time, particle)
+                var = self._get_variable(self._Kz_last, self._Kz_next, time, particle)
             else:
                 var = 0.0
         else:
@@ -971,7 +971,7 @@ cdef class ArakawaADataReader(DataReader):
         TODO
         ----
         1) Can this be done using a specialised interpolating object? Would need to
-        compute depths and kh at all levels, then interpolate between then. Would
+        compute depths and Kz at all levels, then interpolate between then. Would
         need to give some thought to how to do this efficiently.
         2) Test this.
 
@@ -988,80 +988,80 @@ cdef class ArakawaADataReader(DataReader):
         k_prime : float
             Gradient in the vertical eddy diffusivity field.
         """
-        cdef DTYPE_FLOAT_t kh_0, kh_1, kh_2, kh_3
+        cdef DTYPE_FLOAT_t Kz_0, Kz_1, Kz_2, Kz_3
         cdef DTYPE_FLOAT_t z_0, z_1, z_2, z_3
-        cdef DTYPE_FLOAT_t dkh_lower_level, dkh_upper_level
+        cdef DTYPE_FLOAT_t dKz_lower_level, dKz_upper_level
 
         # Particle k_layer
         cdef DTYPE_INT_t k_layer = particle.get_k_layer()
 
         # The value of the derivative
-        cdef DTYPE_FLOAT_t dkh_dz
+        cdef DTYPE_FLOAT_t dKz_dz
 
-        if self._Kh_method == 1:
+        if self._Kz_method == 1:
             if self._surface_only:
-                dkh_dz = 0.0
+                dKz_dz = 0.0
             else:
                 raise NotImplementedError('Implementation is under development')
         else:
             raise RuntimeError('This dataset does not contain vertical eddy diffusivities.')
 
-        return dkh_dz
+        return dKz_dz
 
 #        if particle.get_in_vertical_boundary_layer() == True:
-#            kh_0 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, k_layer-1)
+#            Kz_0 = self._get_variable_on_level(self._Kz_last, self._Kz_next, time, particle, k_layer-1)
 #            z_0 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k_layer-1)
 #
-#            kh_1 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, k_layer)
+#            Kz_1 = self._get_variable_on_level(self._Kz_last, self._Kz_next, time, particle, k_layer)
 #            z_1 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k_layer)
 #
-#            dkh_upper_level = (kh_0 - kh_1) / (z_0 - z_1)
+#            dKz_upper_level = (Kz_0 - Kz_1) / (z_0 - z_1)
 #
-#            return dkh_upper_level
+#            return dKz_upper_level
 #
 #        if k_layer == 0:
-#            kh_0 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, k_layer)
+#            Kz_0 = self._get_variable_on_level(self._Kz_last, self._Kz_next, time, particle, k_layer)
 #            z_0 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k_layer)
 #
-#            kh_1 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, k_layer+1)
+#            Kz_1 = self._get_variable_on_level(self._Kz_last, self._Kz_next, time, particle, k_layer+1)
 #            z_1 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k_layer+1)
 #
-#            kh_2 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, k_layer+2)
+#            Kz_2 = self._get_variable_on_level(self._Kz_last, self._Kz_next, time, particle, k_layer+2)
 #            z_2 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k_layer+2)
 #
-#            dkh_lower_level = (kh_0 - kh_2) / (z_0 - z_2)
-#            dkh_upper_level = (kh_0 - kh_1) / (z_0 - z_1)
+#            dKz_lower_level = (Kz_0 - Kz_2) / (z_0 - z_2)
+#            dKz_upper_level = (Kz_0 - Kz_1) / (z_0 - z_1)
 #
 #        elif k_layer == self._n_depth - 2:
-#            kh_0 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, k_layer-1)
+#            Kz_0 = self._get_variable_on_level(self._Kz_last, self._Kz_next, time, particle, k_layer-1)
 #            z_0 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k_layer-1)
 #
-#            kh_1 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, k_layer)
+#            Kz_1 = self._get_variable_on_level(self._Kz_last, self._Kz_next, time, particle, k_layer)
 #            z_1 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k_layer)
 #
-#            kh_2 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, k_layer+1)
+#            Kz_2 = self._get_variable_on_level(self._Kz_last, self._Kz_next, time, particle, k_layer+1)
 #            z_2 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k_layer+1)
 #
-#            dkh_lower_level = (kh_1 - kh_2) / (z_1 - z_2)
-#            dkh_upper_level = (kh_0 - kh_2) / (z_0 - z_2)
+#            dKz_lower_level = (Kz_1 - Kz_2) / (z_1 - z_2)
+#            dKz_upper_level = (Kz_0 - Kz_2) / (z_0 - z_2)
 #
 #        else:
-#            kh_0 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, k_layer-1)
+#            Kz_0 = self._get_variable_on_level(self._Kz_last, self._Kz_next, time, particle, k_layer-1)
 #            z_0 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k_layer-1)
 #
-#            kh_1 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, k_layer)
+#            Kz_1 = self._get_variable_on_level(self._Kz_last, self._Kz_next, time, particle, k_layer)
 #            z_1 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k_layer)
 #
-#            kh_2 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, k_layer+1)
+#            Kz_2 = self._get_variable_on_level(self._Kz_last, self._Kz_next, time, particle, k_layer+1)
 #            z_2 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k_layer+1)
 #
-#            kh_3 = self._get_variable_on_level(self._kh_last, self._kh_next, time, particle, k_layer+2)
+#            Kz_3 = self._get_variable_on_level(self._Kz_last, self._Kz_next, time, particle, k_layer+2)
 #            z_3 = self._get_variable_on_level(self._depth_levels_last, self._depth_levels_next, time, particle, k_layer+2)
 #
-#            dkh_lower_level = (kh_1 - kh_3) / (z_1 - z_3)
-#            dkh_upper_level = (kh_0 - kh_2) / (z_0 - z_2)
+#            dKz_lower_level = (Kz_1 - Kz_3) / (z_1 - z_3)
+#            dKz_upper_level = (Kz_0 - Kz_2) / (z_0 - z_2)
 #
-#        return interp.linear_interp(particle.get_omega_interfaces(), dkh_lower_level, dkh_upper_level)
+#        return interp.linear_interp(particle.get_omega_interfaces(), dKz_lower_level, dKz_upper_level)
 
     cdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, Particle *particle) except INT_ERR:
         """ Return an integer indicating whether `host' is wet or dry
@@ -1271,7 +1271,7 @@ cdef class ArakawaADataReader(DataReader):
         # Add 3D vars to shape and dimension indices dictionaries
         var_names = ['uo', 'vo']
         if self._has_w: var_names.append('wo')
-        if self._Kh_method == 1: var_names.append('Kh')
+        if self._Kz_method == 1: var_names.append('Kz')
         if self._Ah_method == 1: var_names.append('Ah')
         if 'thetao' in self.env_var_names: var_names.append('thetao')
         if 'so' in self.env_var_names: var_names.append('so')
@@ -1377,18 +1377,18 @@ cdef class ArakawaADataReader(DataReader):
                     self._depth_levels_last[k, i] = self._reference_depth_levels[k] + self._zeta_last[i]
                     self._depth_levels_next[k, i] = self._reference_depth_levels[k] + self._zeta_next[i]
 
-        # Update memory views for kh
-        if self._Kh_method == 1:
-            kh_var_name = self._variable_names['Kh']
-            kh_last = self.mediator.get_time_dependent_variable_at_last_time_index(kh_var_name,
-                    self._variable_shapes['Kh'], DTYPE_FLOAT)
-            self._kh_last = self._reshape_var(kh_last, self._variable_dimension_indices['Kh'])
-            del(kh_last)
+        # Update memory views for Kz
+        if self._Kz_method == 1:
+            Kz_var_name = self._variable_names['Kz']
+            Kz_last = self.mediator.get_time_dependent_variable_at_last_time_index(Kz_var_name,
+                    self._variable_shapes['Kz'], DTYPE_FLOAT)
+            self._Kz_last = self._reshape_var(Kz_last, self._variable_dimension_indices['Kz'])
+            del(Kz_last)
 
-            kh_next = self.mediator.get_time_dependent_variable_at_next_time_index(kh_var_name,
-                    self._variable_shapes['Kh'], DTYPE_FLOAT)
-            self._kh_next = self._reshape_var(kh_next, self._variable_dimension_indices['Kh'])
-            del(kh_next)
+            Kz_next = self.mediator.get_time_dependent_variable_at_next_time_index(Kz_var_name,
+                    self._variable_shapes['Kz'], DTYPE_FLOAT)
+            self._Kz_next = self._reshape_var(Kz_next, self._variable_dimension_indices['Kz'])
+            del(Kz_next)
 
         # Update memory views for Ah
         if self._Ah_method == 1:

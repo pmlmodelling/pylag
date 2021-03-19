@@ -93,10 +93,10 @@ cdef class GOTMDataReader(DataReader):
     cdef DTYPE_FLOAT_t[::1] _zlev_last, _zlev_next, _zlev
 
     # Eddy diffusivity at layer interfaces
-    cdef DTYPE_FLOAT_t[::1] _kh_last, _kh_next, _kh
+    cdef DTYPE_FLOAT_t[::1] _Kz_last, _Kz_next, _Kz
     
     # Eddy diffusivity derivative at layer interfaces
-    cdef DTYPE_FLOAT_t[::1] _kh_prime
+    cdef DTYPE_FLOAT_t[::1] _Kz_prime
 
     # Temperature
     cdef DTYPE_FLOAT_t[::1] _thetao_last, _thetao_next, _thetao
@@ -108,7 +108,7 @@ cdef class GOTMDataReader(DataReader):
     cdef DTYPE_FLOAT_t[::1] _rsdo_last, _rsdo_next, _rsdo
 
     # Interpolator
-    cdef interp.Interpolator _kh_interpolator
+    cdef interp.Interpolator _Kz_interpolator
     cdef interp.Interpolator _thetao_interpolator
     cdef interp.Interpolator _so_interpolator
     cdef interp.Interpolator _rsdo_interpolator
@@ -130,9 +130,9 @@ cdef class GOTMDataReader(DataReader):
         self._zlev_last = np.empty((self._n_zlev), dtype=DTYPE_FLOAT)
         self._zlev_next = np.empty((self._n_zlev), dtype=DTYPE_FLOAT)
         self._zlev = np.empty((self._n_zlev), dtype=DTYPE_FLOAT)
-        self._kh_last = np.empty((self._n_zlev), dtype=DTYPE_FLOAT)
-        self._kh_next = np.empty((self._n_zlev), dtype=DTYPE_FLOAT)
-        self._kh = np.empty((self._n_zlev), dtype=DTYPE_FLOAT)
+        self._Kz_last = np.empty((self._n_zlev), dtype=DTYPE_FLOAT)
+        self._Kz_next = np.empty((self._n_zlev), dtype=DTYPE_FLOAT)
+        self._Kz = np.empty((self._n_zlev), dtype=DTYPE_FLOAT)
         self._thetao_last = np.empty((self._n_zlay), dtype=DTYPE_FLOAT)
         self._thetao_next = np.empty((self._n_zlay), dtype=DTYPE_FLOAT)
         self._thetao = np.empty((self._n_zlay), dtype=DTYPE_FLOAT)
@@ -144,7 +144,7 @@ cdef class GOTMDataReader(DataReader):
         self._rsdo = np.empty((self._n_zlay), dtype=DTYPE_FLOAT)
 
         # Interpolator
-        self._kh_interpolator = interp.get_interpolator(self.config, self._n_zlev)
+        self._Kz_interpolator = interp.get_interpolator(self.config, self._n_zlev)
         self._thetao_interpolator = interp.get_interpolator(self.config, self._n_zlay)
         self._so_interpolator = interp.get_interpolator(self.config, self._n_zlay)
         self._rsdo_interpolator = interp.get_interpolator(self.config, self._n_zlay)
@@ -200,9 +200,9 @@ cdef class GOTMDataReader(DataReader):
         self._zlev_last = self.mediator.get_time_dependent_variable_at_last_time_index('zi', (self._n_zlev,1,1), DTYPE_FLOAT)[:,0,0]
         self._zlev_next = self.mediator.get_time_dependent_variable_at_next_time_index('zi', (self._n_zlev,1,1), DTYPE_FLOAT)[:,0,0]
         
-        # Update memory views for kh
-        self._kh_last = self.mediator.get_time_dependent_variable_at_last_time_index('nuh', (self._n_zlev,1,1), DTYPE_FLOAT)[:,0,0]
-        self._kh_next = self.mediator.get_time_dependent_variable_at_next_time_index('nuh', (self._n_zlev,1,1), DTYPE_FLOAT)[:,0,0]
+        # Update memory views for Kz
+        self._Kz_last = self.mediator.get_time_dependent_variable_at_last_time_index('nuh', (self._n_zlev,1,1), DTYPE_FLOAT)[:,0,0]
+        self._Kz_next = self.mediator.get_time_dependent_variable_at_next_time_index('nuh', (self._n_zlev,1,1), DTYPE_FLOAT)[:,0,0]
 
         # Read in data as requested
         if 'thetao' in self.env_var_names:
@@ -241,9 +241,9 @@ cdef class GOTMDataReader(DataReader):
         for i in xrange(self._n_zlev): 
             self._zlev[i] = interp.linear_interp(self._time_fraction, self._zlev_last[i], self._zlev_next[i])
 
-            self._kh[i] = interp.linear_interp(self._time_fraction, self._kh_last[i], self._kh_next[i])     
+            self._Kz[i] = interp.linear_interp(self._time_fraction, self._Kz_last[i], self._Kz_next[i])     
 
-        self._kh_interpolator.set_points(self._zlev, self._kh)
+        self._Kz_interpolator.set_points(self._zlev, self._Kz)
 
         for i in xrange(self._n_zlay):
             self._zlay[i] = interp.linear_interp(self._time_fraction, self._zlay_last[i], self._zlay_next[i])
@@ -462,13 +462,13 @@ cdef class GOTMDataReader(DataReader):
         
         Returns:
         --------
-        kh : float
+        Kz : float
             The vertical eddy diffusivity.        
         
         """
         cdef DTYPE_FLOAT_t value
 
-        value = self._kh_interpolator.get_value(particle)
+        value = self._Kz_interpolator.get_value(particle)
         if value < 0.0:
             return 0.0
         return value
@@ -493,7 +493,7 @@ cdef class GOTMDataReader(DataReader):
         k_prime : float
             Gradient in the vertical eddy diffusivity field.
         """
-        return self._kh_interpolator.get_first_derivative(particle)
+        return self._Kz_interpolator.get_first_derivative(particle)
 
     cdef DTYPE_FLOAT_t get_environmental_variable(self, var_name,
             DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR:

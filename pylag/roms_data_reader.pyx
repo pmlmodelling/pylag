@@ -173,8 +173,8 @@ cdef class ROMSDataReader(DataReader):
     cdef DTYPE_FLOAT_t[:,::1] _w_next
     
     # Vertical eddy diffusivities
-    cdef DTYPE_FLOAT_t[:,::1] _kh_last
-    cdef DTYPE_FLOAT_t[:,::1] _kh_next
+    cdef DTYPE_FLOAT_t[:,::1] _Kz_last
+    cdef DTYPE_FLOAT_t[:,::1] _Kz_next
 
     # Horizontal eddy viscosities
     cdef DTYPE_FLOAT_t[:,::1] _ah_last
@@ -200,8 +200,8 @@ cdef class ROMSDataReader(DataReader):
     cdef DTYPE_FLOAT_t _time_next
 
     # Options controlling the reading of eddy diffusivities
-    cdef object _Kh_method_name, _Ah_method_name
-    cdef DTYPE_INT_t _Kh_method, _Ah_method
+    cdef object _Kz_method_name, _Ah_method_name
+    cdef DTYPE_INT_t _Kz_method, _Ah_method
 
     # Flags that identify whether a given variable should be read in
     cdef bint _has_w, _has_is_wet,  _has_zeta
@@ -240,7 +240,7 @@ cdef class ROMSDataReader(DataReader):
         # Setup variable name mappings
         self._variable_names = {}
         var_config_names = {'uo': 'uo_var_name', 'vo': 'vo_var_name', 'wo': 'wo_var_name', 'zos': 'zos_var_name',
-                            'Kh': 'Kh_var_name', 'Ah': 'Ah_var_name', 'thetao': 'thetao_var_name',
+                            'Kz': 'Kz_var_name', 'Ah': 'Ah_var_name', 'thetao': 'thetao_var_name',
                             'so': 'so_var_name', 'wetdry_mask_rho': 'wetdry_var_name'}
         for var_name, config_name in var_config_names.items():
             try:
@@ -259,19 +259,19 @@ cdef class ROMSDataReader(DataReader):
         self._has_w = True if 'wo' in self._variable_names else False
 
         # Set options for handling the vertical eddy diffusivity
-        self._Kh_method_name = self.config.get('OCEAN_CIRCULATION_MODEL', 'Kh_method').strip().lower()
-        if self._Kh_method_name not in ['none', 'file']:
-            raise RuntimeError('Invalid option for `Kh_method` ({})'.format(self._Kh_method_name))
+        self._Kz_method_name = self.config.get('OCEAN_CIRCULATION_MODEL', 'Kz_method').strip().lower()
+        if self._Kz_method_name not in ['none', 'file']:
+            raise RuntimeError('Invalid option for `Kz_method` ({})'.format(self._Kz_method_name))
 
-        if self._Kh_method_name == "none":
-            self._Kh_method = 0
-        elif self._Kh_method_name == "file":
-            # Make sure a value for `Kh_var_name` has been provided.
-            if 'Kh' not in self._variable_names:
-                raise RuntimeError('The configuration file states that Kh data should be read from file \n'
-                                    'yet a name for the Kh variable (`Kh_var_name`) has not been given \n'
+        if self._Kz_method_name == "none":
+            self._Kz_method = 0
+        elif self._Kz_method_name == "file":
+            # Make sure a value for `Kz_var_name` has been provided.
+            if 'Kz' not in self._variable_names:
+                raise RuntimeError('The configuration file states that Kz data should be read from file \n'
+                                    'yet a name for the Kz variable (`Kz_var_name`) has not been given \n'
                                     'or the config option was not included.')
-            self._Kh_method = 1
+            self._Kz_method = 1
 
 
         # Set options for handling the horizontal eddy diffusivity
@@ -1058,7 +1058,7 @@ cdef class ROMSDataReader(DataReader):
         
         Returns
         -------
-        kh : float
+        Kz : float
             The vertical eddy diffusivity.        
         
         """
@@ -1073,30 +1073,30 @@ cdef class ROMSDataReader(DataReader):
         cdef DTYPE_FLOAT_t var_lower_level
         cdef DTYPE_FLOAT_t var_upper_level
 
-        # The value of Kh to be returned
-        cdef DTYPE_FLOAT_t Kh
+        # The value of Kz to be returned
+        cdef DTYPE_FLOAT_t Kz
 
-        if self._Kh_method == 1:
+        if self._Kz_method == 1:
 
             # Time fraction
             time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
             # Variable on bounding levels
-            var_level_1 = self._unstructured_grid_rho.interpolate_in_time_and_space(self._kh_last,
-                                                                                    self._kh_next,
+            var_level_1 = self._unstructured_grid_rho.interpolate_in_time_and_space(self._Kz_last,
+                                                                                    self._Kz_next,
                                                                                     k_layer+1,
                                                                                     time_fraction, particle)
 
-            var_level_2 = self._unstructured_grid_rho.interpolate_in_time_and_space(self._kh_last,
-                                                                                    self._kh_next,
+            var_level_2 = self._unstructured_grid_rho.interpolate_in_time_and_space(self._Kz_last,
+                                                                                    self._Kz_next,
                                                                                     k_layer,
                                                                                     time_fraction, particle)
 
-            Kh = interp.linear_interp(particle.get_omega_interfaces(), var_level_1, var_level_2)
+            Kz = interp.linear_interp(particle.get_omega_interfaces(), var_level_1, var_level_2)
         else:
             raise RuntimeError('This dataset does not contain vertical eddy diffusivities.')
 
-        return Kh
+        return Kz
 
 
     cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity_derivative(self,
@@ -1133,28 +1133,28 @@ cdef class ROMSDataReader(DataReader):
         # Variables used in interpolation in time
         cdef DTYPE_FLOAT_t time_fraction
 
-        # Containers for kh and z
-        cdef vector[DTYPE_FLOAT_t] kh
+        # Containers for Kz and z
+        cdef vector[DTYPE_FLOAT_t] Kz
         cdef vector[DTYPE_FLOAT_t] z
 
         # Gradient at bounding levels
-        cdef DTYPE_FLOAT_t dkh_lower_level, dkh_upper_level
+        cdef DTYPE_FLOAT_t dKz_lower_level, dKz_upper_level
 
         # Particle k_layer
         cdef DTYPE_INT_t k_layer = particle.get_k_layer()
         cdef DTYPE_INT_t k, layer
 
-        # The value of dKh_dz to be returned
-        cdef DTYPE_FLOAT_t dKh_dz
+        # The value of dKz_dz to be returned
+        cdef DTYPE_FLOAT_t dKz_dz
 
-        if self._Kh_method == 1:
+        if self._Kz_method == 1:
             # Time fraction
             time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
             if k_layer == 0:
                 for k in xrange(3):
-                    kh.push_back(self._unstructured_grid_rho.interpolate_in_time_and_space(self._kh_last,
-                                                                                           self._kh_next,
+                    Kz.push_back(self._unstructured_grid_rho.interpolate_in_time_and_space(self._Kz_last,
+                                                                                           self._Kz_next,
                                                                                            k_layer+k,
                                                                                            time_fraction, particle))
 
@@ -1163,13 +1163,13 @@ cdef class ROMSDataReader(DataReader):
                                                                                           k_layer+k,
                                                                                           time_fraction, particle))
 
-                dkh_lower_level = (kh[0] - kh[2]) / (z[0] - z[2])
-                dkh_upper_level = (kh[0] - kh[1]) / (z[0] - z[1])
+                dKz_lower_level = (Kz[0] - Kz[2]) / (z[0] - z[2])
+                dKz_upper_level = (Kz[0] - Kz[1]) / (z[0] - z[1])
 
             elif k_layer == self._n_s_rho - 1:
                 for k in xrange(3):
-                    kh.push_back(self._unstructured_grid_rho.interpolate_in_time_and_space(self._kh_last,
-                                                                                           self._kh_next,
+                    Kz.push_back(self._unstructured_grid_rho.interpolate_in_time_and_space(self._Kz_last,
+                                                                                           self._Kz_next,
                                                                                            k_layer - 1 + k,
                                                                                            time_fraction, particle))
 
@@ -1178,13 +1178,13 @@ cdef class ROMSDataReader(DataReader):
                                                                                           k_layer - 1 + k,
                                                                                           time_fraction, particle))
 
-                dkh_lower_level = (kh[1] - kh[2]) / (z[1] - z[2])
-                dkh_upper_level = (kh[0] - kh[2]) / (z[0] - z[2])
+                dKz_lower_level = (Kz[1] - Kz[2]) / (z[1] - z[2])
+                dKz_upper_level = (Kz[0] - Kz[2]) / (z[0] - z[2])
 
             else:
                 for k in xrange(4):
-                    kh.push_back(self._unstructured_grid_rho.interpolate_in_time_and_space(self._kh_last,
-                                                                                           self._kh_next,
+                    Kz.push_back(self._unstructured_grid_rho.interpolate_in_time_and_space(self._Kz_last,
+                                                                                           self._Kz_next,
                                                                                            k_layer - 1 + k,
                                                                                            time_fraction, particle))
 
@@ -1193,14 +1193,14 @@ cdef class ROMSDataReader(DataReader):
                                                                                           k_layer - 1 + k,
                                                                                           time_fraction, particle))
 
-                dkh_lower_level = (kh[1] - kh[3]) / (z[1] - z[3])
-                dkh_upper_level = (kh[0] - kh[2]) / (z[0] - z[2])
+                dKz_lower_level = (Kz[1] - Kz[3]) / (z[1] - z[3])
+                dKz_upper_level = (Kz[0] - Kz[2]) / (z[0] - z[2])
 
-            dKh_dz = interp.linear_interp(particle.get_omega_interfaces(), dkh_lower_level, dkh_upper_level)
+            dKz_dz = interp.linear_interp(particle.get_omega_interfaces(), dKz_lower_level, dKz_upper_level)
         else:
             raise RuntimeError('This dataset does not contain vertical eddy diffusivities.')
 
-        return dKh_dz
+        return dKz_dz
 
     cdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, Particle *particle) except INT_ERR:
         """ Return an integer indicating whether `host' is wet or dry
@@ -1406,8 +1406,8 @@ cdef class ROMSDataReader(DataReader):
             depth_grid_names.append('grid_w')
 
         # Vertical diffusion coefficient
-        if self._Kh_method == 1:
-            var_names.append('Kh')
+        if self._Kz_method == 1:
+            var_names.append('Kz')
             grid_names.append('grid_rho')
             depth_grid_names.append('grid_w')
 
@@ -1538,16 +1538,16 @@ cdef class ROMSDataReader(DataReader):
                     self._variable_shapes['wo'], DTYPE_FLOAT)
             self._w_next = self._reshape_var(w_next, self._variable_dimension_indices['wo'])
 
-        # Update memory views for kh
-        if self._Kh_method == 1:
-            kh_var_name = self._variable_names['Kh']
-            kh_last = self.mediator.get_time_dependent_variable_at_last_time_index(kh_var_name,
-                    self._variable_shapes['Kh'], DTYPE_FLOAT)
-            self._kh_last = self._reshape_var(kh_last, self._variable_dimension_indices['Kh'])
+        # Update memory views for Kz
+        if self._Kz_method == 1:
+            Kz_var_name = self._variable_names['Kz']
+            Kz_last = self.mediator.get_time_dependent_variable_at_last_time_index(Kz_var_name,
+                    self._variable_shapes['Kz'], DTYPE_FLOAT)
+            self._Kz_last = self._reshape_var(Kz_last, self._variable_dimension_indices['Kz'])
 
-            kh_next = self.mediator.get_time_dependent_variable_at_next_time_index(kh_var_name,
-                    self._variable_shapes['Kh'], DTYPE_FLOAT)
-            self._kh_next = self._reshape_var(kh_next, self._variable_dimension_indices['Kh'])
+            Kz_next = self.mediator.get_time_dependent_variable_at_next_time_index(Kz_var_name,
+                    self._variable_shapes['Kz'], DTYPE_FLOAT)
+            self._Kz_next = self._reshape_var(Kz_next, self._variable_dimension_indices['Kz'])
 
         # Update memory views for Ah
         if self._Ah_method == 1:

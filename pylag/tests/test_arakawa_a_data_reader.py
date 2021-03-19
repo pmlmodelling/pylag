@@ -248,7 +248,7 @@ class ArawawaADataReader_test(TestCase):
         config.set('OCEAN_CIRCULATION_MODEL', 'thetao_var_name', 'thetao')
         config.set('OCEAN_CIRCULATION_MODEL', 'so_var_name', 'so')
         config.set('OCEAN_CIRCULATION_MODEL', 'has_is_wet', 'True')
-        config.set('OCEAN_CIRCULATION_MODEL', 'Kh_method', 'None')
+        config.set('OCEAN_CIRCULATION_MODEL', 'Kz_method', 'None')
         config.set('OCEAN_CIRCULATION_MODEL', 'Ah_method', 'None')
         config.add_section("OUTPUT")
         config.set('OUTPUT', 'environmental_variables', 'thetao, so')
@@ -593,7 +593,7 @@ class ArakawaAReflectingHorizBoundaryCondition_test(TestCase):
         config.set('OCEAN_CIRCULATION_MODEL', 'wo_var_name', 'wo')
         config.set('OCEAN_CIRCULATION_MODEL', 'zos_var_name', 'zos')
         config.set('OCEAN_CIRCULATION_MODEL', 'has_is_wet', 'True')
-        config.set('OCEAN_CIRCULATION_MODEL', 'Kh_method', 'None')
+        config.set('OCEAN_CIRCULATION_MODEL', 'Kz_method', 'None')
         config.set('OCEAN_CIRCULATION_MODEL', 'Ah_method', 'None')
         config.add_section("OUTPUT")
 

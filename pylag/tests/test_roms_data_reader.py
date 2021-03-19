@@ -167,9 +167,9 @@ class MockROMSMediator(Mediator):
         ts = np.array([[[4, 4], [4, 4]],
                       [[4, 4], [4, 4]]], dtype=DTYPE_FLOAT)
 
-        # kh at w points
-        kh_dimensions = ('time', 's_w', 'latitude_grid_rho', 'longitude_grid_rho')
-        kh = np.array([[[5, 5], [5, 5]],
+        # Kz at w points
+        Kz_dimensions = ('time', 's_w', 'latitude_grid_rho', 'longitude_grid_rho')
+        Kz = np.array([[[5, 5], [5, 5]],
                       [[5, 5], [5, 5]],
                       [[5, 5], [5, 5]]], dtype=DTYPE_FLOAT)
 
@@ -183,13 +183,13 @@ class MockROMSMediator(Mediator):
                                          'cs_w': cs_w_dimensions, 'cs_r': cs_r_dimensions,
                                          'zos': zos_dimensions, 'uo': u_dimensions, 'vo': v_dimensions,
                                          'wo': w_dimensions, 'thetao': ts_dimensions, 'so': ts_dimensions,
-                                         'kh': kh_dimensions, 'ah': ah_dimensions}
+                                         'Kz': Kz_dimensions, 'ah': ah_dimensions}
 
         # Store in dictionaries
         self._time_dep_vars_last = {'zos': zos, 'uo': u, 'vo': v, 'wo': w, 'thetao': ts,
-                                    'so': ts, 'kh': kh, 'ah': ah}
+                                    'so': ts, 'Kz': Kz, 'ah': ah}
         self._time_dep_vars_next = {'zos': zos, 'uo': u, 'vo': v, 'wo': w, 'thetao': ts,
-                                    'so': ts, 'kh': kh, 'ah': ah}
+                                    'so': ts, 'Kz': Kz, 'ah': ah}
 
         # Time in seconds. ie two time pts, 1 hour apart
         self._t_last = 0.0
@@ -286,9 +286,9 @@ class ROMSReader_test(TestCase):
         config.set('OCEAN_CIRCULATION_MODEL', 'thetao_var_name', 'thetao')
         config.set('OCEAN_CIRCULATION_MODEL', 'so_var_name', 'so')
         config.set('OCEAN_CIRCULATION_MODEL', 'has_is_wet', 'False')
-        config.set('OCEAN_CIRCULATION_MODEL', 'Kh_method', 'File')
+        config.set('OCEAN_CIRCULATION_MODEL', 'Kz_method', 'File')
         config.set('OCEAN_CIRCULATION_MODEL', 'Ah_method', 'File')
-        config.set('OCEAN_CIRCULATION_MODEL', 'Kh_var_name', 'kh')
+        config.set('OCEAN_CIRCULATION_MODEL', 'Kz_var_name', 'Kz')
         config.set('OCEAN_CIRCULATION_MODEL', 'Ah_var_name', 'ah')
         config.add_section("OUTPUT")
         config.set('OUTPUT', 'environmental_variables', 'thetao, so')

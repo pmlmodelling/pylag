@@ -236,10 +236,10 @@ cdef class MockVerticalDiffusivityDataReader(DataReader):
         return self.get_vertical_eddy_diffusivity_derivative_analytic(particle.get_x3())
     
     def get_vertical_eddy_diffusivity_derivative_analytic(self, DTYPE_FLOAT_t x3):
-        cdef DTYPE_FLOAT_t dkh_dz
-        dkh_dz = 0.0136245 - 0.0052649*x3 + 6.35625e-4*x3**2 - 3.463592e-5*x3**3 + \
+        cdef DTYPE_FLOAT_t dKz_dz
+        dKz_dz = 0.0136245 - 0.0052649*x3 + 6.35625e-4*x3**2 - 3.463592e-5*x3**3 + \
                     8.8115e-7 *x3**4 - 8.45508e-9*x3**5
-        return dkh_dz
+        return dKz_dz
 
     cdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, Particle *particle) except INT_ERR:
         """ Return is_wet status
@@ -373,7 +373,7 @@ cdef class MockVelocityEddyViscosityDataReader(DataReader):
     position (x,y) = (0,0) (m).
     
     For testing purposes, u = 1.0 m s-1, v = 1.0 m s-1, Ah = 10 m2 s-1 and
-    M = 1 kg. Furthermore, w = 0.0 m s-1 and Kh = 0.0 m2 s-1.
+    M = 1 kg. Furthermore, w = 0.0 m s-1 and Kz = 0.0 m2 s-1.
     
     Attributes
     ----------

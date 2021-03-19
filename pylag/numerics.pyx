@@ -1320,11 +1320,11 @@ cdef class DiffNaive1DItMethod(ItMethod):
             always be zero since the method does not check for boundary
             crossings.
         """
-        cdef DTYPE_FLOAT_t Kh
+        cdef DTYPE_FLOAT_t Kz
 
-        Kh = data_reader.get_vertical_eddy_diffusivity(time, particle)
+        Kz = data_reader.get_vertical_eddy_diffusivity(time, particle)
         
-        delta_X.x3 = sqrt(2.0*Kh*self._time_step) * random.gauss(0.0, 1.0)
+        delta_X.x3 = sqrt(2.0*Kz*self._time_step) * random.gauss(0.0, 1.0)
         
         return 0
 
@@ -1369,12 +1369,12 @@ cdef class DiffEuler1DItMethod(ItMethod):
             crossings.
         """
         # The vertical eddy diffusiviy and its derivative wrt z
-        cdef DTYPE_FLOAT_t Kh, Kh_prime
+        cdef DTYPE_FLOAT_t Kz, Kz_prime
 
-        Kh = data_reader.get_vertical_eddy_diffusivity(time, particle)
-        Kh_prime = data_reader.get_vertical_eddy_diffusivity_derivative(time, particle)
+        Kz = data_reader.get_vertical_eddy_diffusivity(time, particle)
+        Kz_prime = data_reader.get_vertical_eddy_diffusivity_derivative(time, particle)
 
-        delta_X.x3 = Kh_prime * self._time_step + sqrt(2.0*Kh*self._time_step) * random.gauss(0.0, 1.0)
+        delta_X.x3 = Kz_prime * self._time_step + sqrt(2.0*Kz*self._time_step) * random.gauss(0.0, 1.0)
 
         return 0
 
@@ -1439,16 +1439,16 @@ cdef class DiffVisser1DItMethod(ItMethod):
         """
         cdef Particle _particle
         cdef DTYPE_FLOAT_t zmin, zmax, x3_offset
-        cdef DTYPE_FLOAT_t Kh, Kh_prime
+        cdef DTYPE_FLOAT_t Kz, Kz_prime
         cdef DTYPE_FLOAT_t vel[3]
 
         vel[:] = [0.0, 0.0, 0.0]
 
-        Kh_prime = data_reader.get_vertical_eddy_diffusivity_derivative(time, particle)
+        Kz_prime = data_reader.get_vertical_eddy_diffusivity_derivative(time, particle)
 
         data_reader.get_velocity(time, particle, vel)
         
-        x3_offset = particle.get_x3() + 0.5 * (vel[2] + Kh_prime) * self._time_step
+        x3_offset = particle.get_x3() + 0.5 * (vel[2] + Kz_prime) * self._time_step
 
         # Create a copy of the particle and move it to the offset position
         _particle = particle[0]
@@ -1465,10 +1465,10 @@ cdef class DiffVisser1DItMethod(ItMethod):
             if flag == BDY_ERROR:
                 return flag
 
-        # Compute Kh at the offset position
-        Kh = data_reader.get_vertical_eddy_diffusivity(time, &_particle)
+        # Compute Kz at the offset position
+        Kz = data_reader.get_vertical_eddy_diffusivity(time, &_particle)
 
-        delta_X.x3 = Kh_prime * self._time_step + sqrt(2.0*Kh*self._time_step) * random.gauss(0.0, 1.0)
+        delta_X.x3 = Kz_prime * self._time_step + sqrt(2.0*Kz*self._time_step) * random.gauss(0.0, 1.0)
 
         return 0
 
@@ -1518,14 +1518,14 @@ cdef class DiffMilstein1DItMethod(ItMethod):
         in a water column model Ocean Modelling, 36, 80 - 89
         """
         cdef DTYPE_FLOAT_t deviate
-        cdef DTYPE_FLOAT_t Kh, Kh_prime
+        cdef DTYPE_FLOAT_t Kz, Kz_prime
 
         deviate = random.gauss(0.0, 1.0)
 
-        Kh = data_reader.get_vertical_eddy_diffusivity(time, particle)
-        Kh_prime = data_reader.get_vertical_eddy_diffusivity_derivative(time, particle)
+        Kz = data_reader.get_vertical_eddy_diffusivity(time, particle)
+        Kz_prime = data_reader.get_vertical_eddy_diffusivity_derivative(time, particle)
 
-        delta_X.x3  = 0.5 * Kh_prime * self._time_step * (deviate*deviate + 1.0) + sqrt(2.0 * Kh * self._time_step) * deviate
+        delta_X.x3  = 0.5 * Kz_prime * self._time_step * (deviate*deviate + 1.0) + sqrt(2.0 * Kz * self._time_step) * deviate
 
         return 0
 
@@ -1734,15 +1734,15 @@ cdef class DiffMilstein3DItMethod(ItMethod):
         """
         cdef DTYPE_FLOAT_t deviate_x1, deviate_x2, deviate_x3
         cdef DTYPE_FLOAT_t Ah
-        cdef DTYPE_FLOAT_t Kh
+        cdef DTYPE_FLOAT_t Kz
         cdef DTYPE_FLOAT_t Ah_prime[2]
-        cdef DTYPE_FLOAT_t Kh_prime
+        cdef DTYPE_FLOAT_t Kz_prime
 
         Ah = data_reader.get_horizontal_eddy_viscosity(time, particle)
         data_reader.get_horizontal_eddy_viscosity_derivative(time, particle, Ah_prime)
 
-        Kh = data_reader.get_vertical_eddy_diffusivity(time, particle)
-        Kh_prime = data_reader.get_vertical_eddy_diffusivity_derivative(time, particle)
+        Kz = data_reader.get_vertical_eddy_diffusivity(time, particle)
+        Kz_prime = data_reader.get_vertical_eddy_diffusivity_derivative(time, particle)
 
         deviate_x1 = random.gauss(0.0, 1.0)
         deviate_x2 = random.gauss(0.0, 1.0)
@@ -1752,8 +1752,8 @@ cdef class DiffMilstein3DItMethod(ItMethod):
                 + sqrt(2.0 * Ah * self._time_step) * deviate_x1
         delta_X.x2  = 0.5 * Ah_prime[1] * self._time_step * (deviate_x2*deviate_x2 + 1.0) \
                 + sqrt(2.0 * Ah * self._time_step) * deviate_x2
-        delta_X.x3  = 0.5 * Kh_prime * self._time_step * (deviate_x3*deviate_x3 + 1.0) \
-                + sqrt(2.0 * Kh * self._time_step) * deviate_x3
+        delta_X.x3  = 0.5 * Kz_prime * self._time_step * (deviate_x3*deviate_x3 + 1.0) \
+                + sqrt(2.0 * Kz * self._time_step) * deviate_x3
 
         return 0
 
@@ -1802,17 +1802,17 @@ cdef class AdvDiffMilstein3DItMethod(ItMethod):
         cdef DTYPE_FLOAT_t vel[3]
         cdef DTYPE_FLOAT_t deviate_x1, deviate_x2, deviate_x3
         cdef DTYPE_FLOAT_t Ah
-        cdef DTYPE_FLOAT_t Kh
+        cdef DTYPE_FLOAT_t Kz
         cdef DTYPE_FLOAT_t Ah_prime[2]
-        cdef DTYPE_FLOAT_t Kh_prime
+        cdef DTYPE_FLOAT_t Kz_prime
 
         data_reader.get_velocity(time, particle, vel) 
 
         Ah = data_reader.get_horizontal_eddy_viscosity(time, particle)
         data_reader.get_horizontal_eddy_viscosity_derivative(time, particle, Ah_prime)
 
-        Kh = data_reader.get_vertical_eddy_diffusivity(time, particle)
-        Kh_prime = data_reader.get_vertical_eddy_diffusivity_derivative(time, particle)
+        Kz = data_reader.get_vertical_eddy_diffusivity(time, particle)
+        Kz_prime = data_reader.get_vertical_eddy_diffusivity_derivative(time, particle)
 
         deviate_x1 = random.gauss(0.0, 1.0)
         deviate_x2 = random.gauss(0.0, 1.0)
@@ -1827,8 +1827,8 @@ cdef class AdvDiffMilstein3DItMethod(ItMethod):
                 + sqrt(2.0 * Ah * self._time_step) * deviate_x2
 
         delta_X.x3  = vel[2] * self._time_step \
-                + 0.5 * Kh_prime * self._time_step * (deviate_x3*deviate_x3 + 1.0) \
-                + sqrt(2.0 * Kh * self._time_step) * deviate_x3
+                + 0.5 * Kz_prime * self._time_step * (deviate_x3*deviate_x3 + 1.0) \
+                + sqrt(2.0 * Kz * self._time_step) * deviate_x3
 
         return 0
 

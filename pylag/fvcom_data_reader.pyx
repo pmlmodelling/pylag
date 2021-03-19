@@ -133,8 +133,8 @@ cdef class FVCOMDataReader(DataReader):
     cdef DTYPE_FLOAT_t[:,::1] _w_next
     
     # Vertical eddy diffusivities
-    cdef DTYPE_FLOAT_t[:,::1] _kh_last
-    cdef DTYPE_FLOAT_t[:,::1] _kh_next
+    cdef DTYPE_FLOAT_t[:,::1] _Kz_last
+    cdef DTYPE_FLOAT_t[:,::1] _Kz_next
     
     # Horizontal eddy viscosities
     cdef DTYPE_FLOAT_t[:,::1] _viscofh_last
@@ -160,8 +160,8 @@ cdef class FVCOMDataReader(DataReader):
     cdef DTYPE_FLOAT_t _time_next
 
     # Options controlling the reading of eddy diffusivities
-    cdef object _Kh_method_name, _Ah_method_name
-    cdef DTYPE_INT_t _Kh_method, _Ah_method
+    cdef object _Kz_method_name, _Ah_method_name
+    cdef DTYPE_INT_t _Kz_method, _Ah_method
 
     # Flags that identify whether a given variable should be read in
     cdef bint _has_is_wet
@@ -189,14 +189,14 @@ cdef class FVCOMDataReader(DataReader):
             raise ValueError("Unsupported model coordinate system `{}'".format(coordinate_system))
 
         # Set options for handling the vertical eddy diffusivity
-        self._Kh_method_name = self.config.get('OCEAN_CIRCULATION_MODEL', 'Kh_method').strip().lower()
-        if self._Kh_method_name not in ['none', 'file']:
-            raise RuntimeError('Invalid option for `Kh_method` ({})'.format(self._Kh_method_name))
+        self._Kz_method_name = self.config.get('OCEAN_CIRCULATION_MODEL', 'Kz_method').strip().lower()
+        if self._Kz_method_name not in ['none', 'file']:
+            raise RuntimeError('Invalid option for `Kz_method` ({})'.format(self._Kz_method_name))
 
-        if self._Kh_method_name == "none":
-            self._Kh_method = 0
-        elif self._Kh_method_name == "file":
-            self._Kh_method = 1
+        if self._Kz_method_name == "none":
+            self._Kz_method = 0
+        elif self._Kz_method_name == "file":
+            self._Kz_method = 1
 
         # Set options for handling the horizontal eddy diffusivity
         self._Ah_method_name = self.config.get('OCEAN_CIRCULATION_MODEL', 'Ah_method').strip().lower()
@@ -787,7 +787,7 @@ cdef class FVCOMDataReader(DataReader):
         
         Returns:
         --------
-        kh : float
+        Kz : float
             The vertical eddy diffusivity.        
         
         """
@@ -798,34 +798,34 @@ cdef class FVCOMDataReader(DataReader):
         cdef DTYPE_FLOAT_t time_fraction
 
         # Interpolated diffusivities on lower and upper bounding sigma levels
-        cdef DTYPE_FLOAT_t kh_lower_level
-        cdef DTYPE_FLOAT_t kh_upper_level
+        cdef DTYPE_FLOAT_t Kz_lower_level
+        cdef DTYPE_FLOAT_t Kz_upper_level
 
         # Variable
-        cdef DTYPE_FLOAT_t kh
+        cdef DTYPE_FLOAT_t Kz
 
-        if self._Kh_method == 1:
+        if self._Kz_method == 1:
             # Time fraction
             time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
             # NB The index corresponding to the layer the particle presently resides
             # in is used to calculate the index of the under and over lying k levels
-            kh_lower_level = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
-                                                                                   self._kh_next,
+            Kz_lower_level = self._unstructured_grid.interpolate_in_time_and_space(self._Kz_last,
+                                                                                   self._Kz_next,
                                                                                    k_layer+1,
                                                                                    time_fraction,
                                                                                    particle)
-            kh_upper_level = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
-                                                                                   self._kh_next,
+            Kz_upper_level = self._unstructured_grid.interpolate_in_time_and_space(self._Kz_last,
+                                                                                   self._Kz_next,
                                                                                    k_layer,
                                                                                    time_fraction,
                                                                                    particle)
-            kh = interp.linear_interp(particle.get_omega_interfaces(), kh_lower_level, kh_upper_level)
+            Kz = interp.linear_interp(particle.get_omega_interfaces(), Kz_lower_level, Kz_upper_level)
 
         else:
            raise RuntimeError('This dataset does not contain vertical eddy diffusivities.')
 
-        return kh
+        return Kz
 
     cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity_derivative(self,
             DTYPE_FLOAT_t time, Particle* particle) except FLOAT_ERR:
@@ -858,9 +858,9 @@ cdef class FVCOMDataReader(DataReader):
         k_prime : float
             Gradient in the vertical eddy diffusivity field.
         """
-        cdef DTYPE_FLOAT_t kh_0, kh_1, kh_2, kh_3
+        cdef DTYPE_FLOAT_t Kz_0, Kz_1, Kz_2, Kz_3
         cdef DTYPE_FLOAT_t z_0, z_1, z_2, z_3
-        cdef DTYPE_FLOAT_t dkh_lower_level, dkh_upper_level
+        cdef DTYPE_FLOAT_t dKz_lower_level, dKz_upper_level
 
         # Time fraction
         cdef DTYPE_FLOAT_t time_fraction
@@ -868,17 +868,17 @@ cdef class FVCOMDataReader(DataReader):
         # Particle k_layer
         cdef DTYPE_INT_t k_layer
 
-        # dkh_dz
-        cdef DTYPE_FLOAT_t dkh_dz
+        # dKz_dz
+        cdef DTYPE_FLOAT_t dKz_dz
 
-        if self._Kh_method == 1:
+        if self._Kz_method == 1:
             # Pre-compute k_layer, time fraction
             k_layer = particle.get_k_layer()
             time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
             if k_layer == 0:
-                kh_0 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
-                                                                             self._kh_next,
+                Kz_0 = self._unstructured_grid.interpolate_in_time_and_space(self._Kz_last,
+                                                                             self._Kz_next,
                                                                              k_layer,
                                                                              time_fraction,
                                                                              particle)
@@ -888,8 +888,8 @@ cdef class FVCOMDataReader(DataReader):
                                                                             time_fraction,
                                                                             particle)
 
-                kh_1 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
-                                                                             self._kh_next,
+                Kz_1 = self._unstructured_grid.interpolate_in_time_and_space(self._Kz_last,
+                                                                             self._Kz_next,
                                                                              k_layer+1,
                                                                              time_fraction,
                                                                              particle)
@@ -899,8 +899,8 @@ cdef class FVCOMDataReader(DataReader):
                                                                             time_fraction,
                                                                             particle)
 
-                kh_2 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
-                                                                             self._kh_next,
+                Kz_2 = self._unstructured_grid.interpolate_in_time_and_space(self._Kz_last,
+                                                                             self._Kz_next,
                                                                              k_layer+2,
                                                                              time_fraction,
                                                                              particle)
@@ -910,12 +910,12 @@ cdef class FVCOMDataReader(DataReader):
                                                                             time_fraction,
                                                                             particle)
 
-                dkh_lower_level = (kh_0 - kh_2) / (z_0 - z_2)
-                dkh_upper_level = (kh_0 - kh_1) / (z_0 - z_1)
+                dKz_lower_level = (Kz_0 - Kz_2) / (z_0 - z_2)
+                dKz_upper_level = (Kz_0 - Kz_1) / (z_0 - z_1)
 
             elif k_layer == self._n_siglay - 1:
-                kh_0 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
-                                                                             self._kh_next,
+                Kz_0 = self._unstructured_grid.interpolate_in_time_and_space(self._Kz_last,
+                                                                             self._Kz_next,
                                                                              k_layer-1,
                                                                              time_fraction,
                                                                              particle)
@@ -925,8 +925,8 @@ cdef class FVCOMDataReader(DataReader):
                                                                             time_fraction,
                                                                             particle)
 
-                kh_1 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
-                                                                             self._kh_next,
+                Kz_1 = self._unstructured_grid.interpolate_in_time_and_space(self._Kz_last,
+                                                                             self._Kz_next,
                                                                              k_layer,
                                                                              time_fraction,
                                                                              particle)
@@ -936,8 +936,8 @@ cdef class FVCOMDataReader(DataReader):
                                                                             time_fraction,
                                                                             particle)
 
-                kh_2 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
-                                                                             self._kh_next,
+                Kz_2 = self._unstructured_grid.interpolate_in_time_and_space(self._Kz_last,
+                                                                             self._Kz_next,
                                                                              k_layer+1,
                                                                              time_fraction,
                                                                              particle)
@@ -947,12 +947,12 @@ cdef class FVCOMDataReader(DataReader):
                                                                             time_fraction,
                                                                             particle)
 
-                dkh_lower_level = (kh_1 - kh_2) / (z_1 - z_2)
-                dkh_upper_level = (kh_0 - kh_2) / (z_0 - z_2)
+                dKz_lower_level = (Kz_1 - Kz_2) / (z_1 - z_2)
+                dKz_upper_level = (Kz_0 - Kz_2) / (z_0 - z_2)
 
             else:
-                kh_0 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
-                                                                             self._kh_next,
+                Kz_0 = self._unstructured_grid.interpolate_in_time_and_space(self._Kz_last,
+                                                                             self._Kz_next,
                                                                              k_layer-1,
                                                                              time_fraction,
                                                                              particle)
@@ -962,8 +962,8 @@ cdef class FVCOMDataReader(DataReader):
                                                                             time_fraction,
                                                                             particle)
 
-                kh_1 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
-                                                                             self._kh_next,
+                Kz_1 = self._unstructured_grid.interpolate_in_time_and_space(self._Kz_last,
+                                                                             self._Kz_next,
                                                                              k_layer,
                                                                              time_fraction,
                                                                              particle)
@@ -973,8 +973,8 @@ cdef class FVCOMDataReader(DataReader):
                                                                             time_fraction,
                                                                             particle)
 
-                kh_2 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
-                                                                             self._kh_next,
+                Kz_2 = self._unstructured_grid.interpolate_in_time_and_space(self._Kz_last,
+                                                                             self._Kz_next,
                                                                              k_layer+1,
                                                                              time_fraction,
                                                                              particle)
@@ -984,8 +984,8 @@ cdef class FVCOMDataReader(DataReader):
                                                                             time_fraction,
                                                                             particle)
 
-                kh_3 = self._unstructured_grid.interpolate_in_time_and_space(self._kh_last,
-                                                                             self._kh_next,
+                Kz_3 = self._unstructured_grid.interpolate_in_time_and_space(self._Kz_last,
+                                                                             self._Kz_next,
                                                                              k_layer+2,
                                                                              time_fraction,
                                                                              particle)
@@ -995,15 +995,15 @@ cdef class FVCOMDataReader(DataReader):
                                                                             time_fraction,
                                                                             particle)
 
-                dkh_lower_level = (kh_1 - kh_3) / (z_1 - z_3)
-                dkh_upper_level = (kh_0 - kh_2) / (z_0 - z_2)
+                dKz_lower_level = (Kz_1 - Kz_3) / (z_1 - z_3)
+                dKz_upper_level = (Kz_0 - Kz_2) / (z_0 - z_2)
 
-            dkh_dz = interp.linear_interp(particle.get_omega_interfaces(), dkh_lower_level, dkh_upper_level)
+            dKz_dz = interp.linear_interp(particle.get_omega_interfaces(), dKz_lower_level, dKz_upper_level)
 
         else:
             raise RuntimeError('This dataset does not contain vertical eddy diffusivities.')
 
-        return dkh_dz
+        return dKz_dz
 
     cdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, Particle *particle) except INT_ERR:
         """ Return an integer indicating whether `host' is wet or dry
@@ -1376,10 +1376,10 @@ cdef class FVCOMDataReader(DataReader):
         self._w_last = self.mediator.get_time_dependent_variable_at_last_time_index('ww', (self._n_siglay, self._n_elems), DTYPE_FLOAT)
         self._w_next = self.mediator.get_time_dependent_variable_at_next_time_index('ww', (self._n_siglay, self._n_elems), DTYPE_FLOAT)
         
-        # Update memory views for kh
-        if self._Kh_method == 1:
-            self._kh_last = self.mediator.get_time_dependent_variable_at_last_time_index('kh', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)
-            self._kh_next = self.mediator.get_time_dependent_variable_at_next_time_index('kh', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)
+        # Update memory views for Kz
+        if self._Kz_method == 1:
+            self._Kz_last = self.mediator.get_time_dependent_variable_at_last_time_index('Kz', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)
+            self._Kz_next = self.mediator.get_time_dependent_variable_at_next_time_index('Kz', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)
 
         # Update memory views for viscofh
         if self._Ah_method == 1:
