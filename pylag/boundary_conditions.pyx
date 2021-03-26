@@ -332,7 +332,6 @@ cdef class RefHorizGeographicBoundaryConditionCalculator(HorizBoundaryConditionC
         cdef DTYPE_FLOAT_t x4_prime_geog[2]
 
         # 2D position and direction vectors used for locating lost particles
-        cdef DTYPE_FLOAT_t r_test[3]
         cdef DTYPE_FLOAT_t x_test[3]
         cdef DTYPE_FLOAT_t x_test_rot[3]
         cdef DTYPE_FLOAT_t x_test_geog[2]
@@ -347,6 +346,11 @@ cdef class RefHorizGeographicBoundaryConditionCalculator(HorizBoundaryConditionC
         # 2D direction vector pointing from xi to x4', where x4' is the
         # reflected point that we ultimately trying to find
         cdef DTYPE_FLOAT_t r[2]
+
+        # 2D direction vector pointing from xi in the direction of x4', where
+        # x4' is the reflected point. Used to locate particles undergoing double
+        # reflections.
+        cdef DTYPE_FLOAT_t r_test[2]
 
         # Intermediate variable
         cdef DTYPE_FLOAT_t mult
@@ -444,7 +448,6 @@ cdef class RefHorizGeographicBoundaryConditionCalculator(HorizBoundaryConditionC
             # host element's centroid.
             for i in xrange(2):
                 r_test[i] = r[i]
-            r_test[2] = 1.0
 
             counter_b = 0
             while counter_b < 3:
@@ -453,6 +456,8 @@ cdef class RefHorizGeographicBoundaryConditionCalculator(HorizBoundaryConditionC
 
                 r_test[1] = r_test[1]/10.
                 x_test[1] = pi_rot[1] + r_test[1]
+
+                x_test[2] = 1.0
 
                 reverse_rotate_axes(x_test, intersection[0], intersection[1], x_test_rot)
                 cartesian_to_geographic_coords(x_test_rot, x_test_geog)
