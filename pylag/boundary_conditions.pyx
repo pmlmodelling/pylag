@@ -465,7 +465,7 @@ cdef class RefHorizGeographicBoundaryConditionCalculator(HorizBoundaryConditionC
                 particle_copy_a.set_x1(x_test_geog[0])
                 particle_copy_a.set_x2(x_test_geog[1])
 
-                flag = data_reader.find_host_using_global_search(&particle_copy_a)
+                flag = data_reader.find_host_using_local_search(&particle_copy_a)
 
                 if flag == IN_DOMAIN:
                     break
