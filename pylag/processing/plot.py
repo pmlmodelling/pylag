@@ -414,6 +414,64 @@ class FVCOMPlotter(PyLagPlotter):
 
         return ax, plot
 
+    def plot_quiver(self, ax, u, v, configure=True, update=False,
+            tick_inc=True, extents=None, transform=ccrs.PlateCarree(),
+            draw_coastlines=False, resolution='10m', point_res=1, scale = 0.5,
+                    **kwargs):
+        """ Produce a quiver plot of the supplied velocity field
+
+        """
+        # Check array shapes
+        assert u.shape == v.shape, "u and v shapes do not match"
+        if len(u.shape) != 1:
+            raise ValueError('Expected 1D u/v arrays. Array has shape {}.'.format(u.shape))
+
+        if u.shape[0] != self.n_elems:
+            raise ValueError('The size of the `u` and `v` arrays do not match the number of elements')
+
+        _u = u
+        _v = v
+        
+        #set spacing to plot 1 in n arrows where n = point_res
+        points = (slice(None,None,point_res))
+
+        if update is True:
+            for collection in ax.collections:
+                if type(collection) == matplotlib.quiver.Quiver:
+                    collection.set_UVC(_u, _v)
+                    return ax
+            raise RuntimeError('Received update is True, but the current axis does not contain a Quiver plot object.')
+
+        quiver = ax.quiver(self.xc[points], self.yc[points], _u[points], _v[points], transform=transform,
+                           units='inches', scale_units='inches', scale=scale)
+
+        plt.quiverkey(quiver, 0.9, 0.9, 0.5,
+                      '{} '.format(0.5) + r'$\mathrm{ms^{-1}}$',
+                      coordinates='axes')
+
+        # If not configuring the rest of the plot return to caller
+        if not configure:
+            return ax
+
+        # Set extents
+        if extents is None:
+            extents = self._get_default_extents()
+
+        ax.set_extent(extents, transform)
+
+        if draw_coastlines:
+            ax.coastlines(resolution=resolution, linewidth=self.line_width)
+
+        if tick_inc:
+            self._add_ticks(ax)
+
+        ax.set_xlabel('Longitude (E)', fontsize=self.font_size)
+        ax.set_ylabel('Longitude (N)', fontsize=self.font_size)
+
+        return ax
+
+
+
     def draw_grid(self, ax, draw_masked_elements=False, **kwargs):
         """ Draw the underlying grid or mesh
 
@@ -633,20 +691,15 @@ class ArakawaAPlotter(PyLagPlotter):
             if len(field.shape) != 1:
                 raise ValueError('Expected 1D array')
 
-            if not (field.shape[0] == self.n_nodes or field.shape[0] == self.n_elems):
-                raise ValueError('The size of the `field` array ({}) does not match the number of nodes or elements'.format(field.shape[0]))
+            if field.shape[0] != self.n_nodes:
+                raise ValueError('The size of the `field` array does not match the number of nodes')
 
             _field = field
         else:
-            if field.shape[0] != self.n_nodes:
-                raise ValueError('Preprocessing of data defined at elements is not supported.')
             _field = self.preprocess_array(field)
 
         # Compute field value at face centre of ocean triangles
-        if _field.shape[0] == self.n_nodes:
-            _field = _field[self.ocean_simplices].mean(axis=1)
-        elif _field.shape[0] == self.n_elems:
-            _field = _field[self.ocean_elements]
+        _field = _field[self.ocean_simplices].mean(axis=1)
 
         if update is True:
             for collection in ax.collections:
@@ -707,7 +760,6 @@ class ArakawaAPlotter(PyLagPlotter):
 
         """
         assert u.shape == v.shape, "u and v shapes do not match"
-
         # Check array shapes
         if preprocess_arrays == False:
             if len(u.shape) != 1:
@@ -756,7 +808,6 @@ class ArakawaAPlotter(PyLagPlotter):
         ax.set_ylabel('Longitude (N)', fontsize=self.font_size)
 
         return ax
-
 
     def draw_grid(self, ax, draw_masked_elements=False, linewidth=0.25, edgecolor='k', facecolor='none',
                   transform=ccrs.Geodetic()):
@@ -875,7 +926,7 @@ class ArakawaCPlotter:
 
             # Try to read the element mask
             try:
-                self.maskc[grid_name] = ds.variables['mask_{}'.format(grid_name)][:]
+                self.maskc[grid_name] = ds.variables['mask_c_{}'.format(grid_name)][:]
             except KeyError:
                 self.maskc[grid_name] = None
 
