@@ -123,7 +123,10 @@ cdef class ROMSDataReader(DataReader):
     cdef bint _flip_vertical_axis
 
     # Depth coordinate variables (xarray DataArrays)
-    cdef object _s_rho, _cs_r, _s_w, _cs_w
+    cdef DTYPE_FLOAT_t[::1] _s_rho
+    cdef DTYPE_FLOAT_t[::1] _cs_r
+    cdef DTYPE_FLOAT_t[::1] _s_w
+    cdef DTYPE_FLOAT_t[::1] _cs_w
     cdef DTYPE_FLOAT_t _hc
 
     # Actual depth levels, accounting for changes in sea surface elevation on rho and w grids
@@ -599,7 +602,7 @@ cdef class ROMSDataReader(DataReader):
 
     cdef DTYPE_INT_t set_vertical_grid_vars(self, DTYPE_FLOAT_t time,
                                             Particle *particle) except INT_ERR:
-        """ Find the host sigma layer
+        """ Find the host depth layer
         
         """
 
@@ -615,7 +618,7 @@ cdef class ROMSDataReader(DataReader):
 
         cdef DTYPE_INT_t k
 
-        # Loop over all sigma levels to find the host z layer
+        # Loop over all depth levels to find the host z layer
         depth_lower_level_grid_w = self._unstructured_grid_rho.interpolate_in_time_and_space(self._depth_levels_grid_w_last,
                                                                                              self._depth_levels_grid_w_next,
                                                                                              0,
@@ -633,7 +636,7 @@ cdef class ROMSDataReader(DataReader):
                 # Host layer found
                 particle.set_k_layer(k)
 
-                # Set the sigma level interpolation coefficient
+                # Set the depth level interpolation coefficient
                 particle.set_omega_interfaces(interp.get_linear_fraction(x3, depth_lower_level_grid_w,
                                               depth_upper_level_grid_w))
 
@@ -718,11 +721,19 @@ cdef class ROMSDataReader(DataReader):
         zmin : float
             The bottom depth.
         """
+        cdef DTYPE_FLOAT_t time_fraction # Time interpolation coefficient
+
         cdef DTYPE_FLOAT_t h # Bathymetry at (x1, x2)
 
-        h = self._unstructured_grid_rho.interpolate_in_space(self._h, particle)
+        time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
-        return -h
+        h = self._unstructured_grid_rho.interpolate_in_time_and_space(self._depth_levels_grid_w_last,
+                                                                      self._depth_levels_grid_w_next,
+                                                                      self._n_s_w - 1,
+                                                                      time_fraction,
+                                                                      particle)
+
+        return h
 
     cdef DTYPE_FLOAT_t get_zmax(self, DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR:
         """ Returns the sea surface height in cartesian coordinates
@@ -749,10 +760,11 @@ cdef class ROMSDataReader(DataReader):
 
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
-        zeta = self._unstructured_grid_rho.interpolate_in_time_and_space_2D(self._zeta_last,
-                                                                            self._zeta_next,
-                                                                            time_fraction,
-                                                                            particle)
+        zeta = self._unstructured_grid_rho.interpolate_in_time_and_space(self._depth_levels_grid_w_last,
+                                                                         self._depth_levels_grid_w_next,
+                                                                         0,
+                                                                         time_fraction,
+                                                                         particle)
 
         return zeta
 
