@@ -87,27 +87,32 @@ cdef class ROMSDataReader(DataReader):
     cdef Grid _unstructured_grid_u
     cdef Grid _unstructured_grid_v
     cdef Grid _unstructured_grid_rho
+    cdef Grid _unstructured_grid_psi
 
     # The name of the grid
     cdef string _name_grid_u
     cdef string _name_grid_v
     cdef string _name_grid_rho
+    cdef string _name_grid_psi
 
     # Grid dimensions
     cdef DTYPE_INT_t _n_s_rho, _n_s_w
     cdef DTYPE_INT_t _n_longitude_grid_u, _n_latitude_grid_u, _n_elems_grid_u, _n_nodes_grid_u
     cdef DTYPE_INT_t _n_longitude_grid_v, _n_latitude_grid_v, _n_elems_grid_v, _n_nodes_grid_v
     cdef DTYPE_INT_t _n_longitude_grid_rho, _n_latitude_grid_rho, _n_elems_grid_rho, _n_nodes_grid_rho
+    cdef DTYPE_INT_t _n_longitude_grid_psi, _n_latitude_grid_psi, _n_elems_grid_psi, _n_nodes_grid_psi
     
     # Element connectivity
     cdef DTYPE_INT_t[:,::1] _nv_grid_u
     cdef DTYPE_INT_t[:,::1] _nv_grid_v
     cdef DTYPE_INT_t[:,::1] _nv_grid_rho
+    cdef DTYPE_INT_t[:,::1] _nv_grid_psi
     
     # Element adjacency
     cdef DTYPE_INT_t[:,::1] _nbe_grid_u
     cdef DTYPE_INT_t[:,::1] _nbe_grid_v
     cdef DTYPE_INT_t[:,::1] _nbe_grid_rho
+    cdef DTYPE_INT_t[:,::1] _nbe_grid_psi
 
     # Grid angles
     cdef DTYPE_FLOAT_t[::1] _rho_angles
@@ -145,11 +150,13 @@ cdef class ROMSDataReader(DataReader):
     cdef DTYPE_INT_t[::1] _mask_c_grid_u
     cdef DTYPE_INT_t[::1] _mask_c_grid_v
     cdef DTYPE_INT_t[::1] _mask_c_grid_rho
+    cdef DTYPE_INT_t[::1] _mask_c_grid_psi
 
     # Land sea mask on rho grid nodes (1 - sea point, 0 - land point)
     cdef DTYPE_INT_t[::1] _mask_n_grid_u
     cdef DTYPE_INT_t[::1] _mask_n_grid_v
     cdef DTYPE_INT_t[::1] _mask_n_grid_rho
+    cdef DTYPE_INT_t[::1] _mask_n_grid_psi
 
     # Dictionary of dimension names
     cdef object _dimension_names
@@ -216,6 +223,7 @@ cdef class ROMSDataReader(DataReader):
         self._name_grid_u = b'grid_u'
         self._name_grid_v = b'grid_v'
         self._name_grid_rho = b'grid_rho'
+        self._name_grid_psi = b'grid_psi'
 
         # Time direction
         self._time_direction = <int>get_time_direction(config)
@@ -235,7 +243,9 @@ cdef class ROMSDataReader(DataReader):
                             'latitude_grid_v': 'latitude_dim_name_grid_v',
                             'longitude_grid_v': 'longitude_dim_name_grid_v',
                             'latitude_grid_rho': 'latitude_dim_name_grid_rho',
-                            'longitude_grid_rho': 'longitude_dim_name_grid_rho'}
+                            'longitude_grid_rho': 'longitude_dim_name_grid_rho',
+                            'latitude_grid_psi': 'latitude_dim_name_grid_psi',
+                            'longitude_grid_psi': 'longitude_dim_name_grid_psi'}
 
         for dim_name, config_name in dim_config_names.items():
             self._dimension_names[dim_name] = self.config.get('OCEAN_CIRCULATION_MODEL', config_name).strip()
@@ -328,7 +338,8 @@ cdef class ROMSDataReader(DataReader):
          : list [str]
              List of grid names on which which input data are defined.
         """
-        return [self._name_grid_u.decode(), self._name_grid_v.decode(), self._name_grid_rho.decode()]
+        return [self._name_grid_u.decode(), self._name_grid_v.decode(),
+                self._name_grid_rho.decode(), self._name_grid_psi.decode()]
 
     cpdef setup_data_access(self, start_datetime, end_datetime):
         """ Set up access to time-dependent variables.
@@ -1269,18 +1280,22 @@ cdef class ROMSDataReader(DataReader):
         self._n_longitude_grid_u = self.mediator.get_dimension_variable('longitude_grid_u')
         self._n_longitude_grid_v = self.mediator.get_dimension_variable('longitude_grid_v')
         self._n_longitude_grid_rho = self.mediator.get_dimension_variable('longitude_grid_rho')
+        self._n_longitude_grid_psi = self.mediator.get_dimension_variable('longitude_grid_psi')
 
         self._n_latitude_grid_u = self.mediator.get_dimension_variable('latitude_grid_u')
         self._n_latitude_grid_v = self.mediator.get_dimension_variable('latitude_grid_v')
         self._n_latitude_grid_rho = self.mediator.get_dimension_variable('latitude_grid_rho')
+        self._n_latitude_grid_psi = self.mediator.get_dimension_variable('latitude_grid_psi')
 
         self._n_nodes_grid_u = self.mediator.get_dimension_variable('node_grid_u')
         self._n_nodes_grid_v = self.mediator.get_dimension_variable('node_grid_v')
         self._n_nodes_grid_rho = self.mediator.get_dimension_variable('node_grid_rho')
+        self._n_nodes_grid_psi = self.mediator.get_dimension_variable('node_grid_psi')
 
         self._n_elems_grid_u = self.mediator.get_dimension_variable('element_grid_u')
         self._n_elems_grid_v = self.mediator.get_dimension_variable('element_grid_v')
         self._n_elems_grid_rho = self.mediator.get_dimension_variable('element_grid_rho')
+        self._n_elems_grid_psi = self.mediator.get_dimension_variable('element_grid_psi')
 
         self._n_s_rho = self.mediator.get_dimension_variable('s_rho')
         self._n_s_w = self.mediator.get_dimension_variable('s_w')
@@ -1289,10 +1304,12 @@ cdef class ROMSDataReader(DataReader):
         self._nv_grid_u = self.mediator.get_grid_variable('nv_grid_u', (3, self._n_elems_grid_u), DTYPE_INT)
         self._nv_grid_v = self.mediator.get_grid_variable('nv_grid_v', (3, self._n_elems_grid_v), DTYPE_INT)
         self._nv_grid_rho = self.mediator.get_grid_variable('nv_grid_rho', (3, self._n_elems_grid_rho), DTYPE_INT)
+        self._nv_grid_psi = self.mediator.get_grid_variable('nv_grid_psi', (3, self._n_elems_grid_psi), DTYPE_INT)
 
         self._nbe_grid_u = self.mediator.get_grid_variable('nbe_grid_u', (3, self._n_elems_grid_u), DTYPE_INT)
         self._nbe_grid_v = self.mediator.get_grid_variable('nbe_grid_v', (3, self._n_elems_grid_v), DTYPE_INT)
         self._nbe_grid_rho = self.mediator.get_grid_variable('nbe_grid_rho', (3, self._n_elems_grid_rho), DTYPE_INT)
+        self._nbe_grid_psi = self.mediator.get_grid_variable('nbe_grid_psi', (3, self._n_elems_grid_psi), DTYPE_INT)
 
         # Grid angles
         if self._grid_type == 'curvilinear':
@@ -1322,21 +1339,28 @@ cdef class ROMSDataReader(DataReader):
             xc_grid_rho = self.mediator.get_grid_variable('longitude_c_grid_rho', (self._n_elems_grid_rho), DTYPE_FLOAT) * deg_to_radians
             yc_grid_rho = self.mediator.get_grid_variable('latitude_c_grid_rho', (self._n_elems_grid_rho), DTYPE_FLOAT) * deg_to_radians
 
+            x_grid_psi = self.mediator.get_grid_variable('longitude_grid_psi', (self._n_nodes_grid_psi), DTYPE_FLOAT) * deg_to_radians
+            y_grid_psi = self.mediator.get_grid_variable('latitude_grid_psi', (self._n_nodes_grid_psi), DTYPE_FLOAT) * deg_to_radians
+            xc_grid_psi = self.mediator.get_grid_variable('longitude_c_grid_psi', (self._n_elems_grid_psi), DTYPE_FLOAT) * deg_to_radians
+            yc_grid_psi = self.mediator.get_grid_variable('latitude_c_grid_psi', (self._n_elems_grid_psi), DTYPE_FLOAT) * deg_to_radians
+
             # Don't apply offsets in geographic case - set them to 0.0!
             self._xmin = 0.0
             self._ymin = 0.0
         else:
             raise ValueError("Unsupported model coordinate system `{}'".format(coordinate_system))
 
-        # Land sea mask - elements. Rho grid only for now. U/V grids initialised to all sea points.
+        # Land sea mask - elements. psi grid only for now. U/V/rho grids initialised to be all sea points.
         self._mask_c_grid_u = np.zeros(self._n_elems_grid_u, dtype=DTYPE_INT)
         self._mask_c_grid_v = np.zeros(self._n_elems_grid_v, dtype=DTYPE_INT)
-        self._mask_c_grid_rho = self.mediator.get_grid_variable('mask_grid_rho', (self._n_elems_grid_rho), DTYPE_INT)
+        self._mask_c_grid_rho = np.zeros(self._n_elems_grid_rho, dtype=DTYPE_INT)
+        self._mask_c_grid_psi = self.mediator.get_grid_variable('mask_grid_psi', (self._n_elems_grid_psi), DTYPE_INT)
 
         # Land sea mask - nodes. Rho grid only for now. U/V grids initialised to all sea points.
         self._mask_n_grid_u = np.zeros(self._n_nodes_grid_u, dtype=DTYPE_INT)
         self._mask_n_grid_v = np.zeros(self._n_nodes_grid_v, dtype=DTYPE_INT)
-        self._mask_n_grid_rho = self.mediator.get_grid_variable('mask_nodes_grid_rho', (self._n_nodes_grid_rho), DTYPE_INT)
+        self._mask_n_grid_rho = np.zeros(self._n_nodes_grid_rho, dtype=DTYPE_INT)
+        self._mask_n_grid_psi = self.mediator.get_grid_variable('mask_nodes_grid_psi', (self._n_nodes_grid_psi), DTYPE_INT)
 
         # Initialise the unstructured grids objects
         if self._grid_type == 'rectilinear':
@@ -1367,6 +1391,11 @@ cdef class ROMSDataReader(DataReader):
                                                             x_grid_rho, y_grid_rho, xc_grid_rho, yc_grid_rho,
                                                             self._mask_c_grid_rho, self._mask_n_grid_rho)
 
+        self._unstructured_grid_psi = get_unstructured_grid(self.config, self._name_grid_psi, self._n_nodes_grid_psi,
+                                                            self._n_elems_grid_psi, self._nv_grid_psi, self._nbe_grid_psi,
+                                                            x_grid_psi, y_grid_psi, xc_grid_psi, yc_grid_psi,
+                                                            self._mask_c_grid_psi, self._mask_n_grid_psi)
+
         # Read in depth vars
         self._s_rho = self.mediator.get_grid_variable('s_rho', (self._n_s_rho), DTYPE_FLOAT)
         self._s_w = self.mediator.get_grid_variable('s_w', (self._n_s_w), DTYPE_FLOAT)
@@ -1386,11 +1415,6 @@ cdef class ROMSDataReader(DataReader):
 
         # Bathymetry
         self._h = self.mediator.get_grid_variable('h', (self._n_nodes_grid_rho), DTYPE_FLOAT)
-
-        # Land sea mask - nodes
-        #self._mask_grid_u = self.mediator.get_grid_variable('mask_grid_u', (self._n_nodes_grid_u), DTYPE_INT)
-        #self._mask_grid_v = self.mediator.get_grid_variable('mask_grid_v', (self._n_nodes_grid_v), DTYPE_INT)
-        #self._mask_grid_rho = self.mediator.get_grid_variable('mask_grid_rho', (self._n_nodes_grid_rho), DTYPE_INT)
 
         # Add zeta to shape and dimension indices to dictionaries
         if self._has_zeta:
