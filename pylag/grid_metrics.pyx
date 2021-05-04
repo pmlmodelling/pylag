@@ -1094,7 +1094,7 @@ def create_roms_grid_metrics_file(file_name,
         print('Generating land sea mask at element centres ', end='... ')
         if mask_var_names[grid_name] is not None:
             land_sea_mask_elements[grid_name] = np.empty(elements[grid_name], dtype=DTYPE_INT)
-            compute_land_sea_element_mask(nvs[grid_name], land_sea_mask_nodes[grid_name], land_sea_mask_elements[grid_name], 0)
+            compute_land_sea_element_mask(nvs[grid_name], land_sea_mask_nodes[grid_name], land_sea_mask_elements[grid_name], 2)
         else:
             land_sea_mask_elements[grid_name] = None
         print('done')
