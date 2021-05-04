@@ -1092,7 +1092,7 @@ def create_roms_grid_metrics_file(file_name,
 
         # Generate the land-sea mask at elements
         print('Generating land sea mask at element centres ', end='... ')
-        if mask_var_names[grid_name] is not None:
+        if grid_name == 'grid_psi':
             land_sea_mask_elements[grid_name] = np.empty(elements[grid_name], dtype=DTYPE_INT)
             compute_land_sea_element_mask(nvs[grid_name], land_sea_mask_nodes[grid_name], land_sea_mask_elements[grid_name], 2)
         else:
@@ -1160,7 +1160,7 @@ def create_roms_grid_metrics_file(file_name,
                                         attrs={'long_name': 'elements surrounding each element'})
 
         # Add land sea mask - nodes
-        if mask_var_names[grid_name] is not None:
+        if grid_name == 'grid_psi':
             gm_file_creator.create_variable('mask_nodes_{}'.format(grid_name), land_sea_mask_nodes[grid_name],
                                             ('node_{}'.format(grid_name),), DTYPE_INT, attrs=mask_attrs[grid_name])
 
