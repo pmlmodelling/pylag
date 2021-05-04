@@ -1652,8 +1652,8 @@ cpdef compute_psi_point_mask(mask_grid_rho):
     cdef DTYPE_INT_t i, j
 
     # Create psi grid and fill with sea point flags
-    nx = mask_grid_rho.shape[0] + 1
-    ny = mask_grid_rho.shape[1] + 1
+    nx = mask_grid_rho.shape[0] - 1
+    ny = mask_grid_rho.shape[1] - 1
     mask_grid_psi = np.ones((nx, ny), dtype=DTYPE_INT)
 
     # Memory views
@@ -1662,7 +1662,7 @@ cpdef compute_psi_point_mask(mask_grid_rho):
 
     for i in range(nx-1):
         for j in range(ny-1):
-            if mask_grid_rho_c[i, j] == 0:
+            if mask_grid_rho_c[i+1, j+1] == 0:
                 mask_grid_psi_c[i, j] = 0
                 mask_grid_psi_c[i+1, j] = 0
                 mask_grid_psi_c[i, j+1] = 0
