@@ -1025,27 +1025,22 @@ def create_roms_grid_metrics_file(file_name,
         if grid_name == 'grid_psi':
             mask_grid_rho, _ = _get_variable(input_dataset, mask_name_grid_rho)
 
-            mask_var = compute_psi_point_mask(mask_grid_rho)
+            mask_var_grid_rho = sort_axes(mask_grid_rho,
+                                          lat_name=eta_grid_names['grid_rho'],
+                                          lon_name=xi_grid_names['grid_rho']).squeeze()
+
+            mask_var_grid_rho = np.asarray(mask_var_grid_rho, dtype=DTYPE_INT)
+
+            land_sea_mask_nodes[grid_name] = compute_psi_point_mask(mask_var_grid_rho)
 
             # Check shape
-            if mask_var.shape != lon2d.shape:
+            if land_sea_mask_nodes[grid_name].shape != lon2d.shape:
                 raise RuntimeError('psi grid shape incompatible with rho grid shape. Please check '\
-                                   'the psi grid dimensions are one greater than the rho grid '\
+                                   'the psi grid dimensions are one less than the rho grid '\
                                    'dimensions in x and y.')
-
-            # Generate land-sea mask at nodes
-            land_sea_mask_nodes[grid_name] = sort_axes(mask_var, lat_name=eta_grid_names[grid_name],
-                                            lon_name=xi_grid_names[grid_name]).squeeze()
-            land_sea_mask_nodes[grid_name] = np.asarray(land_sea_mask_nodes[grid_name], dtype=DTYPE_INT)
-            if len(land_sea_mask_nodes[grid_name].shape) < 2 or len(land_sea_mask_nodes[grid_name].shape) > 3:
-                raise ValueError('Unsupported land sea mask with shape {}'.format(land_sea_mask_nodes[grid_name].shape))
 
             # Flip meaning yielding: 1 - masked land point, and 0 sea point.
             land_sea_mask_nodes[grid_name] = 1 - land_sea_mask_nodes[grid_name]
-
-            # Use surface mask only if shape is 3D
-            if len(land_sea_mask_nodes[grid_name].shape) == 3:
-                land_sea_mask_nodes[grid_name] = land_sea_mask_nodes[grid_name][0, :, :]
 
             # Fix up long name to reflect flipping of mask
             mask_attrs[grid_name] = {'standard_name': '{} mask'.format(grid_name),
