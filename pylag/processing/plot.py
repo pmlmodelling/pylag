@@ -907,7 +907,7 @@ class ArakawaCPlotter:
         self.tri = {}
 
         # Read in the required grid variables per grid
-        for grid_name in ['grid_u', 'grid_v', 'grid_rho']:
+        for grid_name in ['grid_u', 'grid_v', 'grid_rho', 'grid_psi']:
 
             # Check to see whether the file contains dimension variables for the given grid
             has_grid_info = False
@@ -926,7 +926,12 @@ class ArakawaCPlotter:
 
             # Try to read the element mask
             try:
-                self.maskc[grid_name] = ds.variables['mask_c_{}'.format(grid_name)][:]
+                maskc = ds.variables['mask_{}'.format(grid_name)][:]
+                ocean_points = np.asarray(maskc == 0).nonzero()[0]
+
+                # Initialise the mask with ones then add zeros for sea points
+                self.maskc[grid_name] = np.ones_like(maskc)
+                self.maskc[grid_name][ocean_points] = 0
             except KeyError:
                 self.maskc[grid_name] = None
 
