@@ -1077,7 +1077,7 @@ def create_roms_grid_metrics_file(file_name,
         nbes[grid_name][np.asarray(nbes[grid_name] == -1).nonzero()] = -2
 
     # Create psi mask
-    print('Calculating land sea mask:')
+    print('\nCalculating land sea mask ...')
     mask_grid_rho, _ = _get_variable(input_dataset, mask_name_grid_rho)
 
     mask_grid_rho = sort_axes(mask_grid_rho,
