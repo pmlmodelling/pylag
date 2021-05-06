@@ -385,7 +385,7 @@ cdef class ROMSDataReader(DataReader):
         
         This function first tries to find the new host horizontal elements using
         a local search algorithm based on the new point's barycentric
-        coordinates within the three grids. This is relatively fast. However,
+        coordinates within the four grids. This is relatively fast. However,
         it can incorrectly flag that a particle has left the domain when in-fact
         it hasn't. For this reason, when the local host element search indicates
         that a particle has left the domain, a check is performed based on the particle's
@@ -398,12 +398,12 @@ cdef class ROMSDataReader(DataReader):
         element will have been set to the last host elements the particle passed
         through before exiting the domain.
 
-        As the input data are defined on three separate horizontal grids, some care
-        is needed when trying to handle boundary conditions. Land boundary crossings
-        are only flagged on the rho grid. Meanwhile, open boundary crossings are
-        tested for on all grids. If a particle exits any one of the three grids across
-        an open boundary, it is flagged as having left the domain.
-        
+        Land and open boundary crossings are tested for and flagged on the psi grid,
+        which defines the corners of grid cells. Once the particle has been located on
+        the psi grid, a search is performed on the remaining grid. If the search is
+        successful on the psi grid but fails on one of the other grids a runtime
+        error is raised.
+
         Conventions
         -----------
         flag = IN_DOMAIN:
@@ -436,9 +436,56 @@ cdef class ROMSDataReader(DataReader):
         Returns
         -------
         flag : int
-            Integer flag that indicates whether or not the seach was successful.
+            Integer flag that indicates whether or not the search was successful.
         """
-        cdef DTYPE_INT_t flag, host_grid_u, host_grid_v, host_grid_rho
+        cdef DTYPE_INT_t flag, host_grid_u, host_grid_v, host_grid_rho, host_grid_psi
+
+        # Grid psi
+        # --------
+        host_grid_psi = particle_new.get_host_horizontal_elem(self._name_grid_psi)
+        particle_new.set_host_horizontal_elem(self._name_grid_psi,
+                                              particle_old.get_host_horizontal_elem(self._name_grid_psi))
+        flag = self._unstructured_grid_psi.find_host_using_local_search(particle_new)
+
+        if flag != IN_DOMAIN:
+            particle_new.set_host_horizontal_elem(self._name_grid_psi, host_grid_psi)
+            flag = self._unstructured_grid_psi.find_host_using_particle_tracing(particle_old,
+                                                                                particle_new)
+
+        if flag != IN_DOMAIN:
+            return flag
+
+        # Grid U
+        # ------
+        host_grid_u = particle_new.get_host_horizontal_elem(self._name_grid_u)
+        particle_new.set_host_horizontal_elem(self._name_grid_u,
+                                              particle_old.get_host_horizontal_elem(self._name_grid_u))
+        flag = self._unstructured_grid_u.find_host_using_local_search(particle_new)
+
+        if flag != IN_DOMAIN:
+            particle_new.set_host_horizontal_elem(self._name_grid_u, host_grid_u)
+            flag = self._unstructured_grid_u.find_host_using_particle_tracing(particle_old,
+                                                                              particle_new)
+        # Check for open boundary crossing
+        if flag != IN_DOMAIN:
+            raise RuntimeError('Unable to locate particle on ROMS U grid')
+
+        # Grid V
+        # ------
+        host_grid_v = particle_new.get_host_horizontal_elem(self._name_grid_v)
+        particle_new.set_host_horizontal_elem(self._name_grid_v,
+                                              particle_old.get_host_horizontal_elem(self._name_grid_v))
+        flag = self._unstructured_grid_v.find_host_using_local_search(particle_new)
+
+        # Double check to see if the particle has left the V-grid
+        if flag != IN_DOMAIN:
+            particle_new.set_host_horizontal_elem(self._name_grid_v, host_grid_v)
+            flag = self._unstructured_grid_v.find_host_using_particle_tracing(particle_old,
+                                                                              particle_new)
+
+        # Check for open boundary crossing
+        if flag != IN_DOMAIN:
+            raise RuntimeError('Unable to locate particle on ROMS V grid')
 
         # Grid rho
         # --------
@@ -453,42 +500,7 @@ cdef class ROMSDataReader(DataReader):
                                                                                 particle_new)
 
         if flag != IN_DOMAIN:
-            return flag
-
-        # Grid U
-        # ------
-        host_grid_u = particle_new.get_host_horizontal_elem(self._name_grid_u)
-        particle_new.set_host_horizontal_elem(self._name_grid_u,
-                                              particle_old.get_host_horizontal_elem(self._name_grid_u))
-        flag = self._unstructured_grid_u.find_host_using_local_search(particle_new)
-
-        # Double check to see if the particle has left the U-grid
-        if flag != IN_DOMAIN:
-            particle_new.set_host_horizontal_elem(self._name_grid_u, host_grid_u)
-            flag = self._unstructured_grid_u.find_host_using_particle_tracing(particle_old,
-                                                                              particle_new)
-        # Check for open boundary crossing
-        if flag == IN_DOMAIN:
-            pass
-        elif flag == OPEN_BDY_CROSSED:
-            return flag
-        elif flag == LAND_BDY_CROSSED:
-            raise RuntimeError('Land boundary crossing detected on U grid suggesting invalid land mask. ')
-
-        # Grid V
-        # ------
-        host_grid_v = particle_new.get_host_horizontal_elem(self._name_grid_v)
-        particle_new.set_host_horizontal_elem(self._name_grid_v,
-                                              particle_old.get_host_horizontal_elem(self._name_grid_v))
-        flag = self._unstructured_grid_v.find_host_using_local_search(particle_new)
-
-        # Double check to see if the particle has left the V-grid
-        if flag != IN_DOMAIN:
-            particle_new.set_host_horizontal_elem(self._name_grid_v, host_grid_v)
-            flag = self._unstructured_grid_v.find_host_using_particle_tracing(particle_old,
-                                                                              particle_new)
-        if flag == LAND_BDY_CROSSED:
-            raise RuntimeError('Land boundary crossing detected on V grid suggesting invalid land mask. ')
+            raise RuntimeError('Unable to locate particle on ROMS rho grid')
 
         return flag
 
@@ -507,15 +519,21 @@ cdef class ROMSDataReader(DataReader):
         """
         cdef DTYPE_INT_t flag
 
-        flag = self._unstructured_grid_u.find_host_using_local_search(particle)
+        flag = self._unstructured_grid_psi.find_host_using_local_search(particle)
         if flag != IN_DOMAIN:
             return flag
+
+        flag = self._unstructured_grid_u.find_host_using_local_search(particle)
+        if flag != IN_DOMAIN:
+            raise RuntimeError('Failed to find particle on ROMS U grid.')
 
         flag = self._unstructured_grid_v.find_host_using_local_search(particle)
         if flag != IN_DOMAIN:
-            return flag
+            raise RuntimeError('Failed to find particle on ROMS V grid.')
 
         flag = self._unstructured_grid_rho.find_host_using_local_search(particle)
+        if flag != IN_DOMAIN:
+            raise RuntimeError('Failed to find particle on ROMS rho grid.')
 
         return flag
 
@@ -534,15 +552,21 @@ cdef class ROMSDataReader(DataReader):
         """
         cdef DTYPE_INT_t flag
 
-        flag = self._unstructured_grid_u.find_host_using_global_search(particle)
+        flag = self._unstructured_grid_psi.find_host_using_global_search(particle)
         if flag != IN_DOMAIN:
             return flag
+
+        flag = self._unstructured_grid_u.find_host_using_global_search(particle)
+        if flag != IN_DOMAIN:
+            raise RuntimeError('Failed to find particle on ROMS U grid.')
 
         flag = self._unstructured_grid_v.find_host_using_global_search(particle)
         if flag != IN_DOMAIN:
-            return flag
+            raise RuntimeError('Failed to find particle on ROMS V grid.')
 
         flag = self._unstructured_grid_rho.find_host_using_global_search(particle)
+        if flag != IN_DOMAIN:
+            raise RuntimeError('Failed to find particle on ROMS rho grid.')
 
         return flag
 
@@ -576,24 +600,29 @@ cdef class ROMSDataReader(DataReader):
         Returns
         -------
         """
-        return self._unstructured_grid_rho.get_boundary_intersection(particle_old, particle_new, start_point,
+        return self._unstructured_grid_psi.get_boundary_intersection(particle_old, particle_new, start_point,
                                                                      end_point, intersection)
 
     cdef set_default_location(self, Particle *particle):
         """ Set default location
 
-        Move the particle to the centroid of the rho grid element it last passed through
+        Move the particle to the centroid of the psi grid element it last passed through
         """
-        self._unstructured_grid_rho.set_default_location(particle)
+        cdef DTYPE_INT_t flag
 
-        # Use global searching to find the u and v grid hosts and local coordinates
-        flag = self._unstructured_grid_u.find_host_using_global_search(particle)
+        self._unstructured_grid_psi.set_default_location(particle)
+
+        # Use global searching to find the rho, u and v grid hosts and local coordinates
+        flag = self._unstructured_grid_rho.find_host_using_local_search(particle)
 
         if flag == IN_DOMAIN:
-            flag = self._unstructured_grid_v.find_host_using_global_search(particle)
+            flag = self._unstructured_grid_u.find_host_using_local_search(particle)
+
+        if flag == IN_DOMAIN:
+            flag = self._unstructured_grid_v.find_host_using_local_search(particle)
 
         if flag != IN_DOMAIN:
-            raise RuntimeError('Failed to set u and or v grid hosts/local coordinates')
+            raise RuntimeError('Failed to set rho, u and or v grid hosts/local coordinates')
 
         return
 
@@ -608,6 +637,7 @@ cdef class ROMSDataReader(DataReader):
         self._unstructured_grid_u.set_local_coordinates(particle)
         self._unstructured_grid_v.set_local_coordinates(particle)
         self._unstructured_grid_rho.set_local_coordinates(particle)
+        self._unstructured_grid_psi.set_local_coordinates(particle)
 
         return
 
@@ -1350,17 +1380,17 @@ cdef class ROMSDataReader(DataReader):
         else:
             raise ValueError("Unsupported model coordinate system `{}'".format(coordinate_system))
 
-        # Land sea mask - elements. psi grid only for now. U/V/rho grids initialised to be all sea points.
+        # Land sea mask - elements. Psi grid only for now. U/V/rho grids initialised to be all sea points.
         self._mask_c_grid_u = np.zeros(self._n_elems_grid_u, dtype=DTYPE_INT)
         self._mask_c_grid_v = np.zeros(self._n_elems_grid_v, dtype=DTYPE_INT)
         self._mask_c_grid_rho = np.zeros(self._n_elems_grid_rho, dtype=DTYPE_INT)
         self._mask_c_grid_psi = self.mediator.get_grid_variable('mask_grid_psi', (self._n_elems_grid_psi), DTYPE_INT)
 
-        # Land sea mask - nodes. Rho grid only for now. U/V grids initialised to all sea points.
+        # Land sea mask - nodes. All sea points - masking is done through the psi grid element mask.
         self._mask_n_grid_u = np.zeros(self._n_nodes_grid_u, dtype=DTYPE_INT)
         self._mask_n_grid_v = np.zeros(self._n_nodes_grid_v, dtype=DTYPE_INT)
         self._mask_n_grid_rho = np.zeros(self._n_nodes_grid_rho, dtype=DTYPE_INT)
-        self._mask_n_grid_psi = self.mediator.get_grid_variable('mask_nodes_grid_psi', (self._n_nodes_grid_psi), DTYPE_INT)
+        self._mask_n_grid_psi = np.zeros(self._n_nodes_grid_psi, dtype=DTYPE_INT)
 
         # Initialise the unstructured grids objects
         if self._grid_type == 'rectilinear':
