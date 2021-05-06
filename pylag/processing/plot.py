@@ -278,7 +278,12 @@ class FVCOMPlotter(PyLagPlotter):
 
         # Try to read the element mask
         try:
-            self.maskc = ds.variables['mask'][:]
+            maskc = ds.variables['mask'][:]
+            ocean_points = np.asarray(maskc == 0).nonzero()[0]
+
+            # Initialise the mask with ones then add zeros for sea points
+            self.maskc = np.ones_like(maskc)
+            self.maskc[ocean_points] = 0
         except KeyError:
             self.maskc = None
 
@@ -545,7 +550,12 @@ class ArakawaAPlotter(PyLagPlotter):
 
         # Try to read the element mask
         try:
-            self.maskc = ds.variables['mask'][:]
+            maskc = ds.variables['mask'][:]
+            ocean_points = np.asarray(maskc == 0).nonzero()[0]
+
+            # Initialise the mask with ones then add zeros for sea points
+            self.maskc = np.ones_like(maskc)
+            self.maskc[ocean_points] = 0
         except KeyError:
             self.maskc = None
 
