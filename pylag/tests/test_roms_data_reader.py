@@ -34,21 +34,25 @@ class MockROMSMediator(Mediator):
         self._time_dep_vars_last = {}
         self._time_dep_vars_next = {}
 
-        # Basic grid (2 x 2 x 3) in rho
-        latitude_rho = np.array([12.0, 14.0], dtype=DTYPE_FLOAT)
-        longitude_rho = np.array([2., 4.], dtype=DTYPE_FLOAT)
+        # Basic grid (2 x 2 x 3) in psi
+        latitude_psi = np.array([11., 13.0], dtype=DTYPE_FLOAT)
+        longitude_psi = np.array([1., 3.], dtype=DTYPE_FLOAT)
+
+        # Basic grid (3 x 3 x 3) in rho
+        latitude_rho = np.array([10.0, 12.0, 14.0], dtype=DTYPE_FLOAT)
+        longitude_rho = np.array([0., 2., 4.], dtype=DTYPE_FLOAT)
 
         # Basic grid (2 x 2 x 3) in u
-        latitude_u = np.array([12.0, 14.0], dtype=DTYPE_FLOAT)
-        longitude_u = np.array([1., 3., 5.], dtype=DTYPE_FLOAT)
+        latitude_u = np.array([10.0, 12.0, 14.0], dtype=DTYPE_FLOAT)
+        longitude_u = np.array([1., 3.], dtype=DTYPE_FLOAT)
 
-        latitude_v = np.array([11.0, 13.0, 15.], dtype=DTYPE_FLOAT)
-        longitude_v = np.array([2., 4.], dtype=DTYPE_FLOAT)
+        latitude_v = np.array([11.0, 13.0], dtype=DTYPE_FLOAT)
+        longitude_v = np.array([0., 2., 4.], dtype=DTYPE_FLOAT)
 
         # Save horizontal grid vars for each grid
-        for grid_name, lon, lat in zip(['grid_rho', 'grid_u', 'grid_v'],
-                                       [longitude_rho, longitude_u, longitude_v],
-                                       [latitude_rho, latitude_u, latitude_v]):
+        for grid_name, lon, lat in zip(['grid_psi', 'grid_rho', 'grid_u', 'grid_v'],
+                                       [longitude_psi, longitude_rho, longitude_u, longitude_v],
+                                       [latitude_psi, latitude_rho, latitude_u, latitude_v]):
 
             # Dimension sizes
             n_longitude = len(lon)
@@ -109,7 +113,7 @@ class MockROMSMediator(Mediator):
             self._grid_vars['mask_nodes_{}'.format(grid_name)] = np.zeros_like(lon_elements)
 
         # Bathymetry at rho points [lat, lon]
-        h = np.array([[20., 20.], [10., 10.]])
+        h = np.array([[20., 20., 20.], [20., 20., 20.], [10., 10., 10.]])
         h = np.moveaxis(h, 1, 0)  # Move to [lon, lat]
         h = h.reshape(np.prod(h.shape), order='C')
         self._grid_vars['h'] = h
@@ -144,39 +148,39 @@ class MockROMSMediator(Mediator):
 
         # Zeta at rho points [lat, lon]
         zos_dimensions = ('time', 'latitude_grid_rho', 'longitude_grid_rho')
-        zos = np.array([[1., 1.], [1., 1.]], dtype=DTYPE_FLOAT)
+        zos = np.array([[1., 1., 1.], [1., 1., 1.], [1., 1., 1.]], dtype=DTYPE_FLOAT)
 
         # u at u points
         u_dimensions = ('time', 's_rho', 'latitude_grid_u', 'longitude_grid_u')
-        u = np.array([[[0, 1, 0], [0, 1, 0]],
-                      [[0, 1, 0], [0, 1, 0]]], dtype=DTYPE_FLOAT)
+        u = np.array([[[0., 1.], [0., 1.], [0., 1.]],
+                      [[0., 1.], [0., 1.], [0., 1.]]], dtype=DTYPE_FLOAT)
 
         # v at v points
         v_dimensions = ('time', 's_rho', 'latitude_grid_v', 'longitude_grid_v')
-        v = np.array([[[0, 0], [2, 2], [0, 0]],
-                      [[0, 0], [2, 2], [0, 0]]], dtype=DTYPE_FLOAT)
+        v = np.array([[[0., 0., 0.], [2., 2., 2.], [0., 0., 0.]],
+                      [[0., 0., 0.], [2., 2., 2.], [0., 0., 0.]]], dtype=DTYPE_FLOAT)
 
         # w at w points
         w_dimensions = ('time', 's_w', 'latitude_grid_rho', 'longitude_grid_rho')
-        w = np.array([[[3, 3], [3, 3]],
-                      [[3, 3], [3, 3]],
-                      [[3, 3], [3, 3]]], dtype=DTYPE_FLOAT)
+        w = np.array([[[3., 3., 3.], [3., 3., 3.]],
+                      [[3., 3., 3.], [3., 3., 3.]],
+                      [[3., 3., 3.], [3., 3., 3.]]], dtype=DTYPE_FLOAT)
 
         # ts at rho points
         ts_dimensions = ('time', 's_rho', 'latitude_grid_rho', 'longitude_grid_rho')
-        ts = np.array([[[4, 4], [4, 4]],
-                      [[4, 4], [4, 4]]], dtype=DTYPE_FLOAT)
+        ts = np.array([[[3., 3., 3.], [3., 3., 3.]],
+                      [[3., 3., 3.], [3., 3., 3.]]], dtype=DTYPE_FLOAT)
 
         # Kz at w points
         Kz_dimensions = ('time', 's_w', 'latitude_grid_rho', 'longitude_grid_rho')
-        Kz = np.array([[[5, 5], [5, 5]],
-                      [[5, 5], [5, 5]],
-                      [[5, 5], [5, 5]]], dtype=DTYPE_FLOAT)
+        Kz = np.array([[[3., 3., 3.], [3., 3., 3.]],
+                      [[3., 3., 3.], [3., 3., 3.]],
+                      [[3., 3., 3.], [3., 3., 3.]]], dtype=DTYPE_FLOAT)
 
         # Ah at w points
         ah_dimensions = ('time', 's_rho', 'latitude_grid_rho', 'longitude_grid_rho')
-        ah = np.array([[[6, 6], [6, 6]],
-                      [[6, 6], [6, 6]]], dtype=DTYPE_FLOAT)
+        ah = np.array([[[3., 3., 3.], [3., 3., 3.]],
+                       [[3., 3., 3.], [3., 3., 3.]]], dtype=DTYPE_FLOAT)
 
         # Set dimensions
         self._time_dep_var_dimensions = {'s_w': s_w_dimensions, 's_rho': s_rho_dimensions,
@@ -272,6 +276,8 @@ class ROMSReader_test(TestCase):
         config.set('OCEAN_CIRCULATION_MODEL', 'time_dim_name', 'time')
         config.set('OCEAN_CIRCULATION_MODEL', 'depth_dim_name_grid_rho', 's_rho')
         config.set('OCEAN_CIRCULATION_MODEL', 'depth_dim_name_grid_w', 's_w')
+        config.set('OCEAN_CIRCULATION_MODEL', 'latitude_dim_name_grid_psi', 'latitude_grid_psi')
+        config.set('OCEAN_CIRCULATION_MODEL', 'longitude_dim_name_grid_psi', 'longitude_grid_psi')
         config.set('OCEAN_CIRCULATION_MODEL', 'latitude_dim_name_grid_rho', 'latitude_grid_rho')
         config.set('OCEAN_CIRCULATION_MODEL', 'longitude_dim_name_grid_rho', 'longitude_grid_rho')
         config.set('OCEAN_CIRCULATION_MODEL', 'latitude_dim_name_grid_u', 'latitude_grid_u')
@@ -312,23 +318,25 @@ class ROMSReader_test(TestCase):
         del(self.data_reader)
 
     def test_find_host_using_global_search(self):
-        particle = ParticleSmartPtr(x1=self.deg_to_radians * 2.25-self.xmin, x2=self.deg_to_radians * 13.75-self.ymin)
+        particle = ParticleSmartPtr(x1=self.deg_to_radians * 2.25-self.xmin, x2=self.deg_to_radians * 12.6-self.ymin)
         flag = self.data_reader.find_host_using_global_search_wrapper(particle)
         test.assert_equal(flag, 0)
-        test.assert_equal(particle.get_host_horizontal_elem('grid_rho'), 0)
-        test.assert_equal(particle.get_host_horizontal_elem('grid_u'), 1)
+        test.assert_equal(particle.get_host_horizontal_elem('grid_psi'), 0)
+        test.assert_equal(particle.get_host_horizontal_elem('grid_rho'), 6)
+        test.assert_equal(particle.get_host_horizontal_elem('grid_u'), 3)
         test.assert_equal(particle.get_host_horizontal_elem('grid_v'), 3)
 
     def test_find_host_when_particle_is_in_the_domain(self):
-        particle_old = ParticleSmartPtr(x1=self.deg_to_radians * 2.25-self.xmin, x2=self.deg_to_radians * 13.75-self.ymin,
-                                        host_elements={'grid_rho': 0, 'grid_u': 1, 'grid_v': 3})
-        particle_new = ParticleSmartPtr(x1=self.deg_to_radians * 3.75-self.xmin, x2=self.deg_to_radians * 12.25-self.ymin,
-                                        host_elements={'grid_rho': -999, 'grid_u': -999, 'grid_v': -999})
+        particle_old = ParticleSmartPtr(x1=self.deg_to_radians * 2.25-self.xmin, x2=self.deg_to_radians * 12.6-self.ymin,
+                                        host_elements={'grid_psi': 0, 'grid_rho': 6, 'grid_u': 3, 'grid_v': 3})
+        particle_new = ParticleSmartPtr(x1=self.deg_to_radians * 1.75-self.xmin, x2=self.deg_to_radians * 12.6-self.ymin,
+                                        host_elements={'grid_psi': -999, 'grid_rho': -999, 'grid_u': -999, 'grid_v': -999})
         flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
         test.assert_equal(flag, 0)
-        test.assert_equal(particle_new.get_host_horizontal_elem('grid_rho'), 1)
+        test.assert_equal(particle_new.get_host_horizontal_elem('grid_psi'), 0)
+        test.assert_equal(particle_new.get_host_horizontal_elem('grid_rho'), 2)
         test.assert_equal(particle_new.get_host_horizontal_elem('grid_u'), 3)
-        test.assert_equal(particle_new.get_host_horizontal_elem('grid_v'), 1)
+        test.assert_equal(particle_new.get_host_horizontal_elem('grid_v'), 0)
 
     # def test_get_zmin(self):
     #     particle = ParticleSmartPtr(x1=2.666666667-self.xmin, x2=13.333333333-self.ymin,
