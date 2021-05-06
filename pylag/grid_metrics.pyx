@@ -7,11 +7,17 @@ include "constants.pxi"
 
 cimport cython
 
+cimport numpy as np
+from libcpp.vector cimport vector
+
 # Data types used for constructing C data structures
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
-cimport numpy as np
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
 
 import numpy as np
 from scipy.spatial import Delaunay, cKDTree
@@ -22,8 +28,13 @@ import time
 
 from pylag.parameters cimport earth_radius
 from pylag.math cimport area_of_a_triangle, area_of_a_spherical_triangle
+from pylag.math cimport float_min
+from pylag.particle_cpp_wrapper cimport ParticleSmartPtr
+from pylag.particle cimport Particle
+from pylag.unstructured cimport Grid
 
 from pylag import version
+from pylag.unstructured import get_unstructured_grid
 from pylag.math import geographic_to_cartesian_coords_python
 from pylag.math import cartesian_to_geographic_coords_python
 
@@ -1021,38 +1032,6 @@ def create_roms_grid_metrics_file(file_name,
         else:
             raise RuntimeError('Unrecognised lon var shape')
 
-        # Save mask
-        if grid_name == 'grid_psi':
-            mask_grid_rho, _ = _get_variable(input_dataset, mask_name_grid_rho)
-
-            mask_var_grid_rho = sort_axes(mask_grid_rho,
-                                          lat_name=eta_grid_names['grid_rho'],
-                                          lon_name=xi_grid_names['grid_rho']).squeeze()
-
-            mask_var_grid_rho = np.asarray(mask_var_grid_rho, dtype=DTYPE_INT)
-
-            land_sea_mask_nodes[grid_name] = compute_psi_point_mask(mask_var_grid_rho)
-
-            # Check shape
-            if land_sea_mask_nodes[grid_name].shape != lon2d.shape:
-                raise RuntimeError('psi grid shape incompatible with rho grid shape. Please check '\
-                                   'the psi grid dimensions are one less than the rho grid '\
-                                   'dimensions in x and y.')
-
-            # Flip meaning yielding: 1 - masked land point, and 0 sea point.
-            land_sea_mask_nodes[grid_name] = 1 - land_sea_mask_nodes[grid_name]
-
-            # Fix up long name to reflect flipping of mask
-            mask_attrs[grid_name] = {'standard_name': '{} mask'.format(grid_name),
-                                     'units': '1',
-                                     'long_name': "Land-sea mask: sea = 0 ; land = 1"}
-
-            land_sea_mask_nodes[grid_name] = land_sea_mask_nodes[grid_name].reshape(np.prod(land_sea_mask_nodes[grid_name].shape), order='C')
-
-        else:
-            mask_attrs[grid_name] = None
-            land_sea_mask_nodes[grid_name] = None
-
         # Save lon and lat points at nodes
         lon_nodes[grid_name] = lon2d.flatten(order='C')
         lat_nodes[grid_name] = lat2d.flatten(order='C')
@@ -1090,21 +1069,42 @@ def create_roms_grid_metrics_file(file_name,
                                                                                                                lat_nodes[grid_name])
         print('done')
 
-        # Generate the land-sea mask at elements
-        print('Generating land sea mask at element centres ', end='... ')
-        if grid_name == 'grid_psi':
-            land_sea_mask_elements[grid_name] = np.empty(elements[grid_name], dtype=DTYPE_INT)
-            compute_land_sea_element_mask(nvs[grid_name], land_sea_mask_nodes[grid_name], land_sea_mask_elements[grid_name], 2)
-        else:
-            land_sea_mask_elements[grid_name] = None
-        print('done')
-
         # Transpose to give ordering expected by PyLag
         nvs[grid_name] = nvs[grid_name].T
         nbes[grid_name] = nbes[grid_name].T
 
         # Flag open boundaries with -2 flag
         nbes[grid_name][np.asarray(nbes[grid_name] == -1).nonzero()] = -2
+
+    # Create psi mask
+    print('Calculating land sea mask:')
+    mask_grid_rho, _ = _get_variable(input_dataset, mask_name_grid_rho)
+
+    mask_grid_rho = sort_axes(mask_grid_rho,
+                              lat_name=eta_grid_names['grid_rho'],
+                              lon_name=xi_grid_names['grid_rho']).squeeze()
+
+    mask_grid_rho = np.asarray(mask_grid_rho.flatten(order='C'), dtype=DTYPE_INT)
+
+    land_sea_mask_elements_grid_psi = compute_psi_grid_element_mask(nodes['grid_psi'],
+                                                                    elements['grid_psi'],
+                                                                    nvs['grid_psi'],
+                                                                    nbes['grid_psi'],
+                                                                    lon_nodes['grid_psi'],
+                                                                    lat_nodes['grid_psi'],
+                                                                    lon_elements['grid_psi'],
+                                                                    lat_elements['grid_psi'],
+                                                                    lon_nodes['grid_rho'],
+                                                                    lat_nodes['grid_rho'],
+                                                                    mask_grid_rho)
+
+    # Flip meaning yielding: 1 - masked land point, and 0 sea point.
+    land_sea_mask_elements_grid_psi = 1 - land_sea_mask_elements_grid_psi
+
+    # Mask attrs
+    mask_attrs = {'standard_name': 'psi_grid mask',
+                  'units': '1',
+                  'long_name': "Land-sea mask: sea = 0 ; land = 1"}
 
     # Vertical grid vars
     print('\nReading vertical grid vars')
@@ -1159,14 +1159,9 @@ def create_roms_grid_metrics_file(file_name,
                                         ('three', 'element_{}'.format(grid_name),), DTYPE_INT,
                                         attrs={'long_name': 'elements surrounding each element'})
 
-        # Add land sea mask - nodes
-        if grid_name == 'grid_psi':
-            gm_file_creator.create_variable('mask_nodes_{}'.format(grid_name), land_sea_mask_nodes[grid_name],
-                                            ('node_{}'.format(grid_name),), DTYPE_INT, attrs=mask_attrs[grid_name])
-
-            # Add land sea mask - elements
-            gm_file_creator.create_variable('mask_{}'.format(grid_name), land_sea_mask_elements[grid_name],
-                                            ('element_{}'.format(grid_name),), DTYPE_INT, attrs=mask_attrs[grid_name])
+    # Add land sea mask - elements
+    gm_file_creator.create_variable('mask_grid_psi', land_sea_mask_elements_grid_psi,
+                                    ('element_grid_psi',), DTYPE_INT, attrs=mask_attrs)
 
     # Bathymetry
     gm_file_creator.create_variable('h', bathy, ('node_grid_rho',), DTYPE_FLOAT, attrs=bathy_attrs)
@@ -1646,29 +1641,168 @@ cpdef compute_land_sea_element_mask(const DTYPE_INT_t [:,:] nv, const DTYPE_INT_
             element_mask[i] = LAND
 
 
-cpdef compute_psi_point_mask(mask_grid_rho):
-    cdef DTYPE_INT_t[:, :] mask_grid_rho_c
-    cdef DTYPE_INT_t[:, :] mask_grid_psi_c
-    cdef DTYPE_INT_t i, j
+cpdef compute_psi_grid_element_mask(n_nodes, n_elements, nv, nbe, lon_grid_psi, lat_grid_psi,
+                                    lonc_grid_psi, latc_grid_psi, lon_grid_rho, lat_grid_rho,
+                                    mask_grid_rho):
+    """ Generate psi grid element mask
 
-    # Create psi grid and fill with sea point flags
-    nx = mask_grid_rho.shape[0] - 1
-    ny = mask_grid_rho.shape[1] - 1
-    mask_grid_psi = np.ones((nx, ny), dtype=DTYPE_INT)
+    For Arakawa C grids, compute the element mask for the psi grid in which nodes are
+    located at cell corners. The psi grid element mask is computed from the rho grid
+    mask which gives the location of masked points at cell centres.
 
-    # Memory views
+    Masked psi grid elements are located by searching for the elements that contain masked
+    rho grid points. The search operation uses PyLag functionality. First, an
+    UnstructuredGrid object is constructed for the psi grid. Then, the latitude and longitude
+    values of masked rho points are passed to host searching algorithms.
+
+    By virtue of the C grid construction, masked rho grid points sit on the edge of psi grid
+    elements. For each masked rho point, the two elements that share the edge along which the
+    masked rho point sits should be masked. The host element search algorithm will only locate
+    one of these. The second element is identified using the barycentric coordinates of the
+    masked rho point in the element that was found - the smallest coordinate signifies the
+    neighbour element that must also be masked.
+
+    Parameters
+    ----------
+    n_nodes : int
+        The number of nodes on the psi grid.
+
+    n_elements : int
+        The number of elements on the psi grid.
+
+    nv : 2D NumPy array, int
+        Simplices array for the psi grid with shape [3, n_elements]
+
+    nbe : 2D NumPy array, int
+        Neighbour array for the psi grid with shape [3, n_elements]
+
+    lon_grid_psi : 1D NumPy array, float
+        1D array of longitudes at nodes on the psi grid.
+
+    lat_grid_psi : 1D NumPy array, float
+        1D array of latitudes at nodes on the psi grid.
+
+    lonc_grid_psi : 1D NumPy array, float
+        1D array of longitudes at element centres on the psi grid.
+
+    latc_grid_psi : 1D NumPy array, float
+        1D array of latitudes at element centres on the psi grid.
+
+    lon_grid_rho : 1D NumPy array, float
+        1D array of longitudes at nodes on the rho grid.
+
+    lat_grid_rho : 1D NumPy array, float
+        1D array of latitudes at nodes on the rho grid.
+
+    mask_grid_rho : 1D NumPy array, float
+        1D array of masked nodes on the rho grid (1 - sea; 0 - land).
+
+    Returns
+    -------
+    maskc_grid_psi : 1D NumPy array, int
+        1D array or masked elements on the psi grid (1 - sea; 0 - land).
+    """
+    cdef DTYPE_INT_t[:] mask_grid_rho_c
+    cdef DTYPE_FLOAT_t[:] lon_grid_rho_c
+    cdef DTYPE_FLOAT_t[:] lat_grid_rho_c
+    cdef DTYPE_INT_t[:] maskc_grid_psi_c
+    cdef Grid grid_psi
+    cdef ParticleSmartPtr test_particle
+    cdef Particle* test_particle_ptr
+    cdef vector[DTYPE_FLOAT_t] phi
+    cdef DTYPE_FLOAT_t phi_test
+    cdef DTYPE_FLOAT_t lon, lat
+    cdef DTYPE_INT_t host, host_nbe
+    cdef DTYPE_INT_t flag
+    cdef DTYPE_INT_t n_nodes_grid_rho
+    cdef DTYPE_INT_t i
+
+    if not (lon_grid_rho.shape[0] == lat_grid_rho.shape[0] == mask_grid_rho.shape[0]):
+        raise ValueError('rho grid lon, lat and mask array dimension sizes do not match')
+
+    # Convert to radians and ensure we are working with C contiguous data
+    lon_grid_psi_rad = np.ascontiguousarray(np.radians(lon_grid_psi))
+    lat_grid_psi_rad = np.ascontiguousarray(np.radians(lat_grid_psi))
+    lonc_grid_psi_rad = np.ascontiguousarray(np.radians(lonc_grid_psi))
+    latc_grid_psi_rad = np.ascontiguousarray(np.radians(latc_grid_psi))
+    lon_grid_rho_rad = np.ascontiguousarray(np.radians(lon_grid_rho))
+    lat_grid_rho_rad = np.ascontiguousarray(np.radians(lat_grid_rho))
+
+    # Make sure nv, nbe and mask arrays are contiguous
+    nv_cont = np.ascontiguousarray(nv)
+    nbe_cont = np.ascontiguousarray(nbe)
+
+    # For speed, create memory views for the rho grid mask, lons and lats
+    lon_grid_rho_c = lon_grid_rho_rad
+    lat_grid_rho_c = lat_grid_rho_rad
     mask_grid_rho_c = mask_grid_rho
-    mask_grid_psi_c = mask_grid_psi
 
-    for i in range(nx-1):
-        for j in range(ny-1):
-            if mask_grid_rho_c[i+1, j+1] == 0:
-                mask_grid_psi_c[i, j] = 0
-                mask_grid_psi_c[i+1, j] = 0
-                mask_grid_psi_c[i, j+1] = 0
-                mask_grid_psi_c[i+1, j+1] = 0
+    # Create dummy psi grid masks. These won't be used but are required in the initialisation
+    # list for the Grid object we will use for host element searching.
+    dummy_mask_elements_grid_psi = np.zeros(n_elements, dtype=DTYPE_INT)
+    dummy_mask_nodes_grid_psi = np.zeros(n_nodes, dtype=DTYPE_INT)
 
-    return mask_grid_psi
+    # Create an UnstructuredGeographicGrid object to aid with host element searching
+    config = configparser.ConfigParser()
+    config.add_section("OCEAN_CIRCULATION_MODEL")
+    config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'geographic')
+    grid_psi = get_unstructured_grid(config, b'grid_psi', n_nodes, n_elements, nv_cont, nbe_cont, lon_grid_psi_rad,
+                                     lat_grid_psi_rad, lonc_grid_psi_rad, latc_grid_psi_rad,
+                                     dummy_mask_elements_grid_psi, dummy_mask_nodes_grid_psi)
+
+    # Create psi grid mask and fill with ones, which indicate sea points. NB the mask is
+    # flipped when it is being prepared for PyLag.
+    maskc_grid_psi = np.ones(n_elements, dtype=DTYPE_INT)
+    maskc_grid_psi_c = maskc_grid_psi
+
+    # Create a test particle which we will use for host element searching on the psi grid
+    test_particle = ParticleSmartPtr(host_elements={'grid_psi': 0})
+    test_particle_ptr = test_particle.get_ptr()
+
+    # Loop over all rho points
+    n_nodes_grid_rho = mask_grid_rho.shape[0]
+    for i in range(n_nodes_grid_rho):
+        if mask_grid_rho_c[i] == 0:
+
+            lon = lon_grid_rho_c[i]
+            lat = lat_grid_rho_c[i]
+
+            # Assign the masked point's lat/lon coordinates to the particle
+            test_particle_ptr.set_x1(lon)
+            test_particle_ptr.set_x2(lat)
+
+            # Initiate a local search
+            flag = grid_psi.find_host_using_local_search(test_particle_ptr)
+
+            # If the search failed, try a global search
+            if flag != IN_DOMAIN:
+                flag = grid_psi.find_host_using_global_search(test_particle_ptr)
+
+            # Some masked points may be outside of the psi grid domain given the
+            # rho grid is larger than the psi grid. Only process points that have
+            # been located within the rho grid.
+            if flag == IN_DOMAIN:
+                host = test_particle_ptr.get_host_horizontal_elem(b'grid_psi')
+
+                # Mask the element
+                maskc_grid_psi_c[host] = 0
+
+                # Get the barycentric coordinates
+                phi = grid_psi.get_phi(lon, lat, host)
+
+                # From the smallest value of phi, identify the host neighbour that should also be masked
+                phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
+                if phi[0] == phi_test:
+                    host_nbe = nbe[0, host]
+                elif phi[1] == phi_test:
+                    host_nbe = nbe[1, host]
+                else:
+                    host_nbe = nbe[2, host]
+
+                # Mask the neighbour element
+                maskc_grid_psi_c[host_nbe] = 0
+
+    return maskc_grid_psi
 
 
 cpdef mask_elements_with_two_land_boundaries(const DTYPE_INT_t[:,:] nbe, DTYPE_INT_t[:] element_mask):
