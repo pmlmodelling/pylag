@@ -32,7 +32,7 @@ class UnstructuredCartesianGrid_test(TestCase):
         self.xc = np.ascontiguousarray(np.array([1.3333333333, 1.6666666667, 0.6666666667, 1.5000000000, 2.3333333333], dtype=DTYPE_FLOAT))
         self.yc = np.ascontiguousarray(np.array([1.6666666667, 1.3333333333, 1.3333333333, 2.3333333333, 1.3333333333], dtype=DTYPE_FLOAT))
         self.mask_nodes = np.ascontiguousarray(np.array([0, 0, 0, 0, 0], dtype=DTYPE_INT))
-        self.mask = np.ascontiguousarray(np.array([0, 0, 2, 2, 2], dtype=DTYPE_INT))
+        self.mask_c = np.ascontiguousarray(np.array([0, 0, 2, 2, 2], dtype=DTYPE_INT))
 
         # Create config
         config = configparser.ConfigParser()
@@ -42,7 +42,7 @@ class UnstructuredCartesianGrid_test(TestCase):
         # Create unstructured grid
         self.unstructured_grid = UnstructuredCartesianGrid(config, self.name, self.n_nodes, self.n_elems,
                                                            self.nv, self.nbe, self.x, self.y, self.xc,
-                                                           self.yc, self.mask, self.mask_nodes)
+                                                           self.yc, self.mask_c, self.mask_nodes)
         
     def tearDown(self):
         del self.unstructured_grid

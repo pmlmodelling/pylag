@@ -310,7 +310,7 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_
                   'units': '1',
                   'long_name': 'Land-sea mask: sea = 0, land = 1'}
 
-    gm_file_creator.create_variable('mask', land_sea_mask_elements, ('element',), DTYPE_INT, attrs=mask_attrs)
+    gm_file_creator.create_variable('mask_c', land_sea_mask_elements, ('element',), DTYPE_INT, attrs=mask_attrs)
 
     # Close FVCOM dataset
     # -------------------
@@ -767,10 +767,10 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
                                     attrs={'long_name': 'elements surrounding each element'})
 
     # Add land sea mask - elements
-    gm_file_creator.create_variable('mask', land_sea_mask_elements, ('element',), DTYPE_INT, attrs=element_mask_attrs)
+    gm_file_creator.create_variable('mask_c', land_sea_mask_elements, ('element',), DTYPE_INT, attrs=element_mask_attrs)
 
     # Add land sea mask
-    gm_file_creator.create_variable('mask_nodes', land_sea_mask_nodes, ('node',), DTYPE_INT, attrs=mask_attrs)
+    gm_file_creator.create_variable('mask', land_sea_mask_nodes, ('node',), DTYPE_INT, attrs=mask_attrs)
 
     # Compute element areas
     gm_file_creator.create_variable('area', areas, ('element',), DTYPE_FLOAT, attrs=area_attrs)
@@ -1160,7 +1160,7 @@ def create_roms_grid_metrics_file(file_name,
                                         attrs={'long_name': 'elements surrounding each element'})
 
     # Add land sea mask - elements
-    gm_file_creator.create_variable('mask_grid_psi', land_sea_mask_elements_grid_psi,
+    gm_file_creator.create_variable('mask_c_grid_psi', land_sea_mask_elements_grid_psi,
                                     ('element_grid_psi',), DTYPE_INT, attrs=mask_attrs)
 
     # Bathymetry

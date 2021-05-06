@@ -278,7 +278,7 @@ class FVCOMPlotter(PyLagPlotter):
 
         # Try to read the element mask
         try:
-            maskc = ds.variables['mask'][:]
+            maskc = ds.variables['mask_c'][:]
             ocean_points = np.asarray(maskc == 0).nonzero()[0]
 
             # Initialise the mask with ones then add zeros for sea points
@@ -475,8 +475,6 @@ class FVCOMPlotter(PyLagPlotter):
 
         return ax
 
-
-
     def draw_grid(self, ax, draw_masked_elements=False, **kwargs):
         """ Draw the underlying grid or mesh
 
@@ -550,7 +548,7 @@ class ArakawaAPlotter(PyLagPlotter):
 
         # Try to read the element mask
         try:
-            maskc = ds.variables['mask'][:]
+            maskc = ds.variables['mask_c'][:]
             ocean_points = np.asarray(maskc == 0).nonzero()[0]
 
             # Initialise the mask with ones then add zeros for sea points
@@ -936,7 +934,7 @@ class ArakawaCPlotter:
 
             # Try to read the element mask
             try:
-                maskc = ds.variables['mask_{}'.format(grid_name)][:]
+                maskc = ds.variables['mask_c_{}'.format(grid_name)][:]
                 ocean_points = np.asarray(maskc == 0).nonzero()[0]
 
                 # Initialise the mask with ones then add zeros for sea points

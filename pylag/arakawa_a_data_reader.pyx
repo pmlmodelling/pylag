@@ -111,8 +111,8 @@ cdef class ArakawaADataReader(DataReader):
     cdef DTYPE_FLOAT_t[::1] _h
 
     # Land sea mask on elements (1 - sea point, 0 - land point)
+    cdef DTYPE_INT_t[::1] _land_sea_mask_c
     cdef DTYPE_INT_t[::1] _land_sea_mask
-    cdef DTYPE_INT_t[::1] _land_sea_mask_nodes
 
     # Full depth mask (1 - sea point, 0 - land point)
     cdef DTYPE_INT_t[:, ::1] _depth_mask_last
@@ -1232,20 +1232,19 @@ cdef class ArakawaADataReader(DataReader):
             raise ValueError("Unsupported model coordinate system `{}'".format(coordinate_system))
 
         # Land sea mask
-        self._land_sea_mask = self.mediator.get_grid_variable('mask', (self._n_elems), DTYPE_INT)
-        self._land_sea_mask_nodes = self.mediator.get_grid_variable('mask_nodes', (self._n_nodes), DTYPE_INT)
+        self._land_sea_mask_c = self.mediator.get_grid_variable('mask_c', (self._n_elems), DTYPE_INT)
+        self._land_sea_mask = self.mediator.get_grid_variable('mask', (self._n_nodes), DTYPE_INT)
 
         # Element areas
         areas = self.mediator.get_grid_variable('area', (self._n_elems), DTYPE_FLOAT)
 
         # Initialise unstructured grid
         self._unstructured_grid = get_unstructured_grid(self.config, self._name, self._n_nodes, self._n_elems,
-                                                        self._nv, self._nbe, x, y, xc, yc, self._land_sea_mask,
-                                                        self._land_sea_mask_nodes, areas=areas)
+                                                        self._nv, self._nbe, x, y, xc, yc, self._land_sea_mask_c,
+                                                        self._land_sea_mask, areas=areas)
 
         # Read in depth vars if doing a 3D run
-        if not self._surface_only:
-            # Depth levels at nodal coordinates. Assumes and requires that depth is positive down. The -1 multiplier
+        if not self._surface_only: # Depth levels at nodal coordinates. Assumes and requires that depth is positive down. The -1 multiplier
             # flips this so that depth is positive up from the zero geoid.
             self._reference_depth_levels = -1.0 * self.mediator.get_grid_variable('depth', (self._n_depth), DTYPE_FLOAT)
 
@@ -1408,7 +1407,7 @@ cdef class ArakawaADataReader(DataReader):
         # masked but it is not a land cell, then it is assumed to be dry.
         if not self._surface_only:
             for i in xrange(self._n_elems):
-                if self._land_sea_mask[i] == 0:
+                if self._land_sea_mask_c[i] == 0:
                     is_wet_last = 1
                     is_wet_next = 1
                     for j in xrange(3):

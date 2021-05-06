@@ -413,10 +413,10 @@ cdef class UnstructuredCartesianGrid(Grid):
     yc : 1D memory view
         y-coordinates of element centres
 
-    land_sea_mask : 1D memory view
+    land_sea_mask_c : 1D memory view
         Land-sea element mask
 
-    land_sea_mask_nodes : 1D memory view
+    land_sea_mask : 1D memory view
         Land-sea element mask nodes
     """
     # Configurtion object
@@ -443,8 +443,8 @@ cdef class UnstructuredCartesianGrid(Grid):
     cdef DTYPE_FLOAT_t[::1] yc
 
     # Land sea mask
+    cdef DTYPE_INT_t[::1] land_sea_mask_c
     cdef DTYPE_INT_t[::1] land_sea_mask
-    cdef DTYPE_INT_t[::1] land_sea_mask_nodes
 
     # Barycentric gradients
     cdef DTYPE_INT_t[:] barycentric_gradients_have_been_cached
@@ -454,7 +454,7 @@ cdef class UnstructuredCartesianGrid(Grid):
     # Cell areas
     cdef DTYPE_FLOAT_t[::1] areas
 
-    def __init__(self, config, name, n_nodes, n_elems, nv, nbe, x, y, xc, yc, land_sea_mask, land_sea_mask_nodes, areas=None):
+    def __init__(self, config, name, n_nodes, n_elems, nv, nbe, x, y, xc, yc, land_sea_mask_c, land_sea_mask, areas=None):
         self.config = config
 
         self.name = name
@@ -466,8 +466,8 @@ cdef class UnstructuredCartesianGrid(Grid):
         self.y = y
         self.xc = xc
         self.yc = yc
+        self.land_sea_mask_c = land_sea_mask_c
         self.land_sea_mask = land_sea_mask
-        self.land_sea_mask_nodes = land_sea_mask_nodes
         if areas is not None:
             self.areas = areas
 
@@ -544,7 +544,7 @@ cdef class UnstructuredCartesianGrid(Grid):
             # Check to see if the particle has walked into an invalid element (e.g. an
             # element treated as land)
             if host_found is True:
-                if self.land_sea_mask[guess] != LAND:
+                if self.land_sea_mask_c[guess] != LAND:
                     # Normal element
                     particle.set_host_horizontal_elem(self.name, guess)
 
@@ -698,7 +698,7 @@ cdef class UnstructuredCartesianGrid(Grid):
 
                 # Check to see if the pathline has exited the domain
                 if elem >= 0:
-                    if self.land_sea_mask[elem] == LAND:
+                    if self.land_sea_mask_c[elem] == LAND:
                         flag = LAND_BDY_CROSSED
 
                         # Set host to the last element the particle passed through
@@ -769,7 +769,7 @@ cdef class UnstructuredCartesianGrid(Grid):
                 host_found = True
 
             if host_found is True:
-                if self.land_sea_mask[guess] != LAND:
+                if self.land_sea_mask_c[guess] != LAND:
                     particle.set_host_horizontal_elem(self.name, guess)
 
                     particle.set_phi(self.name, phi)
@@ -1448,10 +1448,10 @@ cdef class UnstructuredGeographicGrid(Grid):
     yc : 1D memory view
         y-coordinates of element centres in degrees latitude.
 
-    land_sea_mask : 1D memory view
+    land_sea_mask_c : 1D memory view
         Land sea element mask
 
-    land_sea_mask_nodes : 1D memory view
+    land_sea_mask : 1D memory view
         Land sea element mask at nodes
     """
     # Configurtion object
@@ -1486,8 +1486,8 @@ cdef class UnstructuredGeographicGrid(Grid):
     cdef DTYPE_FLOAT_t[:,::1] points_centres
 
     # Land sea element mask
+    cdef DTYPE_INT_t[::1] land_sea_mask_c
     cdef DTYPE_INT_t[::1] land_sea_mask
-    cdef DTYPE_INT_t[::1] land_sea_mask_nodes
 
     # Barycentric gradients
     cdef DTYPE_INT_t[:] barycentric_gradients_have_been_cached
@@ -1497,7 +1497,7 @@ cdef class UnstructuredGeographicGrid(Grid):
     # Element areas
     cdef DTYPE_FLOAT_t[::1] areas
 
-    def __init__(self, config, name, n_nodes, n_elems, nv, nbe, x, y, xc, yc, land_sea_mask, land_sea_mask_nodes, areas=None):
+    def __init__(self, config, name, n_nodes, n_elems, nv, nbe, x, y, xc, yc, land_sea_mask_c, land_sea_mask, areas=None):
 
         self.config = config
 
@@ -1528,8 +1528,8 @@ cdef class UnstructuredGeographicGrid(Grid):
         self.points_centres = np.column_stack((x_centres, y_centres, z_centres))
 
         # Masks
+        self.land_sea_mask_c = land_sea_mask_c[:]
         self.land_sea_mask = land_sea_mask[:]
-        self.land_sea_mask_nodes = land_sea_mask_nodes[:]
 
         # Element areas
         if areas is not None:
@@ -1609,7 +1609,7 @@ cdef class UnstructuredGeographicGrid(Grid):
             # Check to see if the particle has walked into an invalid element (e.g. an
             # element treated as land)
             if host_found is True:
-                if self.land_sea_mask[guess] != LAND:
+                if self.land_sea_mask_c[guess] != LAND:
                     # Normal element
                     particle.set_host_horizontal_elem(self.name, guess)
 
@@ -1768,7 +1768,7 @@ cdef class UnstructuredGeographicGrid(Grid):
 
                 # Check to see if the pathline has exited the domain
                 if elem >= 0:
-                    if self.land_sea_mask[elem] == LAND:
+                    if self.land_sea_mask_c[elem] == LAND:
                         flag = LAND_BDY_CROSSED
 
                         # Set host to the last element the particle passed through
@@ -1849,7 +1849,7 @@ cdef class UnstructuredGeographicGrid(Grid):
                 host_found = True
 
             if host_found is True:
-                if self.land_sea_mask[guess] != LAND:
+                if self.land_sea_mask_c[guess] != LAND:
                     particle.set_host_horizontal_elem(self.name, guess)
 
                     phi = self.get_normalised_tetrahedral_coords(s)
@@ -1951,7 +1951,7 @@ cdef class UnstructuredGeographicGrid(Grid):
             nbe = self.nbe[nbe_idx, particle_new.get_host_horizontal_elem(self.name)]
             if nbe != -1:
                 # Masked elements are treated as land too. If the neighbour isn't masked, continue the search.
-                if self.land_sea_mask[nbe] != LAND:
+                if self.land_sea_mask_c[nbe] != LAND:
                     continue
 
             # End coordinates for the side
@@ -2333,17 +2333,17 @@ cdef class UnstructuredGeographicGrid(Grid):
             var_nodes[i] = var_arr[vertex]
             phi[i] = _phi.at(i)
 
-        if self.land_sea_mask[host_element] == SEA:
+        if self.land_sea_mask_c[host_element] == SEA:
             # Normal sea element
             return interp.interpolate_within_element(var_nodes, phi)
 
-        elif self.land_sea_mask[host_element] == BOUNDARY_ELEMENT:
+        elif self.land_sea_mask_c[host_element] == BOUNDARY_ELEMENT:
             # Boundary element with masked nodes. Adjust interpolation coefficients.
             self._adjust_interpolation_coefficients(host_element, phi)
             return interp.interpolate_within_element(var_nodes, phi)
 
         else:
-            raise RuntimeError('Cannot interpolate within masked element `{}`.'.format(self.land_sea_mask[host_element]))
+            raise RuntimeError('Cannot interpolate within masked element `{}`.'.format(self.land_sea_mask_c[host_element]))
 
     cdef DTYPE_FLOAT_t interpolate_in_time_and_space_2D(self, DTYPE_FLOAT_t[::1] var_last_arr,
                                                         DTYPE_FLOAT_t[::1] var_next_arr,
@@ -2397,17 +2397,17 @@ cdef class UnstructuredGeographicGrid(Grid):
 
             phi[i] = _phi.at(i)
 
-        if self.land_sea_mask[host_element] == SEA:
+        if self.land_sea_mask_c[host_element] == SEA:
             # Normal sea element
             return interp.interpolate_within_element(var_nodes, phi)
 
-        elif self.land_sea_mask[host_element] == BOUNDARY_ELEMENT:
+        elif self.land_sea_mask_c[host_element] == BOUNDARY_ELEMENT:
             # Boundary element with masked nodes. Adjust interpolation coefficients.
             self._adjust_interpolation_coefficients(host_element, phi)
             return interp.interpolate_within_element(var_nodes, phi)
 
         else:
-            raise RuntimeError('Cannot interpolate within masked element `{}`.'.format(self.land_sea_mask[host_element]))
+            raise RuntimeError('Cannot interpolate within masked element `{}`.'.format(self.land_sea_mask_c[host_element]))
 
     cdef DTYPE_FLOAT_t interpolate_in_time_and_space(self, DTYPE_FLOAT_t[:, ::1] var_last_arr,
                                                      DTYPE_FLOAT_t[:, ::1] var_next_arr, DTYPE_INT_t k,
@@ -2464,17 +2464,17 @@ cdef class UnstructuredGeographicGrid(Grid):
 
             phi[i] = _phi.at(i)
 
-        if self.land_sea_mask[host_element] == SEA:
+        if self.land_sea_mask_c[host_element] == SEA:
             # Normal sea element
             return interp.interpolate_within_element(var_nodes, phi)
 
-        elif self.land_sea_mask[host_element] == BOUNDARY_ELEMENT:
+        elif self.land_sea_mask_c[host_element] == BOUNDARY_ELEMENT:
             # Boundary element with masked nodes. Adjust interpolation coefficients.
             self._adjust_interpolation_coefficients(host_element, phi)
             return interp.interpolate_within_element(var_nodes, phi)
 
         else:
-            raise RuntimeError('Cannot interpolate within masked element `{}`.'.format(self.land_sea_mask[host_element]))
+            raise RuntimeError('Cannot interpolate within masked element `{}`.'.format(self.land_sea_mask_c[host_element]))
 
 
     cdef vector[DTYPE_FLOAT_t] _adjust_interpolation_coefficients(self, const DTYPE_INT_t host,
@@ -2492,7 +2492,7 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         for i in range(N_VERTICES):
             node = self.nv[i, host]
-            if self.land_sea_mask_nodes[node] == 0:
+            if self.land_sea_mask[node] == 0:
                 if phi[i] > phi_test:
                     phi_test = phi[i]
                     index = i

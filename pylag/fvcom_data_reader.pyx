@@ -167,8 +167,8 @@ cdef class FVCOMDataReader(DataReader):
     cdef bint _has_is_wet
 
     # Land sea mask on elements (1 - sea point, 0 - land point)
+    cdef DTYPE_INT_t[::1] _land_sea_mask_c
     cdef DTYPE_INT_t[::1] _land_sea_mask
-    cdef DTYPE_INT_t[::1] _land_sea_mask_nodes
 
     def __init__(self, config, mediator):
         self.config = config
@@ -1319,13 +1319,13 @@ cdef class FVCOMDataReader(DataReader):
             self._ymin = 0.0
 
         # Land sea mask
-        self._land_sea_mask = self.mediator.get_grid_variable('mask', (self._n_elems), DTYPE_INT)
-        self._land_sea_mask_nodes = np.zeros(self._n_nodes, dtype=DTYPE_INT)
+        self._land_sea_mask_c = self.mediator.get_grid_variable('mask_c', (self._n_elems), DTYPE_INT)
+        self._land_sea_mask = np.zeros(self._n_nodes, dtype=DTYPE_INT)
 
         # Initialise unstructured grid
         self._unstructured_grid = get_unstructured_grid(self.config, self._name, self._n_nodes, self._n_elems, self._nv,
                                                         self._nbe, self._x, self._y, self._xc, self._yc,
-                                                        self._land_sea_mask, self._land_sea_mask_nodes)
+                                                        self._land_sea_mask_c, self._land_sea_mask)
 
         # Sigma levels at nodal coordinates
         self._siglev = self.mediator.get_grid_variable('siglev', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)

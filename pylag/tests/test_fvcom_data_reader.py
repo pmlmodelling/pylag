@@ -42,11 +42,11 @@ class MockFVCOMMediator(Mediator):
         siglay = np.array([[-.1, -.5, -.9], ]*n_nodes, dtype=float).transpose()
         siglev = np.array([[0., -.2, -.8, -1.], ]*n_nodes, dtype=float).transpose()
         h = np.array([10., 11., 10., 11., 11., 10., 10.], dtype=float)
-        mask = np.array([0, 0, 2, 2, 2], dtype=int)
-        mask_nodes = np.array([0, 0, 0, 0, 0, 0, 0], dtype=int)
+        mask_c = np.array([0, 0, 2, 2, 2], dtype=int)
+        mask = np.array([0, 0, 0, 0, 0, 0, 0], dtype=int)
         self._grid_vars = {'nv': nv, 'nbe': nbe, 'x': x, 'y': y, 'xc': xc,
                            'yc': yc, 'siglay': siglay, 'siglev': siglev,
-                           'h': h, 'mask': mask, 'mask_nodes': mask_nodes}
+                           'h': h, 'mask_c': mask_c, 'mask': mask}
         
         # Dictionaries holding the value of time dependent and time independent variables
         zeta = np.array([[0., 1., 0., 1., 1., 0., 0.], [0., 2., 0., 2., 2., 0., 0.]], dtype=float)

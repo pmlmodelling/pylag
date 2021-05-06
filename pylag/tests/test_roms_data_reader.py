@@ -109,7 +109,7 @@ class MockROMSMediator(Mediator):
             self._grid_vars['nbe_{}'.format(grid_name)] = nbe
 
             self._grid_vars['mask_{}'.format(grid_name)] = np.zeros_like(lon_nodes)
-            self._grid_vars['mask_{}'.format(grid_name)] = np.zeros_like(lon_elements)
+            self._grid_vars['mask_c_{}'.format(grid_name)] = np.zeros_like(lon_elements)
             self._grid_vars['mask_nodes_{}'.format(grid_name)] = np.zeros_like(lon_elements)
 
         # Bathymetry at rho points [lat, lon]

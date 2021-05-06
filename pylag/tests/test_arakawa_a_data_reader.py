@@ -26,7 +26,7 @@ class MockArakawaAMediator(Mediator):
     We first define a structured 3x3x3 grid with depth, lat, and lon dimensions, in that
     order. From this we construct the unstructured grid using the approach adopted within
     create_arakawa_a_grid_metrics_file() in grid_metrics.py. This gives the unstructured
-    grid variables (lat, lon, lat_c, lon_c, depth, h, land_sea_mask) to be readby PyLag.
+    grid variables (lat, lon, lat_c, lon_c, depth, h, land_sea_mask) to be read by PyLag.
     Next, we create the masked, time dependent variables (zeta, u, v, w). These are kept
     on their native structured grid - it is down to PyLag to correctly interpret and handle
     these, with accompanying unit tests put in place to ensure this is so.
@@ -144,7 +144,7 @@ class MockArakawaAMediator(Mediator):
                           'node': n_nodes, 'element': n_elements}
         self._grid_vars = {'nv': nv, 'nbe': nbe, 'longitude': lon_nodes, 'longitude_c': lon_elements,
                            'latitude': lat_nodes, 'latitude_c': lat_elements, 'depth': depth, 'h': h,
-                           'mask': land_sea_mask_elements, 'mask_nodes': land_sea_mask_nodes,
+                           'mask_c': land_sea_mask_elements, 'mask': land_sea_mask_nodes,
                            'permutation': permutation, 'trim_first_latitude': trim_first_latitude,
                            'trim_last_latitude': trim_last_latitude, 'area': areas}
 

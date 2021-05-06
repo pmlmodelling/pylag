@@ -153,10 +153,10 @@ cdef class ROMSDataReader(DataReader):
     cdef DTYPE_INT_t[::1] _mask_c_grid_psi
 
     # Land sea mask on rho grid nodes (1 - sea point, 0 - land point)
-    cdef DTYPE_INT_t[::1] _mask_n_grid_u
-    cdef DTYPE_INT_t[::1] _mask_n_grid_v
-    cdef DTYPE_INT_t[::1] _mask_n_grid_rho
-    cdef DTYPE_INT_t[::1] _mask_n_grid_psi
+    cdef DTYPE_INT_t[::1] _mask_grid_u
+    cdef DTYPE_INT_t[::1] _mask_grid_v
+    cdef DTYPE_INT_t[::1] _mask_grid_rho
+    cdef DTYPE_INT_t[::1] _mask_grid_psi
 
     # Dictionary of dimension names
     cdef object _dimension_names
@@ -1384,13 +1384,13 @@ cdef class ROMSDataReader(DataReader):
         self._mask_c_grid_u = np.zeros(self._n_elems_grid_u, dtype=DTYPE_INT)
         self._mask_c_grid_v = np.zeros(self._n_elems_grid_v, dtype=DTYPE_INT)
         self._mask_c_grid_rho = np.zeros(self._n_elems_grid_rho, dtype=DTYPE_INT)
-        self._mask_c_grid_psi = self.mediator.get_grid_variable('mask_grid_psi', (self._n_elems_grid_psi), DTYPE_INT)
+        self._mask_c_grid_psi = self.mediator.get_grid_variable('mask_c_grid_psi', (self._n_elems_grid_psi), DTYPE_INT)
 
         # Land sea mask - nodes. All sea points - masking is done through the psi grid element mask.
-        self._mask_n_grid_u = np.zeros(self._n_nodes_grid_u, dtype=DTYPE_INT)
-        self._mask_n_grid_v = np.zeros(self._n_nodes_grid_v, dtype=DTYPE_INT)
-        self._mask_n_grid_rho = np.zeros(self._n_nodes_grid_rho, dtype=DTYPE_INT)
-        self._mask_n_grid_psi = np.zeros(self._n_nodes_grid_psi, dtype=DTYPE_INT)
+        self._mask_grid_u = np.zeros(self._n_nodes_grid_u, dtype=DTYPE_INT)
+        self._mask_grid_v = np.zeros(self._n_nodes_grid_v, dtype=DTYPE_INT)
+        self._mask_grid_rho = np.zeros(self._n_nodes_grid_rho, dtype=DTYPE_INT)
+        self._mask_grid_psi = np.zeros(self._n_nodes_grid_psi, dtype=DTYPE_INT)
 
         # Initialise the unstructured grids objects
         if self._grid_type == 'rectilinear':
@@ -1398,33 +1398,33 @@ cdef class ROMSDataReader(DataReader):
             self._unstructured_grid_u = get_unstructured_grid(self.config, self._name_grid_u, self._n_nodes_grid_u,
                                                               self._n_elems_grid_u, self._nv_grid_u, self._nbe_grid_u,
                                                               x_grid_u, y_grid_u, xc_grid_u, yc_grid_u,
-                                                              self._mask_c_grid_u, self._mask_n_grid_u)
+                                                              self._mask_c_grid_u, self._mask_grid_u)
 
             self._unstructured_grid_v = get_unstructured_grid(self.config, self._name_grid_v, self._n_nodes_grid_v,
                                                               self._n_elems_grid_v, self._nv_grid_v, self._nbe_grid_v,
                                                               x_grid_v, y_grid_v, xc_grid_v, yc_grid_v,
-                                                              self._mask_c_grid_v, self._mask_n_grid_v)
+                                                              self._mask_c_grid_v, self._mask_grid_v)
         elif  self._grid_type == 'curvilinear':
             # Use rho grid for u/v velocity components. These will be remapped onto the rho grid as they are read in.
             self._unstructured_grid_u = get_unstructured_grid(self.config, self._name_grid_u, self._n_nodes_grid_rho,
                                                               self._n_elems_grid_rho, self._nv_grid_rho, self._nbe_grid_rho,
                                                               x_grid_rho, y_grid_rho, xc_grid_rho, yc_grid_rho,
-                                                              self._mask_c_grid_rho, self._mask_n_grid_rho)
+                                                              self._mask_c_grid_rho, self._mask_grid_rho)
 
             self._unstructured_grid_v = get_unstructured_grid(self.config, self._name_grid_v, self._n_nodes_grid_rho,
                                                               self._n_elems_grid_rho, self._nv_grid_rho, self._nbe_grid_rho,
                                                               x_grid_rho, y_grid_rho, xc_grid_rho, yc_grid_rho,
-                                                              self._mask_c_grid_rho, self._mask_n_grid_rho)
+                                                              self._mask_c_grid_rho, self._mask_grid_rho)
 
         self._unstructured_grid_rho = get_unstructured_grid(self.config, self._name_grid_rho, self._n_nodes_grid_rho,
                                                             self._n_elems_grid_rho, self._nv_grid_rho, self._nbe_grid_rho,
                                                             x_grid_rho, y_grid_rho, xc_grid_rho, yc_grid_rho,
-                                                            self._mask_c_grid_rho, self._mask_n_grid_rho)
+                                                            self._mask_c_grid_rho, self._mask_grid_rho)
 
         self._unstructured_grid_psi = get_unstructured_grid(self.config, self._name_grid_psi, self._n_nodes_grid_psi,
                                                             self._n_elems_grid_psi, self._nv_grid_psi, self._nbe_grid_psi,
                                                             x_grid_psi, y_grid_psi, xc_grid_psi, yc_grid_psi,
-                                                            self._mask_c_grid_psi, self._mask_n_grid_psi)
+                                                            self._mask_c_grid_psi, self._mask_grid_psi)
 
         # Read in depth vars
         self._s_rho = self.mediator.get_grid_variable('s_rho', (self._n_s_rho), DTYPE_FLOAT)
