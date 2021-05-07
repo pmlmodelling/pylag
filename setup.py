@@ -9,7 +9,7 @@ from Cython.Build import cythonize
 import numpy
 
 MAJOR               = 0
-MINOR               = 4
+MINOR               = 5
 PATCH               = 0
 ISRELEASED          = True
 VERSION = '{}.{}.{}'.format(MAJOR, MINOR, PATCH)
