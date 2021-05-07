@@ -364,16 +364,16 @@ cdef class MockVelocityEddyDiffusivityDataReader(DataReader):
     described by the variables u and v; and a time independent, spatially homogeneous,
     isotropic horizontal eddy diffusivity field described by the variable Ah.
     
-    Under these conditions, the evolution of the tracer C (units kg m-2) is 
+    Under these conditions, the evolution of the tracer c (units g m-2) is
     described by the equation:
     
-    C(t, x, y) = M/(4 * Pi * Ah * t) * exp (-((x - u * t)**2 + (y - v * t)**2)/(4 * Ah * t))
+    c(t, x, y) = M/(4 * Pi * Ah * t) * exp (-((x - u * t)**2 + (y - v * t)**2)/(4 * Ah * t))
     
-    where M (units kg) is the amount of tracer released at time t = 0 (s) and
+    where M (units g) is the amount of tracer released at time t = 0 (s) and
     position (x,y) = (0,0) (m).
     
     For testing purposes, u = 1.0 m s-1, v = 1.0 m s-1, Ah = 10 m2 s-1 and
-    M = 1 kg. Furthermore, w = 0.0 m s-1 and Kz = 0.0 m2 s-1.
+    M = 1 x 10^4 g. Furthermore, w = 0.0 m s-1 and Kz = 0.0 m2 s-1.
     
     Attributes
     ----------
