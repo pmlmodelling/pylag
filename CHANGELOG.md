@@ -2,6 +2,20 @@
 
 PyLag is still very much in development. This page will be updated when future releases are made.
 
+## Version 0.5 07/05/2021
+
+* Add ability to interpolate within boundary elements with masked nodes.
+
+* Implement reflecting boundary conditions in geographic coordinates.
+
+* Add multiple code optimisations to reduce run times.
+
+* Add global run tutorial to docs.
+
+* Add support for including a Smagorinksy-type eddy diffusivity term which is computed from the velocity field.
+
+* Switch to using the psi grid to identify boundary crossings when working with ROMS.
+
 ## Version 0.4 17/02/2020
 
 * Add basic infrastructure to support individual based modelling.
