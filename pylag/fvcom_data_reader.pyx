@@ -1378,8 +1378,8 @@ cdef class FVCOMDataReader(DataReader):
         
         # Update memory views for Kz
         if self._Kz_method == 1:
-            self._Kz_last = self.mediator.get_time_dependent_variable_at_last_time_index('Kz', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)
-            self._Kz_next = self.mediator.get_time_dependent_variable_at_next_time_index('Kz', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)
+            self._Kz_last = self.mediator.get_time_dependent_variable_at_last_time_index('kh', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)
+            self._Kz_next = self.mediator.get_time_dependent_variable_at_next_time_index('kh', (self._n_siglev, self._n_nodes), DTYPE_FLOAT)
 
         # Update memory views for viscofh
         if self._Ah_method == 1:

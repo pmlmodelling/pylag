@@ -83,12 +83,12 @@ class MockFVCOMMediator(Mediator):
 
         # Store in dictionaries
         self._time_dep_vars_last = {'zeta': zeta[0,:], 'u': u[0,:], 'v': v[0,:],
-                                    'ww': ww[0,:], 'Kz': Kz[0,:],
+                                    'ww': ww[0,:], 'kh': Kz[0,:],
                                     'viscofh': viscofh[0,:],
                                     'temp': thetao[0,:], 'salinity': so[0,:],
                                     'wet_cells': wet_cells[0,:]}
         self._time_dep_vars_next = {'zeta': zeta[1,:], 'u': u[1,:], 'v': v[1,:],
-                                    'ww': ww[1,:], 'Kz': Kz[1,:],
+                                    'ww': ww[1,:], 'kh': Kz[1,:],
                                     'viscofh': viscofh[1,:],
                                     'temp': thetao[1,:], 'salinity': so[1,:],
                                     'wet_cells': wet_cells[1,:]}
