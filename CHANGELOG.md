@@ -2,6 +2,10 @@
 
 PyLag is still very much in development. This page will be updated when future releases are made.
 
+## Version 0.5.1 18/05/2021
+
+* Fix Kz and Ah variable names in FVCOMDataReader.
+
 ## Version 0.5 07/05/2021
 
 * Add ability to interpolate within boundary elements with masked nodes.
