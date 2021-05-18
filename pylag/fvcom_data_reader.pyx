@@ -136,7 +136,7 @@ cdef class FVCOMDataReader(DataReader):
     cdef DTYPE_FLOAT_t[:,::1] _Kz_last
     cdef DTYPE_FLOAT_t[:,::1] _Kz_next
     
-    # Horizontal eddy viscosities
+    # Horizontal eddy diffusivities
     cdef DTYPE_FLOAT_t[:,::1] _viscofh_last
     cdef DTYPE_FLOAT_t[:,::1] _viscofh_next
 
@@ -686,7 +686,10 @@ cdef class FVCOMDataReader(DataReader):
         if self._Ah_method == 1:
             var = self._get_variable(self._viscofh_last, self._viscofh_next, time, particle)
         else:
-            raise RuntimeError('This dataset does not contain horizontal eddy viscosities.')
+            raise RuntimeError("Trying to access horizontal eddy diffusivities, but `Ah_method = none`. "\
+                               "If horizontal eddy diffusivities have been saved by FVCOM and you wish "\
+                               "to run with diffusive mixing in the horizontal, try setting `Ah_method = file` "\
+                               "in the run configuration file.")
 
         return var
 
@@ -765,7 +768,10 @@ cdef class FVCOMDataReader(DataReader):
             return
 
         else:
-            raise RuntimeError('This dataset does not contain horizontal eddy viscosities.')
+            raise RuntimeError("Trying to access horizontal eddy diffusivities, but `Ah_method = none`. "\
+                               "If horizontal eddy diffusivities have been saved by FVCOM and you wish "\
+                               "to run with diffusive mixing in the horizontal, try setting `Ah_method = file` "\
+                               "in the run configuration file.")
 
         return
 
@@ -823,7 +829,10 @@ cdef class FVCOMDataReader(DataReader):
             Kz = interp.linear_interp(particle.get_omega_interfaces(), Kz_lower_level, Kz_upper_level)
 
         else:
-           raise RuntimeError('This dataset does not contain vertical eddy diffusivities.')
+            raise RuntimeError("Trying to access vertical eddy diffusivities, but `Kz_method = none`. "\
+                               "If vertical eddy diffusivities have been saved by FVCOM and you wish "\
+                               "to run with diffusive mixing in the vertical, try setting `Kz_method = file` "\
+                               "in the run configuration file.")
 
         return Kz
 
@@ -1001,7 +1010,10 @@ cdef class FVCOMDataReader(DataReader):
             dKz_dz = interp.linear_interp(particle.get_omega_interfaces(), dKz_lower_level, dKz_upper_level)
 
         else:
-            raise RuntimeError('This dataset does not contain vertical eddy diffusivities.')
+            raise RuntimeError("Trying to access vertical eddy diffusivities, but `Kz_method = none`. "\
+                               "If vertical eddy diffusivities have been saved by FVCOM and you wish "\
+                               "to run with diffusive mixing in the vertical, try setting `Kz_method = file` "\
+                               "in the run configuration file.")
 
         return dKz_dz
 
