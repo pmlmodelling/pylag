@@ -675,7 +675,7 @@ cdef class ArakawaADataReader(DataReader):
         cdef DTYPE_FLOAT_t time_fraction # Time interpolation coefficient
         cdef DTYPE_FLOAT_t zeta # Sea surface elevation at (t, x1, x2)
 
-        if self._surface_only == True or self._has_zeta == False:
+        if self._surface_only:
             return 0.0
 
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
@@ -1244,7 +1244,8 @@ cdef class ArakawaADataReader(DataReader):
                                                         self._land_sea_mask, areas=areas)
 
         # Read in depth vars if doing a 3D run
-        if not self._surface_only: # Depth levels at nodal coordinates. Assumes and requires that depth is positive down. The -1 multiplier
+        if not self._surface_only:
+            # Depth levels at nodal coordinates. Assumes and requires that depth is positive down. The -1 multiplier
             # flips this so that depth is positive up from the zero geoid.
             self._reference_depth_levels = -1.0 * self.mediator.get_grid_variable('depth', (self._n_depth), DTYPE_FLOAT)
 
@@ -1255,12 +1256,16 @@ cdef class ArakawaADataReader(DataReader):
             self._depth_levels_last = np.empty((self._n_depth, self._n_nodes), dtype=DTYPE_FLOAT)
             self._depth_levels_next = np.empty((self._n_depth, self._n_nodes), dtype=DTYPE_FLOAT)
 
-
         # Initialise is wet arrays (but don't fill for now)
         self._wet_cells_last = np.empty((self._n_elems), dtype=DTYPE_INT)
         self._wet_cells_next = np.empty((self._n_elems), dtype=DTYPE_INT)
+        
+        # Initialise zeta with zero values
+        self._zeta_last = np.zeros(self._n_nodes, dtype=DTYPE_FLOAT)
+        self._zeta_next = np.zeros(self._n_nodes, dtype=DTYPE_FLOAT)
 
-        # Add zeta to shape and dimension indices dictionaries
+        # If zeta is being read in from file, add zeta shape and
+        # dimension indices to the appropriate dictionaries
         if self._has_zeta:
             self._variable_shapes['zos'] = self.mediator.get_variable_shape(self._variable_names['zos'])[1:]
             dimensions = self.mediator.get_variable_dimensions(self._variable_names['zos'])[1:]
