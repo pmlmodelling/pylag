@@ -188,7 +188,8 @@ class GridMetricsFileCreator(object):
             raise RuntimeError('Problem closing file')
 
 @cython.wraparound(True)
-def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_file_name = './grid_metrics.nc'):
+def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, obc_file_delimiter=' ',
+                                   grid_metrics_file_name = './grid_metrics.nc'):
     """Create FVCOM grid metrics file
 
     In FVCOM output files, the grid variables nv and nbe are not ordered in the
@@ -204,6 +205,10 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_
 
     obc_file_name : str
         The path to the text file containing a list of open boundary nodes
+
+    obc_file_delimiter : str
+        The delimiter used in the obc ascii file. To specify a tab delimited
+        file, set this equal to '\t'. Default: ' '.
 
     grid_metrics_file_name : str, optional
         The name of the grid metrics file that will be created
@@ -284,7 +289,7 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, grid_metrics_
     nv_data = nv_data.T
 
     # Add open boundary flags
-    open_boundary_nodes = get_fvcom_open_boundary_nodes(obc_file_name)
+    open_boundary_nodes = get_fvcom_open_boundary_nodes(obc_file_name, obc_file_delimiter)
     nbe_data = add_fvcom_open_boundary_flags(nv_data, nbe_data, open_boundary_nodes)
 
 
@@ -1826,7 +1831,7 @@ cpdef mask_elements_with_two_land_boundaries(const DTYPE_INT_t[:,:] nbe, DTYPE_I
 
 
 @cython.wraparound(True)
-def get_fvcom_open_boundary_nodes(file_name):
+def get_fvcom_open_boundary_nodes(file_name, delimiter=' '):
     """Read fvcom open boundary nodes from file
 
     Parameters
@@ -1848,7 +1853,16 @@ def get_fvcom_open_boundary_nodes(file_name):
 
     nodes = []
     for line in lines:
-        nodes.append(int(line.strip().split(' ')[1]))
+        if line.strip():
+            entries = line.strip().split(delimiter)
+
+            # There should be exactly three entries in each line. If there aren't,
+            # an incorrect delimiter has probably been passed in.
+            if len(entries) == 3:
+                nodes.append(int(entries[1]))
+            else:
+                raise ValueError('Failed to correctly parse file {}. Is the supplied '\
+                                 'delimiter correct (={})?'.format(file_name, delimiter))
 
     if n_obc_nodes != len(nodes):
         raise RuntimeError('Error reading open boundary node list file.')
