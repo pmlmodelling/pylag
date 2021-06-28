@@ -193,7 +193,7 @@ _variable_invalid_values['age'] = FLOAT_INVALID
 _variable_data_types['thetao'] = DTYPE_FLOAT
 _variable_units['thetao'] = 'degC'
 _variable_long_names['thetao'] = 'Sea Water Potential Temperature'
-_variable_invalid_values['thatao'] = FLOAT_INVALID
+_variable_invalid_values['thetao'] = FLOAT_INVALID
 
 # so
 _variable_data_types['so'] = DTYPE_FLOAT
