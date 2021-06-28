@@ -407,8 +407,8 @@ class FVCOMPlotter(PyLagPlotter):
             ax.set_ylabel('Longitude (N)', fontsize=self.font_size)
         else:
             plot = ax.tripcolor(self.tri, field, **kwargs)
-            ax.set_extent(extents)
-
+            ax.set_xlim(extents[0], extents[1])
+            ax.set_ylim(extents[2], extents[3])
             ax.set_xlabel('x (m)', fontsize=self.font_size)
             ax.set_ylabel('y (m)', fontsize=self.font_size)
 
