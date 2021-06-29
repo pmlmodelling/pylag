@@ -1,9 +1,12 @@
-name: particles
+name: pylag
 channels:
   - defaults
   - conda-forge
+  - geo-down-under
   - JimClark
 dependencies:
+  - python=3.8
+  - pylag
   - sphinx
   - nbsphinx
   - sphinx_rtd_theme
@@ -11,4 +14,3 @@ dependencies:
   - jupyter
   - jupyter_client
   - ipykernel
-  - pylag
