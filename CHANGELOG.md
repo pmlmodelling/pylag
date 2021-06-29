@@ -2,6 +2,18 @@
 
 PyLag is still very much in development. This page will be updated when future releases are made.
 
+## Version 0.5.2 29/06/2021
+
+* Explicitly declare that plots within the documentation be incorporated inline.
+
+* Fix problem when setting extents in FVCOMPlotter when using cartesian coordinates.
+
+* Fix problem with zeta not being initialised when not supplied as an input variable (specific to Arakawa A grids, and 3D tracking).
+
+* Fix typo in variable library for the name of thetao variable (specific to Arakawa A gridded data).
+
+* Allow for alternative delimiters in FVCOM obc file. 
+
 ## Version 0.5.1 18/05/2021
 
 * Fix Kz and Ah variable names in FVCOMDataReader.
