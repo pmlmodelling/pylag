@@ -1,6 +1,6 @@
 name: pylag
 channels:
-  - defaults
+  - nodefaults
   - conda-forge
   - geo-down-under
   - JimClark
