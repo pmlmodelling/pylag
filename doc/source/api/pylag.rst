@@ -5,6 +5,7 @@ Subpackages
 -----------
 
 .. toctree::
+   :maxdepth: 4
 
    pylag.parallel
    pylag.processing
@@ -13,8 +14,10 @@ Submodules
 ----------
 
 .. toctree::
+   :maxdepth: 4
 
    pylag.arakawa_a_data_reader
+   pylag.bio_model
    pylag.boundary_conditions
    pylag.configuration
    pylag.data_reader
@@ -31,6 +34,7 @@ Submodules
    pylag.mock
    pylag.model
    pylag.model_factory
+   pylag.mortality
    pylag.netcdf_logger
    pylag.numerics
    pylag.parameters

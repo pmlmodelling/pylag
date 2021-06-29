@@ -5,8 +5,10 @@ Submodules
 ----------
 
 .. toctree::
+   :maxdepth: 4
 
    pylag.processing.animation
+   pylag.processing.coordinate
    pylag.processing.ensemble
    pylag.processing.fvcom
    pylag.processing.gotm
