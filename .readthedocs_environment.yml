@@ -7,6 +7,9 @@ channels:
 dependencies:
   - python=3.8
   - pylag
+  - matplotlib
+  - cartopy
+  - cmocean
   - sphinx
   - nbsphinx
   - sphinx_rtd_theme
