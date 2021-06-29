@@ -1499,6 +1499,8 @@ class GOTMPlotter(object):
         # Add axis labels
         axes.set_xlabel('Time', fontsize=self.font_size)
         axes.set_ylabel('Depth (m)', fontsize=self.font_size)
+        axes.tick_params(axis='x', labelsize=self.font_size)
+        axes.tick_params(axis='y', labelsize=self.font_size)
 
         # Add colour bar
         if add_colorbar:
@@ -1650,7 +1652,7 @@ class GOTMPlotter(object):
         cax = divider.append_axes("right", size="5%", pad=0.05)
         cbar = figure.colorbar(plot, cax=cax, ticks=cb_ticks)
         cbar.ax.tick_params(labelsize=self.font_size)
-        cbar.set_label(cb_label)
+        cbar.set_label(cb_label, fontsize=self.font_size)
 
     def set_title(self, title):
         """ Set title """
