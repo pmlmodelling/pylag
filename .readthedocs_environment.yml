@@ -2,6 +2,7 @@ name: particles
 channels:
   - defaults
   - conda-forge
+  - JimClark
 dependencies:
   - sphinx
   - nbsphinx
@@ -10,3 +11,4 @@ dependencies:
   - jupyter
   - jupyter_client
   - ipykernel
+  - pylag
