@@ -32,6 +32,7 @@ from pylag.position_modifier import get_position_modifier
 
 # PyLag cimports
 from pylag.particle_cpp_wrapper cimport ParticleSmartPtr
+from pylag.velocity_aggregator cimport VelocityAggregator
 from pylag.boundary_conditions cimport HorizBoundaryConditionCalculator
 from pylag.boundary_conditions cimport VertBoundaryConditionCalculator
 from pylag.position_modifier cimport PositionModifier
@@ -1063,6 +1064,8 @@ cdef class AdvRK43DItMethod(ItMethod):
     _vert_bc_calculator : VertBoundaryConditionCalculator
         The method used for computing vertical boundary conditions.
     """
+    cdef VelocityAggregator _velocity_aggregator
+
     cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
     cdef VertBoundaryConditionCalculator _vert_bc_calculator
 
@@ -1075,6 +1078,9 @@ cdef class AdvRK43DItMethod(ItMethod):
         # Set time step (-ve if reverse tracking)
         time_step = config.getfloat('NUMERICS', 'time_step_adv')
         self._time_step = time_step * self._time_direction
+
+        # Create velocity aggregator
+        self._velocity_aggregator = VelocityAggregator(config)
 
         # Create horizontal boundary conditions calculator
         self._horiz_bc_calculator = get_horiz_boundary_condition_calculator(config)
@@ -1143,7 +1149,7 @@ cdef class AdvRK43DItMethod(ItMethod):
         # Stage 1
         t = time
         _particle = particle[0]
-        data_reader.get_velocity(t, &_particle, vel) 
+        self._velocity_aggregator.get_velocity(data_reader, t, &_particle, vel)
         for i in xrange(ndim):
             k1[i] = self._time_step * vel[i]
 
@@ -1183,7 +1189,7 @@ cdef class AdvRK43DItMethod(ItMethod):
             if flag == BDY_ERROR:
                 return flag
 
-        data_reader.get_velocity(t, &_particle, vel)
+        self._velocity_aggregator.get_velocity(data_reader, t, &_particle, vel)
         for i in xrange(ndim):
             k2[i] = self._time_step * vel[i]
 
@@ -1226,7 +1232,7 @@ cdef class AdvRK43DItMethod(ItMethod):
             if flag == BDY_ERROR:
                 return flag
 
-        data_reader.get_velocity(t, &_particle, vel)
+        self._velocity_aggregator.get_velocity(data_reader, t, &_particle, vel)
         for i in xrange(ndim):
             k3[i] = self._time_step * vel[i]
 
@@ -1269,7 +1275,7 @@ cdef class AdvRK43DItMethod(ItMethod):
             if flag == BDY_ERROR:
                 return flag
 
-        data_reader.get_velocity(t, &_particle, vel)
+        self._velocity_aggregator.get_velocity(data_reader, t, &_particle, vel)
         for i in xrange(ndim):
             k4[i] = self._time_step * vel[i]
 
@@ -1398,12 +1404,18 @@ cdef class DiffVisser1DItMethod(ItMethod):
     _vert_bc_calculator : VertBoundaryConditionCalculator
         The method used for computing vertical boundary conditions.
     """
+    cdef VelocityAggregator _velocity_aggregator
+
     cdef VertBoundaryConditionCalculator _vert_bc_calculator
 
     def __init__(self, config):
         # Set time step
         self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
+        # Create velocity aggregator
+        self._velocity_aggregator = VelocityAggregator(config)
+
+        # Create vertical boundary condition calculator
         self._vert_bc_calculator = get_vert_boundary_condition_calculator(config)
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
@@ -1446,7 +1458,7 @@ cdef class DiffVisser1DItMethod(ItMethod):
 
         Kz_prime = data_reader.get_vertical_eddy_diffusivity_derivative(time, particle)
 
-        data_reader.get_velocity(time, particle, vel)
+        self._velocity_aggregator.get_velocity(data_reader, time, particle, vel)
         
         x3_offset = particle.get_x3() + 0.5 * (vel[2] + Kz_prime) * self._time_step
 
@@ -1767,9 +1779,15 @@ cdef class AdvDiffMilstein3DItMethod(ItMethod):
     ----------
     config : ConfigParser
     """
+    # Velocity aggregator
+    cdef VelocityAggregator _velocity_aggregator
+
     def __init__(self, config):
         # Set time step
         self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
+
+        # Create velocity aggregator
+        self._velocity_aggregator = VelocityAggregator(config)
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
             Particle *particle, Delta *delta_X) except INT_ERR:
@@ -1806,7 +1824,7 @@ cdef class AdvDiffMilstein3DItMethod(ItMethod):
         cdef DTYPE_FLOAT_t Ah_prime[2]
         cdef DTYPE_FLOAT_t Kz_prime
 
-        data_reader.get_velocity(time, particle, vel) 
+        self._velocity_aggregator.get_velocity(data_reader, time, particle, vel)
 
         Ah = data_reader.get_horizontal_eddy_diffusivity(time, particle)
         data_reader.get_horizontal_eddy_diffusivity_derivative(time, particle, Ah_prime)
