@@ -19,7 +19,7 @@ cdef class VelocityAggregator:
 
     cdef bint _apply_sail_effect_term
 
-    cdef bint _apply_buoyancy_term
+    cdef bint _apply_settling_term
 
     cdef bint _apply_behaviour_term
 

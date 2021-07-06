@@ -5,7 +5,7 @@ terms that together yield a particle's velocity. These include:
 1) The effect of ocean currents
 2) The effect of Stokes Drift (under development)
 3) The effect of direct wind forcing, i.e. sail effects (under development)
-4) The effect of buoyancy forcing, i.e. settling or rising (under development)
+4) The effect of settling forcing, i.e. settling or rising (under development)
 5) The effect of movement (under development)
 
 Only a subest of the above effects may be used at any one time, with the
@@ -35,19 +35,19 @@ from pylag.particle_cpp_wrapper cimport ParticleSmartPtr
 cdef class VelocityAggregator:
 
     def __init__(self, config):
-        # TODO set this value for these from the config
+        # For now at least, assume this is applied in all circumstances
         self._apply_ocean_velocity_term = True
 
-        # Apply buoyancy term
+        # Apply settling term?
         try:
             settling = config.get("SETTLING", "settling_velocity_calculator").strip().lower()
         except (configparser.NoSectionError, configparser.NoOptionError) as e:
-            self._apply_buoyancy_term = False
+            self._apply_settling_term = False
         else:
             if settling == "none":
-                self._apply_buoyancy_term = False
+                self._apply_settling_term = False
             else:
-                self._apply_buoyancy_term = True
+                self._apply_settling_term = True
 
         # Support for these has not been included yet
         self._apply_stokes_drift_term = False
@@ -70,7 +70,7 @@ cdef class VelocityAggregator:
             for i in range(3):
                 velocity[i] = velocity_tmp[i]
 
-        if self._apply_buoyancy_term == True:
+        if self._apply_settling_term == True:
             velocity[2] += particle.get_bio_parameter(self._settling_velocity_parameter_name)
 
         return
