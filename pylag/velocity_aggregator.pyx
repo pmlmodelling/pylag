@@ -21,6 +21,11 @@ include "constants.pxi"
 
 import numpy as np
 
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
+
 from pylag.settling import parameter_names as settling_parameter_names
 
 from pylag.particle_cpp_wrapper cimport ParticleSmartPtr
@@ -30,13 +35,23 @@ from pylag.particle_cpp_wrapper cimport ParticleSmartPtr
 cdef class VelocityAggregator:
 
     def __init__(self, config):
-        # TODO set values for these from the config
+        # TODO set this value for these from the config
         self._apply_ocean_velocity_term = True
+
+        # Apply buoyancy term
+        try:
+            settling = config.get("SETTLING", "settling_velocity_calculator").strip().lower()
+        except (configparser.NoSectionError, configparser.NoOptionError) as e:
+            self._apply_buoyancy_term = False
+        else:
+            if settling == "none":
+                self._apply_buoyancy_term = False
+            else:
+                self._apply_buoyancy_term = True
 
         # Support for these has not been included yet
         self._apply_stokes_drift_term = False
         self._apply_sail_effect_term = False
-        self._apply_buoyancy_term = False
         self._apply_behaviour_term = False
 
         # Parameter names

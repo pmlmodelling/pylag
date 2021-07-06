@@ -34,20 +34,12 @@ cdef class SettlingVelocityCalculator:
 
         Parameters
         ----------
-        data_reader : pylag.data_reader.DataReader
-            A concrete PyLag data reader which inherits from the base class
-            `pylag.data_reader.DataReader`.
-
-        time : float
-            The current time.
-
         particle : pylag.particle_cpp_wrapper.ParticleSmartPtr
             PyLag ParticleSmartPtr.
         """
-        self.init_particle_settling_velocity(data_reader, time, particle.get_ptr())
+        self.init_particle_settling_velocity(particle.get_ptr())
 
-    cdef void init_particle_settling_velocity(self, DataReader data_reader, DTYPE_FLOAT_t time,
-                    Particle *particle) except *:
+    cdef void init_particle_settling_velocity(self, Particle *particle) except *:
         raise NotImplementedError
 
     def set_particle_settling_velocity_wrapper(self, DataReader data_reader, DTYPE_FLOAT_t time,
@@ -134,19 +126,11 @@ cdef class ConstantSettlingVelocityCalculator(SettlingVelocityCalculator):
             raise ValueError("Unsupported settling velocity initialisation "\
                 "method `{}'.".format(self.config.get("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "initialisation_method")))
 
-    cdef void init_particle_settling_velocity(self, DataReader data_reader, DTYPE_FLOAT_t time,
-                    Particle *particle) except *:
+    cdef void init_particle_settling_velocity(self, Particle *particle) except *:
         """ Initialise the particle settling velocity
 
         Parameters
         ----------
-        data_reader : DataReader
-            DataReader object used for calculating point velocities
-            and/or diffusivities.
-
-        time : float
-            The current time.
-
         particle : C pointer
             C pointer to a particle struct.
         """
@@ -202,10 +186,13 @@ def get_settling_velocity_calculator(config):
     except (configparser.NoSectionError, configparser.NoOptionError) as e:
         return None
     else:
-        if settling == "constant":
+        if settling == "none":
+            return None
+        elif settling == "constant":
             return ConstantSettlingVelocityCalculator(config)
         else:
             raise ValueError('Unsupported settling velocity calculator.')
+
 
 # Settling parameter names
 # ----------------------------

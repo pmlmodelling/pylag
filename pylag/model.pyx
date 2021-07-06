@@ -26,12 +26,14 @@ from pylag.data_types_python import INT_INVALID, FLOAT_INVALID
 from pylag.variable_library import get_invalid_value
 
 from pylag.numerics import get_num_method, get_global_time_step
+from pylag.settling import get_settling_velocity_calculator
 
 from libcpp.vector cimport vector
 
 from pylag.parameters cimport seconds_per_day, radians_to_deg, deg_to_radians
 from pylag.data_reader cimport DataReader
 from pylag.numerics cimport NumMethod, ParticleStateNumMethod
+from pylag.settling cimport SettlingVelocityCalculator
 from pylag.particle cimport Particle
 from pylag.particle_cpp_wrapper cimport ParticleSmartPtr, copy, to_string
 from pylag.bio_model cimport BioModel
@@ -61,6 +63,7 @@ cdef class OPTModel:
     cdef DataReader data_reader
     cdef NumMethod num_method
     cdef ParticleStateNumMethod particle_state_num_method
+    cdef SettlingVelocityCalculator settling_velocity_calculator
     cdef object environmental_variables
     cdef object particle_seed_smart_ptrs
     cdef object particle_smart_ptrs
@@ -88,6 +91,9 @@ cdef class OPTModel:
 
         # Create num method object
         self.num_method = get_num_method(self.config)
+
+        # Create settling velocity calculator object
+        self.settling_velocity_calculator = get_settling_velocity_calculator(self.config)
 
         # Read in the coordinate system
         coordinate_system = self.config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system").strip().lower()
@@ -331,6 +337,10 @@ cdef class OPTModel:
             if flag == IN_DOMAIN:
                 particle_smart_ptr.get_ptr().set_in_domain(True)
 
+                # Initialise particle settling velocity
+                if self.settling_velocity_calculator is not None:
+                    self.settling_velocity_calculator.init_particle_settling_velocity(particle_smart_ptr.get_ptr())
+
                 # Add particle to the particle set
                 self.particle_seed_smart_ptrs.append(particle_smart_ptr)
 
@@ -380,6 +390,11 @@ cdef class OPTModel:
 
         for particle_ptr in self.particle_ptrs:
             if particle_ptr.get_in_domain():
+                # Update the settling velocity
+                if self.settling_velocity_calculator is not None:
+                    self.settling_velocity_calculator.set_particle_settling_velocity(self.data_reader, time, particle_ptr)
+
+                # Step the model forward in time
                 flag = self.num_method.step(self.data_reader, time, particle_ptr)
 
                 if flag == OPEN_BDY_CROSSED:

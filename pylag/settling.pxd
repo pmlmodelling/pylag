@@ -10,8 +10,7 @@ from pylag.particle cimport Particle
 
 
 cdef class SettlingVelocityCalculator:
-    cdef void init_particle_settling_velocity(self, DataReader data_reader, DTYPE_FLOAT_t time,
-                                              Particle *particle) except *
+    cdef void init_particle_settling_velocity(self, Particle *particle) except *
 
     cdef void set_particle_settling_velocity(self, DataReader data_reader, DTYPE_FLOAT_t time,
                                              Particle *particle) except *
