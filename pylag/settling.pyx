@@ -120,7 +120,7 @@ cdef class ConstantSettlingVelocityCalculator(SettlingVelocityCalculator):
         self._config = config
 
         # Settling velocity parameter name
-        self._settling_velocity_parameter_name = b'settling_velocity_in_meters_per_second'
+        self._settling_velocity_parameter_name = parameter_names['settling_velocity']
 
         if self.config.get("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "initialisation_method") == "fixed_value":
             self._w_sink_fixed = self.config.getfloat("SETTLING", "settling_velocity")
@@ -206,3 +206,7 @@ def get_settling_velocity_calculator(config):
             return ConstantSettlingVelocityCalculator(config)
         else:
             raise ValueError('Unsupported settling velocity calculator.')
+
+# Settling parameter names
+# ----------------------------
+parameter_names = {'settling_velocity' : b'settling_velocity_in_meters_per_second'}

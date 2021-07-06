@@ -1,4 +1,3 @@
-
 """
 A velocity aggregator pulls together and combines different
 terms that together yield a particle's velocity. These include:
@@ -22,7 +21,10 @@ include "constants.pxi"
 
 import numpy as np
 
+from pylag.settling import parameter_names as settling_parameter_names
+
 from pylag.particle_cpp_wrapper cimport ParticleSmartPtr
+
 
 # Velocity aggregator
 cdef class VelocityAggregator:
@@ -37,6 +39,9 @@ cdef class VelocityAggregator:
         self._apply_buoyancy_term = False
         self._apply_behaviour_term = False
 
+        # Parameter names
+        self._settling_velocity_parameter_name = settling_parameter_names['settling_velocity']
+
     cdef void get_velocity(self, DataReader data_reader, DTYPE_FLOAT_t time,
             Particle *particle, DTYPE_FLOAT_t velocity[3]) except +:
         """ Get the velocity
@@ -49,6 +54,9 @@ cdef class VelocityAggregator:
             data_reader.get_velocity(time, particle, velocity_tmp)
             for i in range(3):
                 velocity[i] = velocity_tmp[i]
+
+        if self._apply_buoyancy_term == True:
+            velocity[2] += particle.get_bio_parameter(self._settling_velocity_parameter_name)
 
         return
 
