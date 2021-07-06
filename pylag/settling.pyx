@@ -115,13 +115,13 @@ cdef class ConstantSettlingVelocityCalculator(SettlingVelocityCalculator):
         self._settling_velocity_parameter_name = parameter_names['settling_velocity']
 
         if self.config.get("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "initialisation_method") == "fixed_value":
-            self._w_sink_fixed = self.config.getfloat("SETTLING", "settling_velocity")
+            self._w_sink_fixed = self.config.getfloat("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "settling_velocity")
             self._w_sink_min = -999.
             self._w_sink_max = -999.
         elif self.config.get("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "initialisation_method") == "uniform_random":
             self._w_sink_fixed = -999.
-            self._w_sink_min = self.config.getfloat("SETTLING", "min_settling_velocity")
-            self._w_sink_max = self.config.getfloat("SETTLING", "max_settling_velocity")
+            self._w_sink_min = self.config.getfloat("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "min_settling_velocity")
+            self._w_sink_max = self.config.getfloat("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "max_settling_velocity")
         else:
             raise ValueError("Unsupported settling velocity initialisation "\
                 "method `{}'.".format(self.config.get("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "initialisation_method")))
