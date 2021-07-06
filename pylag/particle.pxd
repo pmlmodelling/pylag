@@ -18,7 +18,13 @@ cdef extern from "particle.h" namespace "particles":
 
         void clear_host_horizontal_elems() except +
 
-        void clear_bio_parameters() except +
+        void clear_parameters() except +
+
+        void clear_state_variables() except +
+
+        void clear_diagnostic_variables() except +
+
+        void clear_boolean_flags() except +
 
         void set_group_id(const DTYPE_INT_t&) except +
         DTYPE_INT_t get_group_id() except +
@@ -78,8 +84,23 @@ cdef extern from "particle.h" namespace "particles":
         void set_is_alive(const bint&) except +
         bint get_is_alive() except +
 
-        void set_bio_parameter(const string&, const DTYPE_FLOAT_t&) except +
-        DTYPE_FLOAT_t get_bio_parameter(const string&) except +
+        void set_parameter(const string&, const DTYPE_FLOAT_t&) except +
+        DTYPE_FLOAT_t get_parameter(const string&) except +
 
-        void get_all_bio_parameters(vector[string]&, vector[float]&) except +
+        void get_all_parameters(vector[string]&, vector[float]&) except +
+
+        void set_state_variable(const string&, const DTYPE_FLOAT_t&) except +
+        DTYPE_FLOAT_t get_state_variable(const string&) except +
+
+        void get_all_state_variables(vector[string]&, vector[float]&) except +
+
+        void set_diagnostic_variable(const string&, const DTYPE_FLOAT_t&) except +
+        DTYPE_FLOAT_t get_diagnostic_variable(const string&) except +
+
+        void get_all_diagnostic_variables(vector[string]&, vector[float]&) except +
+
+        void set_boolean_flag(const string&, const bint&) except +
+        bint get_boolean_flag(const string&) except +
+
+        void get_all_boolean_flags(vector[string]&, vector[bint]&) except +
 

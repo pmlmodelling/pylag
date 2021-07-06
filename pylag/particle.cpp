@@ -23,7 +23,10 @@ namespace particles {
           k_upper_layer(-999),
           age(-999.),
           is_alive(false),
-          bio_parameters{} {
+          parameters{},
+          state_variables{},
+          diagnostic_variables{},
+          boolean_flags{} {
     }
 
     // Copy constructor
@@ -46,7 +49,10 @@ namespace particles {
           k_upper_layer(rhs.k_upper_layer),
           age(rhs.age),
           is_alive(rhs.is_alive),
-          bio_parameters(rhs.bio_parameters) {
+          parameters(rhs.parameters),
+          state_variables(rhs.state_variables),
+          diagnostic_variables(rhs.diagnostic_variables),
+          boolean_flags(rhs.boolean_flags) {
     }
 
     // Copy assignment operator
@@ -70,7 +76,10 @@ namespace particles {
         k_upper_layer = rhs.k_upper_layer;
         age = rhs.age;
         is_alive = rhs.is_alive;
-        bio_parameters = rhs.bio_parameters;
+        parameters = rhs.parameters;
+        state_variables = rhs.state_variables;
+        diagnostic_variables = rhs.diagnostic_variables;
+        boolean_flags = rhs.boolean_flags;
 
         return *this;
     }
@@ -83,8 +92,20 @@ namespace particles {
         host_elements.clear();
     }
 
-    void Particle::clear_bio_parameters() {
-        bio_parameters.clear();
+    void Particle::clear_parameters() {
+        parameters.clear();
+    }
+
+    void Particle::clear_state_variables() {
+        state_variables.clear();
+    }
+
+    void Particle::clear_diagnostic_variables() {
+        diagnostic_variables.clear();
+    }
+
+    void Particle::clear_boolean_flags() {
+        boolean_flags.clear();
     }
 
     // Getters and setters
@@ -257,16 +278,61 @@ namespace particles {
         is_alive = rhs;
     }
 
-    void Particle::set_bio_parameter(const std::string& name, const float& value) {
-        bio_parameters[name] = value;
+    void Particle::set_parameter(const std::string& name, const float& value) {
+        parameters[name] = value;
     }
 
-    float Particle::get_bio_parameter(const std::string& name) const {
-        return bio_parameters.at(name);
+    float Particle::get_parameter(const std::string& name) const {
+        return parameters.at(name);
     }
 
-    void Particle::get_all_bio_parameters(std::vector<std::string>& names, std::vector<float>& values) const {
-        for (auto& x: bio_parameters) {
+    void Particle::get_all_parameters(std::vector<std::string>& names, std::vector<float>& values) const {
+        for (auto& x: parameters) {
+            names.push_back(x.first);
+            values.push_back(x.second);
+        }
+    }
+
+    void Particle::set_state_variable(const std::string& name, const float& value) {
+        state_variables[name] = value;
+    }
+
+    float Particle::get_state_variable(const std::string& name) const {
+        return state_variables.at(name);
+    }
+
+    void Particle::get_all_state_variables(std::vector<std::string>& names, std::vector<float>& values) const {
+        for (auto& x: state_variables) {
+            names.push_back(x.first);
+            values.push_back(x.second);
+        }
+    }
+
+    void Particle::set_diagnostic_variable(const std::string& name, const float& value) {
+        variables[name] = value;
+    }
+
+    float Particle::get_diagnostic_variable(const std::string& name) const {
+        return variables.at(name);
+    }
+
+    void Particle::get_all_diagnostic_variables(std::vector<std::string>& names, std::vector<float>& values) const {
+        for (auto& x: diagnostic_variables) {
+            names.push_back(x.first);
+            values.push_back(x.second);
+        }
+    }
+
+    void Particle::set_boolean_flag(const std::string& name, const bool& value) {
+        boolean_flags[name] = value;
+    }
+
+    bool Particle::get_boolean_flag(const std::string& name) const {
+        return boolean_flags.at(name);
+    }
+
+    void Particle::get_all_boolean_flags(std::vector<std::string>& names, std::vector<bool>& values) const {
+        for (auto& x: boolean_flags) {
             names.push_back(x.first);
             values.push_back(x.second);
         }

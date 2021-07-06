@@ -31,7 +31,8 @@ cdef class ParticleSmartPtr:
                   DTYPE_INT_t k_layer=INT_INVALID, bint in_vertical_boundary_layer=False,
                   DTYPE_INT_t k_lower_layer=INT_INVALID, DTYPE_INT_t k_upper_layer=INT_INVALID,
                   DTYPE_INT_t id=INT_INVALID, DTYPE_INT_t status=0, DTYPE_FLOAT_t age=FLOAT_INVALID,
-                  bint is_alive=False, bio_parameters={}, ParticleSmartPtr particle_smart_ptr=None):
+                  bint is_alive=False, parameters={}, state_variables={}, diagnostic_variables={},
+                  boolean_flags={}, ParticleSmartPtr particle_smart_ptr=None):
 
         cdef ParticleSmartPtr _particle_smart_ptr
 
@@ -68,8 +69,17 @@ cdef class ParticleSmartPtr:
             # Add hosts
             self.set_all_host_horizontal_elems(host_elements)
 
-            # Set all bio parameters
-            self.set_all_bio_parameters(bio_parameters)
+            # Set all parameters
+            self.set_all_parameters(parameters)
+
+            # Set all state variables
+            self.set_all_state_variables(state_variables)
+
+            # Set all diagnostic variables
+            self.set_all_diagnostic_variables(diagnostic_variables)
+
+            # Set all boolean flags
+            self.set_all_boolean_flags(boolean flags)
 
         if not self._particle:
             raise MemoryError()
@@ -222,8 +232,8 @@ cdef class ParticleSmartPtr:
         """
         self._particle.set_age(age)
 
-    def set_bio_parameter(self, name, value):
-        """ Set biological parameter
+    def set_parameter(self, name, value):
+        """ Set generic parameter
 
         Parameters
         ----------
@@ -234,10 +244,10 @@ cdef class ParticleSmartPtr:
             The parameters value.
         """
         param_name = name.encode() if type(name) == str else name
-        self._particle.set_bio_parameter(param_name, value)
+        self._particle.set_parameter(param_name, value)
 
-    def get_bio_parameter(self, name):
-        """ Get biological parameter
+    def get_parameter(self, name):
+        """ Get parameter
 
         Parameters
         ----------
@@ -251,37 +261,220 @@ cdef class ParticleSmartPtr:
         """
         param_name = name.encode() if type(name) == str else name
 
-        return self._particle.get_bio_parameter(param_name)
+        return self._particle.get_parameter(param_name)
 
-    def set_all_bio_parameters(self, bio_parameters):
-        """ Set all bio parameters
+    def set_all_parameters(self, parameters):
+        """ Set all parameters
 
         Parameters
         ----------
-        bio_parameters : dict
-            Dictionary of bio parameters {name: value}
+        parameters : dict
+            Dictionary of parameters {name: value}
         """
-        self._particle.clear_bio_parameters()
-        for name, value in bio_parameters.items():
-            self.set_phi(name, value)
+        self._particle.clear_parameters()
+        for name, value in parameters.items():
+            self.set_parameter(name, value)
 
-    def get_all_bio_parameters(self):
-        """ Get all bio parameters
+    def get_all_parameters(self):
+        """ Get all parameters
 
         Returns
         -------
-        bio_parameters : dict
-             Bio parameters stored in a dictionary.
+        parameters : dict
+             Parameters stored in a dictionary.
         """
         cdef vector[string] names
         cdef vector[float] values
-        self._particle.get_all_bio_parameters(names, values)
+        self._particle.get_all_parameters(names, values)
 
-        bio_parameters = {}
+        parameters = {}
         for name, value in zip(names, values):
-            bio_parameters[name.decode()] = value
+            parameters[name.decode()] = value
 
-        return bio_parameters
+        return parameters
+
+    def set_state_variable(self, name, value):
+        """ Set state variable
+
+        Parameters
+        ----------
+        name : str
+            The name of the state variable.
+
+        value : float
+            The state variable's value.
+        """
+        var_name = name.encode() if type(name) == str else name
+        self._particle.set_state_variable(var_name, value)
+
+    def get_state_variable(self, name):
+        """ Get state variable
+
+        Parameters
+        ----------
+        name : str
+            The name of the state variable.
+
+        Returns
+        -------
+        value : float
+            The value of the state variable.
+        """
+        var_name = name.encode() if type(name) == str else name
+
+        return self._particle.get_state_variable(var_name)
+
+    def set_all_state_variables(self, state_variables):
+        """ Set all state variables
+
+        Parameters
+        ----------
+        state_variables : dict
+            Dictionary of state variables {name: value}
+        """
+        self._particle.clear_state_variables()
+        for name, value in state_variables.items():
+            self.set_state_variable(name, value)
+
+    def get_all_state variables(self):
+        """ Get all state variables
+
+        Returns
+        -------
+        state_variables : dict
+             State variables stored in a dictionary.
+        """
+        cdef vector[string] names
+        cdef vector[float] values
+        self._particle.get_all_state_variables(names, values)
+
+        state_variables = {}
+        for name, value in zip(names, values):
+            state_variables[name.decode()] = value
+
+        return state_variables
+
+    def set_diagnostic_variable(self, name, value):
+        """ Set diagnostic variable
+
+        Parameters
+        ----------
+        name : str
+            The name of the diagnostic variable.
+
+        value : float
+            The diagnostic variable's value.
+        """
+        var_name = name.encode() if type(name) == str else name
+        self._particle.set_diagnostic_variable(var_name, value)
+
+    def get_diagnostic_variable(self, name):
+        """ Get diagnostic variable
+
+        Parameters
+        ----------
+        name : str
+            The name of the diagnostic variable.
+
+        Returns
+        -------
+        value : float
+            The value of the diagnostic variable.
+        """
+        var_name = name.encode() if type(name) == str else name
+
+        return self._particle.get_diagnostic_variable(var_name)
+
+    def set_all_diagnostic_variables(self, diagnostic_variables):
+        """ Set all diagnostic variables
+
+        Parameters
+        ----------
+        diagnostic_variables : dict
+            Dictionary of diagnostic variables {name: value}
+        """
+        self._particle.clear_diagnostic_variables()
+        for name, value in diagnostic_variables.items():
+            self.set_diagnostic_variable(name, value)
+
+    def get_all_diagnostic variables(self):
+        """ Get all diagnostic variables
+
+        Returns
+        -------
+        diagnostic_variables : dict
+             Diagnostic variables stored in a dictionary.
+        """
+        cdef vector[string] names
+        cdef vector[float] values
+        self._particle.get_all_diagnostic_variables(names, values)
+
+        diagnostic_variables = {}
+        for name, value in zip(names, values):
+            diagnostic_variables[name.decode()] = value
+
+        return diagnostic_variables
+
+    def set_boolean_flag(self, name, value):
+        """ Set diagnostic variable
+
+        Parameters
+        ----------
+        name : str
+            The name of the diagnostic variable.
+
+        value : float
+            The diagnostic variable's value.
+        """
+        flag_name = name.encode() if type(name) == str else name
+        self._particle.set_boolean_flag(flag_name, value)
+
+    def get_boolean_flag(self, name):
+        """ Get diagnostic variable
+
+        Parameters
+        ----------
+        name : str
+            The name of the diagnostic variable.
+
+        Returns
+        -------
+        value : float
+            The value of the diagnostic variable.
+        """
+        flag_name = name.encode() if type(name) == str else name
+
+        return self._particle.get_boolean_flag(flag_name)
+
+    def set_all_boolean_flags(self, boolean_flags):
+        """ Set all boolean flags
+
+        Parameters
+        ----------
+        boolean_flags : dict
+            Dictionary of boolean flags {name: value}
+        """
+        self._particle.clear_boolean_flags()
+        for name, value in boolean_flags.items():
+            self.set_boolean_flag(name, value)
+
+    def get_all_boolean flags(self):
+        """ Get all boolean flags
+
+        Returns
+        -------
+        boolean_flags : dict
+             Boolean flags stored in a dictionary.
+        """
+        cdef vector[string] names
+        cdef vector[float] values
+        self._particle.get_all_boolean_flags(names, values)
+
+        boolean_flags = {}
+        for name, value in zip(names, values):
+            boolean_flags[name.decode()] = value
+
+        return boolean_flags
 
     @property
     def status(self):

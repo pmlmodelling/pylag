@@ -30,7 +30,13 @@ namespace particles {
 
             void clear_host_horizontal_elems();
 
-            void clear_bio_parameters();
+            void clear_parameters();
+
+            void clear_state_variables();
+
+            void clear_diagnostic_variables();
+
+            void clear_boolean_flags();
 
             // Getters and setters
             // -------------------
@@ -93,10 +99,28 @@ namespace particles {
             void set_is_alive(const bool& rhs);
             bool get_is_alive() const;
 
-            void set_bio_parameter(const std::string& name, const float& value);
-            float get_bio_parameter(const std::string& name) const;
+           // Generic getters and setters below here, with values stores in map objects
+           // -------------------------------------------------------------------------
 
-            void get_all_bio_parameters(std::vector<std::string>& names, std::vector<float>& values) const;
+            void set_parameter(const std::string& name, const float& value);
+            float get_parameter(const std::string& name) const;
+
+            void get_all_parameters(std::vector<std::string>& names, std::vector<float>& values) const;
+
+            void set_state_variable(const std::string& name, const float& value);
+            float get_state_variable(const std::string& name) const;
+
+            void get_all_state_variables(std::vector<std::string>& names, std::vector<float>& values) const;
+
+            void set_diagnostic_variable(const std::string& name, const float& value);
+            float get_diagnostic_variable(const std::string& name) const;
+
+            void get_all_diagnostic_variables(std::vector<std::string>& names, std::vector<float>& values) const;
+
+            void set_boolean_flag(const std::string& name, const bool& value);
+            float get_boolean_flag(const std::string& name) const;
+
+            void get_all_boolean_flags(std::vector<std::string>& names, std::vector<float>& values) const;
 
         private:
 
@@ -175,8 +199,17 @@ namespace particles {
             // Particle is living?
             bool is_alive;
 
-            // Biological and biochemical parameters. Format is: <name, value>.
-            std::unordered_map<std::string, float> bio_parameters;
+            // Particle parameters. Format is: <name, value>.
+            std::unordered_map<std::string, float> parameters;
+
+            // Particle variables. Format is: <name, value>.
+            std::unordered_map<std::string, float> state_variables;
+
+            // Particle diagnostic variables. Format is: <name, value>.
+            std::unordered_map<std::string, float> diagnostic_variables;
+
+            // Particle boolean flags. Format is: <name, value>.
+            std::unordered_map<std::string, float> boolean_flags;
 
     };
 
