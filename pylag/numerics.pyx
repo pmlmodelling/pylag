@@ -107,9 +107,6 @@ cdef class StdNumMethod(NumMethod):
     """
     cdef DTYPE_FLOAT_t _time_step
 
-    cdef bint _depth_restoring
-    cdef DTYPE_FLOAT_t _fixed_depth_below_surface
-
     cdef ItMethod _iterative_method
     cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
     cdef VertBoundaryConditionCalculator _vert_bc_calculator
@@ -126,17 +123,7 @@ cdef class StdNumMethod(NumMethod):
 
         self._time_step = self._iterative_method.get_time_step()
 
-        try:
-            self._depth_restoring = config.getboolean("SIMULATION", "depth_restoring")
-        except (configparser.NoSectionError, configparser.NoOptionError) as e:
-            self._depth_restoring = False
-
-        try:
-            self._fixed_depth_below_surface = config.getfloat("SIMULATION", "fixed_depth")
-        except (configparser.NoSectionError, configparser.NoOptionError) as e:
-            self._fixed_depth_below_surface = FLOAT_ERR
-
-    cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
+    cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
             Particle *particle) except INT_ERR:
         """ Perform one iteration of the numerical method
         
@@ -167,6 +154,12 @@ cdef class StdNumMethod(NumMethod):
         cdef Delta _delta_X
         cdef DTYPE_INT_t flag
         cdef DTYPE_INT_t counter
+        cdef bint _depth_restoring
+        cdef DTYPE_FLOAT_t _fixed_depth_below_surface
+
+        # Are we using depth restoring
+        _depth_restoring = particle.get_boolean_flag(b'depth_restoring')
+        _fixed_depth_below_surface = particle.get_parameter(b'fixed_depth_below_surface')
 
         # Create a clone of the current particle to work on
         _particle_copy = particle[0]
@@ -211,9 +204,9 @@ cdef class StdNumMethod(NumMethod):
             return flag
         
         # Restore to a fixed depth?
-        if self._depth_restoring is True:
+        if _depth_restoring is True:
             zmax = data_reader.get_zmax(time+self._time_step, &_particle_copy)
-            _particle_copy.set_x3(self._fixed_depth_below_surface + zmax)
+            _particle_copy.set_x3(_fixed_depth_below_surface + zmax)
 
             # Only try to set vertical grid vars if the particle is not beached
             if data_reader.is_wet(time+self._time_step, &_particle_copy) == 1:
@@ -296,9 +289,6 @@ cdef class OS0NumMethod(NumMethod):
     cdef DTYPE_FLOAT_t _diff_time_step
     cdef DTYPE_INT_t _n_sub_time_steps
 
-    cdef bint _depth_restoring
-    cdef DTYPE_FLOAT_t _fixed_depth_below_surface
-
     cdef ItMethod _adv_iterative_method
     cdef ItMethod _diff_iterative_method
     cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
@@ -333,10 +323,7 @@ cdef class OS0NumMethod(NumMethod):
         
         self._n_sub_time_steps = int(self._adv_time_step / self._diff_time_step)
 
-        self._depth_restoring = config.getboolean("SIMULATION", "depth_restoring")
-        self._fixed_depth_below_surface = config.getfloat("SIMULATION", "fixed_depth")
-
-    cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
+    cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
             Particle *particle) except INT_ERR:
         """ Perform one iteration of the numerical integration
         
@@ -370,6 +357,12 @@ cdef class OS0NumMethod(NumMethod):
         cdef DTYPE_FLOAT_t t
         cdef DTYPE_INT_t i
         cdef DTYPE_INT_t counter
+        cdef bint _depth_restoring
+        cdef DTYPE_FLOAT_t _fixed_depth_below_surface
+
+        # Are we using depth restoring
+        _depth_restoring = particle.get_boolean_flag(b'depth_restoring')
+        _fixed_depth_below_surface = particle.get_parameter(b'fixed_depth_below_surface')
 
         # Advection
         # ---------
@@ -487,9 +480,9 @@ cdef class OS0NumMethod(NumMethod):
             _particle_copy_a = _particle_copy_b
 
         # Restore to a fixed depth?
-        if self._depth_restoring is True:
+        if _depth_restoring is True:
             zmax = data_reader.get_zmax(time+self._adv_time_step, &_particle_copy_b)
-            _particle_copy_b.set_x3(self._fixed_depth_below_surface + zmax)
+            _particle_copy_b.set_x3(_fixed_depth_below_surface + zmax)
             
             # Only try to set vertical grid vars if the particle is not beached
             if data_reader.is_wet(time+self._adv_time_step, &_particle_copy_b) == 1:
@@ -552,9 +545,6 @@ cdef class OS1NumMethod(NumMethod):
     cdef DTYPE_FLOAT_t _adv_time_step
     cdef DTYPE_FLOAT_t _diff_time_step
 
-    cdef bint _depth_restoring
-    cdef DTYPE_FLOAT_t _fixed_depth_below_surface
-
     cdef ItMethod _adv_iterative_method
     cdef ItMethod _diff_iterative_method
     cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
@@ -581,10 +571,7 @@ cdef class OS1NumMethod(NumMethod):
                     "the numerical integration scheme OS1NumMethod."\
                     "".format(self._adv_time_step, self._diff_time_step))
 
-        self._depth_restoring = config.getboolean("SIMULATION", "depth_restoring")
-        self._fixed_depth_below_surface = config.getfloat("SIMULATION", "fixed_depth")
-
-    cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time, 
+    cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
             Particle *particle) except INT_ERR:
         """ Perform one iteration of the numerical integration
         
@@ -617,6 +604,12 @@ cdef class OS1NumMethod(NumMethod):
         cdef Delta _delta_X
         cdef DTYPE_FLOAT_t t
         cdef DTYPE_INT_t counter
+        cdef bint _depth_restoring
+        cdef DTYPE_FLOAT_t _fixed_depth_below_surface
+
+        # Are we using depth restoring
+        _depth_restoring = particle.get_boolean_flag(b'depth_restoring')
+        _fixed_depth_below_surface = particle.get_parameter(b'fixed_depth_below_surface')
 
         # 1st Diffusion step
         # ------------------
@@ -761,9 +754,9 @@ cdef class OS1NumMethod(NumMethod):
         t = time + self._adv_time_step
 
         # Restore to a fixed depth?
-        if self._depth_restoring is True:
+        if _depth_restoring is True:
             zmax = data_reader.get_zmax(t, &_particle_copy_b)
-            _particle_copy_b.set_x3(self._fixed_depth_below_surface + zmax)
+            _particle_copy_b.set_x3(_fixed_depth_below_surface + zmax)
 
             if data_reader.is_wet(t, &_particle_copy_b) == 1:
 

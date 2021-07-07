@@ -95,6 +95,8 @@ cdef class OPTModel:
         # Create settling velocity calculator object
         self.settling_velocity_calculator = get_settling_velocity_calculator(self.config)
 
+        # TODO impose check on depth restoring and log a warning if there is a conflict
+
         # Read in the coordinate system
         coordinate_system = self.config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system").strip().lower()
         if coordinate_system in ["cartesian", "geographic"]:
@@ -337,7 +339,22 @@ cdef class OPTModel:
             if flag == IN_DOMAIN:
                 particle_smart_ptr.get_ptr().set_in_domain(True)
 
-                # Initialise particle settling velocity
+                # Will the depth of the particle be restored to a fixed depth?
+                # NB this behaviour can/will be overridden if settling is
+                # enabled.
+                try:
+                    depth_restoring = self.config.getboolean("SIMULATION", "depth_restoring")
+                except (configparser.NoSectionError, configparser.NoOptionError) as e:
+                    depth_restoring = False
+                particle_smart_ptr.get_ptr().set_boolean_flag(b'depth_restoring', depth_restoring)
+
+                try:
+                    fixed_depth_below_surface = self.config.getfloat("SIMULATION", "fixed_depth")
+                except (configparser.NoSectionError, configparser.NoOptionError) as e:
+                    fixed_depth_below_surface = FLOAT_ERR
+                particle_smart_ptr.get_ptr().set_parameter(b'fixed_depth_below_surface', fixed_depth_below_surface)
+
+                # Initialise particle settling velocity parameters
                 if self.settling_velocity_calculator is not None:
                     self.settling_velocity_calculator.init_particle_settling_velocity(particle_smart_ptr.get_ptr())
 
