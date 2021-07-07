@@ -24,7 +24,7 @@ cdef class VelocityAggregator:
     cdef bint _apply_behaviour_term
 
     # Parameter names
-    cdef string _settling_velocity_parameter_name
+    cdef string _settling_velocity_variable_name
 
     # Methods
     cdef void get_velocity(self, DataReader data_reader, DTYPE_FLOAT_t time,

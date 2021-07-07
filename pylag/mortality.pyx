@@ -154,11 +154,11 @@ cdef class FixedTimeMortalityCalculator(MortalityCalculator):
             C pointer to a Particle struct
         """
         if self.initialisation_method == "common_value":
-            particle.set_bio_parameter(self.age_of_death_parameter_name, self.age_of_death)
+            particle.set_parameter(self.age_of_death_parameter_name, self.age_of_death)
         elif self.initialisation_method == "uniform_random":
-            particle.set_bio_parameter(self.age_of_death_parameter_name, random.uniform(self.minimum_bound, self.maximum_bound))
+            particle.set_parameter(self.age_of_death_parameter_name, random.uniform(self.minimum_bound, self.maximum_bound))
         elif self.initialisation_method == "gaussian_random":
-            particle.set_bio_parameter(self.age_of_death_parameter_name, random.gauss(self.mean, self.standard_deviation))
+            particle.set_parameter(self.age_of_death_parameter_name, random.gauss(self.mean, self.standard_deviation))
         else:
             raise ValueError("Unsupported initialisation method `{}`".format(self.initialisation_method))
 
@@ -177,7 +177,7 @@ cdef class FixedTimeMortalityCalculator(MortalityCalculator):
         particle : C pointer
             C pointer to a Particle struct
         """
-        if particle.get_age() >= particle.get_bio_parameter(self.age_of_death_parameter_name):
+        if particle.get_age() >= particle.get_parameter(self.age_of_death_parameter_name):
             particle.set_is_alive(False)
 
 
@@ -227,7 +227,7 @@ cdef class ProbabilisticMortalityCalculator(MortalityCalculator):
         particle : C pointer
             C pointer to a Particle struct
         """
-        particle.set_bio_parameter(self.death_rate_parameter_name, self.death_rate)
+        particle.set_parameter(self.death_rate_parameter_name, self.death_rate)
 
     cdef void apply(self, DataReader data_reader, DTYPE_FLOAT_t time,
                     Particle *particle) except *:
@@ -248,7 +248,7 @@ cdef class ProbabilisticMortalityCalculator(MortalityCalculator):
 
         p = random.uniform(0.0, 1.0)
 
-        if p < particle.get_bio_parameter(self.death_rate_parameter_name) * self.time_step:
+        if p < particle.get_parameter(self.death_rate_parameter_name) * self.time_step:
             particle.set_is_alive(False)
 
 

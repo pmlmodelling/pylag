@@ -85,8 +85,8 @@ cdef class ConstantSettlingVelocityCalculator(SettlingVelocityCalculator):
     config : ConfigParser
         Configuration object
 
-    _settling_velocity_parameters_name : str
-        The name of the parameter with which the settling velocity is associated.
+    _settling_velocity_variable_name : str
+        The name of the variable with which the settling velocity is associated.
 
     _w_settling_fixed : float
         Fixed settling velocity. Used if `initialisation_method` is set to `fixed_value`.
@@ -100,8 +100,8 @@ cdef class ConstantSettlingVelocityCalculator(SettlingVelocityCalculator):
         Maximum settling velocity. Used if `initialisation_method` is set to `uniform_random`.
         Set using the configuration option `max_settling_velocity`.
     """
-    # Settling velocity parameter name
-    cdef string _settling_velocity_parameter_name
+    # Settling velocity variable name
+    cdef string _settling_velocity_variable_name
 
     # Settling velocities, used for initialisation purposes
     cdef DTYPE_FLOAT_t _w_settling_fixed
@@ -111,8 +111,8 @@ cdef class ConstantSettlingVelocityCalculator(SettlingVelocityCalculator):
     def __init__(self, config):
         self._config = config
 
-        # Settling velocity parameter name
-        self._settling_velocity_parameter_name = parameter_names['settling_velocity']
+        # Settling velocity variable name
+        self._settling_velocity_variable_name = variable_names['settling_velocity']
 
         if self.config.get("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "initialisation_method") == "fixed_value":
             self._w_sink_fixed = self.config.getfloat("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "settling_velocity")
@@ -145,7 +145,7 @@ cdef class ConstantSettlingVelocityCalculator(SettlingVelocityCalculator):
                 "method `{}'.".format(self.config.get("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "initialisation_method")))
 
         # Set the particle's settling velocity
-        particle.set_bio_parameter(self.settling_velocity_parameter_name, w_settling)
+        particle.set_diagnostic_variable(self.settling_velocity_variable_name, w_settling)
 
     cdef void set_particle_settling_velocity(self, DataReader data_reader, DTYPE_FLOAT_t time,
                     Particle *particle) except *:
@@ -194,6 +194,6 @@ def get_settling_velocity_calculator(config):
             raise ValueError('Unsupported settling velocity calculator.')
 
 
-# Settling parameter names
-# ----------------------------
-parameter_names = {'settling_velocity' : b'settling_velocity_in_meters_per_second'}
+# Settling variable names
+# -----------------------
+variable_names = {'settling_velocity' : b'settling_velocity_in_meters_per_second'}

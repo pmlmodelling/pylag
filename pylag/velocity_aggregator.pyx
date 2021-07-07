@@ -26,7 +26,7 @@ try:
 except ImportError:
     import ConfigParser as configparser
 
-from pylag.settling import parameter_names as settling_parameter_names
+from pylag.settling import variable_names as settling_variable_names
 
 from pylag.particle_cpp_wrapper cimport ParticleSmartPtr
 
@@ -55,7 +55,7 @@ cdef class VelocityAggregator:
         self._apply_behaviour_term = False
 
         # Parameter names
-        self._settling_velocity_parameter_name = settling_parameter_names['settling_velocity']
+        self._settling_velocity_variable_name = settling_variable_names['settling_velocity']
 
     cdef void get_velocity(self, DataReader data_reader, DTYPE_FLOAT_t time,
             Particle *particle, DTYPE_FLOAT_t velocity[3]) except +:
@@ -71,7 +71,7 @@ cdef class VelocityAggregator:
                 velocity[i] = velocity_tmp[i]
 
         if self._apply_settling_term == True:
-            velocity[2] += particle.get_bio_parameter(self._settling_velocity_parameter_name)
+            velocity[2] += particle.get_diagnostic_variable(self._settling_velocity_variable_name)
 
         return
 
