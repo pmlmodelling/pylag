@@ -118,9 +118,9 @@ namespace particles {
             void get_all_diagnostic_variables(std::vector<std::string>& names, std::vector<float>& values) const;
 
             void set_boolean_flag(const std::string& name, const bool& value);
-            float get_boolean_flag(const std::string& name) const;
+            bool get_boolean_flag(const std::string& name) const;
 
-            void get_all_boolean_flags(std::vector<std::string>& names, std::vector<float>& values) const;
+            void get_all_boolean_flags(std::vector<std::string>& names, std::vector<bool>& values) const;
 
         private:
 

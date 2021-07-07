@@ -1,6 +1,7 @@
 from libcpp.string cimport string
 from libcpp.unordered_map cimport unordered_map
 from libcpp.vector cimport vector
+from libcpp cimport bool
 
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
@@ -99,8 +100,8 @@ cdef extern from "particle.h" namespace "particles":
 
         void get_all_diagnostic_variables(vector[string]&, vector[float]&) except +
 
-        void set_boolean_flag(const string&, const bint&) except +
+        void set_boolean_flag(const string&, const bool&) except +
         bint get_boolean_flag(const string&) except +
 
-        void get_all_boolean_flags(vector[string]&, vector[bint]&) except +
+        void get_all_boolean_flags(vector[string]&, vector[bool]&) except +
 

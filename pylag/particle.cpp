@@ -309,11 +309,11 @@ namespace particles {
     }
 
     void Particle::set_diagnostic_variable(const std::string& name, const float& value) {
-        variables[name] = value;
+        diagnostic_variables[name] = value;
     }
 
     float Particle::get_diagnostic_variable(const std::string& name) const {
-        return variables.at(name);
+        return diagnostic_variables.at(name);
     }
 
     void Particle::get_all_diagnostic_variables(std::vector<std::string>& names, std::vector<float>& values) const {

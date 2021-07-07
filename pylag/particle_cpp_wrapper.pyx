@@ -10,6 +10,7 @@ from cython.operator cimport preincrement as preinc
 
 from libcpp.vector cimport vector
 from libcpp.string cimport string
+from libcpp cimport bool
 
 # Data types
 from pylag.data_types_python import INT_INVALID, FLOAT_INVALID
@@ -79,7 +80,7 @@ cdef class ParticleSmartPtr:
             self.set_all_diagnostic_variables(diagnostic_variables)
 
             # Set all boolean flags
-            self.set_all_boolean_flags(boolean flags)
+            self.set_all_boolean_flags(boolean_flags)
 
         if not self._particle:
             raise MemoryError()
@@ -336,7 +337,7 @@ cdef class ParticleSmartPtr:
         for name, value in state_variables.items():
             self.set_state_variable(name, value)
 
-    def get_all_state variables(self):
+    def get_all_state_variables(self):
         """ Get all state variables
 
         Returns
@@ -397,7 +398,7 @@ cdef class ParticleSmartPtr:
         for name, value in diagnostic_variables.items():
             self.set_diagnostic_variable(name, value)
 
-    def get_all_diagnostic variables(self):
+    def get_all_diagnostic_variables(self):
         """ Get all diagnostic variables
 
         Returns
@@ -458,7 +459,7 @@ cdef class ParticleSmartPtr:
         for name, value in boolean_flags.items():
             self.set_boolean_flag(name, value)
 
-    def get_all_boolean flags(self):
+    def get_all_boolean_flags(self):
         """ Get all boolean flags
 
         Returns
@@ -467,7 +468,7 @@ cdef class ParticleSmartPtr:
              Boolean flags stored in a dictionary.
         """
         cdef vector[string] names
-        cdef vector[float] values
+        cdef vector[bool] values
         self._particle.get_all_boolean_flags(names, values)
 
         boolean_flags = {}
