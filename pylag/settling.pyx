@@ -14,6 +14,7 @@ except ImportError:
 
 from pylag.particle_cpp_wrapper cimport ParticleSmartPtr
 cimport pylag.random as random
+from pylag.parameters cimport seconds_per_day
 
 
 # Base class
@@ -100,6 +101,9 @@ cdef class ConstantSettlingVelocityCalculator(SettlingVelocityCalculator):
         Maximum settling velocity. Used if `initialisation_method` is set to `uniform_random`.
         Set using the configuration option `max_settling_velocity`.
     """
+    # Config
+    cdef object _config
+
     # Settling velocity variable name
     cdef string _settling_velocity_variable_name
 
@@ -145,7 +149,7 @@ cdef class ConstantSettlingVelocityCalculator(SettlingVelocityCalculator):
                 "method `{}'.".format(self.config.get("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "initialisation_method")))
 
         # Set the particle's settling velocity
-        particle.set_diagnostic_variable(self.settling_velocity_variable_name, w_settling)
+        particle.set_diagnostic_variable(self._settling_velocity_variable_name, w_settling)
 
     cdef void set_particle_settling_velocity(self, DataReader data_reader, DTYPE_FLOAT_t time,
                     Particle *particle) except *:
@@ -166,6 +170,110 @@ cdef class ConstantSettlingVelocityCalculator(SettlingVelocityCalculator):
             C pointer to a particle struct.
         """
         pass
+
+
+cdef class DelayedSettlingVelocityCalculator(SettlingVelocityCalculator):
+    """ Delayed settling velocity calculator
+
+    A delayed settling velocity calculator assumes that particles stay
+    at or close to the surface for some period of time which is specified
+    in the run configuration file. After this time, the particles begin
+    to sink at a specified rate.
+
+    The calculator is included as a basic way of simulating the transport
+    and fate of objects such as sea weed detritus, which are initially
+    positively buoyant in seawater, but after time degrade and sink.
+
+    Parameters
+    ----------
+    config : ConfigParser
+        Configuration object
+
+    Attributes
+    ----------
+    config : ConfigParser
+        Configuration object
+
+    _duration_of_surface_transport_phase_variable_name : str
+        The name of the variable with which the duration of the surface transport phase is associated.
+
+    _duration_of_surface_transport_phase_in_seconds : float
+        The time in seconds over which the particle remains positively buoyant and is transported
+        along the surface (units: seconds).
+
+    _settling_velocity_variable_name : str
+        The name of the variable with which the settling velocity is associated.
+
+    _settling_velocity : float
+        Fixed settling velocity for the particle after it has begun to sink (units: m/s).
+    """
+    # Config
+    cdef object _config
+
+    # Variables names
+    cdef string _settling_velocity_variable_name
+
+    # Parameters
+    cdef DTYPE_FLOAT_t _duration_of_surface_transport_phase_in_seconds
+    cdef DTYPE_FLOAT_t _settling_velocity
+
+    # Internal flags
+    cdef bint _settling_has_started
+
+    def __init__(self, config):
+        self._config = config
+
+        # Settling velocity variable name
+        self._settling_velocity_variable_name = variable_names['settling_velocity']
+
+        # Settling parameters
+        duration_in_days = self.config.getfloat("DELAYED_SETTLING_VELOCITY_CALCULATOR",
+                                                "duration_of_surface_transport_phase_in_days")
+        self._duration_of_surface_transport_phase_in_seconds = duration_in_days * seconds_per_day
+
+        self._settling_velocity = self.config.getfloat("DELAYED_SETTLING_VELOCITY_CALCULATOR", "settling_velocity")
+
+        # Internal flags
+        self._settling_has_started = False
+
+    cdef void init_particle_settling_velocity(self, Particle *particle) except *:
+        """ Initialise the particle settling velocity
+
+        Parameters
+        ----------
+        particle : C pointer
+            C pointer to a particle struct.
+        """
+        # The particle's position is initially restored to be at the surface
+        particle.set_boolean_flag('depth_restoring', True)
+        particle.set_diagnostic_variable('fixed_depth_below_surface', 0.0)
+
+        # The settling velocity of the particle (initially zero, overwritten below)
+        particle.set_diagnostic_variable(self._settling_velocity_variable_name, 0.0)
+
+    cdef void set_particle_settling_velocity(self, DataReader data_reader, DTYPE_FLOAT_t time,
+                    Particle *particle) except *:
+        """ Set the settling velocity
+
+        As the velocity is fixed, do nothing.
+
+        Parameters
+        ----------
+        data_reader : DataReader
+            DataReader object used for calculating point velocities
+            and/or diffusivities.
+
+        time : float
+            The current time.
+
+        particle : C pointer
+            C pointer to a particle struct.
+        """
+        if self._settling_has_started == False:
+            if time >= self._duration_of_surface_transport_phase_in_seconds:
+                particle.set_boolean_flag('depth_restoring', False)
+                particle.set_diagnostic_variable(self._settling_velocity_variable_name, self._settling_velocity)
+                self._settling_has_started = True
 
 
 def get_settling_velocity_calculator(config):
@@ -190,6 +298,8 @@ def get_settling_velocity_calculator(config):
             return None
         elif settling == "constant":
             return ConstantSettlingVelocityCalculator(config)
+        elif settling == "delayed":
+            return DelayedSettlingVelocityCalculator(config)
         else:
             raise ValueError('Unsupported settling velocity calculator.')
 
