@@ -71,7 +71,7 @@ cdef class VelocityAggregator:
                 velocity[i] = velocity_tmp[i]
 
         if self._apply_settling_term == True:
-            velocity[2] += particle.get_diagnostic_variable(self._settling_velocity_variable_name)
+            # Settling velocity is positive down
+            velocity[2] -= particle.get_diagnostic_variable(self._settling_velocity_variable_name)
 
         return
-
