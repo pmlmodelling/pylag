@@ -119,13 +119,13 @@ cdef class ConstantSettlingVelocityCalculator(SettlingVelocityCalculator):
         self._settling_velocity_variable_name = variable_names['settling_velocity']
 
         if self._config.get("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "initialisation_method") == "fixed_value":
-            self._w_sink_fixed = self._config.getfloat("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "settling_velocity")
-            self._w_sink_min = -999.
-            self._w_sink_max = -999.
+            self._w_settling_fixed = self._config.getfloat("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "settling_velocity")
+            self._w_settling_min = -999.
+            self._w_settling_max = -999.
         elif self._config.get("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "initialisation_method") == "uniform_random":
-            self._w_sink_fixed = -999.
-            self._w_sink_min = self._config.getfloat("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "min_settling_velocity")
-            self._w_sink_max = self._config.getfloat("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "max_settling_velocity")
+            self._w_settling_fixed = -999.
+            self._w_settling_min = self._config.getfloat("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "min_settling_velocity")
+            self._w_settling_max = self._config.getfloat("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "max_settling_velocity")
         else:
             raise ValueError("Unsupported settling velocity initialisation "\
                 "method `{}'.".format(self._config.get("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "initialisation_method")))
@@ -141,9 +141,9 @@ cdef class ConstantSettlingVelocityCalculator(SettlingVelocityCalculator):
         cdef DTYPE_FLOAT_t w_settling = -999.
 
         if self._config.get("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "initialisation_method") == "fixed_value":
-            w_settling = self._w_sink_fixed
+            w_settling = self._w_settling_fixed
         elif self._config.get("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "initialisation_method") == "uniform_random":
-            w_settling = random.uniform(self._w_sink_min, self._w_sink_max)
+            w_settling = random.uniform(self._w_settling_min, self._w_settling_max)
         else:
             raise ValueError("Unsupported settling velocity initialisation "\
                 "method `{}'.".format(self._config.get("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "initialisation_method")))
