@@ -1762,6 +1762,74 @@ cdef class DiffMilstein3DItMethod(ItMethod):
 
         return 0
 
+
+cdef class AdvDiffMilstein1DItMethod(ItMethod):
+    """ Milstein 1D iterative method
+
+    In this class the contributions of both advection and diffusion are
+    accounted for.
+
+    Parameters
+    ----------
+    config : ConfigParser
+    """
+    # Velocity aggregator
+    cdef VelocityAggregator _velocity_aggregator
+
+    def __init__(self, config):
+        # Set time step
+        self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
+
+        # Create velocity aggregator
+        self._velocity_aggregator = VelocityAggregator(config)
+
+    cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
+            Particle *particle, Delta *delta_X) except INT_ERR:
+        """ Compute position delta in 3D using Milstein iterative method
+
+        This method is a 3D implementation of the Milstein scheme that accounts
+        for the contributions of both advection and diffusion.
+
+        Parameters
+        ----------
+        data_reader : DataReader
+            DataReader object.
+
+        time : float
+            The current time.
+
+        particle : C pointer
+            C pointer to a Particle struct
+
+        delta_X : C pointer
+            C pointer to a Delta struct
+
+        Returns
+        -------
+        flag : int
+            Flag identifying if a boundary crossing has occurred. This should
+            always be zero since the method does not check for boundary
+            crossings.
+        """
+        cdef DTYPE_FLOAT_t vel[3]
+        cdef DTYPE_FLOAT_t deviate_x3
+        cdef DTYPE_FLOAT_t Kz
+        cdef DTYPE_FLOAT_t Kz_prime
+
+        self._velocity_aggregator.get_velocity(data_reader, time, particle, vel)
+
+        Kz = data_reader.get_vertical_eddy_diffusivity(time, particle)
+        Kz_prime = data_reader.get_vertical_eddy_diffusivity_derivative(time, particle)
+
+        deviate_x3 = random.gauss(0.0, 1.0)
+
+        delta_X.x3  = vel[2] * self._time_step \
+                + 0.5 * Kz_prime * self._time_step * (deviate_x3*deviate_x3 + 1.0) \
+                + sqrt(2.0 * Kz * self._time_step) * deviate_x3
+
+        return 0
+
+
 cdef class AdvDiffMilstein3DItMethod(ItMethod):
     """ Milstein 3D iterative method
 
@@ -1887,6 +1955,8 @@ def get_iterative_method(config):
         return DiffMilstein2DItMethod(config)
     elif iterative_method == "Diff_Milstein_3D":
         return DiffMilstein3DItMethod(config)
+    elif iterative_method == "AdvDiff_Milstein_1D":
+        return AdvDiffMilstein1DItMethod(config)
     elif iterative_method == "AdvDiff_Milstein_3D":
         return AdvDiffMilstein3DItMethod(config)
     else:
