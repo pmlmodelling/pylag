@@ -119,16 +119,16 @@ cdef class ConstantSettlingVelocityCalculator(SettlingVelocityCalculator):
         self._settling_velocity_variable_name = variable_names['settling_velocity']
 
         if self._config.get("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "initialisation_method") == "fixed_value":
-            self._w_sink_fixed = self.config.getfloat("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "settling_velocity")
+            self._w_sink_fixed = self._config.getfloat("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "settling_velocity")
             self._w_sink_min = -999.
             self._w_sink_max = -999.
         elif self._config.get("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "initialisation_method") == "uniform_random":
             self._w_sink_fixed = -999.
-            self._w_sink_min = self.config.getfloat("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "min_settling_velocity")
-            self._w_sink_max = self.config.getfloat("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "max_settling_velocity")
+            self._w_sink_min = self._config.getfloat("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "min_settling_velocity")
+            self._w_sink_max = self._config.getfloat("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "max_settling_velocity")
         else:
             raise ValueError("Unsupported settling velocity initialisation "\
-                "method `{}'.".format(self.config.get("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "initialisation_method")))
+                "method `{}'.".format(self._config.get("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "initialisation_method")))
 
     cdef void init_particle_settling_velocity(self, Particle *particle) except *:
         """ Initialise the particle settling velocity
@@ -146,7 +146,7 @@ cdef class ConstantSettlingVelocityCalculator(SettlingVelocityCalculator):
             w_settling = random.uniform(self._w_sink_min, self._w_sink_max)
         else:
             raise ValueError("Unsupported settling velocity initialisation "\
-                "method `{}'.".format(self.config.get("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "initialisation_method")))
+                "method `{}'.".format(self._config.get("CONSTANT_SETTLING_VELOCITY_CALCULATOR", "initialisation_method")))
 
         # Set the particle's settling velocity
         particle.set_diagnostic_variable(self._settling_velocity_variable_name, w_settling)
