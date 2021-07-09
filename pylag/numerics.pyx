@@ -178,7 +178,7 @@ cdef class StdNumMethod(NumMethod):
                     flag = self._vert_bc_calculator.apply(data_reader, time, &_particle_copy)
 
                     # Return if failure recorded
-                    if flag == BDY_ERROR:
+                    if flag != IN_DOMAIN:
                         return flag
 
                 _particle_copy.set_is_beached(0)
@@ -235,7 +235,7 @@ cdef class StdNumMethod(NumMethod):
                 flag = self._vert_bc_calculator.apply(data_reader, time+self._time_step, &_particle_copy)
 
                 # Return if failure recorded
-                if flag == BDY_ERROR:
+                if flag != IN_DOMAIN:
                     return flag
         else:
             _particle_copy.set_is_beached(1)
@@ -384,7 +384,7 @@ cdef class OS0NumMethod(NumMethod):
                     flag = self._vert_bc_calculator.apply(data_reader, time, &_particle_copy_a)
 
                     # Return if failure recorded
-                    if flag == BDY_ERROR:
+                    if flag != IN_DOMAIN:
                         return flag
 
                 _particle_copy_a.set_is_beached(0)
@@ -427,7 +427,7 @@ cdef class OS0NumMethod(NumMethod):
             flag = self._vert_bc_calculator.apply(data_reader, time, &_particle_copy_a)
 
             # Return if failure recorded
-            if flag == BDY_ERROR:
+            if flag != IN_DOMAIN:
                 return flag
 
         # Diffusion
@@ -473,7 +473,7 @@ cdef class OS0NumMethod(NumMethod):
                 flag = self._vert_bc_calculator.apply(data_reader, t+self._diff_time_step, &_particle_copy_b)
 
                 # Return if failure recorded
-                if flag == BDY_ERROR:
+                if flag != IN_DOMAIN:
                     return flag
 
             # Save the particle's last position to help with host element searching
@@ -631,7 +631,7 @@ cdef class OS1NumMethod(NumMethod):
                     flag = self._vert_bc_calculator.apply(data_reader, time, &_particle_copy_a)
 
                     # Return if failure recorded
-                    if flag == BDY_ERROR:
+                    if flag != IN_DOMAIN:
                         return flag
 
                 _particle_copy_a.set_is_beached(0)
@@ -671,7 +671,7 @@ cdef class OS1NumMethod(NumMethod):
             flag = self._vert_bc_calculator.apply(data_reader, time, &_particle_copy_a)
 
             # Return if failure recorded
-            if flag == BDY_ERROR:
+            if flag != IN_DOMAIN:
                 return flag
 
         # Advection step
@@ -723,7 +723,7 @@ cdef class OS1NumMethod(NumMethod):
             flag = self._vert_bc_calculator.apply(data_reader, t, &_particle_copy_b)
 
             # Return if failure recorded
-            if flag == BDY_ERROR:
+            if flag != IN_DOMAIN:
                 return flag
 
         # Save the particle's last position to help with host element searching
@@ -789,7 +789,7 @@ cdef class OS1NumMethod(NumMethod):
                 flag = self._vert_bc_calculator.apply(data_reader, t, &_particle_copy_b)
 
                 # Return if failure recorded
-                if flag == BDY_ERROR:
+                if flag != IN_DOMAIN:
                     return flag
         else:
             _particle_copy_b.set_is_beached(1)
@@ -1179,7 +1179,7 @@ cdef class AdvRK43DItMethod(ItMethod):
             flag = self._vert_bc_calculator.apply(data_reader, t, &_particle)
 
             # Return if failure recorded
-            if flag == BDY_ERROR:
+            if flag != IN_DOMAIN:
                 return flag
 
         self._velocity_aggregator.get_velocity(data_reader, t, &_particle, vel)
@@ -1222,7 +1222,7 @@ cdef class AdvRK43DItMethod(ItMethod):
             flag = self._vert_bc_calculator.apply(data_reader, t, &_particle)
 
             # Return if failure recorded
-            if flag == BDY_ERROR:
+            if flag != IN_DOMAIN:
                 return flag
 
         self._velocity_aggregator.get_velocity(data_reader, t, &_particle, vel)
@@ -1265,7 +1265,7 @@ cdef class AdvRK43DItMethod(ItMethod):
             flag = self._vert_bc_calculator.apply(data_reader, t, &_particle)
 
             # Return if failure recorded
-            if flag == BDY_ERROR:
+            if flag != IN_DOMAIN:
                 return flag
 
         self._velocity_aggregator.get_velocity(data_reader, t, &_particle, vel)
@@ -1467,7 +1467,7 @@ cdef class DiffVisser1DItMethod(ItMethod):
             flag = self._vert_bc_calculator.apply(data_reader, time, &_particle)
 
             # Return if failure recorded
-            if flag == BDY_ERROR:
+            if flag != IN_DOMAIN:
                 return flag
 
         # Compute Kz at the offset position

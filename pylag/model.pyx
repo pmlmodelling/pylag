@@ -428,7 +428,7 @@ cdef class OPTModel:
                 # Step the model forward in time
                 flag = self.num_method.step(self.data_reader, time, particle_ptr)
 
-                if flag == OPEN_BDY_CROSSED:
+                if flag == OPEN_BDY_CROSSED or flag == BOTTOM_BDY_CROSSED:
                     particle_ptr.set_in_domain(False)
                     continue
                 elif flag == BDY_ERROR:

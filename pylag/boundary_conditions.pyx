@@ -577,6 +577,55 @@ cdef class RefVertBoundaryConditionCalculator(VertBoundaryConditionCalculator):
         return flag
 
 
+cdef class AbsBotVertBoundaryConditionCalculator(VertBoundaryConditionCalculator):
+    """ Absorbing bottom boundary vertical boundary condition calculator
+
+    If a particle crosses the bottom boundary, this is flagged and the particle
+    is left in place. The calculator is intended for use in model setups where
+    a basic absorbing bottom boundary is required. If a particle crosses the
+    surface boundary it is reflected back into the domain back into the domain.
+    """
+
+    cdef DTYPE_INT_t apply(self, DataReader data_reader, DTYPE_FLOAT_t time,
+                           Particle *particle) except INT_ERR:
+        cdef DTYPE_FLOAT_t zmin
+        cdef DTYPE_FLOAT_t zmax
+        cdef DTYPE_FLOAT_t x3
+        cdef DTYPE_INT_t flag
+
+        zmin = data_reader.get_zmin(time, particle)
+        zmax = data_reader.get_zmax(time, particle)
+        x3 = particle.get_x3()
+
+        if zmin < zmax:
+            while x3 < zmin or x3 > zmax:
+                if x3 < zmin:
+                    return BOTTOM_BDY_CROSSED
+                elif x3 > zmax:
+                    x3 = zmax + zmax - x3
+        else:
+            # Cell is dry. Place the particle on the sea floor.
+            x3 = zmin
+
+        particle.set_x3(x3)
+
+        flag = data_reader.set_vertical_grid_vars(time, particle)
+
+        if flag != IN_DOMAIN:
+            # This could happen if the grid search was performed using sigma
+            # coords and the computed sigma coordinate lies outside of the
+            # domain, even though x3 lies within the domain. To correct for
+            # this, adjust x3 by epsilon scaled by the column depth.
+            if abs(particle.get_x3() - zmax) < abs(particle.get_x3() - zmin):
+                particle.set_x3(particle.get_x3() - EPSILON * (zmax - zmin))
+            else:
+                particle.set_x3(particle.get_x3() + EPSILON * (zmax - zmin))
+
+            flag = data_reader.set_vertical_grid_vars(time, particle)
+
+        return flag
+
+
 # Factory methods
 # ---------------
 
@@ -643,6 +692,8 @@ def get_vert_boundary_condition_calculator(config):
     else:
         if boundary_condition == "reflecting":
             return RefVertBoundaryConditionCalculator()
+        elif boundary_condition == "bottom_absorbing":
+            return AbsBotVertBoundaryConditionCalculator()
         elif boundary_condition == "None":
             return None
         else:
