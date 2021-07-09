@@ -1325,7 +1325,7 @@ cdef class DiffNaive1DItMethod(ItMethod):
         
         delta_X.x3 = sqrt(2.0*Kz*self._time_step) * random.gauss(0.0, 1.0)
         
-        return 0
+        return IN_DOMAIN
 
 cdef class DiffEuler1DItMethod(ItMethod):
     """ Stochastic Euler 1D iterative method
@@ -1375,7 +1375,7 @@ cdef class DiffEuler1DItMethod(ItMethod):
 
         delta_X.x3 = Kz_prime * self._time_step + sqrt(2.0*Kz*self._time_step) * random.gauss(0.0, 1.0)
 
-        return 0
+        return IN_DOMAIN
 
 cdef class DiffVisser1DItMethod(ItMethod):
     """ Stochastic Visser 1D iterative method
@@ -1475,7 +1475,7 @@ cdef class DiffVisser1DItMethod(ItMethod):
 
         delta_X.x3 = Kz_prime * self._time_step + sqrt(2.0*Kz*self._time_step) * random.gauss(0.0, 1.0)
 
-        return 0
+        return IN_DOMAIN
 
 cdef class DiffMilstein1DItMethod(ItMethod):
     """ Stochastic Milstein 1D iterative method
@@ -1532,7 +1532,7 @@ cdef class DiffMilstein1DItMethod(ItMethod):
 
         delta_X.x3  = 0.5 * Kz_prime * self._time_step * (deviate*deviate + 1.0) + sqrt(2.0 * Kz * self._time_step) * deviate
 
-        return 0
+        return IN_DOMAIN
 
 cdef class DiffConst2DItMethod(ItMethod):
     """ Stochastic Constant 2D iterative method
@@ -1589,7 +1589,7 @@ cdef class DiffConst2DItMethod(ItMethod):
         delta_X.x1 += self._multiplier * random.gauss(0.0, 1.0)
         delta_X.x2 += self._multiplier * random.gauss(0.0, 1.0)
         
-        return 0
+        return IN_DOMAIN
 
 cdef class DiffNaive2DItMethod(ItMethod):
     """ Stochastic Naive Euler 2D iterative method
@@ -1642,7 +1642,7 @@ cdef class DiffNaive2DItMethod(ItMethod):
         delta_X.x1 += sqrt(2.0*Ah*self._time_step) * random.gauss(0.0, 1.0)
         delta_X.x2 += sqrt(2.0*Ah*self._time_step) * random.gauss(0.0, 1.0)
         
-        return 0
+        return IN_DOMAIN
 
 cdef class DiffMilstein2DItMethod(ItMethod):
     """ Stochastic Milstein 2D iterative method
@@ -1697,7 +1697,7 @@ cdef class DiffMilstein2DItMethod(ItMethod):
         delta_X.x2  = 0.5 * Ah_prime[1] * self._time_step * (deviate_x2*deviate_x2 + 1.0) \
                 + sqrt(2.0 * Ah * self._time_step) * deviate_x2
 
-        return 0
+        return IN_DOMAIN
 
 cdef class DiffMilstein3DItMethod(ItMethod):
     """ Stochastic Milstein 3D iterative method
@@ -1760,7 +1760,7 @@ cdef class DiffMilstein3DItMethod(ItMethod):
         delta_X.x3  = 0.5 * Kz_prime * self._time_step * (deviate_x3*deviate_x3 + 1.0) \
                 + sqrt(2.0 * Kz * self._time_step) * deviate_x3
 
-        return 0
+        return IN_DOMAIN
 
 
 cdef class AdvDiffMilstein1DItMethod(ItMethod):
@@ -1827,7 +1827,7 @@ cdef class AdvDiffMilstein1DItMethod(ItMethod):
                 + 0.5 * Kz_prime * self._time_step * (deviate_x3*deviate_x3 + 1.0) \
                 + sqrt(2.0 * Kz * self._time_step) * deviate_x3
 
-        return 0
+        return IN_DOMAIN
 
 
 cdef class AdvDiffMilstein3DItMethod(ItMethod):
@@ -1909,7 +1909,7 @@ cdef class AdvDiffMilstein3DItMethod(ItMethod):
                 + 0.5 * Kz_prime * self._time_step * (deviate_x3*deviate_x3 + 1.0) \
                 + sqrt(2.0 * Kz * self._time_step) * deviate_x3
 
-        return 0
+        return IN_DOMAIN
 
 def get_iterative_method(config):
     """ Factory method for iterative methods
