@@ -337,11 +337,11 @@ class FileReader:
             Flag confirming whether the given date time is valid or not
         """
         ds0 = self.dataset_reader.read_dataset(self.data_file_names[0])
-        data_datetime_0 = num2pydate(ds0.variables[self._time_var_name][0], units=ds0.variables[self._time_var_name].units)
+        data_datetime_0 = self.datetime_reader.get_datetime(ds0, time_index=0)
         ds0.close()
 
         ds1 = self.dataset_reader.read_dataset(self.data_file_names[-1])
-        data_datetime_1 = num2pydate(ds1.variables[self._time_var_name][-1], units=ds1.variables[self._time_var_name].units)
+        data_datetime_1 = self.datetime_reader.get_datetime(ds1, time_index=-1)
         ds1.close()
 
         if data_datetime_0 <= date_time < data_datetime_1:
