@@ -44,12 +44,14 @@ Submodules
    pylag.random
    pylag.restart
    pylag.roms_data_reader
+   pylag.settling
    pylag.simulator
    pylag.spline_cpp_wrapper
    pylag.time_manager
    pylag.unstructured
    pylag.utils
    pylag.variable_library
+   pylag.velocity_aggregator
    pylag.version
 
 Module contents
