@@ -2477,8 +2477,8 @@ cdef class UnstructuredGeographicGrid(Grid):
             raise RuntimeError('Cannot interpolate within masked element `{}`.'.format(self.land_sea_mask_c[host_element]))
 
 
-    cdef vector[DTYPE_FLOAT_t] _adjust_interpolation_coefficients(self, const DTYPE_INT_t host,
-                                                                  DTYPE_FLOAT_t phi[3]):
+    cdef void _adjust_interpolation_coefficients(self, const DTYPE_INT_t host,
+                                                 DTYPE_FLOAT_t phi[3]) except *:
 
         cdef DTYPE_FLOAT_t phi_new[3]
         cdef DTYPE_FLOAT_t phi_test = 0.0
