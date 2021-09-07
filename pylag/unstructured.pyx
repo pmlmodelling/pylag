@@ -2492,7 +2492,7 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         for i in range(N_VERTICES):
             node = self.nv[i, host]
-            if self.land_sea_mask[node] == 0:
+            if self.land_sea_mask[node] == SEA:
                 if phi[i] > phi_test:
                     phi_test = phi[i]
                     index = i
