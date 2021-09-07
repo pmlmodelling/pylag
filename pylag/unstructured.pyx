@@ -2481,14 +2481,15 @@ cdef class UnstructuredGeographicGrid(Grid):
                                                  DTYPE_FLOAT_t phi[3]) except *:
 
         cdef DTYPE_FLOAT_t phi_new[3]
-        cdef DTYPE_FLOAT_t phi_test = 0.0
-        cdef DTYPE_INT_t index = -999
+        cdef DTYPE_FLOAT_t phi_test
+        cdef DTYPE_INT_t index
         cdef DTYPE_INT_t node
         cdef DTYPE_INT_t i
 
         phi_new[:] = [0.0,0.0,0.0]
         phi_test = 0.0
         index = -999
+        node = -999
 
         for i in range(N_VERTICES):
             node = self.nv[i, host]
