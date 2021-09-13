@@ -470,6 +470,9 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
     lon_var, lon_attrs_orig = _get_variable(input_dataset, lon_var_name)
     lat_var, lat_attrs_orig = _get_variable(input_dataset, lat_var_name)
 
+    if len(lon_var.shape) != len(lat_var.shape):
+        raise ValueError('Lon and lat variables have a different number of dimensions')
+
     # Filter attributes so that we include just the main ones
     lon_attrs = {}
     lat_attrs = {}
@@ -485,21 +488,32 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
 
     # Trim the poles if they have been included (we don't want duplicate points). Assumes
     # the poles are the first or last points and that they are given in geographic coordinates.
-    lat_alpha = float(lat_var[0])
-    lat_omega = float(lat_var[-1])
+    # NB Trimming operation is only performed if lon and lat arrays are 1D.
     trim_first_latitude = 0
     trim_last_latitude = 0
-    if lat_alpha == float(-90.0) or lat_alpha == float(90.0):
-        print('Trimming first latitude which sits over a pole ({} deg.)'.format(lat_alpha))
-        lat_var = lat_var[1:]
-        trim_first_latitude = 1
-    if lat_omega == float(-90.0) or lat_omega == float(90.0):
-        print('Trimming last latitude which sits over a pole ({} deg.)'.format(lat_omega))
-        lat_var = lat_var[:-1]
-        trim_last_latitude = 1
+    if len(lon_var.shape) == 1:
+        lat_alpha = float(lat_var[0])
+        lat_omega = float(lat_var[-1])
+        if lat_alpha == float(-90.0) or lat_alpha == float(90.0):
+            print('Trimming first latitude which sits over a pole ({} deg.)'.format(lat_alpha))
+            lat_var = lat_var[1:]
+            trim_first_latitude = 1
+        if lat_omega == float(-90.0) or lat_omega == float(90.0):
+            print('Trimming last latitude which sits over a pole ({} deg.)'.format(lat_omega))
+            lat_var = lat_var[:-1]
+            trim_last_latitude = 1
+
+        # Form 2D arrays
+        lon2d, lat2d = np.meshgrid(lon_var[:], lat_var[:], indexing='ij')
+    
+    elif len(lon_var.shape) == 2:
+        # Sort axes
+        lon2d = sort_axes(lon_var)
+        lat2d = sort_axes(lat_var)
+    else:
+        raise ValueError('Lon/lat vars have {} dimensions. Expected one or two.'.format(len(lon_var.shape)))
 
     # Create points array
-    lon2d, lat2d = np.meshgrid(lon_var[:], lat_var[:], indexing='ij')
     points = np.array([lon2d.flatten(order='C'), lat2d.flatten(order='C')], dtype=DTYPE_FLOAT).T
 
     # Save lon and lat points at nodes
