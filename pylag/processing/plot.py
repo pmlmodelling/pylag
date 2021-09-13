@@ -831,7 +831,7 @@ class ArakawaAPlotter(PyLagPlotter):
         ax : matplotlib.axes.Axes
             Axes object
         """
-        if draw_masked_elements is True:
+        if draw_masked_elements:
             x = self.x[self.simplices]
             y = self.y[self.simplices]
         else:
