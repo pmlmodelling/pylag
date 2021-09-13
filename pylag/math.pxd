@@ -12,10 +12,10 @@ cdef inline DTYPE_FLOAT_t float_max(DTYPE_FLOAT_t a, DTYPE_FLOAT_t b): return a 
 cdef inline DTYPE_INT_t int_min(DTYPE_INT_t a, DTYPE_INT_t b): return a if a <= b else b
 cdef inline DTYPE_INT_t int_max(DTYPE_INT_t a, DTYPE_INT_t b): return a if a >= b else b
 
-cdef inline  DTYPE_FLOAT_t det_second_order(const DTYPE_FLOAT_t p1[2], const DTYPE_FLOAT_t p2[2]):
+cdef inline  DTYPE_FLOAT_t det_second_order(const DTYPE_FLOAT_t p1[2], const DTYPE_FLOAT_t p2[2]) except FLOAT_ERR:
     return p1[0]*p2[1] - p1[1]*p2[0]
 
-cdef inline DTYPE_FLOAT_t det_third_order(const DTYPE_FLOAT_t p1[3], const DTYPE_FLOAT_t p2[3], const DTYPE_FLOAT_t p3[3]):
+cdef inline DTYPE_FLOAT_t det_third_order(const DTYPE_FLOAT_t p1[3], const DTYPE_FLOAT_t p2[3], const DTYPE_FLOAT_t p3[3]) except FLOAT_ERR:
     return p1[0]*(p2[1]*p3[2] - p3[1]*p2[2]) - p1[1]*(p2[0]*p3[2] - p3[0]*p2[2]) + p1[2]*(p2[0]*p3[1] - p3[0]*p2[1])
 
 cdef inline DTYPE_FLOAT_t euclidian_norm(const DTYPE_FLOAT_t a[3]) except *:
