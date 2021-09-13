@@ -13,7 +13,6 @@ import collections
 
 try:
     import matplotlib
-    from matplotlib import cbook
     from matplotlib import pyplot as plt
     from matplotlib.tri.triangulation import Triangulation
     from matplotlib.collections import PolyCollection
@@ -729,7 +728,6 @@ class ArakawaAPlotter(PyLagPlotter):
         collection = PolyCollection(verts, linewidth=linewidth, transform=transform)
         collection.set_alpha(alpha)
         collection.set_array(_field)
-        cbook._check_isinstance((Normalize, None), norm=norm)
         collection.set_cmap(cmap)
         collection.set_norm(norm)
         collection._scale_norm(norm, vmin, vmax)
