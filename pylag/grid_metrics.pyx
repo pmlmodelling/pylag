@@ -465,7 +465,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
     # Ensure masked variables are indeed masked
     input_dataset.set_auto_maskandscale(True)
 
-    # Read in coordinate variables. Use common names to try and ensure a hit.
+    # Read in coordinate variables
     print('Reading the grid:')
     lon_var, lon_attrs_orig = _get_variable(input_dataset, lon_var_name)
     lat_var, lat_attrs_orig = _get_variable(input_dataset, lat_var_name)
@@ -492,6 +492,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
     trim_first_latitude = 0
     trim_last_latitude = 0
     if len(lon_var.shape) == 1:
+        # Applying trimming if required
         lat_alpha = float(lat_var[0])
         lat_omega = float(lat_var[-1])
         if lat_alpha == float(-90.0) or lat_alpha == float(90.0):
@@ -503,27 +504,44 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
             lat_var = lat_var[:-1]
             trim_last_latitude = 1
 
+        # Save original lon and lat sizes
+        n_longitude = lon_var.shape[0]
+        n_latitude = lat_var.shape[0]
+        
         # Form 2D arrays
         lon2d, lat2d = np.meshgrid(lon_var[:], lat_var[:], indexing='ij')
+
+        # Save lons and lats at nodes
+        lon_nodes = lon2d.flatten(order='C').astype(DTYPE_FLOAT)
+        lat_nodes = lat2d.flatten(order='C').astype(DTYPE_FLOAT)
     
+        # Create points array from lon and lat values which will be used for the triangulation
+        points = np.array([lon_nodes, lat_nodes], dtype=DTYPE_FLOAT).T
+
     elif len(lon_var.shape) == 2:
         # Sort axes
         lon2d = sort_axes(lon_var)
         lat2d = sort_axes(lat_var)
+
+        # Save original lon and lat sizes
+        n_longitude = lon_var.shape[0]
+        n_latitude = lon_var.shape[1]
+        
+        # Save lons and lats at nodes
+        lon_nodes = lon2d.flatten(order='C').astype(DTYPE_FLOAT)
+        lat_nodes = lat2d.flatten(order='C').astype(DTYPE_FLOAT)
+        
+        # Create a regular grid based on lon/lat indices from which to create the triangulation
+        xi = np.arange(lon2d.shape[0])
+        yi = np.arange(lon2d.shape[1])
+        xi2d, yi2d = np.meshgrid(xi, yi, indexing='ij')
+        points = np.array([xi2d.flatten(order='C'), yi2d.flatten(order='C')], dtype=DTYPE_FLOAT).T
+
     else:
         raise ValueError('Lon/lat vars have {} dimensions. Expected one or two.'.format(len(lon_var.shape)))
 
-    # Create points array
-    points = np.array([lon2d.flatten(order='C'), lat2d.flatten(order='C')], dtype=DTYPE_FLOAT).T
-
-    # Save lon and lat points at nodes
-    lon_nodes = points[:, 0]
-    lat_nodes = points[:, 1]
-    n_nodes = points.shape[0]
-
-    # Save original lon and lat sizes
-    n_longitude = lon_var.shape[0]
-    n_latitude = lat_var.shape[0]
+    # Save the number of nodes
+    n_nodes = lon_nodes.shape[0]
 
     # Save depth
     if surface_only is False:
@@ -720,7 +738,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
     nbe = nbe.T
 
     # Flag open boundaries with -2 flag in the regional case
-    if is_global == False:
+    if not is_global:
         print('\nFlagging open boundaries ', end='... ')
         nbe[np.asarray(nbe == -1).nonzero()] = -2
         print('done')
