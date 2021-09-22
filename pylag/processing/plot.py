@@ -75,7 +75,7 @@ class PyLagPlotter:
             cbar.set_label(cb_label, size=self.font_size)
         return
 
-    def plot_lines(self, ax, x, y, **kwargs):
+    def plot_lines(self, ax, x, y, transform=ccrs.PlateCarree(), **kwargs):
         """Plot path lines.
 
         In addition to the listed parameters, the function accepts all keyword arguments taken by the Matplotlib
@@ -105,7 +105,8 @@ class PyLagPlotter:
         color = kwargs.pop('color', 'r')
         linewidth = kwargs.pop('linewidth', 1.0)
 
-        line_plots = ax.plot(x, y, zorder=3, alpha=alpha, color=color, linewidth=linewidth, **kwargs)
+        line_plots = ax.plot(x, y, zorder=3, alpha=alpha, color=color, linewidth=linewidth, 
+                             transform=transform, **kwargs)
 
         return ax, line_plots
 
