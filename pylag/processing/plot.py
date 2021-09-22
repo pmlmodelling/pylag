@@ -549,7 +549,7 @@ class ArakawaAPlotter(PyLagPlotter):
         # Try to read the element mask
         try:
             maskc = ds.variables['mask_c'][:]
-            ocean_points = np.asarray(maskc == 0).nonzero()[0]
+            ocean_points = np.asarray(maskc != 2).nonzero()[0]
 
             # Initialise the mask with ones then add zeros for sea points
             self.maskc = np.ones_like(maskc)
