@@ -628,8 +628,8 @@ class ArakawaAPlotter(PyLagPlotter):
         return _field
 
     def plot_field(self, ax, field, preprocess_array=False, update=False, configure=True, add_colour_bar=True,
-                   cb_label=None, tick_inc=True, extents=None, transform=ccrs.Geodetic(), draw_coastlines=False,
-                   resolution='10m', **kwargs):
+                   cb_label=None, tick_inc=True, extents=None, transform=ccrs.PlateCarree(),
+                   draw_coastlines=False, resolution='10m', **kwargs):
         """ Map the supplied field
 
         The field must be defined on either a) the same triangular mesh that is defined in the grid metrics
@@ -820,7 +820,7 @@ class ArakawaAPlotter(PyLagPlotter):
         return ax
 
     def draw_grid(self, ax, draw_masked_elements=False, linewidth=0.25, edgecolor='k', facecolor='none',
-                  transform=ccrs.Geodetic()):
+                  transform=ccrs.PlateCarree()):
         """ Draw the underlying grid or mesh
 
         Parameters
