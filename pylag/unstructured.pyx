@@ -2171,10 +2171,10 @@ cdef class UnstructuredGeographicGrid(Grid):
         s[1] = det_third_order(p2, p, p0)
         s[2] = det_third_order(p1, p0, p)
 
-#        # Flush small values to zero
-#        for i in range(3):
-#            if s[i] < 0.0 and s[i] >= -EPSILON:
-#                s[i] = 0.0
+        # Flush small values to zero
+        for i in range(3):
+            if s[i] < 0.0 and s[i] >= -EPSILON:
+                s[i] = 0.0
 
     cdef void get_grad_phi(self, DTYPE_INT_t host,
                            DTYPE_FLOAT_t dphi_dx[3],
