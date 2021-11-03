@@ -227,11 +227,11 @@ cdef class DelayedSettlingVelocityCalculator(SettlingVelocityCalculator):
         self._settling_velocity_variable_name = variable_names['settling_velocity']
 
         # Settling parameters
-        duration_in_days = self.config.getfloat("DELAYED_SETTLING_VELOCITY_CALCULATOR",
-                                                "duration_of_surface_transport_phase_in_days")
+        duration_in_days = self._config.getfloat("DELAYED_SETTLING_VELOCITY_CALCULATOR",
+                                                 "duration_of_surface_transport_phase_in_days")
         self._duration_of_surface_transport_phase_in_seconds = duration_in_days * seconds_per_day
 
-        self._settling_velocity = self.config.getfloat("DELAYED_SETTLING_VELOCITY_CALCULATOR", "settling_velocity")
+        self._settling_velocity = self._config.getfloat("DELAYED_SETTLING_VELOCITY_CALCULATOR", "settling_velocity")
 
         # Internal flags
         self._settling_has_started = False
