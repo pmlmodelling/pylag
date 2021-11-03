@@ -343,17 +343,18 @@ cdef class GOTMDataReader(DataReader):
         cdef DTYPE_FLOAT_t z
 
         # Start with a local search
-        for k in xrange(particle.get_k_layer()-2, particle.get_k_layer()+2, 1):
-            if k < 0 or k >= self._n_zlay:
-                continue
+        if particle.get_k_layer() >= 0:
+            for k in xrange(particle.get_k_layer()-2, particle.get_k_layer()+2, 1):
+                if k < 0 or k >= self._n_zlay:
+                    continue
 
-            if particle.get_x3() <= self._zlev[k+1] and particle.get_x3() >= self._zlev[k]:
-                particle.set_k_layer(k)
-                particle.set_omega_interfaces(interp.get_linear_fraction_safe(particle.get_x3(), self._zlev[k], self._zlev[k+1]))
-                return IN_DOMAIN
+                if particle.get_x3() <= self._zlev[k+1] and particle.get_x3() >= self._zlev[k]:
+                    particle.set_k_layer(k)
+                    particle.set_omega_interfaces(interp.get_linear_fraction_safe(particle.get_x3(), self._zlev[k], self._zlev[k+1]))
+                    return IN_DOMAIN
 
         # Search the full vertical grid
-        for k in xrange(self._n_zlay): 
+        for k in xrange(self._n_zlay):
             if particle.get_x3() <= self._zlev[k+1] and particle.get_x3() >= self._zlev[k]:
                 particle.set_k_layer(k)
                 particle.set_omega_interfaces(interp.get_linear_fraction_safe(particle.get_x3(), self._zlev[k], self._zlev[k+1]))
