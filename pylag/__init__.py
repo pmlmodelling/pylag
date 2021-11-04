@@ -13,7 +13,7 @@ Conact:
 James Clark (Plymouth Marine Laboratory). Email: jcl@pml.ac.uk
 """
 # Package imports
-from pylag import parallel, processing
+from pylag import parallel, processing, regrid
 
 # Module imports
 from pylag import version
