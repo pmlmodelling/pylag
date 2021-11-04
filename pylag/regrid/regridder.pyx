@@ -43,12 +43,29 @@ cdef class Regridder:
 
     Attributes
     ----------
-    data_reader : pylag.data_reader.DataReader
+    datetime_start : datetime.datetime
+        The earliest date and time at which regridded data is desired.
+        Requested here as PyLag will first check that the given date and
+        time is covered by the input data.
 
+    datetime_end : datetime.datetime
+        The latest date and time at which regridded data is desired.
+        Requested here as PyLag will first check that the given date and
+        time is covered by the input data.
+
+    data_reader : pylag.data_reader.DataReader
+        A PyLag DataReader object.
     """
+    cdef object datetime_start
+    cdef object datetime_end
+
     cdef DataReader data_reader
 
     def __init__(self, config, datetime_start, datetime_end):
+
+        # Save reference times
+        self.datetime_start = datetime_start
+        self.datetime_end = datetime_end
 
         # Intialise the data reader
         if config.get("OCEAN_CIRCULATION_MODEL", "name") == "ArakawaA":
