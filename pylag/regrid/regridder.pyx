@@ -169,7 +169,7 @@ cdef class Regridder:
         n_points = lons.shape[0]
 
         # Check that the coordinate system is supported
-        # TODO if support for Cartesian input grids is added, will need to apply xmin and xmin offsets
+        # TODO if support for Cartesian input grids is added, will need to apply xmin and xmax offsets
         self.coordinate_system = self.config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system").strip().lower()
         if not self.coordinate_system == "geographic":
             raise ValueError('Input oordinate sytem {} is not supported in regridding tasks.'.format(self.coordinate_system))
@@ -230,4 +230,32 @@ cdef class Regridder:
         #if self.config.get('GENERAL', 'log_level') == 'DEBUG':
         #  logger = logging.getLogger(__name__)
         #    logger.info('{} of {} particles are located in the model domain.'.format(particles_in_domain, len(self.particle_seed_smart_ptrs)))
+
+    def interpolate(self, datetime_now, variable_names):
+        """ Return values for the given variables at the specified time point(s)
+
+        Parameters
+        ----------
+        time : datetime.datetime
+            The date/time at which the interpolation should be performed.
+
+        variable_names : list[str]
+            List of variable names that for which interpolated data is required.
+            Names should correspond to PyLag standard names (see
+            `pylag.variable_library.standard_variable_names` for the full list.
+
+        Returns
+        -------
+        interpolated_vars : dict(str : 1D NumPy array)
+            Dictionary giving the interpolated data.
+        """
+        # Establish the current time in seconds
+        time_in_seconds = (datetime_now - self.datetime_start).total_seconds()
+
+        # Read data for the current time
+        self.data_reader.read_data(time_in_seconds)
+
+        data = {}
+
+        return data
 
