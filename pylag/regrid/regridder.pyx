@@ -145,7 +145,8 @@ cdef class Regridder:
             1D array of latitudes to interpolate data to.
 
         depths : 1D MemoryView
-            1D array of depths to interpolate data to.
+            1D array of depths to interpolate data to. Depths should be
+            negative down relative to the sea surface.
         """
          # Particle raw pointer
         cdef ParticleSmartPtr particle_smart_ptr
@@ -209,9 +210,6 @@ cdef class Regridder:
             if flag == IN_DOMAIN:
                 particle_smart_ptr.get_ptr().set_in_domain(True)
 
-                # Add particle to the particle set
-                self.particle_smart_ptrs.append(particle_smart_ptr)
-
                 particles_in_domain += 1
 
                 # Use the location of the last particle to guide the search for the
@@ -222,7 +220,10 @@ cdef class Regridder:
                 for grid_name in self.get_grid_names():
                     particle_smart_ptr.set_host_horizontal_elem(grid_name, INT_INVALID)
                 particle_smart_ptr.get_ptr().set_in_domain(False)
-                self.particle_smart_ptrs.append(particle_smart_ptr)
+
+            # Add particles to the particle set
+            self.particle_smart_ptrs.append(particle_smart_ptr)
+            self.particle_ptrs.push_back(particle_smart_ptr.get_ptr())
 
         if particles_in_domain == 0:
             raise RuntimeError('All points lie outside of the model domain!')
@@ -249,13 +250,55 @@ cdef class Regridder:
         interpolated_vars : dict(str : 1D NumPy array)
             Dictionary giving the interpolated data.
         """
+        cdef Particle* particle_ptr
+
         # Establish the current time in seconds
         time_in_seconds = (datetime_now - self.datetime_start).total_seconds()
 
         # Read data for the current time
         self.data_reader.read_data(time_in_seconds)
 
+        # Set vertical positions
+        self._set_vertical_positions(time_in_seconds)
+
+        # Loop over the particle set
+
         data = {}
 
         return data
 
+    def _set_vertical_positions(self, time):
+        cdef Particle* particle_ptr
+
+        cdef DTYPE_FLOAT_t zmin, zmax, z
+
+        for particle_ptr in self.particle_ptrs:
+            # Set vertical grid vars for particles that lie inside the domain
+            if particle_ptr.get_in_domain() == True:
+
+                # Grid limits for error checking
+                zmin = self.data_reader.get_zmin(time, particle_ptr)
+                zmax = self.data_reader.get_zmax(time, particle_ptr)
+
+                # Compute depth relative to the free surface height at time t.
+                # NB Depths are positive up from the sea surface.
+                z = particle_ptr.get_x3() + zmax
+                particle_ptr.set_x3(z)
+
+                # Determine if the host element is presently dry
+                if self.data_reader.is_wet(time, particle_ptr) == 1:
+
+                    # Confirm the given depth is valid for wet cells
+                    if particle_ptr.get_x3() < zmin or particle_ptr.get_x3() > zmax:
+                        particle_ptr.set_is_beached(1)
+                    else:
+                        particle_ptr.set_is_beached(0)
+
+                        # Find the host z layer
+                        flag = self.data_reader.set_vertical_grid_vars(time, particle_ptr)
+
+                        if flag != IN_DOMAIN:
+                            raise ValueError("Supplied depth z (= {}) is not within the grid (h = {}, zeta={}).".format(particle_ptr.get_x3(), zmin, zmax))
+                else:
+                    # Don't set vertical grid vars as this will fail if zeta < h. They will be set later.
+                    particle_ptr.set_is_beached(1)
