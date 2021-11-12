@@ -19,7 +19,7 @@ from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 # Error flagging
 from pylag.data_types_python import INT_INVALID, FLOAT_INVALID
-from pylag.variable_library import get_invalid_value
+from pylag import variable_library
 
 # PyLag python imports
 from pylag.arakawa_a_data_reader import ArakawaADataReader
@@ -83,6 +83,7 @@ cdef class Regridder:
     cdef object coordinate_system
     cdef object datetime_start
     cdef object datetime_end
+    cdef DTYPE_INT_t n_points
     cdef object particle_smart_ptrs
     cdef vector[Particle*] particle_ptrs
     cdef DataReader data_reader
@@ -117,7 +118,9 @@ cdef class Regridder:
 
         # Set spatial coordinates. These are the points data will be
         # interpolated to
+        print('Computing weights ...')
         self.set_spatial_coordinates(lons_rad, lats_rad, depths)
+        print('done!')
 
     def get_grid_names(self):
         """ Return a list of grid names
@@ -167,7 +170,7 @@ cdef class Regridder:
         assert lons.shape[0] == depths.shape[0], 'Array lengths do not match (n_lon={}, n_depth={})'.format(lons.shape[0], depths.shape[0])
 
         # The number of points at which data will  be interpolated to
-        n_points = lons.shape[0]
+        self.n_points = lons.shape[0]
 
         # Check that the coordinate system is supported
         # TODO if support for Cartesian input grids is added, will need to apply xmin and xmax offsets
@@ -182,7 +185,7 @@ cdef class Regridder:
         id = 0
 
         # Create the particle set
-        for i in range(n_points):
+        for i in range(self.n_points):
             # Unique particle ID.
             id += 1
 
@@ -232,7 +235,7 @@ cdef class Regridder:
         #  logger = logging.getLogger(__name__)
         #    logger.info('{} of {} particles are located in the model domain.'.format(particles_in_domain, len(self.particle_seed_smart_ptrs)))
 
-    def interpolate(self, datetime_now, variable_names):
+    def interpolate(self, datetime_now, var_names):
         """ Return values for the given variables at the specified time point(s)
 
         Parameters
@@ -240,7 +243,7 @@ cdef class Regridder:
         time : datetime.datetime
             The date/time at which the interpolation should be performed.
 
-        variable_names : list[str]
+        var_names : list[str]
             List of variable names that for which interpolated data is required.
             Names should correspond to PyLag standard names (see
             `pylag.variable_library.standard_variable_names` for the full list.
@@ -250,7 +253,30 @@ cdef class Regridder:
         interpolated_vars : dict(str : 1D NumPy array)
             Dictionary giving the interpolated data.
         """
+        cdef DTYPE_FLOAT_t[:] var_c
+        cdef DTYPE_FLOAT_t vel[3]
         cdef Particle* particle_ptr
+        cdef DTYPE_FLOAT_t fill_value
+        cdef bint uo_requested, vo_requested
+        cdef DTYPE_FLOAT_t time_in_seconds
+        cdef DTYPE_INT_t i
+
+        uo_requested = False
+        if 'uo' in var_names:
+            uo_requested = True
+            var_names.remove('uo')
+
+        vo_requested = False
+        if 'vo' in var_names:
+            vo_requested = True
+            var_names.remove('vo')
+
+        env_var_names = []
+        for var_name in var_names:
+            if var_name in variable_library.standard_variable_names.keys():
+                env_var_names.append(var_name)
+            else:
+                raise ValueError('Unrecognised or unsupported variable {}'.format(var_name))
 
         # Establish the current time in seconds
         time_in_seconds = (datetime_now - self.datetime_start).total_seconds()
@@ -258,16 +284,57 @@ cdef class Regridder:
         # Read data for the current time
         self.data_reader.read_data(time_in_seconds)
 
-        # Set vertical positions
+        # Set vertical positions for the interpolation
         self._set_vertical_positions(time_in_seconds)
 
-        # Loop over the particle set
-
+        # Dictionary in which to hold the interpolated data
         data = {}
+
+        if uo_requested or vo_requested:
+            # Create array in which to hold the interpolated uo data
+            uo, uo_fill_value = self._create_float_array()
+            vo, vo_fill_value = self._create_float_array()
+            uo_c = uo
+            vo_c = vo
+
+            # Interpolate
+            for i in range(self.n_points):
+                particle_ptr = self.particle_ptrs[i]
+                if particle_ptr.get_in_domain() == True and particle_ptr.get_is_beached() == 0:
+                    self.data_reader.get_velocity(time_in_seconds, particle_ptr, vel)
+                    uo_c[i] = vel[0]
+                    vo_c[i] = vel[1]
+                else:
+                    uo_c[i] = uo_fill_value
+                    vo_c[i] = vo_fill_value
+
+            # Add uo to dictionary
+            if uo_requested:
+                data['uo'] = np.ma.masked_values(uo, uo_fill_value)
+
+            # Add vo to dictionary
+            if vo_requested:
+                data['vo'] = np.ma.masked_values(vo, vo_fill_value)
+
+        # Loop over all environmental variables
+        for var_name in var_names:
+            var, var_fill_value = self._create_float_array()
+            var_c = var
+
+            # Interpolate
+            for i in range(self.n_points):
+                particle_ptr = self.particle_ptrs[i]
+                if particle_ptr.get_in_domain() == True and particle_ptr.get_is_beached() == 0:
+                    var_c[i] = self.data_reader.get_environmental_variable(var_name, time_in_seconds, particle_ptr)
+                else:
+                    var_c[i] = var_fill_value
+
+            # Save data
+            data[var_name] = np.ma.masked_values(var, var_fill_value)
 
         return data
 
-    def _set_vertical_positions(self, time):
+    def _set_vertical_positions(self, DTYPE_FLOAT_t time):
         cdef Particle* particle_ptr
 
         cdef DTYPE_FLOAT_t zmin, zmax, z
@@ -302,3 +369,9 @@ cdef class Regridder:
                 else:
                     # Don't set vertical grid vars as this will fail if zeta < h. They will be set later.
                     particle_ptr.set_is_beached(1)
+
+    def _create_float_array(self):
+        var = np.zeros(self.n_points, dtype=DTYPE_FLOAT)
+        fill_value = np.ma.default_fill_value(var)
+        return var, fill_value
+
