@@ -83,6 +83,9 @@ cdef class Regridder:
     cdef object coordinate_system
     cdef object datetime_start
     cdef object datetime_end
+    cdef DTYPE_FLOAT_t[:] lons
+    cdef DTYPE_FLOAT_t[:] lats
+    cdef DTYPE_FLOAT_t[:] depths
     cdef DTYPE_INT_t n_points
     cdef object particle_smart_ptrs
     cdef vector[Particle*] particle_ptrs
@@ -111,15 +114,9 @@ cdef class Regridder:
 
         self.coordinate_system = config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system")
 
-        # Ensure coordinate types match
-        lons_rad = (lons * deg_to_radians).astype(DTYPE_FLOAT)
-        lats_rad = (lats * deg_to_radians).astype(DTYPE_FLOAT)
-        depths = depths.astype(DTYPE_FLOAT)
-
-        # Set spatial coordinates. These are the points data will be
-        # interpolated to
-        print('Computing weights ...')
-        self.set_spatial_coordinates(lons_rad, lats_rad, depths)
+        # Generate particle set, including interpolation coefficients
+        print('Computing weights ', end='... ')
+        self.set_spatial_coordinates(lons, lats, depths)
         print('done!')
 
     def get_grid_names(self):
@@ -127,9 +124,7 @@ cdef class Regridder:
         """
         return self.data_reader.get_grid_names()
 
-    def set_spatial_coordinates(self, DTYPE_FLOAT_t[:] lons,
-                                DTYPE_FLOAT_t[:] lats,
-                                DTYPE_FLOAT_t[:] depths):
+    def set_spatial_coordinates(self, lons, lats, depths):
         """ Set coordinates to interpolate to
 
         Internally, a PyLag particle set is created with one particle located
@@ -141,19 +136,20 @@ cdef class Regridder:
 
         Parameters
         ----------
-        lons : 1D MemoryView
+        lons : 1D NumPy array
             1D array of longitudes to interpolate data to.
 
-        lats : 1D MemoryView
+        lats : 1D NumPy array
             1D array of latitudes to interpolate data to.
 
-        depths : 1D MemoryView
+        depths : 1D NumPy array
             1D array of depths to interpolate data to. Depths should be
             negative down relative to the sea surface.
         """
          # Particle raw pointer
         cdef ParticleSmartPtr particle_smart_ptr
 
+        cdef DTYPE_FLOAT_t x1, x2, x3
         cdef DTYPE_INT_t n_points
         cdef DTYPE_INT_t i
 
@@ -169,8 +165,13 @@ cdef class Regridder:
         assert lons.shape[0] == lats.shape[0], 'Array lengths do not match (n_lon={}, n_lat={})'.format(lons.shape[0], lats.shape[0])
         assert lons.shape[0] == depths.shape[0], 'Array lengths do not match (n_lon={}, n_depth={})'.format(lons.shape[0], depths.shape[0])
 
+        # Save spatial coordinates
+        self.lons = (lons * deg_to_radians).astype(DTYPE_FLOAT)
+        self.lats = (lats * deg_to_radians).astype(DTYPE_FLOAT)
+        self.depths = depths.astype(DTYPE_FLOAT)
+
         # The number of points at which data will  be interpolated to
-        self.n_points = lons.shape[0]
+        self.n_points = self.lons.shape[0]
 
         # Check that the coordinate system is supported
         # TODO if support for Cartesian input grids is added, will need to apply xmin and xmax offsets
@@ -190,9 +191,9 @@ cdef class Regridder:
             id += 1
 
             # lon, lat and depth coordinates
-            x1 = lons[i]
-            x2 = lats[i]
-            x3 = depths[i]
+            x1 = self.lons[i]
+            x2 = self.lats[i]
+            x3 = self.depths[i]
 
             # Create particle
             particle_smart_ptr = ParticleSmartPtr(group_id=group, x1=x1, x2=x2, x3=x3, id=id)
@@ -264,19 +265,18 @@ cdef class Regridder:
         uo_requested = False
         if 'uo' in var_names:
             uo_requested = True
-            var_names.remove('uo')
 
         vo_requested = False
         if 'vo' in var_names:
             vo_requested = True
-            var_names.remove('vo')
 
         env_var_names = []
         for var_name in var_names:
-            if var_name in variable_library.standard_variable_names.keys():
-                env_var_names.append(var_name)
-            else:
-                raise ValueError('Unrecognised or unsupported variable {}'.format(var_name))
+            if var_name not in ['uo', 'vo']:
+                if var_name in variable_library.standard_variable_names.keys():
+                    env_var_names.append(var_name)
+                else:
+                    raise ValueError('Unrecognised or unsupported variable {}'.format(var_name))
 
         # Establish the current time in seconds
         time_in_seconds = (datetime_now - self.datetime_start).total_seconds()
@@ -291,7 +291,7 @@ cdef class Regridder:
         data = {}
 
         if uo_requested or vo_requested:
-            # Create array in which to hold the interpolated uo data
+            # Create array in which to hold the interpolated uo and vo data
             uo, uo_fill_value = self._create_float_array()
             vo, vo_fill_value = self._create_float_array()
             uo_c = uo
@@ -317,7 +317,7 @@ cdef class Regridder:
                 data['vo'] = np.ma.masked_values(vo, vo_fill_value)
 
         # Loop over all environmental variables
-        for var_name in var_names:
+        for var_name in env_var_names:
             var, var_fill_value = self._create_float_array()
             var_c = var
 
@@ -336,20 +336,21 @@ cdef class Regridder:
 
     def _set_vertical_positions(self, DTYPE_FLOAT_t time):
         cdef Particle* particle_ptr
-
         cdef DTYPE_FLOAT_t zmin, zmax, z
+        cdef DTYPE_INT_t i
 
-        for particle_ptr in self.particle_ptrs:
+        for i in range(self.n_points):
+            particle_ptr = self.particle_ptrs[i]
+
             # Set vertical grid vars for particles that lie inside the domain
             if particle_ptr.get_in_domain() == True:
-
                 # Grid limits for error checking
                 zmin = self.data_reader.get_zmin(time, particle_ptr)
                 zmax = self.data_reader.get_zmax(time, particle_ptr)
 
                 # Compute depth relative to the free surface height at time t.
                 # NB Depths are positive up from the sea surface.
-                z = particle_ptr.get_x3() + zmax
+                z = self.depths[i] + zmax
                 particle_ptr.set_x3(z)
 
                 # Determine if the host element is presently dry
