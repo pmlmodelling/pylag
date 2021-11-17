@@ -707,9 +707,9 @@ class ArakawaAPlotter(PyLagPlotter):
             _field = self.preprocess_array(field)
 
         # Compute field value at face centre of ocean triangles
-        if field.shape[0] == self.n_nodes:
+        if _field.shape[0] == self.n_nodes:
             _field = _field[self.ocean_simplices].mean(axis=1)
-        if field.shape[0] == self.n_elems:
+        if _field.shape[0] == self.n_elems:
             _field = _field[self.ocean_elements]
 
         if update is True:
