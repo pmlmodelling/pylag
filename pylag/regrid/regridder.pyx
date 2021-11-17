@@ -66,6 +66,9 @@ cdef class Regridder:
 
     Attributes
     ----------
+    config : configparser.ConfigParser
+        PyLag configuration object.
+
     datetime_start : datetime.datetime
         The earliest date and time at which regridded data is desired.
         Requested here as PyLag will first check that the given date and
@@ -78,6 +81,15 @@ cdef class Regridder:
 
     data_reader : pylag.data_reader.DataReader
         A PyLag DataReader object.
+
+    depths : 1D Memory View
+        Depth coordinates to interpolate to.
+
+    lats : 1D Memory View
+        Latitude coordinates to interpolate to.
+
+    lons : 1D Memory View
+        Longitude coordinates to interpolate to.
     """
     cdef object config
     cdef object coordinate_system
@@ -132,7 +144,8 @@ cdef class Regridder:
         set at the same time. Some of these may be time dependent
         (e.g. vertical coordinates, which may vary with changes in
         free surface elevation. Thus, when interpolating data at different
-        time points, these should be reset as required.
+        time points, these should be reset as required. This is achieved by
+        passing the time/date to the function that performs the interpolation.
 
         Parameters
         ----------
@@ -232,12 +245,8 @@ cdef class Regridder:
         if particles_in_domain == 0:
             raise RuntimeError('All points lie outside of the model domain!')
 
-        #if self.config.get('GENERAL', 'log_level') == 'DEBUG':
-        #  logger = logging.getLogger(__name__)
-        #    logger.info('{} of {} particles are located in the model domain.'.format(particles_in_domain, len(self.particle_seed_smart_ptrs)))
-
     def interpolate(self, datetime_now, var_names):
-        """ Return values for the given variables at the specified time point(s)
+        """ Return values for the given variables at the specified time point
 
         Parameters
         ----------
