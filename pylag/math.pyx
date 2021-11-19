@@ -568,10 +568,10 @@ cdef DTYPE_INT_t get_intersection_point_in_geographic_coordinates(const DTYPE_FL
     cdef DTYPE_INT_t intersection_1_is_valid, intersection_2_is_valid
 
     # Convert from geographic to cartesian coordinates
-    geographic_to_cartesian_coords(x1[0], x1[1], 1, x1_cart)
-    geographic_to_cartesian_coords(x2[0], x2[1], 1, x2_cart)
-    geographic_to_cartesian_coords(x3[0], x3[1], 1, x3_cart)
-    geographic_to_cartesian_coords(x4[0], x4[1], 1, x4_cart)
+    geographic_to_cartesian_coords(x1[0], x1[1], 1., x1_cart)
+    geographic_to_cartesian_coords(x2[0], x2[1], 1., x2_cart)
+    geographic_to_cartesian_coords(x3[0], x3[1], 1., x3_cart)
+    geographic_to_cartesian_coords(x4[0], x4[1], 1., x4_cart)
 
     # Compute plane normals for the two arcs
     vector_product(x1_cart, x2_cart, n1)
@@ -746,7 +746,7 @@ cdef DTYPE_INT_t intersection_is_within_arc_segment(const DTYPE_FLOAT_t x1[3],
     theta_arc = angle_between_two_vectors(x1, x2)
 
     # Avoid potential numerical issues associated with small angles
-    if theta_arc < EPSILON:
+    if theta_arc < 1.e-10:
         return 0
 
     # Determine the angles between the arc end points and the intersection point
@@ -756,7 +756,7 @@ cdef DTYPE_INT_t intersection_is_within_arc_segment(const DTYPE_FLOAT_t x1[3],
     # Compute the difference
     difference = fabs(theta_arc - theta_1 - theta_2)
 
-    if difference > EPSILON:
+    if difference > 1.e-10:
         return 0
 
     return 1
@@ -776,6 +776,7 @@ cdef DTYPE_FLOAT_t angle_between_two_vectors(const DTYPE_FLOAT_t a[3],
     x = float_min(x, 1.0)
 
     return acos(x)
+
 
 cdef void unit_vector(const DTYPE_FLOAT_t a[3], DTYPE_FLOAT_t a_unit[3]) except +:
     cdef DTYPE_FLOAT_t norm
