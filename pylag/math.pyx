@@ -741,12 +741,13 @@ cdef DTYPE_INT_t intersection_is_within_arc_segment(const DTYPE_FLOAT_t x1[3],
     """
     cdef DTYPE_FLOAT_t theta_arc, theta_1, theta_2
     cdef DTYPE_FLOAT_t difference
+    cdef DTYPE_FLOAT_t TOLERANCE = 1.e-10
 
     # Determine the angle between the two arc end points
     theta_arc = angle_between_two_vectors(x1, x2)
 
     # Avoid potential numerical issues associated with small angles
-    if theta_arc < 1.e-10:
+    if theta_arc < TOLERANCE:
         return 0
 
     # Determine the angles between the arc end points and the intersection point
@@ -756,7 +757,7 @@ cdef DTYPE_INT_t intersection_is_within_arc_segment(const DTYPE_FLOAT_t x1[3],
     # Compute the difference
     difference = fabs(theta_arc - theta_1 - theta_2)
 
-    if difference > 1.e-10:
+    if difference > TOLERANCE:
         return 0
 
     return 1
