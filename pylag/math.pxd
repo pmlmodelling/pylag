@@ -21,7 +21,7 @@ cdef inline DTYPE_FLOAT_t det_third_order(const DTYPE_FLOAT_t p1[3], const DTYPE
 cdef inline DTYPE_FLOAT_t euclidian_norm(const DTYPE_FLOAT_t a[3]) except *:
     return sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2])
 
-cdef DTYPE_FLOAT_t angle_between_two_vectors(const DTYPE_FLOAT_t a[3], const DTYPE_FLOAT_t b[3]) except FLOAT_ERR
+cdef DTYPE_FLOAT_t angle_between_two_unit_vectors(const DTYPE_FLOAT_t a[3], const DTYPE_FLOAT_t b[3]) except FLOAT_ERR
 
 cdef void unit_vector(const DTYPE_FLOAT_t a[3], DTYPE_FLOAT_t a_unit[3]) except +
 

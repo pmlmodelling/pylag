@@ -111,8 +111,8 @@ def rotate_z_wrapper(const vector[DTYPE_FLOAT_t] &p, const DTYPE_FLOAT_t &angle)
     return p_new
 
 
-def angle_between_two_vectors_wrapper(const vector[DTYPE_FLOAT_t] &a,
-                                      const vector[DTYPE_FLOAT_t] &b):
+def angle_between_two_unit_vectors_wrapper(const vector[DTYPE_FLOAT_t] &a,
+                                           const vector[DTYPE_FLOAT_t] &b):
     cdef DTYPE_FLOAT_t a_c[3]
     cdef DTYPE_FLOAT_t b_c[3]
 
@@ -125,7 +125,7 @@ def angle_between_two_vectors_wrapper(const vector[DTYPE_FLOAT_t] &a,
         a_c[i] = a[i]
         b_c[i] = b[i]
 
-    return angle_between_two_vectors(a_c, b_c)
+    return angle_between_two_unit_vectors(a_c, b_c)
 
 
 def unit_vector_wrapper(const vector[DTYPE_FLOAT_t] &a):
@@ -744,15 +744,15 @@ cdef DTYPE_INT_t intersection_is_within_arc_segment(const DTYPE_FLOAT_t x1[3],
     cdef DTYPE_FLOAT_t TOLERANCE = 1.e-10
 
     # Determine the angle between the two arc end points
-    theta_arc = angle_between_two_vectors(x1, x2)
+    theta_arc = angle_between_two_unit_vectors(x1, x2)
 
     # Avoid potential numerical issues associated with small angles
     if theta_arc < TOLERANCE:
         return 0
 
     # Determine the angles between the arc end points and the intersection point
-    theta_1 = angle_between_two_vectors(x1, xi)
-    theta_2 = angle_between_two_vectors(x2, xi)
+    theta_1 = angle_between_two_unit_vectors(x1, xi)
+    theta_2 = angle_between_two_unit_vectors(x2, xi)
 
     # Compute the difference
     difference = fabs(theta_arc - theta_1 - theta_2)
@@ -763,8 +763,8 @@ cdef DTYPE_INT_t intersection_is_within_arc_segment(const DTYPE_FLOAT_t x1[3],
     return 1
 
 
-cdef DTYPE_FLOAT_t angle_between_two_vectors(const DTYPE_FLOAT_t a[3],
-                                             const DTYPE_FLOAT_t b[3]) except FLOAT_ERR:
+cdef DTYPE_FLOAT_t angle_between_two_unit_vectors(const DTYPE_FLOAT_t a[3],
+                                                  const DTYPE_FLOAT_t b[3]) except FLOAT_ERR:
     """ Determine the angle between two unit vectors
     """
     cdef DTYPE_FLOAT_t x

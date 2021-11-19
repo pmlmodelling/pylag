@@ -28,10 +28,10 @@ def test_euclidian_norm():
     test.assert_almost_equal(norm, 5.)
 
 
-def test_angle_between_two_vectors():
+def test_angle_between_two_unit_vectors():
     a = [0.0, 0.0, 1.0]
     b = [0.0, 1.0, 0.0]
-    angle = math.angle_between_two_vectors_wrapper(a, b)
+    angle = math.angle_between_two_unit_vectors_wrapper(a, b)
     test.assert_almost_equal(angle, np.pi/2.)
 
 
