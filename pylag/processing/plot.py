@@ -223,10 +223,10 @@ class PyLagPlotter:
         gl.xlabel_style = {'fontsize': self.font_size}
         gl.ylabel_style = {'fontsize': self.font_size}
 
-        gl.xlabels_top=False
-        gl.ylabels_right=False
-        gl.xlabels_bottom=True
-        gl.ylabels_left=True
+        gl.top_labels = False
+        gl.right_labels = False
+        gl.bottom_labels = True
+        gl.left_labels = True
 
         gl.xformatter = LONGITUDE_FORMATTER
         gl.yformatter = LATITUDE_FORMATTER
@@ -1278,10 +1278,10 @@ class ArakawaCPlotter:
         gl.xlabel_style = {'fontsize': self.font_size}
         gl.ylabel_style = {'fontsize': self.font_size}
 
-        gl.xlabels_top = False
-        gl.ylabels_right = False
-        gl.xlabels_bottom = True
-        gl.ylabels_left = True
+        gl.top_labels = False
+        gl.right_labels = False
+        gl.bottom_labels = True
+        gl.left_labels = True
 
         gl.xformatter = LONGITUDE_FORMATTER
         gl.yformatter = LATITUDE_FORMATTER
