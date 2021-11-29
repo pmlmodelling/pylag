@@ -182,7 +182,9 @@ texinfo_documents = [
      'Miscellaneous'),
 ]
 
-
+# Execute notebooks
+nbsphinx_execute = 'auto'
+#nbsphinx_execute = 'always'
 
 
 # Example configuration for intersphinx: refer to the Python standard library.
