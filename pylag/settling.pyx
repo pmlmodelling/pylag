@@ -245,8 +245,8 @@ cdef class DelayedSettlingVelocityCalculator(SettlingVelocityCalculator):
             C pointer to a particle struct.
         """
         # The particle's position is initially restored to be at the surface
-        particle.set_boolean_flag('depth_restoring', True)
-        particle.set_diagnostic_variable('fixed_depth_below_surface', 0.0)
+        particle.set_restore_to_fixed_depth(True)
+        particle.set_fixed_depth(0.0)
 
         # The settling velocity of the particle (initially zero, overwritten below)
         particle.set_diagnostic_variable(self._settling_velocity_variable_name, 0.0)
@@ -271,7 +271,8 @@ cdef class DelayedSettlingVelocityCalculator(SettlingVelocityCalculator):
         """
         if self._settling_has_started == False:
             if time >= self._duration_of_surface_transport_phase_in_seconds:
-                particle.set_boolean_flag('depth_restoring', False)
+                particle.set_restore_to_fixed_depth(False)
+                particle.set_fixed_depth(-999.)
                 particle.set_diagnostic_variable(self._settling_velocity_variable_name, self._settling_velocity)
                 self._settling_has_started = True
 

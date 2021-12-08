@@ -21,6 +21,8 @@ namespace particles {
           in_vertical_boundary_layer(false),
           k_lower_layer(-999),
           k_upper_layer(-999),
+          restore_to_fixed_depth(false),
+          fixed_depth(-999.),
           age(-999.),
           is_alive(false),
           parameters{},
@@ -47,6 +49,8 @@ namespace particles {
           in_vertical_boundary_layer(rhs.in_vertical_boundary_layer),
           k_lower_layer(rhs.k_lower_layer),
           k_upper_layer(rhs.k_upper_layer),
+          restore_to_fixed_depth(rhs.restore_to_fixed_depth),
+          fixed_depth(rhs.fixed_depth),
           age(rhs.age),
           is_alive(rhs.is_alive),
           parameters(rhs.parameters),
@@ -74,6 +78,8 @@ namespace particles {
         in_vertical_boundary_layer = rhs.in_vertical_boundary_layer;
         k_lower_layer = rhs.k_lower_layer;
         k_upper_layer = rhs.k_upper_layer;
+        restore_to_fixed_depth = rhs.restore_to_fixed_depth;
+        fixed_depth = rhs.fixed_depth;
         age = rhs.age;
         is_alive = rhs.is_alive;
         parameters = rhs.parameters;
@@ -260,6 +266,22 @@ namespace particles {
 
     int Particle::get_k_upper_layer() const {
         return k_upper_layer;
+    }
+
+    void Particle::set_restore_to_fixed_depth(const bool& rhs) {
+        restore_to_fixed_depth = rhs;
+    }
+
+    bool Particle::get_restore_to_fixed_depth() const {
+        return restore_to_fixed_depth;
+    }
+
+    void Particle::set_fixed_depth(const double& rhs) {
+        fixed_depth = rhs;
+    }
+
+    double Particle::get_fixed_depth() const {
+        return fixed_depth;
     }
 
     void Particle::set_age(const float& rhs) {

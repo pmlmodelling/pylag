@@ -32,7 +32,8 @@ cdef class ParticleSmartPtr:
                   DTYPE_INT_t k_layer=INT_INVALID, bint in_vertical_boundary_layer=False,
                   DTYPE_INT_t k_lower_layer=INT_INVALID, DTYPE_INT_t k_upper_layer=INT_INVALID,
                   DTYPE_INT_t id=INT_INVALID, DTYPE_INT_t status=0, DTYPE_FLOAT_t age=FLOAT_INVALID,
-                  bint is_alive=False, parameters={}, state_variables={}, diagnostic_variables={},
+                  bint is_alive=False, bint restore_to_fixed_depth=False, DTYPE_FLOAT_t fixed_depth=FLOAT_INVALID,
+                  parameters={}, state_variables={}, diagnostic_variables={},
                   boolean_flags={}, ParticleSmartPtr particle_smart_ptr=None):
 
         cdef ParticleSmartPtr _particle_smart_ptr
@@ -61,6 +62,8 @@ cdef class ParticleSmartPtr:
             self._particle.set_in_vertical_boundary_layer(in_vertical_boundary_layer)
             self._particle.set_k_lower_layer(k_lower_layer)
             self._particle.set_k_upper_layer(k_upper_layer)
+            self._particle.set_restore_to_fixed_depth(restore_to_fixed_depth)
+            self._particle.set_fixed_depth(fixed_depth)
             self._particle.set_age(age)
             self._particle.set_is_alive(is_alive)
 
@@ -550,6 +553,16 @@ cdef class ParticleSmartPtr:
         return self._particle.get_in_vertical_boundary_layer()
 
     @property
+    def restore_to_fixed_depth(self):
+        """ Flag signifying whether a particle's position is restored to a fixed depth """
+        return self._particle.get_restore_to_fixed_depth()
+
+    @property
+    def fixed_depth(self):
+        """ The fixed depth below the surface that particle's are restored to  """
+        return self._particle.get_fixed_depth()
+
+    @property
     def age(self):
         """ The age of the particle in seconds """
         return self._particle.get_age()
@@ -621,6 +634,8 @@ cdef to_string(Particle* particle):
              "Partilce k upper layer = {} \n"\
              "Particle in domain = {} \n"\
              "Particle is beached = {} \n"\
+             "Particle is restored to a fixed depth = {} \n"\
+             "Particle fixed depth (only used if depth restoring has been activated) = {} \n"\
              "Particle age = {} seconds \n".format(particle.get_id(),
                                                    particle.get_x1(),
                                                    particle.get_x2(),
@@ -633,6 +648,8 @@ cdef to_string(Particle* particle):
                                                    particle.get_k_upper_layer(),
                                                    particle.get_in_domain(),
                                                    particle.get_is_beached(),
+                                                   particle.get_restore_to_fixed_depth(),
+                                                   particle.get_fixed_depth(),
                                                    particle.get_age())
 
     # Get host elements

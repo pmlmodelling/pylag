@@ -158,8 +158,8 @@ cdef class StdNumMethod(NumMethod):
         cdef DTYPE_FLOAT_t _fixed_depth_below_surface
 
         # Are we using depth restoring
-        _depth_restoring = particle.get_boolean_flag(b'depth_restoring')
-        _fixed_depth_below_surface = particle.get_parameter(b'fixed_depth_below_surface')
+        _depth_restoring = particle.get_restore_to_fixed_depth()
+        _fixed_depth_below_surface = particle.get_fixed_depth()
 
         # Create a clone of the current particle to work on
         _particle_copy = particle[0]
@@ -361,8 +361,8 @@ cdef class OS0NumMethod(NumMethod):
         cdef DTYPE_FLOAT_t _fixed_depth_below_surface
 
         # Are we using depth restoring
-        _depth_restoring = particle.get_boolean_flag(b'depth_restoring')
-        _fixed_depth_below_surface = particle.get_parameter(b'fixed_depth_below_surface')
+        _depth_restoring = particle.get_restore_to_fixed_depth()
+        _fixed_depth_below_surface = particle.get_fixed_depth()
 
         # Advection
         # ---------
@@ -608,8 +608,8 @@ cdef class OS1NumMethod(NumMethod):
         cdef DTYPE_FLOAT_t _fixed_depth_below_surface
 
         # Are we using depth restoring
-        _depth_restoring = particle.get_boolean_flag(b'depth_restoring')
-        _fixed_depth_below_surface = particle.get_parameter(b'fixed_depth_below_surface')
+        _depth_restoring = particle.get_restore_to_fixed_depth()
+        _fixed_depth_below_surface = particle.get_fixed_depth()
 
         # 1st Diffusion step
         # ------------------

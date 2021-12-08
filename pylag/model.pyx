@@ -356,7 +356,7 @@ cdef class OPTModel:
                 except (configparser.NoSectionError, configparser.NoOptionError) as e:
                     depth_restoring = False
 
-                particle_smart_ptr.get_ptr().set_boolean_flag(b'depth_restoring', depth_restoring)
+                particle_smart_ptr.get_ptr().set_restore_to_fixed_depth(depth_restoring)
 
                 try:
                     fixed_depth_below_surface = self.config.getfloat("SIMULATION", "fixed_depth")
@@ -366,7 +366,7 @@ cdef class OPTModel:
                                            'You can choose a restoring depth with the configuration option `fixed_depth`.')
                     fixed_depth_below_surface = FLOAT_ERR
 
-                particle_smart_ptr.get_ptr().set_parameter(b'fixed_depth_below_surface', fixed_depth_below_surface)
+                particle_smart_ptr.get_ptr().set_fixed_depth(fixed_depth_below_surface)
 
                 # Initialise particle settling velocity parameters
                 if self.settling_velocity_calculator is not None:

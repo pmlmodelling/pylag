@@ -93,14 +93,20 @@ namespace particles {
             void set_k_layer(const int& rhs);
             int get_k_layer() const;
 
+            void set_restore_to_fixed_depth(const bool& rhs);
+            bool get_restore_to_fixed_depth() const;
+
+            void set_fixed_depth(const double& rhs);
+            double get_fixed_depth() const;
+
             void set_age(const float& rhs);
             float get_age() const;
 
             void set_is_alive(const bool& rhs);
             bool get_is_alive() const;
 
-           // Generic getters and setters below here, with values stores in map objects
-           // -------------------------------------------------------------------------
+            // Generic getters and setters below here, with values stores in map objects
+            // -------------------------------------------------------------------------
 
             void set_parameter(const std::string& name, const float& value);
             float get_parameter(const std::string& name) const;
@@ -192,6 +198,12 @@ namespace particles {
 
             // Intrinsic particle properties and parameters
             // --------------------------------------------
+
+            // Restore the particle to a fixed depth?
+            bool restore_to_fixed_depth;
+
+            // Depth below the surface to which the particle is restored
+            double fixed_depth;
 
             // Particle age in seconds
             float age;
