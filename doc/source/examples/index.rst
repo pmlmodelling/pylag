@@ -9,8 +9,8 @@ different flow fields, or direct observations (e.g. from HF Radar facilities). I
 calculated on the fly. Below a number of example use cases are described. These start with very simple analytical
 models of different flows, the results of which are used to verify the model implementation, and to test the accuracy of
 different numerical integration schemes. More involved examples include using PyLag directly with different ocean models,
-or with inputs defined on common structured and unstructured grid types. Where possible, these try to highlight different
-model features, such as running forward or backward in time simulations; running with Cartesian or Polar Coordinates;
+and with inputs defined on common structured and unstructured grid types. Collectively, the examples highlight different
+model features, such as running forward or backward in time simulations; running with Cartesian or Geographic Coordinates;
 performing ensemble simulations; and exploiting PyLag's parallel computing support.
 
 
