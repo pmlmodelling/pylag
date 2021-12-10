@@ -26,6 +26,4 @@ performing ensemble simulations; and exploiting PyLag's parallel computing suppo
     arakawa_a_forward_tracking
     global_arakawa_a_forward_tracking
     roms_txla
-    settling
-    mortality
 
