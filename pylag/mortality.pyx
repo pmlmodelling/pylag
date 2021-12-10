@@ -1,10 +1,10 @@
 """
-Bio model objects can be used to manage the configuration and update of
-biological particles.
+MortalityCalculators can be used to determine whether a living
+particle lives or dies.
 
 Note
 ----
-bio_model is implemented in Cython. Only a small portion of the
+mortality is implemented in Cython. Only a small portion of the
 API is exposed in Python with accompanying documentation.
 """
 
