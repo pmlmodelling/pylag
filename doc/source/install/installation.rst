@@ -29,20 +29,20 @@ With *miniconda3* installed and configured, create a new environment in which to
 
 .. code-block:: bash
 
-    $ conda create -n particles python=3.8
-    $ conda activate particles
+    $ conda create -n pylag python=3.9
+    $ conda activate pylag
 
 Finally, install *PyLag*:
 
 .. code-block:: bash
 
-    (particles) $ conda install -n particles -c JimClark pylag
+    (pylag) $ conda install -n pylag -c JimClark pylag
 
 To test that *PyLag* has been correctly installed, type:
 
 .. code-block:: bash
 
-    (particles) $ python -c "import pylag"
+    (pylag) $ python -c "import pylag"
 
 which should exit without error.
 
@@ -52,7 +52,7 @@ which should exit without error.
 Building from source
 --------------------
 
-Developers who wish to work with the source code directly should first clone *PyLag's* git repository from `GitHub <https://github.com/jimc101/PyLag>`_. With SSH access setup, you can clone the repository using the following commands:
+Developers who wish to work with the source code directly should first clone *PyLag's* git repository from `GitHub <https://github.com/jimc101/PyLag>`_. You can clone the repository using the following commands:
 
 .. code-block:: bash
 
@@ -72,7 +72,7 @@ The new step here is the installation of conda-build and conda-verify. Note we d
 
 .. code-block:: bash
 
-    $ conda create -n particles python=3.8
+    $ conda create -n particles python=3.9
     $ conda activate particles
 
 And finally, in the PyLag source code directory, build and install *PyLag*.
@@ -133,8 +133,8 @@ To build PyLag's documentation, a number of extra dependencies are required. The
 
 .. code-block:: bash
 
-   (particles) $ conda install -n particles sphinx nbsphinx sphinx_rtd_theme sphinxcontrib-napoleon jupyter \
-                 jupyter_client ipykernel ffmpeg seapy cmocean matplotlib shapely cartopy
-   (particles) $ conda install -c JimClark -n particles PyFVCOM PyQT-fit
+   (particles) $ conda install -n pylag sphinx nbsphinx sphinx_rtd_theme sphinxcontrib-napoleon jupyter \
+                 jupyter_client ipykernel seapy cmocean matplotlib shapely cartopy
+   (particles) $ conda install -c JimClark -n pylag PyQT-fit
 
-If you haven't added the JimClark channel you will need to do this before installing PyFVCOM and PyQT-fit.
+If you haven't added the JimClark channel you will need to do this before installing and PyQT-fit.
