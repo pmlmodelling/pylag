@@ -292,11 +292,15 @@ class FVCOMPlotter(PyLagPlotter):
             self.y = ds.variables['latitude'][:]
             self.xc = ds.variables['longitude_c'][:]
             self.yc = ds.variables['latitude_c'][:]
+
+            self.transform = ccrs.PlateCarree()
         else:
             self.x = ds.variables['x'][:]
             self.y = ds.variables['y'][:]
             self.xc = ds.variables['xc'][:]
             self.yc = ds.variables['yc'][:]
+
+            self.transform = None
 
         # Triangles
         self.triangles = self.nv.transpose()
@@ -311,7 +315,7 @@ class FVCOMPlotter(PyLagPlotter):
                          self.y.max()])
 
     def plot_field(self, ax, field, update=False, configure=True, add_colour_bar=True, cb_label=None, tick_inc=True,
-                   extents=None, transform=ccrs.PlateCarree(), draw_coastlines=False, resolution='10m',
+                   extents=None, draw_coastlines=False, resolution='10m',
                    **kwargs):
         """ Map the supplied field
 
@@ -355,9 +359,6 @@ class FVCOMPlotter(PyLagPlotter):
             Four element numpy array giving lon/lat limits (e.g. [-4.56, -3.76,
             49.96, 50.44])
 
-        transform : cartopy.crs.Projection
-            Type of projection.
-
         draw_coastlines : boolean, optional
             Draw coastlines. Default False.
 
@@ -382,11 +383,11 @@ class FVCOMPlotter(PyLagPlotter):
         # If not configuring the plot, simply plot the field and return
         if not configure:
             if self.geographic_coords:
-                plot = ax.tripcolor(self.tri, field, transform=transform, **kwargs)
+                plot = ax.tripcolor(self.tri, field, transform=self.transform, **kwargs)
             else:
                 plot = ax.tripcolor(self.tri, field, **kwargs)
 
-            return ax
+            return ax, plot
 
         # Set extents
         if extents is None:
@@ -394,8 +395,8 @@ class FVCOMPlotter(PyLagPlotter):
 
         # Create plot
         if self.geographic_coords:
-            plot = ax.tripcolor(self.tri, field, transform=transform, **kwargs)
-            ax.set_extent(extents, transform)
+            plot = ax.tripcolor(self.tri, field, transform=self.transform, **kwargs)
+            ax.set_extent(extents, self.transform)
 
             if draw_coastlines:
                 ax.coastlines(resolution=resolution, linewidth=self.line_width)
@@ -420,8 +421,8 @@ class FVCOMPlotter(PyLagPlotter):
         return ax, plot
 
     def plot_quiver(self, ax, u, v, configure=True, update=False,
-            tick_inc=True, extents=None, transform=ccrs.PlateCarree(),
-            draw_coastlines=False, resolution='10m', point_res=1, scale = 0.5,
+                    tick_inc=True, extents=None, draw_coastlines=False,
+                    resolution='10m', point_res=1, scale=0.5,
                     **kwargs):
         """ Produce a quiver plot of the supplied velocity field
 
@@ -438,7 +439,7 @@ class FVCOMPlotter(PyLagPlotter):
         _v = v
         
         #set spacing to plot 1 in n arrows where n = point_res
-        points = (slice(None,None,point_res))
+        points = (slice(None, None, point_res))
 
         if update is True:
             for collection in ax.collections:
@@ -447,7 +448,7 @@ class FVCOMPlotter(PyLagPlotter):
                     return ax
             raise RuntimeError('Received update is True, but the current axis does not contain a Quiver plot object.')
 
-        quiver = ax.quiver(self.xc[points], self.yc[points], _u[points], _v[points], transform=transform,
+        quiver = ax.quiver(self.xc[points], self.yc[points], _u[points], _v[points], transform=self.transform,
                            units='inches', scale_units='inches', scale=scale)
 
         plt.quiverkey(quiver, 0.9, 0.9, 0.5,
@@ -462,7 +463,7 @@ class FVCOMPlotter(PyLagPlotter):
         if extents is None:
             extents = self._get_default_extents()
 
-        ax.set_extent(extents, transform)
+        ax.set_extent(extents, self.transform)
 
         if draw_coastlines:
             ax.coastlines(resolution=resolution, linewidth=self.line_width)
@@ -562,6 +563,8 @@ class ArakawaAPlotter(PyLagPlotter):
             self.y = ds.variables['latitude'][:]
             self.xc = ds.variables['longitude_c'][:]
             self.yc = ds.variables['latitude_c'][:]
+
+            self.transform = ccrs.PlateCarree()
         else:
             raise ValueError('Arakawa A-grid plotter includes support for geographic coordinates only')
 
@@ -590,7 +593,6 @@ class ArakawaAPlotter(PyLagPlotter):
             self.tri = stripy.sTriangulation(lons=np.radians(self.x), lats=np.radians(self.y), permute=False)
         else:
             self.tri = Triangulation(self.x, self.y, self.simplices, mask=self.maskc)
-
 
     def _get_default_extents(self):
         return np.array([self.x.min(),
@@ -628,7 +630,7 @@ class ArakawaAPlotter(PyLagPlotter):
         return _field
 
     def plot_field(self, ax, field, preprocess_array=False, update=False, configure=True, add_colour_bar=True,
-                   cb_label=None, tick_inc=True, extents=None, transform=ccrs.PlateCarree(),
+                   cb_label=None, tick_inc=True, extents=None,
                    draw_coastlines=False, resolution='10m', **kwargs):
         """ Map the supplied field
 
@@ -676,9 +678,6 @@ class ArakawaAPlotter(PyLagPlotter):
         extents : 1D array, optional
             Four element numpy array giving lon/lat limits (e.g. [-4.56, -3.76,
             49.96, 50.44])
-
-        transform : cartopy.crs.Projection
-            Type of projection.
 
         draw_coastlines : boolean, optional
             Draw coastlines. Default False.
@@ -729,7 +728,7 @@ class ArakawaAPlotter(PyLagPlotter):
 
         # Create the plot
         verts = np.stack((self.x[self.ocean_simplices], self.y[self.ocean_simplices]), axis=-1)
-        collection = PolyCollection(verts, linewidth=linewidth, transform=transform)
+        collection = PolyCollection(verts, linewidth=linewidth, transform=self.transform)
         collection.set_alpha(alpha)
         collection.set_array(_field)
         collection.set_cmap(cmap)
@@ -745,7 +744,7 @@ class ArakawaAPlotter(PyLagPlotter):
         if extents is None:
             extents = self._get_default_extents()
 
-        ax.set_extent(extents, transform)
+        ax.set_extent(extents, self.transform)
 
         if draw_coastlines:
             ax.coastlines(resolution=resolution, linewidth=self.line_width)
@@ -764,7 +763,7 @@ class ArakawaAPlotter(PyLagPlotter):
         return ax, collection
 
     def plot_quiver(self, ax, u, v, preprocess_arrays=True, configure=True, update=False, tick_inc=True,
-                    extents=None, transform=ccrs.PlateCarree(), draw_coastlines=False, resolution='10m',
+                    extents=None, draw_coastlines=False, resolution='10m',
                     **kwargs):
         """ Produce a quiver plot of the supplied velocity field
 
@@ -791,7 +790,7 @@ class ArakawaAPlotter(PyLagPlotter):
                     return ax
             raise RuntimeError('Received update is True, but the current axis does not contain a Quiver plot object.')
 
-        quiver = ax.quiver(self.x, self.y, _u, _v, transform=transform,
+        quiver = ax.quiver(self.x, self.y, _u, _v, transform=self.transform,
                            units='inches', scale_units='inches', scale=0.5)
 
         plt.quiverkey(quiver, 0.9, 0.9, 0.5,
@@ -806,7 +805,7 @@ class ArakawaAPlotter(PyLagPlotter):
         if extents is None:
             extents = self._get_default_extents()
 
-        ax.set_extent(extents, transform)
+        ax.set_extent(extents, self.transform)
 
         if draw_coastlines:
             ax.coastlines(resolution=resolution, linewidth=self.line_width)
@@ -819,8 +818,7 @@ class ArakawaAPlotter(PyLagPlotter):
 
         return ax
 
-    def draw_grid(self, ax, draw_masked_elements=False, linewidth=0.25, edgecolor='k', facecolor='none',
-                  transform=ccrs.PlateCarree()):
+    def draw_grid(self, ax, draw_masked_elements=False, linewidth=0.25, edgecolor='k', facecolor='none'):
         """ Draw the underlying grid or mesh
 
         Parameters
@@ -842,7 +840,7 @@ class ArakawaAPlotter(PyLagPlotter):
 
         verts = np.stack((x, y), axis=-1)
         collection = PolyCollection(verts, edgecolor=edgecolor, linewidth=linewidth, facecolor=facecolor,
-                                    transform=transform)
+                                    transform=self.transform)
         ax.add_collection(collection)
         ax.grid(False)
         ax.autoscale_view()
@@ -950,6 +948,8 @@ class ArakawaCPlotter:
                 self.y[grid_name] = ds.variables['latitude_{}'.format(grid_name)][:]
                 self.xc[grid_name] = ds.variables['longitude_c_{}'.format(grid_name)][:]
                 self.yc[grid_name] = ds.variables['latitude_c_{}'.format(grid_name)][:]
+
+                self.transform = ccrs.PlateCarree()
             else:
                 self.x[grid_name] = ds.variables['x_{}'.format(grid_name)][:]
                 self.y[grid_name] = ds.variables['y_{}'.format(grid_name)][:]
@@ -970,8 +970,7 @@ class ArakawaCPlotter:
                          self.y[grid_name].max()])
 
     def plot_field(self, ax, grid_name, field, update=False, configure=True, add_colour_bar=True, cb_label=None, tick_inc=True,
-                   extents=None, transform=ccrs.PlateCarree(), draw_coastlines=False, resolution='10m',
-                   **kwargs):
+                   extents=None, draw_coastlines=False, resolution='10m', **kwargs):
         """ Map the supplied field
 
         The field must be defined on the same triangular mesh that is defined in the grid metrics
@@ -1017,9 +1016,6 @@ class ArakawaCPlotter:
             Four element numpy array giving lon/lat limits (e.g. [-4.56, -3.76,
             49.96, 50.44])
 
-        transform : cartopy.crs.Projection
-            Type of projection.
-
         draw_coastlines : boolean, optional
             Draw coastlines. Default False.
 
@@ -1045,11 +1041,11 @@ class ArakawaCPlotter:
         # If not configuring the plot, simply plot the field and return
         if not configure:
             if self.geographic_coords:
-                plot = ax.tripcolor(self.tri[grid_name], field, transform=transform, **kwargs)
+                plot = ax.tripcolor(self.tri[grid_name], field, transform=self.transform, **kwargs)
             else:
                 plot = ax.tripcolor(self.tri[grid_name], field, **kwargs)
 
-            return ax
+            return ax, plot
 
         # Set extents
         if extents is None:
@@ -1057,8 +1053,8 @@ class ArakawaCPlotter:
 
         # Create plot
         if self.geographic_coords:
-            plot = ax.tripcolor(self.tri[grid_name], field, transform=transform, **kwargs)
-            ax.set_extent(extents, transform)
+            plot = ax.tripcolor(self.tri[grid_name], field, transform=self.transform, **kwargs)
+            ax.set_extent(extents, self.transform)
 
             if draw_coastlines:
                 ax.coastlines(resolution=resolution, linewidth=self.line_width)
@@ -1122,7 +1118,8 @@ class ArakawaCPlotter:
         color = kwargs.pop('color', 'r')
         linewidth = kwargs.pop('linewidth', 1.0)
 
-        line_plots = ax.plot(x, y, zorder=3, alpha=alpha, color=color, linewidth=linewidth, **kwargs)
+        line_plots = ax.plot(x, y, transform=self.transform, zorder=3, alpha=alpha,
+                             color=color, linewidth=linewidth, **kwargs)
 
         return ax, line_plots
 
@@ -1141,7 +1138,7 @@ class ArakawaCPlotter:
 
         return
 
-    def scatter(self, ax, grid_name, x, y, configure=False, transform=ccrs.PlateCarree(), zorder=4,
+    def scatter(self, ax, grid_name, x, y, configure=False,  zorder=4,
                 extents=None, draw_coastlines=False, resolution='10m', tick_inc=False, **kwargs):
         """ Create a scatter plot using the provided x and y values
 
@@ -1168,9 +1165,6 @@ class ArakawaCPlotter:
         configure : bool, optional
             If true, configure the plot by setting plot extents, drawing coastlines etc. Default: False.
 
-        transform : cartopy.crs.Projection
-            The type of transform to perform if geographic_coords is True. Optional.
-
         draw_coastlines : bool
             Draw coastlines? Only used if geographic_coords is True. Optional.
 
@@ -1192,7 +1186,7 @@ class ArakawaCPlotter:
         # particle positions without setting up the plot in full.
         if not configure:
             if self.geographic_coords:
-                scatter_plot = ax.scatter(x, y, transform=transform, zorder=zorder, **kwargs)
+                scatter_plot = ax.scatter(x, y, transform=self.transform, zorder=zorder, **kwargs)
             else:
                 scatter_plot = ax.scatter(x, y, zorder=zorder, **kwargs)
 
@@ -1206,8 +1200,8 @@ class ArakawaCPlotter:
 
         # Create plot
         if self.geographic_coords:
-            scatter_plot = ax.scatter(x, y, transform=transform, zorder=zorder, **kwargs)
-            ax.set_extent(extents, transform)
+            scatter_plot = ax.scatter(x, y, transform=self.transform, zorder=zorder, **kwargs)
+            ax.set_extent(extents, self.transform)
 
             if draw_coastlines:
                 ax.coastlines(resolution=resolution, linewidth=self.line_width)
@@ -1250,7 +1244,7 @@ class ArakawaCPlotter:
             reinstate_mask = True
             self.tri[grid_name].set_mask(None)
 
-        ax.triplot(self.tri[grid_name], zorder=zorder, **kwargs)
+        ax.triplot(self.tri[grid_name], transform=self.transform, zorder=zorder, **kwargs)
 
         # Reinstate the mask if needed
         if reinstate_mask:
@@ -1675,6 +1669,9 @@ def create_figure(figure_size=(10., 10.),  font_size=10, axis_position=None, pro
 
     axis_position : 1D array, optional
         Array giving axis dimensions
+
+    projection : ccrs.Projection
+        Cartopy projection to use for the plot. If None, a projection will not be used.
 
     bg_color : str, optional
         Colour to use for the axis background. Default is `white`. When
