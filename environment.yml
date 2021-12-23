@@ -1,4 +1,4 @@
-name: particles
+name: pylag
 channels:
   - JimClark
 dependencies:
