@@ -10,8 +10,5 @@ In the following sections, further details are provided regarding *PyLag's* over
     :maxdepth: 2
     
     overview
-    configuration
-    initial_positions
-    boundary_conditions
-    settling
-    mortality
+    getting_started
+    cookbook/index
