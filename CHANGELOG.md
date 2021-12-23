@@ -2,6 +2,14 @@
 
 PyLag is still very much in development. This page will be updated when future releases are made.
 
+## Version 0.6.0 23/12/2021
+
+* Add regridding sub-package
+
+* Implement support for modelling settling. Includes a forward looking change to the way in which particle velocities are caculated.
+
+* Restructured docs.
+
 ## Version 0.5.2 29/06/2021
 
 * Explicitly declare that plots within the documentation be incorporated inline.
