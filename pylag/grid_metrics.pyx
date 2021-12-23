@@ -161,10 +161,7 @@ class GridMetricsFileCreator(object):
 
         global_attrs = OrderedDict()
 
-        global_attrs['Conventions'] = "CF-1.7"
         global_attrs['title'] = "PyLag grid metrics file"
-        global_attrs['institution'] = 'Plymouth Marine Laboratory (PML)'
-        global_attrs['contact'] = 'James R. Clark (jcl@pml.ac.uk)'
         global_attrs['netcdf-version-id'] = 'netCDF-4'
         global_attrs['pylag-version-id'] = version.git_revision
 
