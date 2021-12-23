@@ -9,8 +9,8 @@ from Cython.Build import cythonize
 import numpy
 
 MAJOR               = 0
-MINOR               = 5
-PATCH               = 2
+MINOR               = 6
+PATCH               = 0
 ISRELEASED          = True
 VERSION = '{}.{}.{}'.format(MAJOR, MINOR, PATCH)
 
@@ -188,7 +188,6 @@ setup(name="PyLag",
           'Topic :: Particle Tracking',
           'Programming Language :: C++',
           'Programming Language :: Cython',
-          'Programming Language :: Python :: 3.6',
           'Programming Language :: Python :: 3.7',
           'Programming Language :: Python :: 3.8',
           'Programming Language :: Python :: 3.9',
