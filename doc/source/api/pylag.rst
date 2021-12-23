@@ -9,6 +9,7 @@ Subpackages
 
    pylag.parallel
    pylag.processing
+   pylag.regrid
 
 Submodules
 ----------
