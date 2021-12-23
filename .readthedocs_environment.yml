@@ -5,6 +5,7 @@ channels:
   - geo-down-under
   - JimClark
 dependencies:
+  - python=3.9
   - pylag
   - matplotlib
   - cartopy
