@@ -41,9 +41,9 @@ def __test(inLat, inLong, inZone=False):
 
 def __convert(args):
     """
-    Child function to create a projection object and convert coordinates (optinally inverse).
+    Child function to create a projection object and convert coordinates (optionally inverse).
 
-    This function can therefore to UTM -> lat/lon as well as lat/lon -> UTM
+    This function can therefore do UTM -> lat/lon as well as lat/lon -> UTM transformations.
 
     Parameters
     ----------
