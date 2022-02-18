@@ -69,15 +69,18 @@ def __convert(args):
     return c, d
 
 
-def _get_zone_number(longitude, latitude):
+def get_zone_number(longitude, latitude):
     """
     Calculate the UTM zone number from the given coordinate. Shamelessly lifted
     from the utm.lonlat_to_zone_number function.
 
     Parameters
     ----------
-    lon, lat : float
-        Longitude and latitude
+    longitude : float
+        Longitude in degrees East.
+
+    latitude : float
+        Latitude in degrees North.
 
     Returns
     -------
@@ -117,7 +120,11 @@ def get_zone_letter(latitude):
     zone_letter : str
         Zone letter
 
+    TODO
+    ----
+    Unit tests indicate this fails. Either fix or delete.
     """
+    raise PyLagRuntimeError('This function fails unit tests and should not be used.')
 
     ZONE_LETTERS = "CDEFGHJKLMNPQRSTUVWXX"
 
