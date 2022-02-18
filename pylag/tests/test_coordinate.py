@@ -84,7 +84,7 @@ class FileReader_test(TestCase):
         self.assertIsInstance(x, list)
         self.assertEqual(x, [1.0, 2.0])
 
-    def test_get_zone_number_with_longitude_and_latitude_for_30N(self):
+    def test_get_zone_number_with_longitude_and_latitude_for_30U(self):
         latitude = 50.0
         longitude = -4.0
 
@@ -92,7 +92,7 @@ class FileReader_test(TestCase):
 
         self.assertEqual(zone_number, 30)
 
-    def test_get_zone_letter_with_latitude_for_30N(self):
+    def test_get_zone_letter_with_latitude_for_30U(self):
         latitude = 50.0
 
         zone_letter = coordinate.get_zone_letter(latitude)
