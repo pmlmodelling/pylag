@@ -150,9 +150,9 @@ def get_zone_letter(latitude):
     zone_letter : str
         Zone letter
 
-    TODO
-    ----
-    Unit tests indicate this fails. Either fix or delete.
+    Raises
+    ------
+    PyLagOutOfBoundsError - For a latitude that is < -80 or > 84
     """
     ZONE_LETTERS = "CDEFGHJKLMNPQRSTUVWXX"
 
