@@ -4,7 +4,7 @@ import unittest
 from unittest import TestCase
 import numpy.testing as test
 from collections import namedtuple
-
+import numpy as np
 
 import pylag.processing.coordinate as coordinate
 from pylag.exceptions import PyLagOutOfBoundsError
@@ -47,6 +47,42 @@ class FileReader_test(TestCase):
         test.assert_equal(lat, coords.lat)
         test.assert_equal(lon, coords.lon)
         test.assert_equal('30N', coords.zone)
+
+    def test_to_list_with_a_float(self):
+        value = 10.0
+        x = coordinate.to_list(value)
+        self.assertIsInstance(x, list)
+        self.assertEqual(x, [10.0])
+
+    def test_to_list_with_an_int(self):
+        value = 10
+        x = coordinate.to_list(value)
+        self.assertIsInstance(x, list)
+        self.assertEqual(x, [10])
+
+    def test_to_list_with_a_string(self):
+        value = '10'
+        x = coordinate.to_list(value)
+        self.assertIsInstance(x, list)
+        self.assertEqual(x, ['10'])
+
+    def test_to_list_with_a_list(self):
+        value = [1.0, 2.0]
+        x = coordinate.to_list(value)
+        self.assertIsInstance(x, list)
+        self.assertEqual(x, [1.0, 2.0])
+
+    def test_to_list_with_a_tuple(self):
+        value = (1.0, 2.0)
+        x = coordinate.to_list(value)
+        self.assertIsInstance(x, list)
+        self.assertEqual(x, [1.0, 2.0])
+
+    def test_to_list_with_a_ndarray(self):
+        value = np.array([1.0, 2.0])
+        x = coordinate.to_list(value)
+        self.assertIsInstance(x, list)
+        self.assertEqual(x, [1.0, 2.0])
 
     def test_get_zone_number_with_longitude_and_latitude_for_30N(self):
         latitude = 50.0

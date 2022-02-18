@@ -20,11 +20,41 @@ import numpy as np
 
 import pyproj
 
-from pylag.exceptions import PyLagOutOfBoundsError
+from pylag.exceptions import PyLagRuntimeError, PyLagTypeError, PyLagOutOfBoundsError
 
 
-# Convert a string, tuple, float or int to a list.
-to_list = lambda x: [x] if isinstance(x, str) or isinstance(x, (float, int, np.float32)) else x
+def to_list(x):
+    """ Try to convert `x` to a list
+
+    Support for strings, ints, floats, tuples and ndarrays is included.
+
+    Parameters
+    ----------
+    x : object
+        The object to convert.
+
+    Returns
+    -------
+     : list
+        The processed object transformed to a list.
+
+    Raises
+    ------
+    PyLagTypeError is the object is not supported.
+    """
+
+    if isinstance(x, str) or isinstance(x, (int, float)):
+        return [x]
+    elif isinstance(x, tuple):
+        return list(x)
+    elif isinstance(x, np.ndarray):
+        return x.tolist()
+    elif isinstance(x, list):
+        return x
+
+    x_type = type(x)
+
+    raise PyLagTypeError('Unexpected type {x_type!r}')
 
 
 def __test(inLat, inLong, inZone=False):
