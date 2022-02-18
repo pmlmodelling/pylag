@@ -20,7 +20,7 @@ import numpy as np
 
 import pyproj
 
-from pylag.exceptions import PyLagOutOfBoundsError
+from pylag.exceptions import PyLagRuntimeError, PyLagOutOfBoundsError
 
 
 # Convert a string, tuple, float or int to a list.

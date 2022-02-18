@@ -11,5 +11,9 @@ class PyLagException(Exception):
     pass
 
 
+class PyLagRuntimeError(PyLagException):
+    pass
+
+
 class PyLagOutOfBoundsError(PyLagException):
     pass
