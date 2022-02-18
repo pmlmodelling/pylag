@@ -20,6 +20,9 @@ import numpy as np
 
 import pyproj
 
+from pylag.exceptions import PyLagOutOfBoundsError
+
+
 # Convert a string, tuple, float or int to a list.
 to_list = lambda x: [x] if isinstance(x, str) or isinstance(x, (float, int, np.float32)) else x
 
@@ -430,6 +433,30 @@ def lonlat_decimal_from_degminsec_wco(lon_degminsec, lat_degminsec):
     lat = lat_sign * lat
 
     return lon, lat
+
+
+def check_valid_zone(zone_number, zone_letter=None):
+    """ Check zone is valid
+
+    Implementation copied from the utm package. See https://github.com/Turbo87/utm.
+
+    Parameters
+    ----------
+    zone_number : int
+        The UTM zone number.
+
+    zone_letter : str, optional
+        The UTM zone letter. If provided, this should be a single character in length
+        and between C and X.
+    """
+    if not 1 <= zone_number <= 60:
+        raise PyLagOutOfBoundsError('Zone number out of range (must be between 1 and 60)')
+
+    if zone_letter is not None:
+        zone_letter = zone_letter.upper()
+
+        if not 'C' <= zone_letter <= 'X' or zone_letter in ['I', 'O']:
+            raise PyLagOutOfBoundsError('Zone letter out of range (must be between C and X)')
 
 
 if __name__ == '__main__':
