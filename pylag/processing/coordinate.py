@@ -20,7 +20,7 @@ import numpy as np
 
 import pyproj
 
-from pylag.exceptions import PyLagRuntimeError, PyLagOutOfBoundsError
+from pylag.exceptions import PyLagOutOfBoundsError
 
 
 # Convert a string, tuple, float or int to a list.
@@ -124,8 +124,6 @@ def get_zone_letter(latitude):
     ----
     Unit tests indicate this fails. Either fix or delete.
     """
-    raise PyLagRuntimeError('This function fails unit tests and should not be used.')
-
     ZONE_LETTERS = "CDEFGHJKLMNPQRSTUVWXX"
 
     if -80 <= latitude <= 84:

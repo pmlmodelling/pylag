@@ -56,15 +56,13 @@ class FileReader_test(TestCase):
 
         self.assertEqual(zone_number, 30)
 
-    @unittest.skip('This is a known failing case')
     def test_get_zone_letter_with_latitude_for_30N(self):
         latitude = 50.0
 
         zone_letter = coordinate.get_zone_letter(latitude)
 
-        self.assertEqual(zone_letter, 'N')
+        self.assertEqual(zone_letter, 'U')
 
-    @unittest.skip('This is a known failing case')
     def test_get_zone_letter_with_invalid_latitude(self):
         latitude = 89.0
 
