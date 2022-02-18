@@ -161,21 +161,26 @@ def get_zone_letter(latitude):
 
     raise PyLagOutOfBoundsError(f'Latitude of {latitude!r} out of range for utm zones')
 
-def utm_from_lonlat(lon, lat, zone=None, ellipsoid='WGS84', datum='WGS84', parallel=False):
-    """
-    Converts lat/long to UTM for the specified zone.
+
+def utm_from_lonlat(longitude, latitude, zone_number, northern, ellipsoid='WGS84',
+                    datum='WGS84', parallel=False):
+    """ Converts lats and lons to UTM for the specified zone if given.
 
     East Longitudes are positive, west longitudes are negative. North latitudes
-    are positive, south latitudes are negative. Lat and Long are in decimal
+    are positive, south latitudes are negative. Lat and Lon are in decimal
     degrees.
+
+    Be careful when using this function for coordinates that span multiple zones
+    as the transformation is specific to the specified zone.
 
     Parameters
     ----------
-    lon, lat : float, tuple, list, np.ndarray
+    longitude, latitude : float, tuple, list, np.ndarray
         Longitudes and latitudes.
-    zone : str, optional
-        Zone number and letter (e.g. 30N). If omitted, calculate it based on the
-        position.
+    zone_number : int
+        Zone number (e.g. 30).
+    northern : bool
+        Flag signifying whether the zone is in the northern or southern hemisphere.
     ellipsoid : str, optional
         Give an ellipsoid for the conversion. Defaults to WGS84.
     datum : str, optional
@@ -188,83 +193,45 @@ def utm_from_lonlat(lon, lat, zone=None, ellipsoid='WGS84', datum='WGS84', paral
     -------
     eastings, northings : np.ndarray
         Eastings and northings for the given longitude, latitudes and zone.
-    zone : np.ndarray
-        List of UTM zones for the eastings and northings.
-
     """
-    lon = to_list(lon)
-    lat = to_list(lat)
+    lon = to_list(longitude)
+    lat = to_list(latitude)
 
-    # Fix zone arrays/lists/tuple/strings.
-    if isinstance(zone, str):
-        zone = to_list(zone)
-    elif isinstance(zone, np.ndarray):
-        zone = zone.tolist()
+    zone = f'{zone_number}'
+    if not northern:
+        zone = f'{zone}S'
 
-    # For the spherical case, if we haven't been given zones, find them.
-    if not zone:
-        zone = []
-        try:
-            for lonlat in zip(lon, lat):
-                zone_number = _get_zone_number(*lonlat)
-                zone_letter = _get_zone_letter(lonlat[-1])
-                if zone_number and zone_letter:
-                    zone.append('{:d}{}'.format(zone_number, zone_letter))
-                else:
-                    raise ValueError('Invalid zone letter: are your latitudes north or south of 84 and -80 respectively?')
-        except TypeError:
-            zone_number = _get_zone_number(lon, lat)
-            zone_letter = _get_zone_letter(lat)
-            if zone_number and zone_letter:
-                zone.append('{:d}{}'.format(zone_number, zone_letter))
-            else:
-                raise ValueError('Invalid zone letter: are your latitudes north or south of 84 and -80 respectively?')
-
-    zone = to_list(zone)
     inverse = False
 
-    try:
-        npos = len(lon)
-        if npos != len(lon):
-            raise ValueError('Supplied latitudes and longitudes are not the same size.')
-    except TypeError:
-        npos = 1
-
-    # If we've been given a single zone and multiple coordinates, make a
-    # list of zones so we can do things easily in parallel.
-    try:
-        if len(zone) != npos:
-            zone = zone * npos
-    except TypeError:
-        # Leave zone as is.
-        pass
+    n_positions = len(lon)
+    if n_positions != len(lat):
+        raise PyLagRuntimeError('Lat and lon array sizes do not match')
 
     # Do this in parallel unless we only have a single position or we've been
     # told not to.
-    if npos > 1 and parallel:
+    if n_positions > 1 and parallel:
         pool = multiprocessing.Pool()
-        arguments = zip(lon, lat, zone,
-                        [ellipsoid] * npos,
-                        [datum] * npos,
-                        [inverse] * npos)
+        arguments = zip(lon, lat,
+                        [zone] * n_positions,
+                        [ellipsoid] * n_positions,
+                        [datum] * n_positions,
+                        [inverse] * n_positions)
         results = pool.map(__convert, arguments)
         results = np.asarray(results)
         eastings, northings = results[:, 0], results[:, 1]
         pool.close()
-    elif npos > 1 and not parallel:
+    elif n_positions > 1 and not parallel:
         eastings, northings = [], []
-        for pos in zip(lon, lat, zone, [ellipsoid] * npos, [datum] * npos, [inverse] * npos):
+        for pos in zip(lon, lat,
+                       [zone] * n_positions,
+                       [ellipsoid] * n_positions,
+                       [datum] * n_positions,
+                       [inverse] * n_positions):
             result = __convert(pos)
             eastings.append(result[0])
             northings.append(result[1])
     else:
-        # The lon, lat and zone will all be lists here, For
-        # cross-python2/python3 support, we can't just * them, so assume
-        # the first value in the list is what we want.
-        try:
-            eastings, northings = __convert((lon[0], lat[0], zone[0], ellipsoid, datum, inverse))
-        except IndexError:
-            eastings, northings = __convert((lon, lat, zone, ellipsoid, datum, inverse))
+        eastings, northings = __convert((lon[0], lat[0], zone, ellipsoid, datum, inverse))
 
         eastings = to_list(eastings)
         northings = to_list(northings)
