@@ -102,14 +102,14 @@ def _get_zone_number(longitude, latitude):
     return int(((longitude + 180) % 360) / 6) + 1
 
 
-def _get_zone_letter(latitude):
+def get_zone_letter(latitude):
     """
     Calculate the UTM zone letter from the given latitude. Shamelessly lifted
     from the utm.latitude_to_zone_letter function.
 
     Parameters
     ----------
-    lat : float
+    latitude : float
         Latitude
 
     Returns
@@ -123,9 +123,8 @@ def _get_zone_letter(latitude):
 
     if -80 <= latitude <= 84:
         return ZONE_LETTERS[int(latitude + 80) >> 3]
-    else:
-        return None
 
+    raise PyLagOutOfBoundsError(f'Latitude of {latitude!r} out of range for utm zones')
 
 def utm_from_lonlat(lon, lat, zone=None, ellipsoid='WGS84', datum='WGS84', parallel=False):
     """

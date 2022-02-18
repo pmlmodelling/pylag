@@ -47,6 +47,15 @@ class FileReader_test(TestCase):
         test.assert_equal(lon, coords.lon)
         test.assert_equal('30N', coords.zone)
 
+    def test_get_zone_letter_with_latitude_for_30N(self):
+        latitude = 50.0
+
+        coordinate.get_zone_letter(latitude)
+
+    def test_get_zone_letter_with_latitude_for_30N(self):
+        latitude = 89.0
+
+        self.assertRaises(PyLagOutOfBoundsError, coordinate.get_zone_letter, latitude)
 
     def test_check_valid_zone_with_valid_number_and_valid_letter(self):
         zone_number = 30
