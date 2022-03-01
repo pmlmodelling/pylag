@@ -124,6 +124,30 @@ def get_zone_letter(latitude):
     raise PyLagOutOfBoundsError(f'Latitude of {latitude!r} out of range for utm zones')
 
 
+def check_valid_zone(zone_number, zone_letter=None):
+    """ Check zone is valid
+
+    Implementation copied from the utm package. See https://github.com/Turbo87/utm.
+
+    Parameters
+    ----------
+    zone_number : int
+        The UTM zone number.
+
+    zone_letter : str, optional
+        The UTM zone letter. If provided, this should be a single character in length
+        and between C and X.
+    """
+    if not 1 <= zone_number <= 60:
+        raise PyLagOutOfBoundsError('Zone number out of range (must be between 1 and 60)')
+
+    if zone_letter is not None:
+        zone_letter = zone_letter.upper()
+
+        if not 'C' <= zone_letter <= 'X' or zone_letter in ['I', 'O']:
+            raise PyLagOutOfBoundsError('Zone letter out of range (must be between C and X)')
+
+
 def utm_from_lonlat(longitude, latitude, epsg_code: Optional[str] = None, zone=None):
     """ Converts lats and lons to UTM coordinates using pyproj
 
@@ -361,27 +385,4 @@ def lonlat_decimal_from_degminsec_wco(lon_degminsec, lat_degminsec):
 
     return lon, lat
 
-
-def check_valid_zone(zone_number, zone_letter=None):
-    """ Check zone is valid
-
-    Implementation copied from the utm package. See https://github.com/Turbo87/utm.
-
-    Parameters
-    ----------
-    zone_number : int
-        The UTM zone number.
-
-    zone_letter : str, optional
-        The UTM zone letter. If provided, this should be a single character in length
-        and between C and X.
-    """
-    if not 1 <= zone_number <= 60:
-        raise PyLagOutOfBoundsError('Zone number out of range (must be between 1 and 60)')
-
-    if zone_letter is not None:
-        zone_letter = zone_letter.upper()
-
-        if not 'C' <= zone_letter <= 'X' or zone_letter in ['I', 'O']:
-            raise PyLagOutOfBoundsError('Zone letter out of range (must be between C and X)')
 
