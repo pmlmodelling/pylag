@@ -15,6 +15,7 @@ refuses to do coordinate conversions outside a single zone.
 
 from __future__ import division
 from typing import Optional
+import warnings
 
 import numpy as np
 
@@ -123,7 +124,7 @@ def get_zone_letter(latitude):
     raise PyLagOutOfBoundsError(f'Latitude of {latitude!r} out of range for utm zones')
 
 
-def utm_from_lonlat(longitude, latitude, epsg_code: Optional[int] = None):
+def utm_from_lonlat(longitude, latitude, epsg_code: Optional[str] = None, zone=None):
     """ Converts lats and lons to UTM coordinates using pyproj
 
     East Longitudes are positive, west longitudes are negative. North latitudes
@@ -142,8 +143,11 @@ def utm_from_lonlat(longitude, latitude, epsg_code: Optional[int] = None):
     ----------
     longitude, latitude : object
         Longitudes and latitudes. Can be a single value or array like.
-    epsg_code : int, optional
+    epsg_code : str, optional
         The EPSG code for the utm transformation.
+    zone : str, optional
+        DEPRECATED. Past means of specifying the UTM zone for the transformation
+        that is no longer supported.
 
     Returns
     -------
@@ -151,13 +155,23 @@ def utm_from_lonlat(longitude, latitude, epsg_code: Optional[int] = None):
         Eastings and northings in the supplied reference system for the given
         longitudes and latitudes.
     """
+    if zone is not None:
+        message = (f'The utm zone argument can no longer be used to specify '
+                   f'the type of transformation to perform. If an EPSG code '
+                   f'has not been given, the first longitude and latitude '
+                   f'values and the WGS 84 datum will now be used to infer the '
+                   f'EPSG code to be used for the transformation. If you wish to '
+                   f'specify the CRS that should be used, please provide the '
+                   f'appropriate EPSG code as a function argument.')
+        warnings.warn(message, DeprecationWarning)
+
     lon = to_list(longitude)
     lat = to_list(latitude)
 
     if len(lon) != len(lat):
         raise PyLagRuntimeError('Lat and lon array sizes do not match')
 
-    # Use the first longitude and latitude values to determine the epsg_code
+    # Use the first longitude and latitude values to determine the EPSG code
     # if it has not been given. Don't use, say, min/max values as we don't
     # want to return multiple utm zones.
     if epsg_code is None:
