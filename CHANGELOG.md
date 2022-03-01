@@ -2,6 +2,12 @@
 
 PyLag is still very much in development. This page will be updated when future releases are made.
 
+## Version 0.6.1 01/03/2022
+
+* Switch to using CRS and Transform classes from pyproj for UTM transformations, with the CRS defined by EPSG codes rather than UTM zone numbers.
+
+* Move conda build config from the top-level to a sub-directory.
+
 ## Version 0.6.0 23/12/2021
 
 * Add regridding sub-package
