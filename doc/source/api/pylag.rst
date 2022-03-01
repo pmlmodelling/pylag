@@ -24,6 +24,7 @@ Submodules
    pylag.data_reader
    pylag.data_types_python
    pylag.delta
+   pylag.exceptions
    pylag.file_reader
    pylag.fvcom_data_reader
    pylag.gotm_data_reader
