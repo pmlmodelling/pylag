@@ -207,7 +207,8 @@ def lonlat_from_utm(eastings, northings, epsg_code: str, zone=None):
         The EPSG code for the utm transformation.
     zone : str, optional
         DEPRECATED. Past means of specifying the UTM zone for the transformation
-        that is no longer supported.
+        that is no longer supported. If zone is passed in, a runtime error will
+        be raised.
 
     Returns
     -------
