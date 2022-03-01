@@ -57,48 +57,6 @@ def to_list(x):
     raise PyLagTypeError('Unexpected type {x_type!r}')
 
 
-def __test(inLat, inLong, inZone=False):
-    """ Simple back and forth test of the functions with a given lat/long pair.
-
-    Parameters
-    ----------
-    inLat, inLong : float
-        Input latitude and longitude pair.
-
-    """
-    e, n, z = utm_from_lonlat(inLong, inLat, inZone)
-    lon, lat = lonlat_from_utm(e, n, z)
-
-    return z, e, n, lon, lat
-
-
-def __convert(args):
-    """
-    Child function to create a projection object and convert coordinates (optionally inverse).
-
-    This function can therefore do UTM -> lat/lon as well as lat/lon -> UTM transformations.
-
-    Parameters
-    ----------
-    args : tuple
-        Arguments:
-            in_x, in_y : float
-            zone, ellipsoid, datum : str
-            inverse : bool
-
-    Returns
-    -------
-    out_x, out_y : float
-        Coordinates following conversion.
-
-    """
-    a, b, zone, ellipsoid, datum, inverse = args
-    projection = pyproj.Proj(f"+proj=utm +zone={zone}, +ellps={ellipsoid} +datum={datum} +units=m +no_defs")
-    c, d = projection(a, b, inverse=inverse)
-
-    return c, d
-
-
 def get_zone_number(longitude, latitude):
     """
     Calculate the UTM zone number from the given coordinate. Shamelessly lifted
