@@ -54,7 +54,7 @@ def to_list(x):
 
     x_type = type(x)
 
-    raise PyLagTypeError('Unexpected type {x_type!r}')
+    raise PyLagTypeError(f"Unexpected type {x_type!r}")
 
 
 def get_zone_number(longitude, latitude):
