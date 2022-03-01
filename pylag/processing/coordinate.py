@@ -390,36 +390,3 @@ def check_valid_zone(zone_number, zone_letter=None):
         if not 'C' <= zone_letter <= 'X' or zone_letter in ['I', 'O']:
             raise PyLagOutOfBoundsError('Zone letter out of range (must be between C and X)')
 
-
-if __name__ == '__main__':
-
-    print('\nTest with NumPy single values')
-    latTest, lonTest = 50, -5
-    z, e, n, outLat, outLong = __test(latTest, lonTest)
-    print("Input (lat/long): {}, {}\nOutput (lat/long): {} {}".format(
-        latTest, lonTest, outLat, outLong))
-    print("Intermediate UTM: {}, {}".format(e, n))
-
-    print('\nTest with lists')
-    latTest, lonTest = [50, 55], [-5, -20]
-    z, e, n, outLat, outLong = __test(latTest, lonTest)
-    for c in range(len(latTest)):
-        print("Input (lat/long): {}, {}\nOutput (lat/long): {} {}".format(
-            latTest[c], lonTest[c], outLat[c], outLong[c]))
-        print("Intermediate UTM: {}, {}".format(e[c], n[c]))
-
-    print('\nTest with NumPy arrays')
-    latTest, lonTest = np.asarray([50, 55]), np.asarray([-5, -20])
-    z, e, n, outLat, outLong = __test(latTest, lonTest)
-    for c in range(len(latTest)):
-        print("Input (lat/long): {}, {}\nOutput (lat/long): {} {}".format(
-            latTest[c], lonTest[c], outLat[c], outLong[c]))
-        print("Intermediate UTM: {}, {}".format(e[c], n[c]))
-
-    print('\nTest with NumPy arrays but a single zone')
-    latTest, lonTest = np.asarray([50, 55]), np.asarray([-5, -20])
-    z, e, n, outLat, outLong = __test(latTest, lonTest, inZone=30)
-    for c in range(len(latTest)):
-        print("Input (lat/long): {}, {}\nOutput (lat/long): {} {}".format(
-            latTest[c], lonTest[c], outLat[c], outLong[c]))
-        print("Intermediate UTM: {}, {}".format(e[c], n[c]))
