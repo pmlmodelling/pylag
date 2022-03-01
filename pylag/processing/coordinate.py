@@ -148,6 +148,32 @@ def check_valid_zone(zone_number, zone_letter=None):
             raise PyLagOutOfBoundsError('Zone letter out of range (must be between C and X)')
 
 
+def get_epsg_code(lon: float, lat: float, datum: Optional[str] = "WGS 84") -> str:
+    """ Calculate EPSG code from longitude and latitude values
+
+    Parameters
+    ----------
+    lon, lat : float
+        Longitude and latitudes
+
+    datum : str, optional
+        The datum to use. Optional, default "WGS 84".
+
+    Returns
+    -------
+    epsg_code : str
+        The EPSG code.
+    """
+    a = AreaOfInterest(west_lon_degree=lon,
+                       south_lat_degree=lat,
+                       east_lon_degree=lon,
+                       north_lat_degree=lat)
+
+    utm_crs_list = query_utm_crs_info(datum_name=f"{datum}", area_of_interest=a)
+
+    return utm_crs_list[0].code
+
+
 def utm_from_lonlat(longitude, latitude, epsg_code: Optional[str] = None, zone=None):
     """ Converts lats and lons to UTM coordinates using pyproj
 
@@ -196,16 +222,9 @@ def utm_from_lonlat(longitude, latitude, epsg_code: Optional[str] = None, zone=N
         raise PyLagRuntimeError('Lat and lon array sizes do not match')
 
     # Use the first longitude and latitude values to determine the EPSG code
-    # if it has not been given. Don't use, say, min/max values as we don't
-    # want to return multiple utm zones.
+    # if it has not been given.
     if epsg_code is None:
-        a = AreaOfInterest(west_lon_degree=lon[0],
-                           south_lat_degree=lat[0],
-                           east_lon_degree=lon[0],
-                           north_lat_degree=lat[0])
-
-        utm_crs_list = query_utm_crs_info(datum_name="WGS 84", area_of_interest=a)
-        epsg_code = utm_crs_list[0].code
+        epsg_code = get_epsg_code(lon[0], lat[0])
 
     utm_crs = CRS.from_epsg(epsg_code)
 
