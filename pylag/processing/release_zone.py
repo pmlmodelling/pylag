@@ -8,7 +8,8 @@ import numpy as np
 import numbers
 from scipy.spatial import ConvexHull
 
-from pylag.processing.coordinate import utm_from_lonlat, lonlat_from_utm
+from pylag.exceptions import PyLagRuntimeError
+from pylag.processing.coordinate import utm_from_lonlat, lonlat_from_utm, get_epsg_code
 
 have_shapely = True
 try:
@@ -368,8 +369,8 @@ def create_release_zones_along_cord(r1, r2, group_id=1, radius=100.0,
     n_zones, buffer_zone = divmod(r3_length, 2.0*radius)
 
     if verbose:
-        print("Cord length is {:f} m. A radius of {:f} m thus " \
-              "yields {:d} release zones.".format(r3_length, radius, n_zones))
+        print(f"Cord length is {r3_length} m. A radius of {radius} m thus "
+              f"yields {n_zones} release zones.")
 
     if n_zones == 0:
         print("WARNING: zero release zones have been created. Try reducing the zone radius.")
@@ -382,7 +383,8 @@ def create_release_zones_along_cord(r1, r2, group_id=1, radius=100.0,
         centre = r1 + r3_prime
         release_zone = create_release_zone(group_id, radius, centre, n_particles, depth, random)
         if verbose:
-            print("Zone {:d} (group_id = {:d}) contains {:d} particles.".format(n, group_id, release_zone.get_number_of_particles()))
+            n_particles_in_release_zone = release_zone.get_number_of_particles()
+            print(f"Zone {n} (group_id = {group_id}) contains {n_particles_in_release_zone} particles.")
         release_zones.append(release_zone)
         group_id += 1
 
@@ -390,8 +392,8 @@ def create_release_zones_along_cord(r1, r2, group_id=1, radius=100.0,
 
 
 def create_release_zones_around_shape(shape_obj, start, target_length, group_id,
-                                      radius, n_particles, depth=0.0, random=True, check_overlaps=False,
-                                      overlap_tol=0.0001, zone=None, maximum_vertex_separation=None,
+                                      radius, n_particles, depth=0.0, random=True,
+                                      epsg_code=None, maximum_vertex_separation=None,
                                       return_end_zone=True, verbose=False, ax=None):
     """ Create a set of adjacent release zones around an arbitrary polygon.
 
@@ -422,16 +424,8 @@ def create_release_zones_around_shape(shape_obj, start, target_length, group_id,
         If true create a random uniform distribution of particles within each
         zone (default).
 
-    check_overlaps : boolean, optional
-        If true check for overlaps between non-adjacent release zones that may
-        result from jagged features.
-
-    overlap_tol : float, optional
-        Overlap tolerance, ratio ((target-act)/target < overlap_tol). Assists
-        in avoiding false positives, which can arise from rounding issues.
-
-    zone : str, optional
-        UTM zone to which to force all coordinates. This is useful if you've
+    epsg_code : str, optional
+        EPSG code to which to force all coordinates. This is useful if you've
         got a large model domain.
 
     maximum_vertex_separation : float, optional
@@ -446,84 +440,86 @@ def create_release_zones_around_shape(shape_obj, start, target_length, group_id,
         Hide warnings and progress details (default).
 
     """
+    raise PyLagRuntimeError('Function has not been tested.')
 
-    # Use all points from the shapefile.
-    if hasattr(shape_obj, 'points'):
-        points = np.array(shape_obj.points)
-    else:
-        points = np.array(shape_obj)
-
-    # Use shapely to do all the heavy lifting. Work in cartesian coordinates so distances make sense.
-    xx, yy, _ = utm_from_lonlat(points[:, 0], points[:, 1], zone=zone)
-    # Calculate the section lengths so we can drop points which are separated by more than that distance.
-    close_enough = [True] * len(xx)
-    if maximum_vertex_separation is not None:
-        close_enough = [True] + [np.hypot(i[0], i[1]) <= maximum_vertex_separation for i in zip(xx[:-1] - xx[1:], yy[:-1] - yy[1:])]
-
-        # Reorder the coordinates so we start from the last point after the first jump in distance. This should make
-        # the polygon more sensibly stored (i.e. the beginning will be after the first long stretch.).
-        big_sections = np.argwhere(~np.asarray(close_enough))
-        if np.any(big_sections):
-            if is_clockwise_ordered(points):
-                reorder_idx = big_sections[-1][0] + 1
-            else:
-                reorder_idx = big_sections[0][0] - 1
-
-            xx = np.array(xx[reorder_idx:].tolist() + xx[:reorder_idx].tolist())
-            yy = np.array(yy[reorder_idx:].tolist() + yy[:reorder_idx].tolist())
-            # Redo the close_enough no we've reordered things so the indexing works OK.
-            close_enough = [True] + [np.hypot(i[0], i[1]) <= maximum_vertex_separation for i in zip(xx[:-1] - xx[1:], yy[:-1] - yy[1:])]
-
-    xx = xx[close_enough]
-    yy = yy[close_enough]
-
-    # Split our line into sections of length target_length. Then, on each of those, further split them into sections
-    # radius * 2 long. On each of those sections, create release zones. Return the lot as a single list.
-
-    # For reasons I can't fathom, using shapely.ops.split() doesn't work with the polygon line. The issue is that
-    # "not polygon_line.relate_patten(splitter, '0********')" returns True, which means shapely.ops.split() just
-    # returns the whole line as a list (which is then bundled into a GeometryCollection). This is not what I want!
-    # So, I'll manually split the line after we've put zones all the way along it. This isn't as neat :(
-    line = shapely.geometry.LineString(np.array((xx, yy)).T)
-    # Create release zones at radius * 2 distance along the current line.
-    zone_centres = [line.interpolate(i) for i in np.arange(1, line.length, radius * 2)]
-    release_zones = [create_release_zone(group_id, radius, i.coords[0], n_particles, depth, random) for i in zone_centres]
-
-    # Now, we'll split these into groups of target_length and increment each group ID.
-    zone_separations = [0] + [get_length(i[0].get_centre(), i[1].get_centre()) for i in zip(release_zones[:-1], release_zones[1:])]
-    # Find the indices where we've exceeded the target_length.
-    split_indices = np.argwhere(np.diff(np.mod(np.cumsum(zone_separations), target_length)) < 0).ravel()
-    split_indices = np.append(split_indices, -1)
-    split_indices = np.append([0], split_indices)
-
-    new_zones = []
-    for start_index, end_index in zip(split_indices[:-1], split_indices[1:]):
-        # Get a set of release zones and increment their group ID.
-        current_zones = release_zones[start_index:end_index]
-        _ = [i.set_group_id(group_id) for i in current_zones]
-        n_points = len(current_zones * n_particles)
-        if verbose:
-            print(f'Group {group_id} contains {n_points} particles.')
-
-        group_id += 1
-        new_zones += current_zones
-
-        # Plot the release zones.
-        if ax is not None:
-            ax.plot(*current_zones[0].get_centre(), 'ro', zorder=10)
-            ax.text(*current_zones[0].get_centre(), f'Group {current_zones[0].get_group_id()} start', zorder=1000)
-
-    release_zones = new_zones
-
-    if not return_end_zone:
-        release_zones = release_zones[:-1]
-
-    return release_zones
+#    # Use all points from the shapefile.
+#    if hasattr(shape_obj, 'points'):
+#        points = np.array(shape_obj.points)
+#    else:
+#        points = np.array(shape_obj)
+#
+#    # Use shapely to do all the heavy lifting. Work in cartesian coordinates so distances make sense.
+#    xx, yy, _ = utm_from_lonlat(points[:, 0], points[:, 1], epsg_code=epsg_code)
+#    # Calculate the section lengths so we can drop points which are separated by more than that distance.
+#    close_enough = [True] * len(xx)
+#    if maximum_vertex_separation is not None:
+#        close_enough = [True] + [np.hypot(i[0], i[1]) <= maximum_vertex_separation for i in zip(xx[:-1] - xx[1:], yy[:-1] - yy[1:])]
+#
+#        # Reorder the coordinates so we start from the last point after the first jump in distance. This should make
+#        # the polygon more sensibly stored (i.e. the beginning will be after the first long stretch.).
+#        big_sections = np.argwhere(~np.asarray(close_enough))
+#        if np.any(big_sections):
+#            if is_clockwise_ordered(points):
+#                reorder_idx = big_sections[-1][0] + 1
+#            else:
+#                reorder_idx = big_sections[0][0] - 1
+#
+#            xx = np.array(xx[reorder_idx:].tolist() + xx[:reorder_idx].tolist())
+#            yy = np.array(yy[reorder_idx:].tolist() + yy[:reorder_idx].tolist())
+#            # Redo the close_enough no we've reordered things so the indexing works OK.
+#            close_enough = [True] + [np.hypot(i[0], i[1]) <= maximum_vertex_separation for i in zip(xx[:-1] - xx[1:], yy[:-1] - yy[1:])]
+#
+#    xx = xx[close_enough]
+#    yy = yy[close_enough]
+#
+#    # Split our line into sections of length target_length. Then, on each of those, further split them into sections
+#    # radius * 2 long. On each of those sections, create release zones. Return the lot as a single list.
+#
+#    # For reasons I can't fathom, using shapely.ops.split() doesn't work with the polygon line. The issue is that
+#    # "not polygon_line.relate_patten(splitter, '0********')" returns True, which means shapely.ops.split() just
+#    # returns the whole line as a list (which is then bundled into a GeometryCollection). This is not what I want!
+#    # So, I'll manually split the line after we've put zones all the way along it. This isn't as neat :(
+#    line = shapely.geometry.LineString(np.array((xx, yy)).T)
+#    # Create release zones at radius * 2 distance along the current line.
+#    zone_centres = [line.interpolate(i) for i in np.arange(1, line.length, radius * 2)]
+#    release_zones = [create_release_zone(group_id, radius, i.coords[0], n_particles, depth, random) for i in zone_centres]
+#
+#    # Now, we'll split these into groups of target_length and increment each group ID.
+#    zone_separations = [0] + [get_length(i[0].get_centre(), i[1].get_centre()) for i in zip(release_zones[:-1], release_zones[1:])]
+#    # Find the indices where we've exceeded the target_length.
+#    split_indices = np.argwhere(np.diff(np.mod(np.cumsum(zone_separations), target_length)) < 0).ravel()
+#    split_indices = np.append(split_indices, -1)
+#    split_indices = np.append([0], split_indices)
+#
+#    new_zones = []
+#    for start_index, end_index in zip(split_indices[:-1], split_indices[1:]):
+#        # Get a set of release zones and increment their group ID.
+#        current_zones = release_zones[start_index:end_index]
+#        _ = [i.set_group_id(group_id) for i in current_zones]
+#        n_points = len(current_zones * n_particles)
+#        if verbose:
+#            print(f'Group {group_id} contains {n_points} particles.')
+#
+#        group_id += 1
+#        new_zones += current_zones
+#
+#        # Plot the release zones.
+#        if ax is not None:
+#            ax.plot(*current_zones[0].get_centre(), 'ro', zorder=10)
+#            ax.text(*current_zones[0].get_centre(), f'Group {current_zones[0].get_group_id()} start', zorder=1000)
+#
+#    release_zones = new_zones
+#
+#    if not return_end_zone:
+#        release_zones = release_zones[:-1]
+#
+#    return release_zones
 
 
 def create_release_zones_around_shape_section(shape_obj, start, target_length, group_id,
-                                              radius, n_particles, depth=0.0, zone=None, random=True,
-                                              check_overlaps=False, overlap_tol=0.0001, verbose=False):
+                                              radius, n_particles, depth=0.0, epsg_code=None,
+                                              random=True, check_overlaps=False,
+                                              overlap_tol=0.0001, verbose=False):
     """ Create a set of adjacent release zones around a some part of an arbritray poloygon.
 
     This function is distinct from the function `create_release_zones_around_shape` in
@@ -553,8 +549,8 @@ def create_release_zones_around_shape_section(shape_obj, start, target_length, g
     depth : float
         Zone depth in m.
 
-    zone : float
-        Zone within which to calculate lat/lon coordinates
+    epsg_code : str
+        EPSG code within which to calculate lat/lon coordinates
 
     random : boolean
         If true create a random uniform distribution of particles within each
@@ -590,7 +586,7 @@ def create_release_zones_around_shape_section(shape_obj, start, target_length, g
     clockwise_ordering = _is_clockwise_ordered(points)
 
     # Find starting location
-    start_idx = _find_start_index(points, start[0], start[1], zone=zone)
+    start_idx = _find_start_index(points, start[0], start[1], epsg_code=epsg_code)
 
     # Form the first release zone centred on the point corresponding to start_idx
     release_zones = []
@@ -599,7 +595,8 @@ def create_release_zones_around_shape_section(shape_obj, start, target_length, g
     centre_ref = np.array([x[0], y[0]])  # Coordinates of zone centre, saved for release zone separation calculation
     release_zone = create_release_zone(group_id, radius, centre_ref, n_particles, depth, random)
     if verbose:
-        print("Zone (group_id = {}) contains {} particles.".format(group_id, release_zone.get_number_of_particles()))
+        n_particles_in_release_zone = release_zone.get_number_of_particles()
+        print(f"Zone (group_id = {group_id}) contains {n_particles_in_release_zone} particles.")
     release_zones.append(release_zone)
 
     # Now step through vertices in shape_obj creating new release zones en route
@@ -630,8 +627,8 @@ def create_release_zones_around_shape_section(shape_obj, start, target_length, g
             # Create location
             release_zone = create_release_zone(group_id, radius, r4, n_particles, depth, random)
             if verbose:
-                print("Zone (group_id = {}) contains {} particles.".format(group_id,
-                                                                           release_zone.get_number_of_particles()))
+                n_particles_in_release_zone = release_zone.get_number_of_particles()
+                print(f"Zone (group_id = {group_id}) contains {n_particles_in_release_zone} particles.")
 
             # Check if the new release zone overlaps with non-adjacent zones
             if check_overlaps:
@@ -639,11 +636,9 @@ def create_release_zones_around_shape_section(shape_obj, start, target_length, g
                     centre_test = zone_test.get_centre()
                     zone_separation = _get_length(r4, centre_test)
                     if (target_separation - zone_separation) / target_separation > overlap_tol:
-                        print("WARNING: Area overlap detected between release zones {} \
-                               and {}. Target separation = {}. Actual separation = {}.".format(zone_test.get_group_id(),
-                                                                                               release_zone.get_group_id(),
-                                                                                               target_separation,
-                                                                                               zone_separation))
+                        print(f"WARNING: Area overlap detected between release zones {zone_test.get_group_id()} "
+                              f"and {release_zone.get_group_id()}. Target separation = {target_separation}. "
+                              f"Actual separation = {zone_separation}.")
 
             # Append the new release zone to the current set.
             release_zones.append(release_zone)
@@ -704,7 +699,7 @@ def _is_clockwise_ordered(points):
     return is_clockwise
 
 
-def _find_start_index(points, lon, lat, tolerance=None, zone=None):
+def _find_start_index(points, lon, lat, tolerance=None, epsg_code=None) -> int:
     """ Find start index for release zone creation.
 
     Parameters
@@ -724,22 +719,26 @@ def _find_start_index(points, lon, lat, tolerance=None, zone=None):
         Raise ValueError if the target lat/lon values lie beyond this distance
         (in m) from the shape_obj.
 
-    zone : str, optional
-        Give a UTM zone (e.g. '30N') to use when converting the coordinates to
-        cartesian. Useful for large domains which spread over multiple UTM zones.
+    epsg_code : str, optional
+        Give a EPSG code to use when transforming lat and lon coordinates to m.
+        If not provided, the supplied lat and lon values are used to infer the
+        EPSG code. Useful for large domains which spread over multiple UTM zones.
 
-    Returns:
-    --------
+    Returns
+    -------
     start_idx: integer
         Start index in array points[start_idx,:].
 
     """
-    x_start, y_start, _ = utm_from_lonlat(lon, lat, zone=zone)
+    if epsg_code is None:
+        epsg_code = get_epsg_code(lon, lat)
 
-    x_points, y_points, _ = utm_from_lonlat(points[:, 0], points[:, 1], zone=zone)
+    x_start, y_start, _ = utm_from_lonlat(lon, lat, epsg_code=epsg_code)
+
+    x_points, y_points, _ = utm_from_lonlat(points[:, 0], points[:, 1], epsg_code=epsg_code)
 
     # Find the position on the boundary closest to the supplied lat/lon values.
-    distances = np.hypot(x_points - x_start, y_points - y_start)
+    distances = np.hypot(x_points - x_start[0], y_points - y_start[0])
     distance_min = np.min(distances)
     if tolerance:
         if distance_min < tolerance:

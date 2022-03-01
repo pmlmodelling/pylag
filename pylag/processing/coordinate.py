@@ -14,67 +14,65 @@ refuses to do coordinate conversions outside a single zone.
 """
 
 from __future__ import division
+from typing import Optional
+import warnings
 
-import multiprocessing
 import numpy as np
 
 import pyproj
+from pyproj.aoi import AreaOfInterest
+from pyproj.database import query_utm_crs_info
+from pyproj import CRS, Transformer
 
-# Convert a string, tuple, float or int to a list.
-to_list = lambda x: [x] if isinstance(x, str) or isinstance(x, (float, int, np.float32)) else x
-
-
-def __test(inLat, inLong, inZone=False):
-    """ Simple back and forth test of the functions with a given lat/long pair.
-
-    Parameters
-    ----------
-    inLat, inLong : float
-        Input latitude and longitude pair.
-
-    """
-    e, n, z = utm_from_lonlat(inLong, inLat, inZone)
-    lon, lat = lonlat_from_utm(e, n, z)
-
-    return z, e, n, lon, lat
+from pylag.exceptions import PyLagRuntimeError, PyLagTypeError, PyLagOutOfBoundsError
 
 
-def __convert(args):
-    """
-    Child function to create a projection object and convert coordinates (optinally inverse).
+def to_list(x):
+    """ Try to convert `x` to a list
 
-    This function can therefore to UTM -> lat/lon as well as lat/lon -> UTM
+    Support for strings, ints, floats, tuples and ndarrays is included.
 
     Parameters
     ----------
-    args : tuple
-        Arguments:
-            in_x, in_y : float
-            zone, ellipsoid, datum : str
-            inverse : bool
+    x : object
+        The object to convert.
 
     Returns
     -------
-    out_x, out_y : float
-        Coordinates following conversion.
+     : list
+        The processed object transformed to a list.
 
+    Raises
+    ------
+    PyLagTypeError is the object is not supported.
     """
-    a, b, zone, ellipsoid, datum, inverse = args
-    projection = pyproj.Proj("+proj=utm +zone={}, +ellps={} +datum={} +units=m +no_defs".format(zone, ellipsoid, datum))
-    c, d = projection(a, b, inverse=inverse)
 
-    return c, d
+    if isinstance(x, str) or isinstance(x, (int, float)):
+        return [x]
+    elif isinstance(x, tuple):
+        return list(x)
+    elif isinstance(x, np.ndarray):
+        return x.tolist()
+    elif isinstance(x, list):
+        return x
+
+    x_type = type(x)
+
+    raise PyLagTypeError(f"Unexpected type {x_type!r}")
 
 
-def _get_zone_number(longitude, latitude):
+def get_zone_number(longitude, latitude):
     """
     Calculate the UTM zone number from the given coordinate. Shamelessly lifted
     from the utm.lonlat_to_zone_number function.
 
     Parameters
     ----------
-    lon, lat : float
-        Longitude and latitude
+    longitude : float
+        Longitude in degrees East.
+
+    latitude : float
+        Latitude in degrees North.
 
     Returns
     -------
@@ -99,14 +97,14 @@ def _get_zone_number(longitude, latitude):
     return int(((longitude + 180) % 360) / 6) + 1
 
 
-def _get_zone_letter(latitude):
+def get_zone_letter(latitude):
     """
     Calculate the UTM zone letter from the given latitude. Shamelessly lifted
     from the utm.latitude_to_zone_letter function.
 
     Parameters
     ----------
-    lat : float
+    latitude : float
         Latitude
 
     Returns
@@ -114,130 +112,131 @@ def _get_zone_letter(latitude):
     zone_letter : str
         Zone letter
 
+    Raises
+    ------
+    PyLagOutOfBoundsError - For a latitude that is < -80 or > 84
     """
-
     ZONE_LETTERS = "CDEFGHJKLMNPQRSTUVWXX"
 
     if -80 <= latitude <= 84:
         return ZONE_LETTERS[int(latitude + 80) >> 3]
-    else:
-        return None
+
+    raise PyLagOutOfBoundsError(f'Latitude of {latitude!r} out of range for utm zones')
 
 
-def utm_from_lonlat(lon, lat, zone=None, ellipsoid='WGS84', datum='WGS84', parallel=False):
-    """
-    Converts lat/long to UTM for the specified zone.
+def check_valid_zone(zone_number, zone_letter=None):
+    """ Check zone is valid
 
-    East Longitudes are positive, west longitudes are negative. North latitudes
-    are positive, south latitudes are negative. Lat and Long are in decimal
-    degrees.
+    Implementation copied from the utm package. See https://github.com/Turbo87/utm.
 
     Parameters
     ----------
-    lon, lat : float, tuple, list, np.ndarray
-        Longitudes and latitudes.
-    zone : str, optional
-        Zone number and letter (e.g. 30N). If omitted, calculate it based on the
-        position.
-    ellipsoid : str, optional
-        Give an ellipsoid for the conversion. Defaults to WGS84.
+    zone_number : int
+        The UTM zone number.
+
+    zone_letter : str, optional
+        The UTM zone letter. If provided, this should be a single character in length
+        and between C and X.
+    """
+    if not 1 <= zone_number <= 60:
+        raise PyLagOutOfBoundsError('Zone number out of range (must be between 1 and 60)')
+
+    if zone_letter is not None:
+        zone_letter = zone_letter.upper()
+
+        if not 'C' <= zone_letter <= 'X' or zone_letter in ['I', 'O']:
+            raise PyLagOutOfBoundsError('Zone letter out of range (must be between C and X)')
+
+
+def get_epsg_code(lon: float, lat: float, datum: Optional[str] = "WGS 84") -> str:
+    """ Calculate EPSG code from longitude and latitude values
+
+    Parameters
+    ----------
+    lon, lat : float
+        Longitude and latitudes
+
     datum : str, optional
-        Give a datum for the conversion. Defaults to WGS84.
-    parallel : bool, optional
-        Optionally enable the parallel processing (sometimes this is faster
-        for a very large number of positions). Defaults to False.
+        The datum to use. Optional, default "WGS 84".
 
     Returns
     -------
-    eastings, northings : np.ndarray
-        Eastings and northings for the given longitude, latitudes and zone.
-    zone : np.ndarray
-        List of UTM zones for the eastings and northings.
-
+    epsg_code : str
+        The EPSG code.
     """
-    lon = to_list(lon)
-    lat = to_list(lat)
+    a = AreaOfInterest(west_lon_degree=lon,
+                       south_lat_degree=lat,
+                       east_lon_degree=lon,
+                       north_lat_degree=lat)
 
-    # Fix zone arrays/lists/tuple/strings.
-    if isinstance(zone, str):
-        zone = to_list(zone)
-    elif isinstance(zone, np.ndarray):
-        zone = zone.tolist()
+    utm_crs_list = query_utm_crs_info(datum_name=f"{datum}", area_of_interest=a)
 
-    # For the spherical case, if we haven't been given zones, find them.
-    if not zone:
-        zone = []
-        try:
-            for lonlat in zip(lon, lat):
-                zone_number = _get_zone_number(*lonlat)
-                zone_letter = _get_zone_letter(lonlat[-1])
-                if zone_number and zone_letter:
-                    zone.append('{:d}{}'.format(zone_number, zone_letter))
-                else:
-                    raise ValueError('Invalid zone letter: are your latitudes north or south of 84 and -80 respectively?')
-        except TypeError:
-            zone_number = _get_zone_number(lon, lat)
-            zone_letter = _get_zone_letter(lat)
-            if zone_number and zone_letter:
-                zone.append('{:d}{}'.format(zone_number, zone_letter))
-            else:
-                raise ValueError('Invalid zone letter: are your latitudes north or south of 84 and -80 respectively?')
-
-    zone = to_list(zone)
-    inverse = False
-
-    try:
-        npos = len(lon)
-        if npos != len(lon):
-            raise ValueError('Supplied latitudes and longitudes are not the same size.')
-    except TypeError:
-        npos = 1
-
-    # If we've been given a single zone and multiple coordinates, make a
-    # list of zones so we can do things easily in parallel.
-    try:
-        if len(zone) != npos:
-            zone = zone * npos
-    except TypeError:
-        # Leave zone as is.
-        pass
-
-    # Do this in parallel unless we only have a single position or we've been
-    # told not to.
-    if npos > 1 and parallel:
-        pool = multiprocessing.Pool()
-        arguments = zip(lon, lat, zone,
-                        [ellipsoid] * npos,
-                        [datum] * npos,
-                        [inverse] * npos)
-        results = pool.map(__convert, arguments)
-        results = np.asarray(results)
-        eastings, northings = results[:, 0], results[:, 1]
-        pool.close()
-    elif npos > 1 and not parallel:
-        eastings, northings = [], []
-        for pos in zip(lon, lat, zone, [ellipsoid] * npos, [datum] * npos, [inverse] * npos):
-            result = __convert(pos)
-            eastings.append(result[0])
-            northings.append(result[1])
-    else:
-        # The lon, lat and zone will all be lists here, For
-        # cross-python2/python3 support, we can't just * them, so assume
-        # the first value in the list is what we want.
-        try:
-            eastings, northings = __convert((lon[0], lat[0], zone[0], ellipsoid, datum, inverse))
-        except IndexError:
-            eastings, northings = __convert((lon, lat, zone, ellipsoid, datum, inverse))
-
-        eastings = to_list(eastings)
-        northings = to_list(northings)
-
-    return np.asarray(eastings), np.asarray(northings), np.asarray(zone)
+    return utm_crs_list[0].code
 
 
-def lonlat_from_utm(eastings, northings, zone, ellipsoid='WGS84', datum='WGS84', parallel=False):
+def utm_from_lonlat(longitude, latitude, epsg_code: Optional[str] = None, zone=None):
+    """ Converts lats and lons to UTM coordinates using pyproj
+
+    East Longitudes are positive, west longitudes are negative. North latitudes
+    are positive, south latitudes are negative. Lats and lons are in decimal
+    degrees.
+
+    The desired EPSG code can be found by searching websites such as
+    epsg.io or spatialreference.org. If it is not provided, it will be calculated
+    automatically from the first lon and lat values for the WGS 84 datum using
+    the approach described here: https://tinyurl.com/aa83npwy.
+
+    Be careful when using this function for coordinates that span multiple zones
+    as the transformation is specific to the specified EPSG reference system.
+
+    Parameters
+    ----------
+    longitude, latitude : object
+        Longitudes and latitudes. Can be a single value or array like.
+    epsg_code : str, optional
+        The EPSG code for the utm transformation.
+    zone : str, optional
+        DEPRECATED. Past means of specifying the UTM zone for the transformation
+        that is no longer supported.
+
+    Returns
+    -------
+    eastings, northings : numpy.ndarray
+        Eastings and northings in the supplied reference system for the given
+        longitudes and latitudes.
     """
-    Converts UTM coordinates to lat/long.
+    if zone is not None:
+        message = (f'The utm zone argument can no longer be used to specify '
+                   f'the type of transformation to perform. If an EPSG code '
+                   f'has not been given, the first longitude and latitude '
+                   f'values and the WGS 84 datum will now be used to infer the '
+                   f'EPSG code to be used for the transformation. If you wish to '
+                   f'specify the CRS that should be used, please provide the '
+                   f'appropriate EPSG code as a function argument.')
+        warnings.warn(message, DeprecationWarning)
+
+    lon = to_list(longitude)
+    lat = to_list(latitude)
+
+    if len(lon) != len(lat):
+        raise PyLagRuntimeError('Lat and lon array sizes do not match')
+
+    # Use the first longitude and latitude values to determine the EPSG code
+    # if it has not been given.
+    if epsg_code is None:
+        epsg_code = get_epsg_code(lon[0], lat[0])
+
+    utm_crs = CRS.from_epsg(epsg_code)
+
+    proj = Transformer.from_crs(utm_crs.geodetic_crs, utm_crs, always_xy=True)
+
+    eastings, northings = proj.transform(lon, lat)
+
+    return np.asarray(eastings), np.asarray(northings), epsg_code
+
+
+def lonlat_from_utm(eastings, northings, epsg_code: str, zone=None):
+    """ Converts UTM coordinates to lat/lon.
 
     East Longitudes are positive, west longitudes are negative. North latitudes
     are positive, south latitudes are negative. Lat and Long are in decimal
@@ -245,17 +244,14 @@ def lonlat_from_utm(eastings, northings, zone, ellipsoid='WGS84', datum='WGS84',
 
     Parameters
     ----------
-    eastings, northings : float, tuple, list, np.ndarray
-        Eastings and northings.
-    zone : str, tuple, list, np.ndarray
-        Zone number and letter (e.g. 30N).
-    ellipsoid : str, optional
-        Give an ellipsoid for the conversion. Defaults to WGS84.
-    datum : str, optional
-        Give a datum for the conversion. Defaults to WGS84.
-    parallel : bool, optional
-        Optionally enable parallel processing (sometimes this is faster
-        for a large number of positions). Defaults to False.
+    eastings, northings : object
+        Eastings and northings. Can be single values or array like,
+    epsg_code : str
+        The EPSG code for the utm transformation.
+    zone : str, optional
+        DEPRECATED. Past means of specifying the UTM zone for the transformation
+        that is no longer supported. If zone is passed in, a runtime error will
+        be raised.
 
     Returns
     -------
@@ -263,47 +259,24 @@ def lonlat_from_utm(eastings, northings, zone, ellipsoid='WGS84', datum='WGS84',
         Longitude and latitudes for the given eastings and northings.
 
     """
+    if zone is not None:
+        raise PyLagRuntimeError(f'UTM zone keys can no longer be used to specify the CRS '
+                                f'used for the transformation. Please use the epsg_code '
+                                f'instead to specify the CRS.')
+
+    utm_crs = CRS.from_epsg(epsg_code)
+
+    proj = Transformer.from_crs(utm_crs.geodetic_crs, utm_crs, always_xy=True)
 
     eastings = to_list(eastings)
     northings = to_list(northings)
-    zone = to_list(zone)
 
-    inverse = True
+    if len(eastings) != len(northings):
+        raise PyLagRuntimeError('Easting and northing array sizes do not match')
 
-    npos = len(eastings)
-    if npos != len(northings):
-        raise ValueError('Supplied eastings and northings are not the same size.')
+    lons, lats = proj.transform(eastings, northings, direction=pyproj.enums.TransformDirection.INVERSE)
 
-    # If we've been given a single zone and multiple coordinates, make a
-    # list of zones so we can do things easily in parallel.
-    if len(zone) != npos:
-        zone = zone * npos
-
-    # Do this in parallel unless we only have a small number of positions or
-    # we've been told not to.
-    if npos > 1 and parallel:
-        pool = multiprocessing.Pool()
-        arguments = zip(eastings, northings, zone,
-                        [ellipsoid] * npos,
-                        [datum] * npos,
-                        [inverse] * npos)
-        results = pool.map(__convert, arguments)
-        results = np.asarray(results)
-        lon, lat = results[:, 0], results[:, 1]
-        pool.close()
-    elif npos > 1 and not parallel:
-        lon, lat = [], []
-        for pos in zip(eastings, northings, zone, [ellipsoid] * npos, [datum] * npos, [inverse] * npos):
-            result = __convert(pos)
-            lon.append(result[0])
-            lat.append(result[1])
-    else:
-        # The eastings, northings and zone will all be lists here, For
-        # cross-python2/python3 support, we can't just * them, so assume
-        # the first value in the list is what we want.
-        lon, lat = __convert((eastings[0], northings[0], zone[0], ellipsoid, datum, inverse))
-
-    return np.asarray(lon), np.asarray(lat)
+    return np.asarray(lons), np.asarray(lats)
 
 
 def british_national_grid_to_lonlat(eastings, northings):
@@ -432,35 +405,3 @@ def lonlat_decimal_from_degminsec_wco(lon_degminsec, lat_degminsec):
     return lon, lat
 
 
-if __name__ == '__main__':
-
-    print('\nTest with NumPy single values')
-    latTest, lonTest = 50, -5
-    z, e, n, outLat, outLong = __test(latTest, lonTest)
-    print("Input (lat/long): {}, {}\nOutput (lat/long): {} {}".format(
-        latTest, lonTest, outLat, outLong))
-    print("Intermediate UTM: {}, {}".format(e, n))
-
-    print('\nTest with lists')
-    latTest, lonTest = [50, 55], [-5, -20]
-    z, e, n, outLat, outLong = __test(latTest, lonTest)
-    for c in range(len(latTest)):
-        print("Input (lat/long): {}, {}\nOutput (lat/long): {} {}".format(
-            latTest[c], lonTest[c], outLat[c], outLong[c]))
-        print("Intermediate UTM: {}, {}".format(e[c], n[c]))
-
-    print('\nTest with NumPy arrays')
-    latTest, lonTest = np.asarray([50, 55]), np.asarray([-5, -20])
-    z, e, n, outLat, outLong = __test(latTest, lonTest)
-    for c in range(len(latTest)):
-        print("Input (lat/long): {}, {}\nOutput (lat/long): {} {}".format(
-            latTest[c], lonTest[c], outLat[c], outLong[c]))
-        print("Intermediate UTM: {}, {}".format(e[c], n[c]))
-
-    print('\nTest with NumPy arrays but a single zone')
-    latTest, lonTest = np.asarray([50, 55]), np.asarray([-5, -20])
-    z, e, n, outLat, outLong = __test(latTest, lonTest, inZone=30)
-    for c in range(len(latTest)):
-        print("Input (lat/long): {}, {}\nOutput (lat/long): {} {}".format(
-            latTest[c], lonTest[c], outLat[c], outLong[c]))
-        print("Intermediate UTM: {}, {}".format(e[c], n[c]))

@@ -16,7 +16,7 @@ class ReleaseZoneCreatorTest(TestCase):
         self.group_id = 1
         self.radius = 2.0
         self.centre = [0.0, 0.0]
-        self.zone='30N'
+        self.epsg_code = '32630'
 
     def tearDown(self):
         del(self.group_id)
@@ -49,7 +49,7 @@ class ReleaseZoneCreatorTest(TestCase):
         y = self.centre[1]
         z = 0.0
         release_zone = ReleaseZone(self.group_id, self.radius, self.centre)
-        release_zone.add_particle(x,y,z)
+        release_zone.add_particle(x, y, z)
         particle_number = release_zone.get_number_of_particles()
         test.assert_equal(1, particle_number)
 
@@ -59,7 +59,7 @@ class ReleaseZoneCreatorTest(TestCase):
         z = 0.0
         release_zone = ReleaseZone(self.group_id, self.radius, self.centre)
         try:
-            release_zone.add_particle(x,y,z)
+            release_zone.add_particle(x, y, z)
         except ValueError:
             pass
         particle_number = release_zone.get_number_of_particles()
@@ -70,27 +70,27 @@ class ReleaseZoneCreatorTest(TestCase):
         y = self.centre[1]
         z = 0.0
         release_zone = ReleaseZone(self.group_id, self.radius, self.centre)
-        release_zone.add_particle(x,y,z)
+        release_zone.add_particle(x, y, z)
         x_coords, y_coords, z_coords = release_zone.get_coords()
         test.assert_array_almost_equal(x, x_coords)
         test.assert_array_almost_equal(y, y_coords)
         test.assert_array_almost_equal(z, z_coords)
 
     def test_is_clockwise_ordered_is_true(self):
-        points = np.array([[0.0,0.0],[0.0,1.0],[1.0,1.0],[1.0,0.0],[0.0,0.0]])
+        points = np.array([[0.0, 0.0], [0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]])
         clockwise_ordered = is_clockwise_ordered(points)
         test.assert_equal(True, clockwise_ordered)
 
     def test_is_clockwise_ordered_is_false(self):
-        points = np.array([[0.0,0.0],[1.0,0.0],[1.0,1.0],[0.0,1.0],[0.0,0.0]])
+        points = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], [0.0, 0.0]])
         clockwise_ordered = is_clockwise_ordered(points)
         test.assert_equal(False, clockwise_ordered)
 
     def test_find_start_index(self):
         lon_start = 0.1
         lat_start = 1.1
-        points = np.array([[0.0,0.0],[0.0,1.0],[1.0,1.0],[1.0,0.0],[0.0,0.0]])
-        start_idx = find_start_index(points, lon_start, lat_start, zone=self.zone)
+        points = np.array([[0.0, 0.0], [0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]])
+        start_idx = find_start_index(points, lon_start, lat_start, epsg_code=self.epsg_code)
         test.assert_equal(1, start_idx)
 
     def test_get_length(self):
