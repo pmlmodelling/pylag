@@ -382,8 +382,8 @@ def create_release_zones_along_cord(r1, r2, group_id=1, radius=100.0,
         centre = r1 + r3_prime
         release_zone = create_release_zone(group_id, radius, centre, n_particles, depth, random)
         if verbose:
-            n_particles = release_zone.get_number_of_particles()
-            print(f"Zone {n} (group_id = {group_id}) contains {n_particles} particles.")
+            n_particles_in_release_zone = release_zone.get_number_of_particles()
+            print(f"Zone {n} (group_id = {group_id}) contains {n_particles_in_release_zone} particles.")
         release_zones.append(release_zone)
         group_id += 1
 
@@ -600,7 +600,8 @@ def create_release_zones_around_shape_section(shape_obj, start, target_length, g
     centre_ref = np.array([x[0], y[0]])  # Coordinates of zone centre, saved for release zone separation calculation
     release_zone = create_release_zone(group_id, radius, centre_ref, n_particles, depth, random)
     if verbose:
-        print("Zone (group_id = {}) contains {} particles.".format(group_id, release_zone.get_number_of_particles()))
+        n_particles_in_release_zone = release_zone.get_number_of_particles()
+        print(f"Zone (group_id = {group_id}) contains {n_particles_in_release_zone} particles.")
     release_zones.append(release_zone)
 
     # Now step through vertices in shape_obj creating new release zones en route
@@ -631,8 +632,8 @@ def create_release_zones_around_shape_section(shape_obj, start, target_length, g
             # Create location
             release_zone = create_release_zone(group_id, radius, r4, n_particles, depth, random)
             if verbose:
-                print("Zone (group_id = {}) contains {} particles.".format(group_id,
-                                                                           release_zone.get_number_of_particles()))
+                n_particles_in_release_zone = release_zone.get_number_of_particles()
+                print(f"Zone (group_id = {group_id}) contains {n_particles_in_release_zone} particles.")
 
             # Check if the new release zone overlaps with non-adjacent zones
             if check_overlaps:
@@ -640,11 +641,9 @@ def create_release_zones_around_shape_section(shape_obj, start, target_length, g
                     centre_test = zone_test.get_centre()
                     zone_separation = _get_length(r4, centre_test)
                     if (target_separation - zone_separation) / target_separation > overlap_tol:
-                        print("WARNING: Area overlap detected between release zones {} \
-                               and {}. Target separation = {}. Actual separation = {}.".format(zone_test.get_group_id(),
-                                                                                               release_zone.get_group_id(),
-                                                                                               target_separation,
-                                                                                               zone_separation))
+                        print(f"WARNING: Area overlap detected between release zones {zone_test.get_group_id()} "
+                              f"and {release_zone.get_group_id()}. Target separation = {target_separation}. "
+                              f"Actual separation = {zone_separation}.")
 
             # Append the new release zone to the current set.
             release_zones.append(release_zone)
