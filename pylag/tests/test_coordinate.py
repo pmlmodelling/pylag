@@ -11,42 +11,46 @@ from pylag.exceptions import PyLagOutOfBoundsError
 
 
 # Helpers
-Coordinates = namedtuple('Coordinates', ('lon', 'lat', 'easting', 'northing', 'zone'))
+Coordinates = namedtuple('Coordinates', ('lon', 'lat', 'easting', 'northing', 'epsg'))
 
 
 class FileReader_test(TestCase):
 
-    def _back_forth(self, lat_arg, lon_arg, zone_arg=False):
+    def _back_forth(self, lon_arg, lat_arg, epsg_code: int):
         """ Simple back and forth test of the functions with a given lat/lon pair
 
         Parameters
         ----------
-        lat_arg : float
-            Latitude in degrees N.
-
         lon_arg : float
             Longitude in degrees E.
 
-        zone_arg : float
-            Zone identifier (e.g. 30N)
+        lat_arg : float
+            Latitude in degrees N.
+
+        epsg_code : int
+            EPSG code.
 
         Returns
         -------
          : Coordinates
              A Coordinates namedtuple.
         """
-        easting, northing, zone = coordinate.utm_from_lonlat(lon_arg, lat_arg, zone_arg)
-        lon, lat = coordinate.lonlat_from_utm(easting, northing, zone)
+        easting, northing = coordinate.utm_from_lonlat(lon_arg, lat_arg, epsg_code)
+        lon, lat = coordinate.lonlat_from_utm(easting, northing, epsg_code)
 
-        return Coordinates(lon=lon, lat=lat, easting=easting, northing=northing, zone=zone)
+        return Coordinates(lon=lon, lat=lat, easting=easting, northing=northing, epsg=epsg_code)
 
     def test_convert_latlon_coords(self):
-        lat, lon = 50, -5
-        coords = self._back_forth(lat, lon)
+        # Test values (Easting: 428333.55, Northing: 5539109.82)
+        lon, lat = -4., 50.
+        epsg_code = 32630
 
-        test.assert_equal(lat, coords.lat)
-        test.assert_equal(lon, coords.lon)
-        test.assert_equal('30N', coords.zone)
+        coords = self._back_forth(lon, lat, epsg_code)
+
+        test.assert_almost_equal(coords.lon[0], lon)
+        test.assert_almost_equal(coords.lat[0], lat)
+        test.assert_almost_equal(coords.easting[0], 428333.55, decimal=2)
+        test.assert_almost_equal(coords.northing[0], 5539109.82, decimal=2)
 
     def test_to_list_with_a_float(self):
         value = 10.0
