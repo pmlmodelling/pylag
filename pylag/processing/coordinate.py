@@ -14,10 +14,13 @@ refuses to do coordinate conversions outside a single zone.
 """
 
 from __future__ import division
+from typing import Optional
 
 import numpy as np
 
 import pyproj
+from pyproj.aoi import AreaOfInterest
+from pyproj.database import query_utm_crs_info
 from pyproj import CRS, Transformer
 
 from pylag.exceptions import PyLagRuntimeError, PyLagTypeError, PyLagOutOfBoundsError
@@ -120,18 +123,17 @@ def get_zone_letter(latitude):
     raise PyLagOutOfBoundsError(f'Latitude of {latitude!r} out of range for utm zones')
 
 
-def utm_from_lonlat(longitude, latitude, epsg_code: int):
-    """ Converts lats and lons to UTM for the specified EPSG reference system
+def utm_from_lonlat(longitude, latitude, epsg_code: Optional[int] = None):
+    """ Converts lats and lons to UTM coordinates using pyproj
 
     East Longitudes are positive, west longitudes are negative. North latitudes
-    are positive, south latitudes are negative. Lat and Lon are in decimal
+    are positive, south latitudes are negative. Lats and lons are in decimal
     degrees.
 
     The desired EPSG code can be found by searching websites such as
-    epsg.io or spatialreference.org. Alternatively, you can use pyproj to determine
-    the correct EPSG code for an area of interest: https://tinyurl.com/aa83npwy.
-
-    The function leverages pyproj to perform the conversion.
+    epsg.io or spatialreference.org. If it is not provided, it will be calculated
+    automatically from the first lon and lat values for the WGS 84 datum using
+    the approach described here: https://tinyurl.com/aa83npwy.
 
     Be careful when using this function for coordinates that span multiple zones
     as the transformation is specific to the specified EPSG reference system.
@@ -140,7 +142,7 @@ def utm_from_lonlat(longitude, latitude, epsg_code: int):
     ----------
     longitude, latitude : object
         Longitudes and latitudes. Can be a single value or array like.
-    epsg_code
+    epsg_code : int, optional
         The EPSG code for the utm transformation.
 
     Returns
@@ -149,19 +151,31 @@ def utm_from_lonlat(longitude, latitude, epsg_code: int):
         Eastings and northings in the supplied reference system for the given
         longitudes and latitudes.
     """
-    utm_crs = CRS.from_epsg(epsg_code)
-
-    proj = Transformer.from_crs(utm_crs.geodetic_crs, utm_crs, always_xy=True)
-
     lon = to_list(longitude)
     lat = to_list(latitude)
 
     if len(lon) != len(lat):
         raise PyLagRuntimeError('Lat and lon array sizes do not match')
 
+    # Use the first longitude and latitude values to determine the epsg_code
+    # if it has not been given. Don't use, say, min/max values as we don't
+    # want to return multiple utm zones.
+    if epsg_code is None:
+        a = AreaOfInterest(west_lon_degree=lon[0],
+                           south_lat_degree=lat[0],
+                           east_lon_degree=lon[0],
+                           north_lat_degree=lat[0])
+
+        utm_crs_list = query_utm_crs_info(datum_name="WGS 84", area_of_interest=a)
+        epsg_code = utm_crs_list[0].code
+
+    utm_crs = CRS.from_epsg(epsg_code)
+
+    proj = Transformer.from_crs(utm_crs.geodetic_crs, utm_crs, always_xy=True)
+
     eastings, northings = proj.transform(lon, lat)
 
-    return np.asarray(eastings), np.asarray(northings)
+    return np.asarray(eastings), np.asarray(northings), epsg_code
 
 
 def lonlat_from_utm(eastings, northings, epsg_code: int):

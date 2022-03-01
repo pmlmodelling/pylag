@@ -1,6 +1,7 @@
 """ Unit tests for pylag.processing.coordinate.py """
 
 import unittest
+from typing import Optional
 from unittest import TestCase
 import numpy.testing as test
 from collections import namedtuple
@@ -11,12 +12,12 @@ from pylag.exceptions import PyLagOutOfBoundsError
 
 
 # Helpers
-Coordinates = namedtuple('Coordinates', ('lon', 'lat', 'easting', 'northing', 'epsg'))
+Coordinates = namedtuple('Coordinates', ('lon', 'lat', 'easting', 'northing', 'epsg_code'))
 
 
 class FileReader_test(TestCase):
 
-    def _back_forth(self, lon_arg, lat_arg, epsg_code: int):
+    def _back_forth(self, lon_arg, lat_arg, epsg_code_arg: Optional[int] = None):
         """ Simple back and forth test of the functions with a given lat/lon pair
 
         Parameters
@@ -27,7 +28,7 @@ class FileReader_test(TestCase):
         lat_arg : float
             Latitude in degrees N.
 
-        epsg_code : int
+        epsg_code_arg : int, optional
             EPSG code.
 
         Returns
@@ -35,15 +36,15 @@ class FileReader_test(TestCase):
          : Coordinates
              A Coordinates namedtuple.
         """
-        easting, northing = coordinate.utm_from_lonlat(lon_arg, lat_arg, epsg_code)
+        easting, northing, epsg_code = coordinate.utm_from_lonlat(lon_arg, lat_arg, epsg_code_arg)
         lon, lat = coordinate.lonlat_from_utm(easting, northing, epsg_code)
 
-        return Coordinates(lon=lon, lat=lat, easting=easting, northing=northing, epsg=epsg_code)
+        return Coordinates(lon=lon, lat=lat, easting=easting, northing=northing, epsg_code=epsg_code)
 
     def test_convert_latlon_coords(self):
         # Test values (Easting: 428333.55, Northing: 5539109.82)
         lon, lat = -4., 50.
-        epsg_code = 32630
+        epsg_code = '32630'
 
         coords = self._back_forth(lon, lat, epsg_code)
 
@@ -51,6 +52,18 @@ class FileReader_test(TestCase):
         test.assert_almost_equal(coords.lat[0], lat)
         test.assert_almost_equal(coords.easting[0], 428333.55, decimal=2)
         test.assert_almost_equal(coords.northing[0], 5539109.82, decimal=2)
+
+    def test_convert_latlon_coords_without_epsg_code(self):
+        # Test values (Easting: 428333.55, Northing: 5539109.82)
+        lon, lat = -4., 50.
+
+        coords = self._back_forth(lon, lat)
+
+        test.assert_almost_equal(coords.lon[0], lon)
+        test.assert_almost_equal(coords.lat[0], lat)
+        test.assert_almost_equal(coords.easting[0], 428333.55, decimal=2)
+        test.assert_almost_equal(coords.northing[0], 5539109.82, decimal=2)
+        test.assert_equal(coords.epsg_code, '32630')
 
     def test_to_list_with_a_float(self):
         value = 10.0
