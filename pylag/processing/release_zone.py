@@ -517,8 +517,9 @@ def create_release_zones_around_shape(shape_obj, start, target_length, group_id,
 
 
 def create_release_zones_around_shape_section(shape_obj, start, target_length, group_id,
-                                              radius, n_particles, depth=0.0, zone=None, random=True,
-                                              check_overlaps=False, overlap_tol=0.0001, verbose=False):
+                                              radius, n_particles, depth=0.0, epsg_code=None,
+                                              random=True, check_overlaps=False,
+                                              overlap_tol=0.0001, verbose=False):
     """ Create a set of adjacent release zones around a some part of an arbritray poloygon.
 
     This function is distinct from the function `create_release_zones_around_shape` in
@@ -548,8 +549,8 @@ def create_release_zones_around_shape_section(shape_obj, start, target_length, g
     depth : float
         Zone depth in m.
 
-    zone : float
-        Zone within which to calculate lat/lon coordinates
+    epsg_code : str
+        EPSG code within which to calculate lat/lon coordinates
 
     random : boolean
         If true create a random uniform distribution of particles within each
@@ -585,7 +586,7 @@ def create_release_zones_around_shape_section(shape_obj, start, target_length, g
     clockwise_ordering = _is_clockwise_ordered(points)
 
     # Find starting location
-    start_idx = _find_start_index(points, start[0], start[1], zone=zone)
+    start_idx = _find_start_index(points, start[0], start[1], epsg_code=epsg_code)
 
     # Form the first release zone centred on the point corresponding to start_idx
     release_zones = []
@@ -698,7 +699,7 @@ def _is_clockwise_ordered(points):
     return is_clockwise
 
 
-def _find_start_index(points, lon, lat, tolerance=None, zone=None):
+def _find_start_index(points, lon, lat, tolerance=None, epsg_code=None) -> int:
     """ Find start index for release zone creation.
 
     Parameters
@@ -718,22 +719,26 @@ def _find_start_index(points, lon, lat, tolerance=None, zone=None):
         Raise ValueError if the target lat/lon values lie beyond this distance
         (in m) from the shape_obj.
 
-    zone : str, optional
-        Give a UTM zone (e.g. '30N') to use when converting the coordinates to
-        cartesian. Useful for large domains which spread over multiple UTM zones.
+    epsg_code : str, optional
+        Give a EPSG code to use when transforming lat and lon coordinates to m.
+        If not provided, the supplied lat and lon values are used to infer the
+        EPSG code. Useful for large domains which spread over multiple UTM zones.
 
-    Returns:
-    --------
+    Returns
+    -------
     start_idx: integer
         Start index in array points[start_idx,:].
 
     """
-    x_start, y_start, _ = utm_from_lonlat(lon, lat, zone=zone)
+    if epsg_code is None:
+        epsg_code = get_epsg_code(lon, lat)
 
-    x_points, y_points, _ = utm_from_lonlat(points[:, 0], points[:, 1], zone=zone)
+    x_start, y_start, _ = utm_from_lonlat(lon, lat, epsg_code=epsg_code)
+
+    x_points, y_points, _ = utm_from_lonlat(points[:, 0], points[:, 1], epsg_code=epsg_code)
 
     # Find the position on the boundary closest to the supplied lat/lon values.
-    distances = np.hypot(x_points - x_start, y_points - y_start)
+    distances = np.hypot(x_points - x_start[0], y_points - y_start[0])
     distance_min = np.min(distances)
     if tolerance:
         if distance_min < tolerance:
