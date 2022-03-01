@@ -192,7 +192,7 @@ def utm_from_lonlat(longitude, latitude, epsg_code: Optional[str] = None, zone=N
     return np.asarray(eastings), np.asarray(northings), epsg_code
 
 
-def lonlat_from_utm(eastings, northings, epsg_code: int):
+def lonlat_from_utm(eastings, northings, epsg_code: str, zone=None):
     """ Converts UTM coordinates to lat/lon.
 
     East Longitudes are positive, west longitudes are negative. North latitudes
@@ -203,8 +203,11 @@ def lonlat_from_utm(eastings, northings, epsg_code: int):
     ----------
     eastings, northings : object
         Eastings and northings. Can be single values or array like,
-    epsg_code
+    epsg_code : str
         The EPSG code for the utm transformation.
+    zone : str, optional
+        DEPRECATED. Past means of specifying the UTM zone for the transformation
+        that is no longer supported.
 
     Returns
     -------
@@ -212,6 +215,11 @@ def lonlat_from_utm(eastings, northings, epsg_code: int):
         Longitude and latitudes for the given eastings and northings.
 
     """
+    if zone is not None:
+        raise PyLagRuntimeError(f'UTM zone keys can no longer be used to specify the CRS '
+                                f'used for the transformation. Please use the epsg_code '
+                                f'instead to specify the CRS.')
+
     utm_crs = CRS.from_epsg(epsg_code)
 
     proj = Transformer.from_crs(utm_crs.geodetic_crs, utm_crs, always_xy=True)
