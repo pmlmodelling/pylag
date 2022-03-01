@@ -368,8 +368,8 @@ def create_release_zones_along_cord(r1, r2, group_id=1, radius=100.0,
     n_zones, buffer_zone = divmod(r3_length, 2.0*radius)
 
     if verbose:
-        print("Cord length is {:f} m. A radius of {:f} m thus " \
-              "yields {:d} release zones.".format(r3_length, radius, n_zones))
+        print(f"Cord length is {r3_length} m. A radius of {radius} m thus "
+              f"yields {n_zones} release zones.")
 
     if n_zones == 0:
         print("WARNING: zero release zones have been created. Try reducing the zone radius.")
@@ -382,7 +382,8 @@ def create_release_zones_along_cord(r1, r2, group_id=1, radius=100.0,
         centre = r1 + r3_prime
         release_zone = create_release_zone(group_id, radius, centre, n_particles, depth, random)
         if verbose:
-            print("Zone {:d} (group_id = {:d}) contains {:d} particles.".format(n, group_id, release_zone.get_number_of_particles()))
+            n_particles = release_zone.get_number_of_particles()
+            print(f"Zone {n} (group_id = {group_id}) contains {n_particles} particles.")
         release_zones.append(release_zone)
         group_id += 1
 
