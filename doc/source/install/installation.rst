@@ -13,17 +13,16 @@ For end users, the easiest way to install *PyLag* is using *Conda*. This will in
 Installation using Conda
 ------------------------
 
-First `install miniconda3 <https://conda.io/projects/conda/en/latest/user-guide/install/linux.html>`_ in a location of your choosing. Then, activate *Conda*, ensure conda is up to data, and add the channels *conda-forge*, *geo-down-under* and *JimClark*. The channel *geo-down-under* is needed for one of PyLag's dependencies. The channel *JimClark* is a temporary distribution channel for *PyLag*. For example:
+First `install miniconda3 <https://conda.io/projects/conda/en/latest/user-guide/install/linux.html>`_ in a location of your choosing. Then, activate *Conda*, ensure *Conda* is up to data, and add the channels *conda-forge* and *JimClark*. The channel *JimClark* is a temporary distribution channel for *PyLag*. For example:
 
 .. code-block:: bash
 
     $ source /opt/miniconda/miniconda3/bin/activate
     $ conda update conda
-    $ conda config --append channels conda-forge
-    $ conda config --append channels geo-down-under
-    $ conda config --append channels JimClark
+    $ conda config --prepend channels conda-forge
+    $ conda config --prepend channels JimClark
 
-The above code assumes *miniconda3* was installed into the directory ``/opt/miniconda``, once the appropriate write permissions have been set. The default behaviour is to install *miniconda3* into your home directory. This is, of course, also fine.
+The above code assumes *miniconda3* was installed into the directory ``/opt/miniconda``, once the appropriate write permissions have been set. The default behaviour is to install *miniconda3* into your home directory. This is, of course, also fine. The *prepend* flag ensures the two new channels are added to the top of the priority list, meaning all packages will be drawn from either the *JimClark* or *conda-forge* channels.
 
 With *miniconda3* installed and configured, create a new environment in which to install *PyLag* using the following commands:
 
@@ -52,36 +51,42 @@ which should exit without error.
 Building from source
 --------------------
 
-Developers who wish to work with the source code directly should first clone *PyLag's* git repository from `GitHub <https://github.com/jimc101/PyLag>`_. You can clone the repository using the following commands:
+Developers who wish to work with the source code directly should first clone *PyLag's* git repository from `GitHub <https://github.com/pmlmodelling/pylag>`_. You can clone the repository using the following commands:
 
 .. code-block:: bash
 
     $ mkdir -p $HOME/code/git/PyLag && cd $HOME/code/git/PyLag
-    $ git clone https://github.com/jimc101/PyLag.git
+    $ git clone https://github.com/pmlmodelling/pylag.git
 
-The cleanest and safest way of installing *PyLag's* dependencies is using *Conda*. Following steps similar to those described above, we can configure a new *Conda* environment so:
+The cleanest and safest way of installing *PyLag's* dependencies is using *Conda*. One approach is to install *PyLag* using *Conda*, as described above, before then running pip install in the PyLag code directory:
+
+.. code-block:: bash
+
+    (pylag) $ cd $HOME/code/git/PyLag/pylag
+    (pylag) $ pip install .
+
+Alternatively, PyLag can also been built using *Conda*. Following steps similar to those described above, we can configure a new *Conda* environment so:
 
 .. code-block:: bash
 
     $ source /opt/miniconda/miniconda3/bin/activate
-    $ conda config --append channels conda-forge
-    $ conda config --append channels geo-down-under
+    $ conda config --prepend channels conda-forge
     $ conda install conda-build conda-verify
 
 The new step here is the installation of conda-build and conda-verify. Note we don't add the JimClark channel in order to avoid conda installing pylag from Anaconda cloud. Next, create a new environment as above:
 
 .. code-block:: bash
 
-    $ conda create -n particles python=3.9
-    $ conda activate particles
+    $ conda create -n pylag python=3.9
+    $ conda activate pylag
 
 And finally, in the PyLag source code directory, build and install *PyLag*.
 
 .. code-block:: bash
 
-    (particles) $ cd $HOME/code/git/PyLag/PyLag
-    (particles) $ conda build . --numpy 1.20
-    (particles) $ conda install -n particles --use-local pylag
+    (pylag) $ cd $HOME/code/git/PyLag/PyLag
+    (pylag) $ conda build . --numpy 1.20
+    (pylag) $ conda install -n pylag --use-local pylag
 
 Occasionally, when building *PyLag* this way, users have hit upon clashes with locally installed packages. To get around this problem, you may find it useful to add the following aliases to your bashrc file, which you can use to activate and deactivate *Conda*:
 
@@ -89,14 +94,6 @@ Occasionally, when building *PyLag* this way, users have hit upon clashes with l
 
     alias start_conda='export PYTHONNOUSERSITE=True && source /opt/miniconda/miniconda3/bin/activate'
     alias stop_conda='unset PYTHONNOUSERSITE && conda deactivate'
-
-The *Conda* build process is quite long, and it doesn't lend itself to rapid build-install-test cycles. If you find yourself wanting to perform repeated builds, it is recommended you build using *Conda* on the first attempt, as described above. This will ensure PyLag's dependencies are correctly installed. Then, after this, you can install *PyLag* using *pip* like so:
-
-.. code-block:: bash
-
-    (particles) $ cd $HOME/code/git/PyLag/PyLag
-    (particles) $ pip install .
-
 
 .. _alternatives:
 
@@ -133,8 +130,8 @@ To build PyLag's documentation, a number of extra dependencies are required. The
 
 .. code-block:: bash
 
-   (particles) $ conda install -n pylag sphinx nbsphinx sphinx_rtd_theme sphinxcontrib-napoleon jupyter \
+   (pylag) $ conda install -n pylag sphinx nbsphinx sphinx_rtd_theme sphinxcontrib-napoleon jupyter \
                  jupyter_client ipykernel seapy cmocean matplotlib shapely cartopy
-   (particles) $ conda install -c JimClark -n pylag PyQT-fit
+   (pylag) $ conda install -c JimClark -n pylag PyQT-fit
 
-If you haven't added the JimClark channel you will need to do this before installing and PyQT-fit.
+If you haven't added the JimClark channel you will need to do this before installing PyQT-fit.
