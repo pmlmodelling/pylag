@@ -15,8 +15,9 @@ try:
 except ImportError:
     import ConfigParser as configparser
 
+from pylag.exceptions import PyLagValueError
 from pylag.data_types_python import DTYPE_FLOAT
-from pylag.numerics import get_time_direction
+from pylag.numerics import get_global_time_step, get_time_direction
 from pylag.utils import round_time
 from pylag import version
 
@@ -322,6 +323,20 @@ class FileReader:
 
         # Set time indices for reading frames
         self._set_time_indices(0.0) # 0s as simulation start
+
+        # Check that the choice of start time and time step yields an even number
+        # of time steps between the start time and the times at which data are
+        # defined. We check against both the first and second times when input
+        # data are defined to ensure the check is robust.
+        time_step = get_global_time_step(self.config)
+        n_steps_before = self.first_time[self.tidx_first] / time_step
+        n_steps_after = self.second_time[self.tidx_second] / time_step
+        if not (n_steps_before.is_integer() and n_steps_after.is_integer()):
+            raise PyLagValueError(f'PyLag requires there to be an integer number of time '
+                                  f'steps (measured in seconds) between the simulation '
+                                  f'start time and the times when input data are defined. '
+                                  f'Please modify your start time or time step to ensure '
+                                  f'this is the case.')
 
     def _check_date_time_is_valid(self, date_time):
         """ Check that the given date time lies within the range covered by the input data

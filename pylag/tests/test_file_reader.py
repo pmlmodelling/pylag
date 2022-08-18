@@ -9,13 +9,14 @@ except ImportError:
     import ConfigParser as configparser
 
 from pylag import version
+from pylag.exceptions import PyLagValueError
 from pylag.file_reader import FileReader, FileNameReader, DatasetReader
 
 # Module level variables used in testing
 # --------------------------------------
 
 # Test datasets ('file_name': 'time variable array in seconds')
-# NB The repition of 300 s is deliberate, and is introduced
+# NB The repetition of 300 s is deliberate, and is introduced
 # to test the behaviour when working with FVCOM data files where
 # typically the last time in the first data file is repeated as
 # the first entry in the second data file.
@@ -113,6 +114,10 @@ class FileReader_test(TestCase):
         self.config.set('OCEAN_CIRCULATION_MODEL', 'grid_metrics_file', 'grid_metrics')
         self.config.set('OCEAN_CIRCULATION_MODEL', 'rounding_interval', rounding_interval)
         self.config.add_section("SIMULATION")
+        self.config.add_section("NUMERICS")
+        self.config.set('NUMERICS', 'num_method', 'test')
+        self.config.set('NUMERICS', 'time_step_adv', '1.0')
+
 
         # Mock file name reader
         self.file_name_reader = MockFileNameReader()
@@ -281,6 +286,30 @@ class FileReader_test(TestCase):
         # Check file names
         test.assert_array_equal('test_file_3', self.file_reader.first_data_file_name)
         test.assert_array_equal('test_file_3', self.file_reader.second_data_file_name)
+
+    def test_set_start_datetime_and_time_step_to_give_an_integer_number_of_timesteps_after_data_record_start(self):
+        start_datetime = datetime.datetime(2000, 1, 1, 0, 0, 0)
+        end_datetime = datetime.datetime(2000, 1, 1, 0, 1, 0)
+
+        self.config.set('SIMULATION', 'time_direction', 'forward')
+
+        self.config.set('NUMERICS', 'time_step_adv', '10')
+
+        # Create file reader
+        self.file_reader = FileReader(self.config, self.file_name_reader, self.dataset_reader, start_datetime,
+                                      end_datetime)
+
+    def test_set_start_datetime_and_time_step_to_give_a_non_integer_number_of_timesteps_after_data_record_start(self):
+        start_datetime = datetime.datetime(2000, 1, 1, 0, 0, 0)
+        end_datetime = datetime.datetime(2000, 1, 1, 0, 1, 0)
+
+        self.config.set('SIMULATION', 'time_direction', 'forward')
+
+        self.config.set('NUMERICS', 'time_step_adv', '11')
+
+        # Create file reader
+        self.assertRaises(PyLagValueError, FileReader, self.config, self.file_name_reader, self.dataset_reader,
+                          start_datetime, end_datetime)
 
     def test_set_time_arrays_with_start_datetime_equal_to_data_record_start(self):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid = 0 seconds after data record start
