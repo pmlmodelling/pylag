@@ -65,41 +65,41 @@ class FileReader_test(TestCase):
         test.assert_almost_equal(coords.northing[0], 5539109.82, decimal=2)
         test.assert_equal(coords.epsg_code, '32630')
 
-    def test_to_list_with_a_float(self):
+    def test_to_ndarray_with_a_float(self):
         value = 10.0
-        x = coordinate.to_list(value)
-        self.assertIsInstance(x, list)
-        self.assertEqual(x, [10.0])
+        x = coordinate.to_ndarray(value)
+        self.assertIsInstance(x, np.ndarray)
+        test.assert_array_equal(x, np.array([10.0]))
 
-    def test_to_list_with_an_int(self):
+    def test_to_ndarray_with_an_int(self):
         value = 10
-        x = coordinate.to_list(value)
-        self.assertIsInstance(x, list)
-        self.assertEqual(x, [10])
+        x = coordinate.to_ndarray(value)
+        self.assertIsInstance(x, np.ndarray)
+        test.assert_array_equal(x, np.array([10]))
 
-    def test_to_list_with_a_string(self):
+    def test_to_ndarray_with_a_string(self):
         value = '10'
-        x = coordinate.to_list(value)
-        self.assertIsInstance(x, list)
-        self.assertEqual(x, ['10'])
+        x = coordinate.to_ndarray(value)
+        self.assertIsInstance(x, np.ndarray)
+        test.assert_array_equal(x, np.array(['10']))
 
-    def test_to_list_with_a_list(self):
+    def test_to_ndarray_with_a_list(self):
         value = [1.0, 2.0]
-        x = coordinate.to_list(value)
-        self.assertIsInstance(x, list)
-        self.assertEqual(x, [1.0, 2.0])
+        x = coordinate.to_ndarray(value)
+        self.assertIsInstance(x, np.ndarray)
+        test.assert_array_equal(x, np.array([1.0, 2.0]))
 
-    def test_to_list_with_a_tuple(self):
+    def test_to_ndarray_with_a_tuple(self):
         value = (1.0, 2.0)
-        x = coordinate.to_list(value)
-        self.assertIsInstance(x, list)
-        self.assertEqual(x, [1.0, 2.0])
+        x = coordinate.to_ndarray(value)
+        self.assertIsInstance(x, np.ndarray)
+        test.assert_array_equal(x, np.array([1.0, 2.0]))
 
-    def test_to_list_with_a_ndarray(self):
+    def test_to_ndarray_with_a_ndarray(self):
         value = np.array([1.0, 2.0])
-        x = coordinate.to_list(value)
-        self.assertIsInstance(x, list)
-        self.assertEqual(x, [1.0, 2.0])
+        x = coordinate.to_ndarray(value)
+        self.assertIsInstance(x, np.ndarray)
+        test.assert_array_equal(x, np.array([1.0, 2.0]))
 
     def test_get_zone_number_with_longitude_and_latitude_for_30U(self):
         latitude = 50.0

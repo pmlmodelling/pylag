@@ -27,10 +27,10 @@ from pyproj import CRS, Transformer
 from pylag.exceptions import PyLagRuntimeError, PyLagTypeError, PyLagOutOfBoundsError
 
 
-def to_list(x):
-    """ Try to convert `x` to a list
+def to_ndarray(x):
+    """ Try to convert `x` to a NumPy NDArray
 
-    Support for strings, ints, floats, tuples and ndarrays is included.
+    Support for strings, ints, floats, tuples and lists is included.
 
     Parameters
     ----------
@@ -39,21 +39,19 @@ def to_list(x):
 
     Returns
     -------
-     : list
-        The processed object transformed to a list.
+     : ndarray
+        The processed object transformed to a ndarray.
 
     Raises
     ------
     PyLagTypeError is the object is not supported.
     """
 
-    if isinstance(x, str) or isinstance(x, (int, float)):
-        return [x]
-    elif isinstance(x, tuple):
-        return list(x)
+    if isinstance(x, (str, int, float)):
+        return np.array([x])
+    elif isinstance(x, (tuple, list)):
+        return np.asarray(x)
     elif isinstance(x, np.ndarray):
-        return x.tolist()
-    elif isinstance(x, list):
         return x
 
     x_type = type(x)
@@ -217,8 +215,8 @@ def utm_from_lonlat(longitude, latitude, epsg_code: Optional[str] = None, zone=N
                    f'appropriate EPSG code as a function argument.')
         warnings.warn(message, DeprecationWarning)
 
-    lon = to_list(longitude)
-    lat = to_list(latitude)
+    lon = to_ndarray(longitude)
+    lat = to_ndarray(latitude)
 
     if len(lon) != len(lat):
         raise PyLagRuntimeError('Lat and lon array sizes do not match')
@@ -270,8 +268,8 @@ def lonlat_from_utm(eastings, northings, epsg_code: str, zone=None):
 
     proj = Transformer.from_crs(utm_crs.geodetic_crs, utm_crs, always_xy=True)
 
-    eastings = to_list(eastings)
-    northings = to_list(northings)
+    eastings = to_ndarray(eastings)
+    northings = to_ndarray(northings)
 
     if len(eastings) != len(northings):
         raise PyLagRuntimeError('Easting and northing array sizes do not match')
