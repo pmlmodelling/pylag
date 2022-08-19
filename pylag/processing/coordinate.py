@@ -204,6 +204,8 @@ def utm_from_lonlat(longitude, latitude, epsg_code: Optional[str] = None, zone=N
     eastings, northings : numpy.ndarray
         Eastings and northings in the supplied reference system for the given
         longitudes and latitudes.
+    epsg_code : str
+        The EPSG code for the utm transformation.
     """
     if zone is not None:
         message = (f'The utm zone argument can no longer be used to specify '
