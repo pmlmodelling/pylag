@@ -549,7 +549,7 @@ def create_release_zones_around_shape_section(shape_obj, start, target_length, g
     depth : float
         Zone depth in m.
 
-    epsg_code : str
+    epsg_code : str, optional
         EPSG code within which to calculate lat/lon coordinates
 
     random : boolean
@@ -585,13 +585,17 @@ def create_release_zones_around_shape_section(shape_obj, start, target_length, g
     # Establish whether or not the shapefile is ordered in a clockwise or anticlockwise manner
     clockwise_ordering = _is_clockwise_ordered(points)
 
+    # Set the epsg_code from the start coordinates if it has not been set already.
+    if epsg_code is None:
+        epsg_code = get_epsg_code(start[0], start[1])
+
     # Find starting location
     start_idx = _find_start_index(points, start[0], start[1], epsg_code=epsg_code)
 
     # Form the first release zone centred on the point corresponding to start_idx
     release_zones = []
     idx = start_idx - n_points if clockwise_ordering else start_idx
-    x, y, zone = utm_from_lonlat(points[idx, 0], points[idx, 1])
+    x, y, _ = utm_from_lonlat(points[idx, 0], points[idx, 1], epsg_code=epsg_code)
     centre_ref = np.array([x[0], y[0]])  # Coordinates of zone centre, saved for release zone separation calculation
     release_zone = create_release_zone(group_id, radius, centre_ref, n_particles, depth, random)
     if verbose:
@@ -610,7 +614,7 @@ def create_release_zones_around_shape_section(shape_obj, start, target_length, g
         if counter > n_points or distance_travelled > target_length:
             break
 
-        x, y, zone = utm_from_lonlat(points[idx, 0], points[idx, 1])
+        x, y, zone = utm_from_lonlat(points[idx, 0], points[idx, 1], epsg_code=epsg_code)
         if _get_length(centre_ref, np.array([x[0], y[0]])) >= target_separation:
             # Track back along the last cord in order to find the point
             # giving a release zone separation of 2*radius.
