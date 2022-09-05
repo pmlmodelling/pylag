@@ -31,6 +31,7 @@ from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 # PyLag python imports
 from pylag.particle_cpp_wrapper cimport ParticleSmartPtr
 from pylag.math import geographic_to_cartesian_coords_python
+from pylag.exceptions import PyLagRuntimeError
 
 # PyLag cython imports
 from pylag.parameters cimport deg_to_radians, radians_to_deg, earth_radius, pi
@@ -2479,38 +2480,62 @@ cdef class UnstructuredGeographicGrid(Grid):
 
     cdef void _adjust_interpolation_coefficients(self, const DTYPE_INT_t host,
                                                  DTYPE_FLOAT_t phi[3]) except *:
+        """ Adjust interpolation coefficients
 
-        cdef DTYPE_FLOAT_t phi_new[3]
+        Adjust the interpolation coefficients so that a nearest neighbour
+        algorithm is used. The algorithm sets the value of phi for the
+        nearest node to 1.0 and all other entries to 0.0. The method can
+        be useful when interpolating within boundary elements with masked
+        nodes as it prevents masked nodes with missing values being used to
+        compute the value of a given variable inside the element.
+
+        Parameters
+        ----------
+        host : int
+            The host element.
+
+        phi : C array, float
+            Interpolation coefficients in the host element.
+        """
+        cdef DTYPE_FLOAT_t phi_new[N_VERTICES]
         cdef DTYPE_FLOAT_t phi_test
         cdef DTYPE_INT_t index
+        cdef bint has_sea_points
         cdef DTYPE_INT_t node
         cdef DTYPE_INT_t i
 
-        phi_new[:] = [0.0,0.0,0.0]
+        # Initialise all phi's to zero
         phi_test = 0.0
-        index = -999
-        node = -999
+        for i in range(N_VERTICES):
+            phi_new[i] = 0.0
 
+        # Try to find the index of the nearest neighbour
+        has_sea_points = False
+        index = INT_ERR
         for i in range(N_VERTICES):
             node = self.nv[i, host]
             if self.land_sea_mask[node] == SEA:
+                has_sea_points = True
                 if phi[i] > phi_test:
                     phi_test = phi[i]
                     index = i
 
-        if phi_test > 0.0:
-            # Use a nearest neighbour interpolation scheme
+        if index == INT_ERR:
+            # The nearest neighbour wasn't found, meaning there were no sea
+            # points which a value of phi > 0.0. Although unlikely, this could
+            # happen if the particle was sat on a masked node. In this case, we search
+            # for an unmasked node and use it as the nearest neighbour.
             for i in range(N_VERTICES):
-                if phi[i] == phi_test:
-                    phi_new[i] = 1.0
+                node = self.nv[i, host]
+                if self.land_sea_mask[node] == SEA:
+                    index = i
 
-                    # Break to guard against identical phis
-                    break
-        elif index > -1:
-            # Particle must sit over a masked node. Use the last unmasked element checked.
-            phi_new[index] = 1.0
-        else:
-            raise RuntimeError('Failed to adjust interpolation weights')
+        if index == INT_ERR:
+            # If no index has been found, then all sea points must be masked.
+            raise PyLagRuntimeError(f'All nodes of element {host} are masked!')
+
+        # Nearest neighbour was found - set the corresponding phi to 1.0
+        phi_new[index] = 1.0
 
         # Copy phi_new into phi
         for i in range(N_VERTICES):
