@@ -375,7 +375,8 @@ def geographic_to_cartesian_coords_wrapper(const DTYPE_FLOAT_t &lon_rad,
 
 def cartesian_to_geographic_coords_wrapper(const vector[DTYPE_FLOAT_t] &coords_cart):
 
-    cdef DTYPE_FLOAT_t coords_cart_c[3], coords_geog_c[2]
+    cdef DTYPE_FLOAT_t coords_cart_c[3]
+    cdef DTYPE_FLOAT_t coords_geog_c[2]
     cdef vector[DTYPE_FLOAT_t] coords_geog
     cdef int i
 
