@@ -2500,7 +2500,6 @@ cdef class UnstructuredGeographicGrid(Grid):
         cdef DTYPE_FLOAT_t phi_new[N_VERTICES]
         cdef DTYPE_FLOAT_t phi_test
         cdef DTYPE_INT_t index
-        cdef bint has_sea_points
         cdef DTYPE_INT_t node
         cdef DTYPE_INT_t i
 
@@ -2510,12 +2509,10 @@ cdef class UnstructuredGeographicGrid(Grid):
             phi_new[i] = 0.0
 
         # Try to find the index of the nearest neighbour
-        has_sea_points = False
         index = INT_ERR
         for i in range(N_VERTICES):
             node = self.nv[i, host]
             if self.land_sea_mask[node] == SEA:
-                has_sea_points = True
                 if phi[i] > phi_test:
                     phi_test = phi[i]
                     index = i
@@ -2529,6 +2526,7 @@ cdef class UnstructuredGeographicGrid(Grid):
                 node = self.nv[i, host]
                 if self.land_sea_mask[node] == SEA:
                     index = i
+                    break
 
         if index == INT_ERR:
             # If no index has been found, then all sea points must be masked.
