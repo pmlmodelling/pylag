@@ -1063,7 +1063,8 @@ cdef class ROMSDataReader(DataReader):
         cdef DTYPE_INT_t k_upper_layer = particle.get_k_upper_layer()
 
         # Gradients on lower and upper layers
-        cdef DTYPE_FLOAT_t grad_lower_layer[2], grad_upper_layer[2]
+        cdef DTYPE_FLOAT_t grad_lower_layer[2]
+        cdef DTYPE_FLOAT_t grad_upper_layer[2]
 
         if self._Ah_method == 1:
             # Time fraction
