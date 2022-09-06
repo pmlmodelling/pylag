@@ -353,7 +353,9 @@ cdef class Grid:
         valid_points : numpy array
             Array of 1/0 flags which signify which values to use (1) and which to ignore (0).
         """
-        cdef DTYPE_FLOAT_t xpts_c[4], ypts_c[4], vals_c[4]
+        cdef DTYPE_FLOAT_t xpts_c[4]
+        cdef DTYPE_FLOAT_t ypts_c[4]
+        cdef DTYPE_FLOAT_t vals_c[4]
         cdef DTYPE_INT_t valid_points_c[4]
         cdef int i
 
