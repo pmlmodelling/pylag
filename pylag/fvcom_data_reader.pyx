@@ -773,8 +773,6 @@ cdef class FVCOMDataReader(DataReader):
                                "to run with diffusive mixing in the horizontal, try setting `Ah_method = file` "\
                                "in the run configuration file.")
 
-        return
-
     cdef DTYPE_FLOAT_t get_vertical_eddy_diffusivity(self, DTYPE_FLOAT_t time,
             Particle* particle) except FLOAT_ERR:
         """ Returns the vertical eddy diffusivity through linear interpolation.
