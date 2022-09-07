@@ -928,6 +928,9 @@ cdef class AdvRK42DItMethod(ItMethod):
         cdef DTYPE_INT_t i
         cdef DTYPE_INT_t counter
 
+        # Time at a given iteration
+        cdef DTYPE_FLOAT_t t
+
         # Host search flag
         cdef DTYPE_INT_t flag
 
@@ -1130,6 +1133,9 @@ cdef class AdvRK43DItMethod(ItMethod):
        
         # For applying vertical boundary conditions
         cdef DTYPE_FLOAT_t zmin, zmax
+
+        # Time at a given iteration
+        cdef DTYPE_FLOAT_t t
 
         # Array indices/loop counters
         cdef DTYPE_INT_t ndim = 3
