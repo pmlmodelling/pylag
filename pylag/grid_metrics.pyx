@@ -1887,8 +1887,9 @@ def get_fvcom_open_boundary_nodes(file_name, delimiter=' '):
 
             # There should be exactly three entries in each line. If there aren't,
             # an incorrect delimiter has probably been passed in.
+            # NB - the minus one ensures zero-based numbering.
             if len(entries) == 3:
-                nodes.append(int(entries[1]))
+                nodes.append(int(entries[1]) - 1)
             else:
                 raise ValueError('Failed to correctly parse file {}. Is the supplied '\
                                  'delimiter correct (={})?'.format(file_name, delimiter))
