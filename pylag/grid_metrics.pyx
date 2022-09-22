@@ -34,6 +34,7 @@ from pylag.particle cimport Particle
 from pylag.unstructured cimport Grid
 
 from pylag import version
+from pylag.exceptions import PyLagRuntimeError
 from pylag.unstructured import get_unstructured_grid
 from pylag.math import geographic_to_cartesian_coords_python
 from pylag.math import cartesian_to_geographic_coords_python
@@ -241,8 +242,8 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, obc_file_deli
 
     # Add grid coordinate variables
     # -----------------------------
-    for fvcom_var_name, var_name in zip(['x', 'y', 'xc', 'yc', 'lat', 'lon', 'latc', 'lonc', 'siglev', 'siglay', 'h'],
-                                        ['x', 'y', 'xc', 'yc', 'latitude', 'longitude', 'latitude_c', 'longitude_c', 'siglev', 'siglay', 'h']):
+    for fvcom_var_name, var_name in zip(['x', 'y', 'xc', 'yc', 'lat', 'lon', 'latc', 'lonc', 'siglay', 'h'],
+                                        ['x', 'y', 'xc', 'yc', 'latitude', 'longitude', 'latitude_c', 'longitude_c', 'siglay', 'h']):
         nc_var = fvcom_dataset.variables[fvcom_var_name]
 
         var_data = nc_var[:]
@@ -261,6 +262,47 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, obc_file_deli
             attrs[attr_name] = nc_var.getncattr(attr_name)
 
         gm_file_creator.create_variable(var_name, var_data, dimensions, dtype, attrs=attrs)
+
+    # Add siglev array after checking for erroneously masked values
+    # -------------------------------------------------------------
+    siglev_var = fvcom_dataset.variables['siglev']
+    siglev_data = siglev_var[:]
+    if np.ma.is_masked(siglev_data):
+        # Determine which levels (interfaces) contain at least some masked points
+        masked_levels = np.unique(np.asarray(siglev_data.mask==True).nonzero()[0])
+
+        # Error checking
+        if len(masked_levels) != 1:
+            raise PyLagRuntimeError(f'More than one sigma level contains masked values. '
+                                    f'Please check the consistency of sigma in your FVCOM '
+                                    f'data file. NB - PyLag will attempt to flush the value '
+                                    f'of sigma to -1.0 at the bottom interface if that '
+                                    f'level contains masked values. These may arise due to '
+                                    f'floating point precision errors in FVCOM itself.')
+
+        masked_level = masked_levels[0]
+        if masked_level != n_siglev - 1:
+            raise PyLagRuntimeError(f'Masked nodes found in siglev array at level {masked_level}. '
+                                    f'Please check the consistency of sigma in your FVCOM '
+                                    f'data file. NB - PyLag will attempt to flush the value '
+                                    f'of sigma to -1.0 at the bottom interface in the siglev array '
+                                    f'if that level contains masked values. These may arise due to '
+                                    f'floating point precision errors in FVCOM itself. This is not '
+                                    f'the bottom level/interface, hence this error.')
+
+        # Fix up the siglev array
+        print(f'WARNING - found masked points in the last level of the '
+              f'FVCOM siglev array. To facilitate grid searching in PyLag, '
+              f'these values will be flushed to an exact value of -1.0.')
+        siglev_data[-1, :] = -1.0
+
+    # Extract variable data and save
+    dtype = siglev_var.dtype.name
+    dimensions = siglev_var.dimensions
+    attrs = {}
+    for attr_name in siglev_var.ncattrs():
+        attrs[attr_name] = siglev_var.getncattr(attr_name)
+    gm_file_creator.create_variable('siglev', siglev_data, dimensions, dtype, attrs=attrs)
 
     # Add modified nv array
     # ---------------------
