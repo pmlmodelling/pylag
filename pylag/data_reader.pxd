@@ -4,6 +4,7 @@ from libcpp.vector cimport vector
 
 # Data types used for constructing C data structures
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
+from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 
 # PyLag cimports
 from pylag.particle cimport Particle
@@ -69,4 +70,11 @@ cdef class DataReader:
 
     cdef DTYPE_INT_t is_wet(self, DTYPE_FLOAT_t time, Particle *particle) except INT_ERR
 
-    cdef DTYPE_FLOAT_t get_environmental_variable(self, var_name, DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR
+    cdef DTYPE_FLOAT_t get_environmental_variable(self, var_name,
+            DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR
+
+    cdef void get_ten_meter_wind_velocity(self, DTYPE_FLOAT_t time,
+            Particle *particle, DTYPE_FLOAT_t wind_vel[2]) except +
+
+    cdef void get_surface_stokes_drift_velocity(self, DTYPE_FLOAT_t time,
+            Particle *particle, DTYPE_FLOAT_t stokes_drift[2]) except +
