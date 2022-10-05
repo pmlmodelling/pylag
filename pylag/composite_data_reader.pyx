@@ -112,7 +112,7 @@ cdef class CompositeDataReader(DataReader):
             raise PyLagRuntimeError(f'Twe (or more) input grids have the same '
                                     f'name. The most common name is '
                                     f'{most_common_name} which appears '
-                                    f'{count} times.'
+                                    f'{count} times.')
 
         return all_grid_names
 
