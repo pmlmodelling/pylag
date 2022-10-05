@@ -27,6 +27,9 @@ from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 # PyLag cython imports
 from pylag.data_reader cimport DataReader
+from pylag.particle cimport Particle
+
+# PyLag python imports
 from pylag.exceptions import PyLagRuntimeError
 
 
