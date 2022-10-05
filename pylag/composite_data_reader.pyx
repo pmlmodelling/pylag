@@ -555,3 +555,48 @@ cdef class CompositeDataReader(DataReader):
             Integer that identifies the host element in question
         """
         return self.ocean_data_reader.is_wet(time, particle)
+
+    cdef void get_ten_meter_wind_velocity(self, DTYPE_FLOAT_t time,
+            Particle *particle, DTYPE_FLOAT_t wind_vel[2]) except +:
+        """ Returns the ten meter wind velocity
+
+        Parameters:
+        -----------
+        time : float
+            Time at which to interpolate.
+
+        particle: *Particle
+            Pointer to a Particle object.
+
+        wind_vel : C array, float
+            Horizontal wind velocity components in C array of length two.
+        """
+        if self.using_atomsphere_data:
+            self.atmosphere_data_reader.get_ten_meter_wind_velocity(time,
+                    particle, wind_vel)
+        else:
+            raise PyLagRuntimeError(f"Cannot return the 10 m wind velocity "
+                                    f"as wind data has not been provided.")
+
+    cdef void get_surface_stokes_drift_velocity(self, DTYPE_FLOAT_t time,
+            Particle *particle, DTYPE_FLOAT_t stokes_drift[2]) except +:
+        """ Returns the surface Stoke's drift velocity
+
+        Parameters:
+        -----------
+        time : float
+            Time at which to interpolate.
+
+        particle: *Particle
+            Pointer to a Particle object.
+
+        stokes_drift : C array, float
+            Surface Stoke's drift in C array of length two.
+        """
+        if self.using_waves_data:
+            self.waves_data_reader.get_surface_stokes_drift_velocity(time,
+                    particle, stokes_drift)
+        else:
+            raise PyLagRuntimeError(f"Cannot return the surface Stoke's drift "
+                                    f"velocity as wave data has not been "
+                                    f"provided.")
