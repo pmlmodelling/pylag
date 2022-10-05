@@ -357,9 +357,9 @@ cdef class AtmosphereDataReader(DataReader):
         wind_vel : C array, float
             Horizontal wind velocity components in C array of length two.
         """
-        wind_vel[0] = self._get_variable(self._u_last, self._u_next, time,
+        wind_vel[0] = self._get_variable(self._u10_last, self._u10_next, time,
                 particle)
-        wind_vel[1] = self._get_variable(self._v_last, self._v_next, time,
+        wind_vel[1] = self._get_variable(self._v10_last, self._v10_next, time,
                 particle)
 
         return
