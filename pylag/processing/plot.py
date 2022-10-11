@@ -1686,18 +1686,13 @@ def create_figure(figure_size=(10., 10.),  font_size=10, axis_position=None, pro
     figure = plt.figure(figsize=figure_size_inches)
     figure.set_facecolor('white')
 
-    axes = figure.add_subplot(1, 1, 1, projection=projection)
+    axes = figure.add_subplot(1, 1, 1, projection=projection, facecolor=bg_color)
 
     if axis_position:
         axes.set_position(axis_position)
 
     axes.tick_params(axis='both', which='major', labelsize=font_size)
     axes.tick_params(axis='both', which='minor', labelsize=font_size)
-
-    if projection is not None:
-        axes.background_patch.set_facecolor(bg_color)
-    else:
-        axes.set_facecolor(bg_color)
 
     return figure, axes
 
