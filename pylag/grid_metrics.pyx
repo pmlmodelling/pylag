@@ -34,7 +34,7 @@ from pylag.particle cimport Particle
 from pylag.unstructured cimport Grid
 
 from pylag import version
-from pylag.exceptions import PyLagRuntimeError
+from pylag.exceptions import PyLagRuntimeError, PyLagValueError
 from pylag.unstructured import get_unstructured_grid
 from pylag.math import geographic_to_cartesian_coords_python
 from pylag.math import cartesian_to_geographic_coords_python
@@ -54,11 +54,13 @@ class GridMetricsFileCreator(object):
         The format of the NetCDF file (e.g. NetCDF4). Default: NetCDF4.
 
     is_global bool, optional
-        Flag signifying whether the grid is global or not. Optional, default : False.
+        Flag signifying whether the grid is global or not. Optional,
+        default : False.
 
     """
 
-    def __init__(self, file_name='./grid_metrics.nc', format="NETCDF4", is_global=False):
+    def __init__(self, file_name='./grid_metrics.nc', format="NETCDF4",
+            is_global=False):
         self.file_name = file_name
 
         self.format = format
@@ -83,7 +85,8 @@ class GridMetricsFileCreator(object):
     def create_file(self):
         """ Create the file
 
-        Create a new, skeleton file. Dimensions and variables must be added separately.
+        Create a new, skeleton file. Dimensions and variables
+        must be added separately.
 
         Parameters
         ----------
@@ -115,7 +118,8 @@ class GridMetricsFileCreator(object):
         """
         self.dims[name] = self.ncfile.createDimension(name, size)
 
-    def create_variable(self, var_name, var_data, dimensions, dtype, fill_value=None, attrs=None):
+    def create_variable(self, var_name, var_data, dimensions, dtype,
+            fill_value=None, attrs=None):
         """" Add variable
 
         Parameters
@@ -140,14 +144,16 @@ class GridMetricsFileCreator(object):
         """
         for dimension in dimensions:
             if dimension not in self.dims.keys():
-                raise RuntimeError("Can't create variable `{}': the `{}' coordinate " \
-                                   "variable has not yet been created.".format(var_name, dimension))
+                raise PyLagRuntimeError(f"Can't create variable `{var_name}': "
+                        f"the `{dimension}' coordinate variable has not yet "
+                        f"been created.")
 
         if fill_value is not None:
-            self.vars[var_name] = self.ncfile.createVariable(var_name, dtype, dimensions, fill_value=fill_value,
-                                                             **self.ncopts)
+            self.vars[var_name] = self.ncfile.createVariable(var_name, dtype,
+                    dimensions, fill_value=fill_value, **self.ncopts)
         else:
-            self.vars[var_name] = self.ncfile.createVariable(var_name, dtype, dimensions, **self.ncopts)
+            self.vars[var_name] = self.ncfile.createVariable(var_name, dtype,
+                    dimensions, **self.ncopts)
 
         if attrs is not None:
             self.vars[var_name].setncatts(attrs)
@@ -186,8 +192,8 @@ class GridMetricsFileCreator(object):
             raise RuntimeError('Problem closing file')
 
 @cython.wraparound(True)
-def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, obc_file_delimiter=' ',
-                                   grid_metrics_file_name = './grid_metrics.nc'):
+def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name,
+        obc_file_delimiter=' ', grid_metrics_file_name = './grid_metrics.nc'):
     """Create FVCOM grid metrics file
 
     In FVCOM output files, the grid variables nv and nbe are not ordered in the
@@ -226,7 +232,7 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, obc_file_deli
     n_siglev = fvcom_dataset.dimensions['siglev'].size
     n_siglay = fvcom_dataset.dimensions['siglay'].size
 
-    print('Creating FVCOM grid metrics file {}'.format(grid_metrics_file_name))
+    print(f'Creating FVCOM grid metrics file {grid_metrics_file_name}')
 
     # Instantiate file creator
     gm_file_creator = GridMetricsFileCreator(file_name=grid_metrics_file_name)
@@ -302,7 +308,8 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, obc_file_deli
     attrs = {}
     for attr_name in siglev_var.ncattrs():
         attrs[attr_name] = siglev_var.getncattr(attr_name)
-    gm_file_creator.create_variable('siglev', siglev_data, dimensions, dtype, attrs=attrs)
+    gm_file_creator.create_variable('siglev', siglev_data, dimensions,
+            dtype, attrs=attrs)
 
     # Add modified nv array
     # ---------------------
@@ -315,7 +322,8 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, obc_file_deli
     attrs = {}
     for attr_name in nv_var.ncattrs():
         attrs[attr_name] = nv_var.getncattr(attr_name)
-    gm_file_creator.create_variable('nv', nv_data, dimensions, dtype, attrs=attrs)
+    gm_file_creator.create_variable('nv', nv_data, dimensions, dtype,
+            attrs=attrs)
 
     # Add modified nbe array
     # ----------------------
@@ -328,8 +336,10 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, obc_file_deli
     nv_data = nv_data.T
 
     # Add open boundary flags
-    open_boundary_nodes = get_fvcom_open_boundary_nodes(obc_file_name, obc_file_delimiter)
-    nbe_data = add_fvcom_open_boundary_flags(nv_data, nbe_data, open_boundary_nodes)
+    open_boundary_nodes = get_fvcom_open_boundary_nodes(obc_file_name,
+                                                        obc_file_delimiter)
+    nbe_data = add_fvcom_open_boundary_flags(nv_data, nbe_data,
+                                              open_boundary_nodes)
 
 
     # Add variable
@@ -354,7 +364,8 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, obc_file_deli
                   'units': '1',
                   'long_name': 'Land-sea mask: sea = 0, land = 1'}
 
-    gm_file_creator.create_variable('mask_c', land_sea_mask_elements, ('element',), DTYPE_INT, attrs=mask_attrs)
+    gm_file_creator.create_variable('mask_c', land_sea_mask_elements,
+            ('element',), DTYPE_INT, attrs=mask_attrs)
 
     # Close FVCOM dataset
     # -------------------
@@ -366,11 +377,12 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name, obc_file_deli
     return
 
 @cython.wraparound(True)
-def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_var_name='latitude',
-                                       depth_var_name='depth', mask_var_name=None, reference_var_name=None,
-                                       bathymetry_var_name=None, dim_names=None, is_global=False,
-                                       surface_only=False, prng_seed=10, masked_vertices_per_element=0,
-                                       grid_metrics_file_name='./grid_metrics.nc'):
+def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',
+        lat_var_name='latitude', depth_var_name='depth', mask_var_name=None,
+        reference_var_name=None, bathymetry_var_name=None, dim_names=None,
+        is_global=False, surface_only=False, prng_seed=10,
+        masked_vertices_per_element=0,
+        grid_metrics_file_name='./grid_metrics.nc'):
     """ Create a Arakawa A-grid metrics file
 
     This function creates a grid metrics file for data defined on a regular rectilinear
@@ -473,18 +485,20 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
     np.random.seed(prng_seed)
 
     if mask_var_name is None and reference_var_name is None:
-        raise ValueError('Either the name of the mask variable or the name of a reference '\
-                         'masked variable must be given in order to generate the land sea mask '\
-                         'as required by PyLag.')
+        raise PyLagValueError(f'Either the name of the mask variable or '
+                f'the name of a reference masked variable must be given '
+                f'in order to generate the land sea mask as required by '
+                f'PyLag.')
 
     if mask_var_name and reference_var_name:
-        print('Using `mask_var_name` to form the land sea mask. Supplied reference var is unused.')
+        print(f'Using `mask_var_name` to form the land sea mask.')
 
     if surface_only is False:
         if bathymetry_var_name is None and reference_var_name is None:
-            raise ValueError('Either the name of the bathymetry variable or the name of a reference ' \
-                             'masked variable must be given in order to compute and save the bathymetry, '\
-                             'as required by PyLag when running with input fields.')
+            raise PyLagValueError(f'Either the name of the bathymetry '
+                    f'variable or the name of a reference '
+                    f'masked variable must be given in order to compute '
+                    f'and save the bathymetry, as required by PyLag when')
 
     # Process dimension name
     if dim_names is not None:
@@ -510,7 +524,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
     lat_var, lat_attrs_orig = _get_variable(input_dataset, lat_var_name)
 
     if len(lon_var.shape) != len(lat_var.shape):
-        raise ValueError('Lon and lat variables have a different number of dimensions')
+        raise PyLagValueError('Lon and lat variables have a different number of dimensions')
 
     # Filter attributes so that we include just the main ones
     lon_attrs = {}
@@ -535,11 +549,11 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
         lat_alpha = float(lat_var[0])
         lat_omega = float(lat_var[-1])
         if lat_alpha == float(-90.0) or lat_alpha == float(90.0):
-            print('Trimming first latitude which sits over a pole ({} deg.)'.format(lat_alpha))
+            print(f'Trimming first latitude which sits over a pole ({lat_alpha} deg.)')
             lat_var = lat_var[1:]
             trim_first_latitude = 1
         if lat_omega == float(-90.0) or lat_omega == float(90.0):
-            print('Trimming last latitude which sits over a pole ({} deg.)'.format(lat_omega))
+            print(f'Trimming last latitude which sits over a pole ({lat_omega} deg.)')
             lat_var = lat_var[:-1]
             trim_last_latitude = 1
 
@@ -574,10 +588,12 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
         xi = np.arange(lon2d.shape[0])
         yi = np.arange(lon2d.shape[1])
         xi2d, yi2d = np.meshgrid(xi, yi, indexing='ij')
-        points = np.array([xi2d.flatten(order='C'), yi2d.flatten(order='C')], dtype=DTYPE_FLOAT).T
+        points = np.array([xi2d.flatten(order='C'), yi2d.flatten(order='C')],
+                dtype=DTYPE_FLOAT).T
 
     else:
-        raise ValueError('Lon/lat vars have {} dimensions. Expected one or two.'.format(len(lon_var.shape)))
+        raise PyLagValueError(f'Lon/lat vars have {len(lon_var.shape)} '
+                              f'dimensions. Expected one or two.')
 
     # Save the number of nodes
     n_nodes = lon_nodes.shape[0]
@@ -591,15 +607,16 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
     # Read in the reference variable if needed
     if mask_var_name is None or (surface_only is False and bathymetry_var_name is None):
         ref_var, _ = _get_variable(input_dataset, reference_var_name)
-        ref_var = sort_axes(ref_var, time_name=time_dim_name, depth_name=depth_dim_name, lat_name=lat_dim_name,
+        ref_var = sort_axes(ref_var, time_name=time_dim_name,
+                            depth_name=depth_dim_name, lat_name=lat_dim_name,
                             lon_name=lon_dim_name)
 
         if not np.ma.isMaskedArray(ref_var):
-            raise RuntimeError('Reference variable is not a masked array. Cannot generate land-sea mask '/
-                               'and/or bathymetry.')
+            raise PyLagRuntimeError(f'Reference variable is not a masked '
+                    f'array. Cannot generate land-sea mask and/or bathymetry.')
 
         if len(ref_var.shape) != 4:
-            raise ValueError('Reference variable is not 4D ([t, z, y, x]).')
+            raise PyLagValueError('Reference variable is not 4D ([t, z, y, x]).')
 
         # Trim latitudes
         if trim_first_latitude == 1:
@@ -619,7 +636,9 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
         lat_nodes = lat_nodes[node_indices]
 
         # Create the triangulation
-        tri = stripy.sTriangulation(lons=np.radians(lon_nodes), lats=np.radians(lat_nodes), permute=False)
+        tri = stripy.sTriangulation(lons=np.radians(lon_nodes),
+                                    lats=np.radians(lat_nodes),
+                                    permute=False)
         print('done')
 
         # Save simplices
@@ -647,11 +666,12 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
         if bathymetry_var_name:
             # NB assumes bathymetry is positive up
             bathy_var, _ = _get_variable(input_dataset, bathymetry_var_name)
-            bathy = sort_axes(bathy_var, time_name=time_dim_name, depth_name=depth_dim_name, lat_name=lat_dim_name,
+            bathy = sort_axes(bathy_var, time_name=time_dim_name,
+                              depth_name=depth_dim_name, lat_name=lat_dim_name,
                               lon_name=lon_dim_name).squeeze()
 
             if len(bathy.shape) != 2:
-                raise RuntimeError('Bathymetry array is not 2D.')
+                raise PyLagRuntimeError('Bathymetry array is not 2D.')
 
             # Trim latitudes
             if trim_first_latitude == 1:
@@ -667,7 +687,8 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
             bathy_ref_var = ref_var[0, :, :, :]
 
             # Reshape giving (n_levels, n_nodes)
-            bathy_ref_var = bathy_ref_var.reshape(n_levels, np.prod(bathy_ref_var.shape[1:]), order='C')
+            bathy_ref_var = bathy_ref_var.reshape(n_levels,
+                    np.prod(bathy_ref_var.shape[1:]), order='C')
 
             bathy = np.empty((bathy_ref_var.shape[1]), dtype=DTYPE_FLOAT)
             for i in range(bathy.shape[0]):
@@ -694,10 +715,13 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
         mask_var, mask_attrs = _get_variable(input_dataset, mask_var_name)
 
         # Generate land-sea mask at nodes
-        land_sea_mask_nodes = sort_axes(mask_var, time_name=time_dim_name, depth_name=depth_dim_name,
-                                        lat_name=lat_dim_name, lon_name=lon_dim_name).squeeze()
+        land_sea_mask_nodes = sort_axes(mask_var, time_name=time_dim_name,
+                                        depth_name=depth_dim_name,
+                                        lat_name=lat_dim_name,
+                                        lon_name=lon_dim_name).squeeze()
         if len(land_sea_mask_nodes.shape) < 2 or len(land_sea_mask_nodes.shape) > 3:
-            raise ValueError('Unsupported land sea mask with shape {}'.format(land_sea_mask_nodes.shape))
+            raise PyLagValueError(f'Unsupported land sea mask with '
+                                  f'shape {land_sea_mask_nodes.shape}')
 
         # Flip meaning yielding: 1 - masked land point, and 0 sea point.
         land_sea_mask_nodes = 1 - land_sea_mask_nodes
@@ -723,8 +747,8 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
                       'units': '1',
                       'long_name': 'Land-sea mask: sea = 0, land = 1'}
 
-    land_sea_mask_nodes = np.asarray(land_sea_mask_nodes.reshape(np.prod(land_sea_mask_nodes.shape), order='C'),
-                                     dtype=DTYPE_INT)
+    land_sea_mask_nodes = np.asarray(land_sea_mask_nodes.reshape(
+            np.prod(land_sea_mask_nodes.shape), order='C'), dtype=DTYPE_INT)
 
     # Permute the land sea mask indices
     land_sea_mask_nodes = land_sea_mask_nodes[node_indices]
@@ -745,12 +769,16 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
         lon_elements = np.degrees(xc)
         lat_elements = np.degrees(yc)
     else:
-        lon_elements, lat_elements = compute_element_midpoints_in_geographic_coordinates(nv, lon_nodes, lat_nodes)
+        lon_elements, lat_elements = \
+                compute_element_midpoints_in_geographic_coordinates(nv,
+                                                                    lon_nodes,
+                                                                    lat_nodes)
     print('done')
 
     # Save element areas
     print('\nCalculating element areas ', end='... ')
-    areas = compute_element_areas(nv, lon_nodes, lat_nodes, coordinate_system='geographic')
+    areas = compute_element_areas(nv, lon_nodes, lat_nodes,
+                                  coordinate_system='geographic')
     area_attrs = {'standard_name' : 'areas',
                   'units' : 'm^2',
                   'long_name' : 'Element areas'}
@@ -759,7 +787,9 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
     # Generate the land-sea mask at elements
     print('\nGenerating land sea mask at element centres ', end='... ')
     land_sea_mask_elements = np.empty(n_elems, dtype=DTYPE_INT)
-    compute_land_sea_element_mask(nv, land_sea_mask_nodes, land_sea_mask_elements, masked_vertices_per_element)
+    compute_land_sea_element_mask(nv, land_sea_mask_nodes,
+                                  land_sea_mask_elements,
+                                  masked_vertices_per_element)
     print('done')
 
     # Mask elements with two land boundaries
@@ -784,14 +814,16 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
     else:
         # In the global case no open boundary neighbours should have been flagged
         if np.count_nonzero(nbe == -1) != 0:
-            raise RuntimeError('Neighbour array for global grid contains invalid entries')
+            raise PyLagRuntimeError(f'Neighbour array for global grid '
+                                    f'contains invalid entries')
 
     # Create grid metrics file
     # ------------------------
-    print('\nCreating grid metrics file {} '.format(grid_metrics_file_name), end='... ')
+    print(f'\nCreating grid metrics file {grid_metrics_file_name} ', end='... ')
 
     # Instantiate file creator
-    gm_file_creator = GridMetricsFileCreator(grid_metrics_file_name, is_global=is_global)
+    gm_file_creator = GridMetricsFileCreator(grid_metrics_file_name,
+                                             is_global=is_global)
 
     # Create skeleton file
     gm_file_creator.create_file()
@@ -803,21 +835,29 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
     gm_file_creator.create_dimension('element', n_elems)
 
     # Add longitude at nodes
-    gm_file_creator.create_variable('longitude', lon_nodes, ('node',), DTYPE_FLOAT, attrs=lon_attrs)
+    gm_file_creator.create_variable('longitude', lon_nodes, ('node',),
+                                    DTYPE_FLOAT, attrs=lon_attrs)
 
     # Add longitude at element centres
-    gm_file_creator.create_variable('longitude_c', lon_elements, ('element',), DTYPE_FLOAT, attrs=lon_attrs)
+    gm_file_creator.create_variable('longitude_c', lon_elements, ('element',),
+                                    DTYPE_FLOAT, attrs=lon_attrs)
 
     # Add latitude at nodes
-    gm_file_creator.create_variable('latitude', lat_nodes, ('node',), DTYPE_FLOAT, attrs=lat_attrs)
+    gm_file_creator.create_variable('latitude', lat_nodes, ('node',),
+                                    DTYPE_FLOAT, attrs=lat_attrs)
 
     # Add latitude at element centres
-    gm_file_creator.create_variable('latitude_c', lat_elements, ('element',), DTYPE_FLOAT, attrs=lat_attrs)
+    gm_file_creator.create_variable('latitude_c', lat_elements, ('element',),
+                                    DTYPE_FLOAT, attrs=lat_attrs)
 
     # Flag signifying whether the first latitude point should be trimmed
     trim_attrs = {'long_name': '0 - no, 1 - yes'}
-    gm_file_creator.create_variable('trim_first_latitude', np.asarray(trim_first_latitude, dtype=DTYPE_INT), (), DTYPE_INT, attrs=trim_attrs)
-    gm_file_creator.create_variable('trim_last_latitude', np.asarray(trim_last_latitude, dtype=DTYPE_INT), (),  DTYPE_INT, attrs=trim_attrs)
+    gm_file_creator.create_variable('trim_first_latitude',
+            np.asarray(trim_first_latitude, dtype=DTYPE_INT), (),
+            DTYPE_INT, attrs=trim_attrs)
+    gm_file_creator.create_variable('trim_last_latitude',
+            np.asarray(trim_last_latitude, dtype=DTYPE_INT), (),
+            DTYPE_INT, attrs=trim_attrs)
 
     # Vars for 3D runs
     if surface_only is False:
@@ -825,10 +865,12 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
         gm_file_creator.create_dimension('depth', n_levels)
 
         # Depth
-        gm_file_creator.create_variable('depth', depth, ('depth',), DTYPE_FLOAT, attrs=depth_attrs)
+        gm_file_creator.create_variable('depth', depth, ('depth',),
+                DTYPE_FLOAT, attrs=depth_attrs)
 
         # Bathymetry
-        gm_file_creator.create_variable('h', bathy, ('node',), DTYPE_FLOAT, attrs=bathy_attrs)
+        gm_file_creator.create_variable('h', bathy, ('node',),
+                DTYPE_FLOAT, attrs=bathy_attrs)
 
     # Add node index map
     gm_file_creator.create_variable('permutation', node_indices, ('node',), DTYPE_INT,
@@ -843,13 +885,16 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',lat_v
                                     attrs={'long_name': 'elements surrounding each element'})
 
     # Add land sea mask - elements
-    gm_file_creator.create_variable('mask_c', land_sea_mask_elements, ('element',), DTYPE_INT, attrs=element_mask_attrs)
+    gm_file_creator.create_variable('mask_c', land_sea_mask_elements, ('element',),
+            DTYPE_INT, attrs=element_mask_attrs)
 
     # Add land sea mask
-    gm_file_creator.create_variable('mask', land_sea_mask_nodes, ('node',), DTYPE_INT, attrs=mask_attrs)
+    gm_file_creator.create_variable('mask', land_sea_mask_nodes, ('node',),
+            DTYPE_INT, attrs=mask_attrs)
 
     # Compute element areas
-    gm_file_creator.create_variable('area', areas, ('element',), DTYPE_FLOAT, attrs=area_attrs)
+    gm_file_creator.create_variable('area', areas, ('element',),
+            DTYPE_FLOAT, attrs=area_attrs)
 
     # Close input dataset
     input_dataset.close()
