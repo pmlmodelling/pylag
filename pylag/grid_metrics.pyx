@@ -440,11 +440,11 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',
         if `mask_var_name` is None. Must be given if `mask_var_name` is None.
         Optional, default : None.
 
-    bathymetry_var_name : bool, optional
+    bathymetry_var_name : str, optional
         Bathymetry variable name. If None, the bathymetry is inferred from the depth mask
         of `reference_var_name`. If the output files contain a time varying mask due to
         changes in sea surface elevation, the bathymetry should be provided. Optional,
-        default : True.
+        default : None.
 
     dim_names : dict, optional
         Dictionary of dimension names. The dictionary should be used to specify dimension
