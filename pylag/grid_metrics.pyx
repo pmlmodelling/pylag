@@ -1071,8 +1071,8 @@ def create_roms_grid_metrics_file(file_name,
         try:
             vtransform = input_dataset.variables['Vtransform'][0]
         except KeyError:
-            print('Vtransform variable not found in dataset. Please provide it as a keyword argument.')
-            raise
+            raise PyLagRuntimeError(f'Vtransform variable not found in '
+                    f'dataset. Please provide it as a keyword argument.')
 
     # Initialise dictionaries
     nodes = {}
@@ -1097,10 +1097,11 @@ def create_roms_grid_metrics_file(file_name,
     # Process bathymetry (defined at rho points)
     bathy_var, bathy_attrs = _get_variable(input_dataset, bathymetry_var_name)
     if len(bathy_var.shape) == 2:
-        bathy = sort_axes(bathy_var, lon_name=xi_grid_names['grid_rho'], lat_name=eta_grid_names['grid_rho']).squeeze()
+        bathy = sort_axes(bathy_var, lon_name=xi_grid_names['grid_rho'],
+                lat_name=eta_grid_names['grid_rho']).squeeze()
         bathy = bathy.reshape(np.prod(bathy.shape), order='C')
     else:
-        raise RuntimeError('Bathymetry array is not 2D.')
+        raise PyLagRuntimeError('Bathymetry array is not 2D.')
 
     # Remove chunk size from attrs
     try:
@@ -1111,7 +1112,8 @@ def create_roms_grid_metrics_file(file_name,
     # Process angles at rho points
     if angles_var_name is not None:
         angles_var, angles_attrs = _get_variable(input_dataset, angles_var_name)
-        angles = sort_axes(angles_var, lon_name=xi_grid_names['grid_rho'], lat_name=eta_grid_names['grid_rho']).squeeze()
+        angles = sort_axes(angles_var, lon_name=xi_grid_names['grid_rho'],
+                lat_name=eta_grid_names['grid_rho']).squeeze()
         angles = angles.reshape(np.prod(angles.shape), order='C')
 
     # Loop over all grids
@@ -1122,8 +1124,10 @@ def create_roms_grid_metrics_file(file_name,
         print('\nProcessing {} variables ...'.format(grid_name))
 
         # Read in coordinate variables.
-        lon_var, lon_attrs[grid_name] = _get_variable(input_dataset, lon_var_names[grid_name])
-        lat_var, lat_attrs[grid_name] = _get_variable(input_dataset, lat_var_names[grid_name])
+        lon_var, lon_attrs[grid_name] = _get_variable(input_dataset,
+                                                      lon_var_names[grid_name])
+        lat_var, lat_attrs[grid_name] = _get_variable(input_dataset,
+                                                      lat_var_names[grid_name])
 
         # Remove chunk size from attrs
         try:
@@ -1148,10 +1152,12 @@ def create_roms_grid_metrics_file(file_name,
         elif len(lon_var.shape) == 2:
             # Curvilinear grid
             # ----------------
-            lon2d = sort_axes(lon_var, lon_name=xi_grid_names[grid_name], lat_name=eta_grid_names[grid_name]).squeeze()
-            lat2d = sort_axes(lat_var, lon_name=xi_grid_names[grid_name], lat_name=eta_grid_names[grid_name]).squeeze()
+            lon2d = sort_axes(lon_var, lon_name=xi_grid_names[grid_name],
+                    lat_name=eta_grid_names[grid_name]).squeeze()
+            lat2d = sort_axes(lat_var, lon_name=xi_grid_names[grid_name],
+                    lat_name=eta_grid_names[grid_name]).squeeze()
         else:
-            raise RuntimeError('Unrecognised lon var shape')
+            raise PyLagRuntimeError('Unrecognised lon var shape')
 
         # Save lon and lat points at nodes
         lon_nodes[grid_name] = lon2d.flatten(order='C')
@@ -1162,7 +1168,8 @@ def create_roms_grid_metrics_file(file_name,
         n_longitude[grid_name] = lon_var.shape[0]
         n_latitude[grid_name] = lat_var.shape[0]
 
-        # Create the Triangulation using local coordinates which helps to ensure a regular grid is made
+        # Create the Triangulation using local coordinates which helps to
+        # ensure a regular grid is made
         xi = range(input_dataset.dimensions[xi_grid_names[grid_name]].size)
         eta = range(input_dataset.dimensions[eta_grid_names[grid_name]].size)
         xi2d, eta2d = np.meshgrid(xi[:], eta[:], indexing='ij')
@@ -1172,7 +1179,8 @@ def create_roms_grid_metrics_file(file_name,
         # Save simplices
         #   - Flip to reverse ordering, as expected by PyLag
         #   - Transpose to give it the dimension ordering expected by PyLag
-        nvs[grid_name] = np.asarray(np.flip(tris[grid_name].simplices.copy(), axis=1), dtype=DTYPE_INT)
+        nvs[grid_name] = np.asarray(np.flip(tris[grid_name].simplices.copy(),
+                axis=1), dtype=DTYPE_INT)
 
         # Save neighbours
         #   - Transpose to give it the dimension ordering expected by PyLag
@@ -1185,9 +1193,11 @@ def create_roms_grid_metrics_file(file_name,
 
         # Save lon and lat points at element centres
         print('Calculating lons and lats at element centres ', end='... ')
-        lon_elements[grid_name], lat_elements[grid_name] = compute_element_midpoints_in_geographic_coordinates(nvs[grid_name],
-                                                                                                               lon_nodes[grid_name],
-                                                                                                               lat_nodes[grid_name])
+        lon_elements[grid_name], lat_elements[grid_name] = \
+                compute_element_midpoints_in_geographic_coordinates(
+                        nvs[grid_name],
+                        lon_nodes[grid_name],
+                        lat_nodes[grid_name])
         print('done')
 
         # Transpose to give ordering expected by PyLag
@@ -1289,7 +1299,8 @@ def create_roms_grid_metrics_file(file_name,
 
     # Angles
     if angles_var_name is not None:
-        gm_file_creator.create_variable('angles_grid_rho', angles, ('node_grid_rho',), DTYPE_FLOAT, attrs=angles_attrs)
+        gm_file_creator.create_variable('angles_grid_rho', angles,
+                ('node_grid_rho',), DTYPE_FLOAT, attrs=angles_attrs)
 
     # Add dimensions and variables describing the vertical grid. No transforms are done here.
     gm_file_creator.create_dimension('s_rho', input_dataset.dimensions['s_rho'].size)
@@ -1301,8 +1312,9 @@ def create_roms_grid_metrics_file(file_name,
         attrs = vertical_grid_var_attrs[key]
         gm_file_creator.create_variable(key, var_data, var.dimensions, DTYPE_FLOAT, attrs=attrs)
 
-    gm_file_creator.create_variable('vtransform', np.asarray(vtransform, dtype=DTYPE_FLOAT), (), DTYPE_FLOAT,
-                                    attrs={'long_name': 'vertical terrain following transformation equation'})
+    gm_file_creator.create_variable('vtransform', np.asarray(vtransform,
+            dtype=DTYPE_FLOAT), (), DTYPE_FLOAT,
+            attrs={'long_name': 'vertical terrain following transformation equation'})
 
     # Close input dataset
     input_dataset.close()
@@ -1351,7 +1363,7 @@ def sort_axes(nc_var, time_name='time', depth_name='depth', lat_name='latitude',
     var : NumPy NDArray
         Variable array with sorted axes.
     """
-    print("Sorting axes for variable `{}`".format(nc_var.name), end='... ')
+    print(f"Sorting axes for variable `{nc_var.name}`", end='... ')
 
     var = nc_var[:]
     dimensions = nc_var.dimensions
@@ -1418,20 +1430,19 @@ def sort_axes(nc_var, time_name='time', depth_name='depth', lat_name='latitude',
         return var
 
     else:
-        raise RuntimeError('Unsupported number of dimensions associated with variable {}'.format(nc_var.name))
+        raise PyLagRuntimeError(f'Unsupported number of dimensions '
+                                f'associated with variable {nc_var.name}')
 
 
 def _get_dimension_index(dimensions, name):
     try:
         return dimensions.index(name)
     except ValueError:
-        print('\n\nFailed to find dimension index. Dimensions were {}; supplied '
-              'names were {}.'.format(dimensions, name))
-        raise
-
+        raise PyLagRuntimeError(f'\n\nFailed to find dimension index. '
+                f'Dimensions were {dimensions}; supplied name was {name}.')
 
 def _get_variable(dataset, var_name):
-    print("Reading variable `{}` ".format(var_name), end='... ')
+    print(f"Reading variable `{var_name}` ", end='... ')
 
     var = None
     try:
@@ -1449,7 +1460,8 @@ def _get_variable(dataset, var_name):
 
         return var, attrs
 
-    raise RuntimeError("Variable `{}` not found in the supplied dataset")
+    raise PyLagRuntimeError(f"Variable `{var_name}` not found in the supplied "
+                            f"dataset")
 
 @cython.wraparound(True)
 cpdef identify_neighbour_simplices(stri, iterations=10, verbose=True):
@@ -1527,7 +1539,8 @@ cpdef identify_neighbour_simplices(stri, iterations=10, verbose=True):
     # Iteratively find all neighbours for all elements.
     for k in k_values:
         if verbose:
-            print('\nSearching for adjoining neighbours with k = {} '.format(k), end='... ')
+            print(f'\nSearching for adjoining neighbours with k = {k} ',
+                  end='... ')
 
         simplex_indices = np.asarray(found==0, dtype=DTYPE_INT).nonzero()[0]
 
@@ -1570,7 +1583,8 @@ cpdef identify_neighbour_simplices(stri, iterations=10, verbose=True):
                     break
 
         if verbose:
-            print('found {} %'.format(100*np.count_nonzero(found)/n_simplices))
+            percent_found = 100*np.count_nonzero(found)/n_simplices
+            print(f'found {percent_found} %')
 
         if np.count_nonzero(found) == n_simplices:
             return nbe
@@ -1632,7 +1646,8 @@ cpdef sort_adjacency_array(DTYPE_INT_t [:, :] nv, DTYPE_INT_t [:, :] nbe):
                 elif _get_number_of_matching_nodes(nv_test, side3) == 2:
                     index_side3 = elem
                 else:
-                    raise Exception('Failed to match side to test element.')
+                    raise PyLagRuntimeError(f'Failed to match side to test '
+                                            f'element.')
 
         nbe[i, 0] = index_side1
         nbe[i, 1] = index_side2
@@ -1672,7 +1687,8 @@ cpdef compute_element_areas(nv, x_nodes, y_nodes, coordinate_system='geographic'
         lat_nodes_radians = np.radians(y_nodes)
 
         # Convert to Cartesian coordinates
-        x, y, z = geographic_to_cartesian_coords_python(lon_nodes_radians, lat_nodes_radians)
+        x, y, z = geographic_to_cartesian_coords_python(lon_nodes_radians,
+                                                        lat_nodes_radians)
         points_view = np.ascontiguousarray(np.column_stack([x, y, z]))
 
         for i in range(n_elements):
@@ -1702,19 +1718,22 @@ cpdef compute_element_areas(nv, x_nodes, y_nodes, coordinate_system='geographic'
 
             areas_view[i] = area_of_a_triangle(x1, x2, x3)
     else:
-        raise RuntimeError('Unknown coordinate system {}'.format(coordinate_system))
+        raise PyLagRuntimeError(f"Unknown coordinate system "
+                                f"`{coordinate_system}`")
 
     return areas
 
 
 @cython.wraparound(True)
-cpdef compute_element_midpoints_in_geographic_coordinates(nv, lon_nodes, lat_nodes):
+cpdef compute_element_midpoints_in_geographic_coordinates(nv, lon_nodes,
+                                                          lat_nodes):
     # Convert to radians
     lon_nodes_radians = np.radians(lon_nodes)
     lat_nodes_radians = np.radians(lat_nodes)
 
     # Convert to Cartesian coordinates
-    x, y, z = geographic_to_cartesian_coords_python(lon_nodes_radians, lat_nodes_radians)
+    x, y, z = geographic_to_cartesian_coords_python(lon_nodes_radians,
+                                                    lat_nodes_radians)
     points = np.column_stack([x, y, z])
 
     # Compute mid points in Cartesian coordinates
@@ -1722,23 +1741,26 @@ cpdef compute_element_midpoints_in_geographic_coordinates(nv, lon_nodes, lat_nod
     mids /= np.linalg.norm(mids, axis=1).reshape(-1,1)
 
     # Convert back to geographic coordinates
-    midlons, midlats = cartesian_to_geographic_coords_python(mids[:,0], mids[:,1], mids[:,2])
+    midlons, midlats = cartesian_to_geographic_coords_python(mids[:,0],
+            mids[:,1], mids[:,2])
 
     # Convert back to degrees and return
     return np.degrees(midlons), np.degrees(midlats)
 
 
 @cython.wraparound(True)
-cpdef compute_land_sea_element_mask(const DTYPE_INT_t [:,:] nv, const DTYPE_INT_t [:] nodal_mask,
-                                    DTYPE_INT_t [:] element_mask, const DTYPE_INT_t masked_vertices_per_element):
+cpdef compute_land_sea_element_mask(const DTYPE_INT_t [:,:] nv,
+        const DTYPE_INT_t [:] nodal_mask, DTYPE_INT_t [:] element_mask,
+        const DTYPE_INT_t masked_vertices_per_element):
     cdef DTYPE_INT_t node
     cdef DTYPE_INT_t n_elements, n_vertices
     cdef DTYPE_INT_t counter
     cdef DTYPE_INT_t i
 
     if masked_vertices_per_element < 0 or masked_vertices_per_element > 2:
-        raise ValueError('Invalid selection for the number of permitted masked vertices forming an element.' \
-                         'Options are 0, 1 or 2.')
+        raise PyLagValueError(f'Invalid selection for the number of permitted '
+                              f'masked vertices forming an element. '
+                              f'Options are 0, 1 or 2.')
 
     n_elements = nv.shape[0]
     n_vertices = nv.shape[1]
@@ -1762,9 +1784,9 @@ cpdef compute_land_sea_element_mask(const DTYPE_INT_t [:,:] nv, const DTYPE_INT_
             element_mask[i] = LAND
 
 
-cpdef compute_psi_grid_element_mask(n_nodes, n_elements, nv, nbe, lon_grid_psi, lat_grid_psi,
-                                    lonc_grid_psi, latc_grid_psi, lon_grid_rho, lat_grid_rho,
-                                    mask_grid_rho):
+cpdef compute_psi_grid_element_mask(n_nodes, n_elements, nv, nbe, lon_grid_psi,
+        lat_grid_psi, lonc_grid_psi, latc_grid_psi, lon_grid_rho, lat_grid_rho,
+        mask_grid_rho):
     """ Generate psi grid element mask
 
     For Arakawa C grids, compute the element mask for the psi grid in which nodes are
@@ -1839,7 +1861,8 @@ cpdef compute_psi_grid_element_mask(n_nodes, n_elements, nv, nbe, lon_grid_psi, 
     cdef DTYPE_INT_t i
 
     if not (lon_grid_rho.shape[0] == lat_grid_rho.shape[0] == mask_grid_rho.shape[0]):
-        raise ValueError('rho grid lon, lat and mask array dimension sizes do not match')
+        raise PyLagValueError(f'rho grid lon, lat and mask array '
+                              f'dimension sizes do not match')
 
     # Convert to radians and ensure we are working with C contiguous data
     lon_grid_psi_rad = np.ascontiguousarray(np.radians(lon_grid_psi))
@@ -1867,9 +1890,10 @@ cpdef compute_psi_grid_element_mask(n_nodes, n_elements, nv, nbe, lon_grid_psi, 
     config = configparser.ConfigParser()
     config.add_section("OCEAN_CIRCULATION_MODEL")
     config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'geographic')
-    grid_psi = get_unstructured_grid(config, b'grid_psi', n_nodes, n_elements, nv_cont, nbe_cont, lon_grid_psi_rad,
-                                     lat_grid_psi_rad, lonc_grid_psi_rad, latc_grid_psi_rad,
-                                     dummy_mask_elements_grid_psi, dummy_mask_nodes_grid_psi)
+    grid_psi = get_unstructured_grid(config, b'grid_psi', n_nodes, n_elements,
+            nv_cont, nbe_cont, lon_grid_psi_rad, lat_grid_psi_rad,
+            lonc_grid_psi_rad, latc_grid_psi_rad, dummy_mask_elements_grid_psi,
+            dummy_mask_nodes_grid_psi)
 
     # Create psi grid mask and fill with ones, which indicate sea points. NB the mask is
     # flipped when it is being prepared for PyLag.
@@ -1911,7 +1935,8 @@ cpdef compute_psi_grid_element_mask(n_nodes, n_elements, nv, nbe, lon_grid_psi, 
                 # Get the barycentric coordinates
                 phi = grid_psi.get_phi(lon, lat, host)
 
-                # From the smallest value of phi, identify the host neighbour that should also be masked
+                # From the smallest value of phi, identify the host neighbour
+                # that should also be masked
                 phi_test = float_min(float_min(phi[0], phi[1]), phi[2])
                 if phi[0] == phi_test:
                     host_nbe = nbe[0, host]
@@ -1926,7 +1951,8 @@ cpdef compute_psi_grid_element_mask(n_nodes, n_elements, nv, nbe, lon_grid_psi, 
     return maskc_grid_psi
 
 
-cpdef mask_elements_with_two_land_boundaries(const DTYPE_INT_t[:,:] nbe, DTYPE_INT_t[:] element_mask):
+cpdef mask_elements_with_two_land_boundaries(const DTYPE_INT_t[:,:] nbe,
+        DTYPE_INT_t[:] element_mask):
     cdef DTYPE_INT_t i, j
     cdef DTYPE_INT_t n_elements, n_neighbours
     cdef DTYPE_INT_t neighbour
@@ -1965,7 +1991,7 @@ def get_fvcom_open_boundary_nodes(file_name, delimiter=' '):
 
     # Number of open boundary nodes given on first line
     n_obc_nodes = int(lines.pop(0).strip().split(' ')[-1])
-    print('Grid has {} nodes on the open boundary'.format(n_obc_nodes))
+    print(f'Grid has {n_obc_nodes} nodes on the open boundary')
 
     nodes = []
     for line in lines:
@@ -1978,11 +2004,12 @@ def get_fvcom_open_boundary_nodes(file_name, delimiter=' '):
             if len(entries) == 3:
                 nodes.append(int(entries[1]) - 1)
             else:
-                raise ValueError('Failed to correctly parse file {}. Is the supplied '\
-                                 'delimiter correct (={})?'.format(file_name, delimiter))
+                raise PyLagValueError(f'Failed to correctly parse file '
+                        f'{file_name}. Is the supplied delimiter correct '
+                        f'(={delimiter})?')
 
     if n_obc_nodes != len(nodes):
-        raise RuntimeError('Error reading open boundary node list file.')
+        raise PyLagRuntimeError('Error reading open boundary node list file.')
 
     return nodes
 
@@ -2025,12 +2052,13 @@ def add_fvcom_open_boundary_flags(nv, nbe, ob_nodes):
             elif len(nodes.intersection([nv[0, i], nv[1, i]])) == 2:
                 nbe_new[2, i] = -2
             else:
-                raise RuntimeError('Failed to identify open boundary.')
+                raise PyLagRuntimeError('Failed to identify open boundary.')
     return nbe_new
 
 
 @cython.wraparound(True)
-cpdef DTYPE_INT_t _get_number_of_matching_nodes(DTYPE_INT_t [:] array1, DTYPE_INT_t [:] array2):
+cpdef DTYPE_INT_t _get_number_of_matching_nodes(DTYPE_INT_t [:] array1,
+        DTYPE_INT_t [:] array2):
     cdef DTYPE_INT_t i, j
     cdef DTYPE_INT_t matches
 
