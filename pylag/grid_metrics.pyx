@@ -383,7 +383,7 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name,
 def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',
         lat_var_name='latitude', depth_var_name='depth', mask_var_name=None,
         reference_var_name=None, bathymetry_var_name=None, dim_names=None,
-        is_global=False, surface_only=False, prng_seed=10,
+        is_global=False, surface_only=False, save_mask=True, prng_seed=10,
         masked_vertices_per_element=0,
         grid_metrics_file_name='./grid_metrics.nc'):
     """ Create a Arakawa A-grid metrics file
@@ -412,6 +412,10 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',
 
     If `surface_only` is set to `True`, only 2D surface grid data is extracted and saved.
     Currently, it is assumed the 0 index corresponds to the ocean's surface.
+
+    If `save_mask` is set to `False`, the node and element mask is not saved. This option can
+    be used when creating the grid metrics files for fields where the land-sea mask is
+    not used (e.g. atmospheric winds, waves).
 
     Parameters
     ----------
@@ -466,6 +470,11 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',
         transport modelling, and True if you want to do 2D surface only
         transport modeling. Optional, default : False.
 
+    save_mask : bool, optional
+       If False, don't include an element or node mask. Can be used if creating
+       surface wind and wave grid metrics files, where the mask is not read.
+       Optional, default: True.
+
     prng_seed : int, optional
         Seed for the pseudo random number generator.
 
@@ -487,11 +496,12 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',
     # Seed the PRNG to make indexing permutations reproducible
     np.random.seed(prng_seed)
 
-    if mask_var_name is None and reference_var_name is None:
-        raise PyLagValueError(f'Either the name of the mask variable or '
-                f'the name of a reference masked variable must be given '
-                f'in order to generate the land sea mask as required by '
-                f'PyLag.')
+    if save_mask:
+        if mask_var_name is None and reference_var_name is None:
+            raise PyLagValueError(f'Either the name of the mask variable or '
+                    f'the name of a reference masked variable must be given '
+                    f'in order to generate the land sea mask as required by '
+                    f'PyLag.')
 
     if not surface_only:
         if bathymetry_var_name is None and reference_var_name is None:
@@ -609,7 +619,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',
     read_ref_var = False
 
     # Check if we need ref var for the mask
-    if mask_var_name is None:
+    if save_mask and mask_var_name is None:
         read_ref_var = True
 
     # Check if we need ref var for the bathymetry
@@ -723,48 +733,49 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',
         bathy = bathy[node_indices]
 
     # Save mask
-    print('\nGenerating the land sea mask at element nodes:')
-    if mask_var_name is not None:
-        mask_var, mask_attrs = _get_variable(input_dataset, mask_var_name)
+    if save_mask:
+        print('\nGenerating the land sea mask at element nodes:')
+        if mask_var_name is not None:
+            mask_var, mask_attrs = _get_variable(input_dataset, mask_var_name)
 
-        # Generate land-sea mask at nodes
-        land_sea_mask_nodes = sort_axes(mask_var, time_name=time_dim_name,
-                                        depth_name=depth_dim_name,
-                                        lat_name=lat_dim_name,
-                                        lon_name=lon_dim_name).squeeze()
-        if len(land_sea_mask_nodes.shape) < 2 or len(land_sea_mask_nodes.shape) > 3:
-            raise PyLagValueError(f'Unsupported land sea mask with '
-                                  f'shape {land_sea_mask_nodes.shape}')
+            # Generate land-sea mask at nodes
+            land_sea_mask_nodes = sort_axes(mask_var, time_name=time_dim_name,
+                                            depth_name=depth_dim_name,
+                                            lat_name=lat_dim_name,
+                                            lon_name=lon_dim_name).squeeze()
+            if len(land_sea_mask_nodes.shape) < 2 or len(land_sea_mask_nodes.shape) > 3:
+                raise PyLagValueError(f'Unsupported land sea mask with '
+                                      f'shape {land_sea_mask_nodes.shape}')
 
-        # Flip meaning yielding: 1 - masked land point, and 0 sea point.
-        land_sea_mask_nodes = 1 - land_sea_mask_nodes
+            # Flip meaning yielding: 1 - masked land point, and 0 sea point.
+            land_sea_mask_nodes = 1 - land_sea_mask_nodes
 
-        # Use surface mask only if shape is 3D
-        if len(land_sea_mask_nodes.shape) == 3:
-            land_sea_mask_nodes = land_sea_mask_nodes[0, :, :]
+            # Use surface mask only if shape is 3D
+            if len(land_sea_mask_nodes.shape) == 3:
+                land_sea_mask_nodes = land_sea_mask_nodes[0, :, :]
 
-        # Trim latitudes
-        if trim_first_latitude == 1:
-            land_sea_mask_nodes = land_sea_mask_nodes[:, 1:]
-        if trim_last_latitude == 1:
-            land_sea_mask_nodes = land_sea_mask_nodes[:, :-1]
+            # Trim latitudes
+            if trim_first_latitude == 1:
+                land_sea_mask_nodes = land_sea_mask_nodes[:, 1:]
+            if trim_last_latitude == 1:
+                land_sea_mask_nodes = land_sea_mask_nodes[:, :-1]
 
-        # Fix up long name to reflect flipping of mask
-        mask_attrs['long_name'] = "Land-sea mask: sea = 0 ; land = 1"
+            # Fix up long name to reflect flipping of mask
+            mask_attrs['long_name'] = "Land-sea mask: sea = 0 ; land = 1"
 
-    else:
-        land_sea_mask_nodes = ref_var.mask[0, 0, :, :]
+        else:
+            land_sea_mask_nodes = ref_var.mask[0, 0, :, :]
 
-        # Add standard attributes
-        mask_attrs = {'standard_name': 'sea_binary_mask',
-                      'units': '1',
-                      'long_name': 'Land-sea mask: sea = 0, land = 1'}
+            # Add standard attributes
+            mask_attrs = {'standard_name': 'sea_binary_mask',
+                          'units': '1',
+                          'long_name': 'Land-sea mask: sea = 0, land = 1'}
 
-    land_sea_mask_nodes = np.asarray(land_sea_mask_nodes.reshape(
-            np.prod(land_sea_mask_nodes.shape), order='C'), dtype=DTYPE_INT)
+        land_sea_mask_nodes = np.asarray(land_sea_mask_nodes.reshape(
+                np.prod(land_sea_mask_nodes.shape), order='C'), dtype=DTYPE_INT)
 
-    # Permute the land sea mask indices
-    land_sea_mask_nodes = land_sea_mask_nodes[node_indices]
+        # Permute the land sea mask indices
+        land_sea_mask_nodes = land_sea_mask_nodes[node_indices]
 
     # Save neighbours
     #   - Sort to ensure match with nv
@@ -798,22 +809,23 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',
     print('done')
 
     # Generate the land-sea mask at elements
-    print('\nGenerating land sea mask at element centres ', end='... ')
-    land_sea_mask_elements = np.empty(n_elems, dtype=DTYPE_INT)
-    compute_land_sea_element_mask(nv, land_sea_mask_nodes,
-                                  land_sea_mask_elements,
-                                  masked_vertices_per_element)
-    print('done')
+    if save_mask:
+        print('\nGenerating land sea mask at element centres ', end='... ')
+        land_sea_mask_elements = np.empty(n_elems, dtype=DTYPE_INT)
+        compute_land_sea_element_mask(nv, land_sea_mask_nodes,
+                                      land_sea_mask_elements,
+                                      masked_vertices_per_element)
+        print('done')
 
-    # Mask elements with two land boundaries
-    print('\nMask elements with two land boundaries ', end='... ')
-    mask_elements_with_two_land_boundaries(nbe, land_sea_mask_elements)
-    print('done')
+        # Mask elements with two land boundaries
+        print('\nMask elements with two land boundaries ', end='... ')
+        mask_elements_with_two_land_boundaries(nbe, land_sea_mask_elements)
+        print('done')
 
-    # Add standard attributes for the element mask
-    element_mask_attrs = {'standard_name': 'sea_binary_mask',
-                          'units': '1',
-                          'long_name': 'Land-sea mask: sea = 0, land = 1, boundary element = 2'}
+        # Add standard attributes for the element mask
+        element_mask_attrs = {'standard_name': 'sea_binary_mask',
+                              'units': '1',
+                              'long_name': 'Land-sea mask: sea = 0, land = 1, boundary element = 2'}
 
     # Transpose nv and nbe arrays to give the dimension ordering expected by PyLag
     nv = nv.T
@@ -897,17 +909,18 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',
     gm_file_creator.create_variable('nbe', nbe, ('three', 'element',), DTYPE_INT,
                                     attrs={'long_name': 'elements surrounding each element'})
 
-    # Add land sea mask - elements
-    gm_file_creator.create_variable('mask_c', land_sea_mask_elements, ('element',),
-            DTYPE_INT, attrs=element_mask_attrs)
+    if save_mask:
+        # Add land sea mask - elements
+        gm_file_creator.create_variable('mask_c', land_sea_mask_elements, ('element',),
+                DTYPE_INT, attrs=element_mask_attrs)
 
-    # Add land sea mask
-    gm_file_creator.create_variable('mask', land_sea_mask_nodes, ('node',),
-            DTYPE_INT, attrs=mask_attrs)
+        # Add land sea mask
+        gm_file_creator.create_variable('mask', land_sea_mask_nodes, ('node',),
+                DTYPE_INT, attrs=mask_attrs)
 
-    # Compute element areas
-    gm_file_creator.create_variable('area', areas, ('element',),
-            DTYPE_FLOAT, attrs=area_attrs)
+        # Compute element areas
+        gm_file_creator.create_variable('area', areas, ('element',),
+                DTYPE_FLOAT, attrs=area_attrs)
 
     # Close input dataset
     input_dataset.close()
