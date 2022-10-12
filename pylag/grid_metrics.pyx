@@ -248,8 +248,11 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name,
 
     # Add grid coordinate variables
     # -----------------------------
-    for fvcom_var_name, var_name in zip(['x', 'y', 'xc', 'yc', 'lat', 'lon', 'latc', 'lonc', 'siglay', 'h'],
-                                        ['x', 'y', 'xc', 'yc', 'latitude', 'longitude', 'latitude_c', 'longitude_c', 'siglay', 'h']):
+    fvcom_var_names = ['x', 'y', 'xc', 'yc', 'lat', 'lon', 'latc',
+                       'lonc', 'siglay', 'h']
+    mapped_var_names = ['x', 'y', 'xc', 'yc', 'latitude', 'longitude',
+                        'latitude_c', 'longitude_c', 'siglay', 'h']
+    for fvcom_var_name, var_name in zip(fvcom_var_names, mapped_var_names):
         nc_var = fvcom_dataset.variables[fvcom_var_name]
 
         var_data = nc_var[:]
