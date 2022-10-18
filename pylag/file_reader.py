@@ -45,6 +45,10 @@ class FileReader:
     config : ConfigParser
         Configuration object.
 
+    data_source : str
+        String indicating what type of data the datetime objects will be
+        associated with. Options are: 'ocean', 'atmosphere', and 'wave'.
+
     file_name_reader : FileNameReader
         Object to assist with reading in file names.
 
@@ -61,6 +65,10 @@ class FileReader:
     ----------
     config : ConfigParser
         Run configuration object.
+
+    config_section_name : str
+        String identifying the section of the config where parameters
+        describing the data are listed (e.g. WAVE_DATA).
 
     file_name_reader : FileNameReader
         Object to assist with reading in file names from disk
@@ -134,38 +142,55 @@ class FileReader:
         of ensemble simulations.
 
     """
-    def __init__(self, config, file_name_reader, dataset_reader, datetime_start, datetime_end):
+    def __init__(self, config, data_source, file_name_reader, dataset_reader,
+                 datetime_start, datetime_end):
         self.config = config
+
+        # Determine the appropriate section config name from the data source
+        if data_source == 'ocean':
+            self.config_section_name = 'OCEAN_CIRCULATION_MODEL'
+        elif data_source == 'atmosphere':
+            self.config_section_name = 'ATMOSPHERE_DATA'
+        elif data_source == 'wave':
+            self.config_section_name = 'WAVE_DATA'
+        else:
+            raise PyLagValueError(f"Unsupported data source `{data_source}. "
+                                  f"Valid options are `ocean`, `atmosphere` "
+                                  f"and `wave`.")
 
         self.file_name_reader = file_name_reader
 
         self.dataset_reader = dataset_reader
 
-        self.data_dir = self.config.get("OCEAN_CIRCULATION_MODEL", "data_dir")
-        self.data_file_name_stem = self.config.get("OCEAN_CIRCULATION_MODEL", "data_file_stem")
+        self.data_dir = self.config.get(self.config_section_name,
+                                        "data_dir")
+        self.data_file_name_stem = self.config.get(self.config_section_name,
+                                                   "data_file_stem")
         try:
-            self.grid_metrics_file_name = self.config.get("OCEAN_CIRCULATION_MODEL", "grid_metrics_file")
+            self.grid_metrics_file_name = self.config.get(
+                self.config_section_name, "grid_metrics_file")
         except configparser.NoOptionError:
             logger = logging.getLogger(__name__)
-            logger.error('A grid metrics file was not given. Please provide '\
-                'one an try again. If one needs to be generated, please '\
-                'have a look at the tools provided in pylag.utils, which '\
-                'provides several functions to help with the creation '\
-                'of grid metrics files.')
-            raise RuntimeError('A grid metrics file was not listed in the run '\
-                'configuration file. See the log file for more details.')
+            logger.error(f"A grid metrics file was not given. Please provide "
+                         f"one and try again. If one needs to be generated, "
+                         f"please take a look at PyLag's online documentation.")
+            raise RuntimeError(f"A grid metrics file was not listed in the run "
+                               f"configuration file. See the log file for more "
+                               f"details.")
 
         # Time variable name
         try:
-            self._time_var_name = self.config.get("OCEAN_CIRCULATION_MODEL", "time_var_name").strip()
+            self._time_var_name = self.config.get(self.config_section_name,
+                                                  "time_var_name").strip()
         except configparser.NoOptionError:
+            # Adopt default name `time`
             self._time_var_name = "time"
 
         # Time direction
         self.time_direction = int(get_time_direction(config))
 
         # Initialise datetime reader
-        self.datetime_reader = get_datetime_reader(config)
+        self.datetime_reader = get_datetime_reader(config, data_source)
 
         # Read in grid info. and search for input data files.
         self._setup_file_access()
