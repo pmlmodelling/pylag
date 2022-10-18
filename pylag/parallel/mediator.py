@@ -31,6 +31,10 @@ class MPIMediator(Mediator):
     config : ConfigParser
         Run configuration object
 
+    data_source : str
+        String indicating what type of data the datetime objects will be
+        associated with. Options are: 'ocean', 'atmosphere', and 'wave'.
+
     start_datetime : Datetime
         Simulation start date/time.
 
@@ -46,7 +50,7 @@ class MPIMediator(Mediator):
         FileReader object.
 
     """
-    def __init__(self, config, datetime_start, datetime_end):
+    def __init__(self, config, data_source, datetime_start, datetime_end):
         self.config = config
 
         # MPI objects and variables
@@ -58,7 +62,9 @@ class MPIMediator(Mediator):
             try:
                 file_name_reader = DiskFileNameReader()
                 dataset_reader = NetCDFDatasetReader()
-                self.file_reader = FileReader(config, file_name_reader, dataset_reader, datetime_start, datetime_end)
+                self.file_reader = FileReader(config, data_source,
+                                              file_name_reader, dataset_reader,
+                                              datetime_start, datetime_end)
             except Exception as e:
                 logger = logging.getLogger(__name__)
                 logger.error('Caught exception when reading input file. '\
