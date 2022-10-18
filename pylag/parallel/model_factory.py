@@ -56,22 +56,23 @@ def get_model(config, datetime_start, datetime_end):
     except (configparser.NoSectionError, configparser.NoOptionError):
         ocean_product_name = "none"
 
-    data_source = 'ocean'
-    ocean_mediator = MPIMediator(config, data_source, datetime_start,
-                                 datetime_end)
-    if ocean_product_name == "ArakawaA":
-        ocean_data_reader = ArakawaADataReader(config, ocean_mediator)
-    elif ocean_product_name == "FVCOM":
-        ocean_data_reader = FVCOMDataReader(config, ocean_mediator)
-    elif ocean_product_name == "ROMS":
-        ocean_data_reader = ROMSDataReader(config, ocean_mediator)
-    elif ocean_product_name == "GOTM":
-        ocean_data_reader = GOTMDataReader(config, ocean_mediator)
-    elif ocean_product_name.lower() == "none":
-        ocean_data_reader = None
+    if ocean_product_name.lower() != "none":
+        data_source = 'ocean'
+        ocean_mediator = MPIMediator(config, data_source, datetime_start,
+                                     datetime_end)
+        if ocean_product_name == "ArakawaA":
+            ocean_data_reader = ArakawaADataReader(config, ocean_mediator)
+        elif ocean_product_name == "FVCOM":
+            ocean_data_reader = FVCOMDataReader(config, ocean_mediator)
+        elif ocean_product_name == "ROMS":
+            ocean_data_reader = ROMSDataReader(config, ocean_mediator)
+        elif ocean_product_name == "GOTM":
+            ocean_data_reader = GOTMDataReader(config, ocean_mediator)
+        else:
+            raise PyLagValueError(f"Unsupported ocean data product "
+                                  f"`{ocean_product_name}`")
     else:
-        raise PyLagValueError(f"Unsupported ocean data product "
-                              f"`{ocean_product_name}`")
+        ocean_data_reader = None
 
     # Atmosphere data
     # ---------------
@@ -80,16 +81,17 @@ def get_model(config, datetime_start, datetime_end):
     except (configparser.NoSectionError, configparser.NoOptionError):
         atmos_product_name = "none"
 
-    data_source = 'atmosphere'
-    atmos_mediator = MPIMediator(config, data_source, datetime_start,
-                                 datetime_end)
-    if atmos_product_name == "ArakawaA":
-        atmos_data_reader = AtmosphereDataReader(config, atmos_mediator)
-    elif atmos_product_name.lower() == "none":
-        atmos_data_reader = None
+    if atmos_product_name.lower() != "none":
+        data_source = 'atmosphere'
+        atmos_mediator = MPIMediator(config, data_source, datetime_start,
+                                     datetime_end)
+        if atmos_product_name == "Default":
+            atmos_data_reader = AtmosphereDataReader(config, atmos_mediator)
+        else:
+            raise PyLagValueError(f"Unsupported atmosphere data product "
+                                  f"`{atmos_product_name}`")
     else:
-        raise PyLagValueError(f"Unsupported atmosphere data product "
-                              f"`{atmos_product_name}`")
+        atmos_data_reader = None
 
     # Waves data
     # ----------
@@ -98,16 +100,17 @@ def get_model(config, datetime_start, datetime_end):
     except (configparser.NoSectionError, configparser.NoOptionError):
         waves_product_name = "none"
 
-    data_source = 'wave'
-    waves_mediator = MPIMediator(config, data_source, datetime_start,
-                                 datetime_end)
-    if waves_product_name == "ArakawaA":
-        waves_data_reader = WavesDataReader(config, waves_mediator)
-    elif waves_product_name.lower() == "none":
-        waves_data_reader = None
+    if waves_product_name.lower() != "none":
+        data_source = 'wave'
+        waves_mediator = MPIMediator(config, data_source, datetime_start,
+                                     datetime_end)
+        if waves_product_name == "Default":
+            waves_data_reader = WavesDataReader(config, waves_mediator)
+        else:
+            raise PyLagValueError(f"Unsupported waves data product "
+                                  f"`{waves_product_name}`")
     else:
-        raise PyLagValueError(f"Unsupported waves data product "
-                              f"`{waves_product_name}`")
+        waves_data_reader = None
 
     # Error checking
     # --------------
