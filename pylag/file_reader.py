@@ -190,7 +190,8 @@ class FileReader:
         self.time_direction = int(get_time_direction(config))
 
         # Initialise datetime reader
-        self.datetime_reader = get_datetime_reader(config, data_source)
+        self.datetime_reader = get_datetime_reader(config,
+                                                   self.config_section_name)
 
         # Read in grid info. and search for input data files.
         self._setup_file_access()
@@ -973,40 +974,30 @@ class NetCDFDatasetReader(DatasetReader):
 #################################################
 
 
-def get_datetime_reader(config, data_source):
+def get_datetime_reader(config, config_section_name):
     """ Factory method for datetime readers
 
     There is a hierarchy of data sources. At the top level, the
     source may be associated with ocean, atmosphere or wave data. Below
     that, in principle, there are multiple types of ocean, atmosphere
-    and wave data. The top-level data source is must be specified. This
-    is then used to construct the required date time reader.
+    and wave data. The top-level data source must be specified through the
+    appropriate config section name. This is then used to construct the
+    required date time reader.
 
     Parameters
     ----------
     config : ConfigParser
         Configuration object
 
-    data_source : str
-        String indicating what type of data the datetime objects will be
-        associated with. Options are: 'ocean', 'atmosphere', and 'wave'.
+    config_section_name : str
+        String identifying the type of data the time variable is associated
+        with (e.g. WAVE_DATA, ATMOSPHERE_DATA etc).
 
     Returns
     -------
      : DatetimeReader
          A DatetimeReader.
     """
-    if data_source == 'ocean':
-        config_section_name = 'OCEAN_CIRCULATION_MODEL'
-    elif data_source == 'atmosphere':
-        config_section_name = 'ATMOSPHERE_DATA'
-    elif data_source == 'wave':
-        config_section_name = 'WAVE_DATA'
-    else:
-        raise PyLagValueError(f"Unsupported data source `{data_source}. "
-                              f"Valid options are `ocean`, `atmosphere` "
-                              f"and `wave`.")
-
     # The name of the data source (e.g. FVCOM, ROMS etc)
     name = config.get(config_section_name, "name")
 
