@@ -106,11 +106,15 @@ cdef class WavesDataReader(DataReader):
     # (e.g. {'u': {'latitude': 0, 'longitude': 1}})
     cdef object _variable_dimension_indices
 
+    # Land sea mask on elements (1 - sea point, 0 - land point)
+    cdef DTYPE_INT_t[::1] _land_sea_mask_c
+    cdef DTYPE_INT_t[::1] _land_sea_mask
+
     # u/v/w velocity components
-    cdef DTYPE_FLOAT_t[::1] _usdx_last
-    cdef DTYPE_FLOAT_t[::1] _usdx_next
     cdef DTYPE_FLOAT_t[::1] _vsdx_last
     cdef DTYPE_FLOAT_t[::1] _vsdx_next
+    cdef DTYPE_FLOAT_t[::1] _vsdy_last
+    cdef DTYPE_FLOAT_t[::1] _vsdy_next
 
     # Time direction
     cdef DTYPE_INT_t _time_direction
@@ -140,7 +144,7 @@ cdef class WavesDataReader(DataReader):
 
         # Setup variable name mappings
         self._variable_names = {}
-        var_config_names = {'usdx': 'usdx_var_name', 'vsdx': 'vsdx_var_name'}
+        var_config_names = {'vsdx': 'vsdx_var_name', 'vsdy': 'vsdy_var_name'}
         for var_name, config_name in var_config_names.items():
             try:
                 var = self.config.get('WAVE_DATA',
@@ -357,9 +361,9 @@ cdef class WavesDataReader(DataReader):
         stokes_drift : C array, float
             Surface Stoke's drift velocity components in C array of length two.
         """
-        stokes_drift[0] = self._get_variable(self._usdx_last, self._usdx_next,
+        stokes_drift[0] = self._get_variable(self._vsdx_last, self._vsdx_next,
                 time, particle)
-        stokes_drift[1] = self._get_variable(self._vsdx_last, self._vsdx_next,
+        stokes_drift[1] = self._get_variable(self._vsdy_last, self._vsdy_next,
                 time, particle)
 
         return
@@ -458,10 +462,19 @@ cdef class WavesDataReader(DataReader):
         yc = yc * deg_to_radians
 
         # Land sea mask
-        self._land_sea_mask_c = self.mediator.get_grid_variable('mask_c',
-                (self._n_elems), DTYPE_INT)
-        self._land_sea_mask = self.mediator.get_grid_variable('mask',
-                (self._n_nodes), DTYPE_INT)
+        try:
+            self._land_sea_mask_c = self.mediator.get_grid_variable('mask_c',
+                    (self._n_elems), DTYPE_INT)
+        except KeyError:
+            # No mask - treat all points as being sea.
+            self._land_sea_mask_c = np.zeros(self._n_elems, dtype=DTYPE_INT)
+
+        try:
+            self._land_sea_mask = self.mediator.get_grid_variable('mask',
+                    (self._n_nodes), DTYPE_INT)
+        except KeyError:
+            # No mask - treat all points as being sea.
+            self._land_sea_mask = np.zeros(self._n_nodes, dtype=DTYPE_INT)
 
         # Element areas
         areas = self.mediator.get_grid_variable('area', (self._n_elems),
@@ -474,15 +487,14 @@ cdef class WavesDataReader(DataReader):
                 areas=areas)
 
         # Add 3D vars to shape and dimension indices dictionaries
-        var_names = ['usdx', 'vsdx']
+        var_names = ['vsdx', 'vsdy']
         for var_name in var_names:
-            self._variable_shapes[var_name] = \
-                    self.mediator.get_variable_shape(self._variable_names[var_name])[1:]
-            dimensions = \
-                    self.mediator.get_variable_dimensions(self._variable_names[var_name])[1:]
+            self._variable_shapes[var_name] = self.mediator.get_variable_shape(
+                    self._variable_names[var_name])[1:]
+            dimensions = self.mediator.get_variable_dimensions(
+                    self._variable_names[var_name])[1:]
             self._variable_dimension_indices[var_name] = \
-                    {'depth': dimensions.index(self._dimension_names['depth']),
-                     'latitude': dimensions.index(self._dimension_names['latitude']),
+                    {'latitude': dimensions.index(self._dimension_names['latitude']),
                      'longitude': dimensions.index(self._dimension_names['longitude'])}
 
     cdef _read_time_dependent_vars(self):
@@ -510,20 +522,6 @@ cdef class WavesDataReader(DataReader):
         self._time_last = self.mediator.get_time_at_last_time_index()
         self._time_next = self.mediator.get_time_at_next_time_index()
 
-        # Update memory views for usdx
-        usdx_var_name = self._variable_names['usdx']
-        usdx_last = self.mediator.get_time_dependent_variable_at_last_time_index(
-                usdx_var_name, self._variable_shapes['usdx'], DTYPE_FLOAT)
-        self._usdx_last = self._reshape_var(usdx_last,
-                self._variable_dimension_indices['usdx'])
-        del(usdx_last)
-
-        usdx_next = self.mediator.get_time_dependent_variable_at_next_time_index(
-                usdx_var_name, self._variable_shapes['usdx'], DTYPE_FLOAT)
-        self._usdx_next = self._reshape_var(usdx_next,
-                self._variable_dimension_indices['usdx'])
-        del(usdx_next)
-
         # Update memory views for vsdx
         vsdx_var_name = self._variable_names['vsdx']
         vsdx_last = self.mediator.get_time_dependent_variable_at_last_time_index(
@@ -537,6 +535,20 @@ cdef class WavesDataReader(DataReader):
         self._vsdx_next = self._reshape_var(vsdx_next,
                 self._variable_dimension_indices['vsdx'])
         del(vsdx_next)
+
+        # Update memory views for vsdy
+        vsdy_var_name = self._variable_names['vsdy']
+        vsdy_last = self.mediator.get_time_dependent_variable_at_last_time_index(
+                vsdy_var_name, self._variable_shapes['vsdy'], DTYPE_FLOAT)
+        self._vsdy_last = self._reshape_var(vsdy_last,
+                self._variable_dimension_indices['vsdy'])
+        del(vsdy_last)
+
+        vsdy_next = self.mediator.get_time_dependent_variable_at_next_time_index(
+                vsdy_var_name, self._variable_shapes['vsdy'], DTYPE_FLOAT)
+        self._vsdy_next = self._reshape_var(vsdy_next,
+                self._variable_dimension_indices['vsdy'])
+        del(vsdy_next)
 
         return
 

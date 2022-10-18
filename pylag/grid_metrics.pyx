@@ -918,9 +918,9 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',
         gm_file_creator.create_variable('mask', land_sea_mask_nodes, ('node',),
                 DTYPE_INT, attrs=mask_attrs)
 
-        # Compute element areas
-        gm_file_creator.create_variable('area', areas, ('element',),
-                DTYPE_FLOAT, attrs=area_attrs)
+    # Compute element areas
+    gm_file_creator.create_variable('area', areas, ('element',),
+            DTYPE_FLOAT, attrs=area_attrs)
 
     # Close input dataset
     input_dataset.close()

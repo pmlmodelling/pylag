@@ -80,7 +80,7 @@ cdef class StokesDriftCalculator:
         stokes_drift : C array
             C array of length two.
         """
-        raise RuntimeError
+        raise NotImplementedError
 
 
 cdef class SurfaceStokesDriftCalculator(StokesDriftCalculator):

@@ -70,7 +70,7 @@ cdef class CompositeDataReader(DataReader):
     cdef DataReader atmosphere_data_reader
     cdef DataReader waves_data_reader
 
-    cdef bint uising_atmosphere_data
+    cdef bint using_atmosphere_data
     cdef bint using_waves_data
 
     def __init__(self, config, ocean_data_reader, atmosphere_data_reader=None,

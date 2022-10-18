@@ -106,6 +106,10 @@ cdef class AtmosphereDataReader(DataReader):
     # (e.g. {'u': {'latitude': 0, 'longitude': 1}})
     cdef object _variable_dimension_indices
 
+    # Land sea mask on elements (1 - sea point, 0 - land point)
+    cdef DTYPE_INT_t[::1] _land_sea_mask_c
+    cdef DTYPE_INT_t[::1] _land_sea_mask
+
     # u/v/w velocity components
     cdef DTYPE_FLOAT_t[::1] _u10_last
     cdef DTYPE_FLOAT_t[::1] _u10_next
@@ -458,10 +462,19 @@ cdef class AtmosphereDataReader(DataReader):
         yc = yc * deg_to_radians
 
         # Land sea mask
-        self._land_sea_mask_c = self.mediator.get_grid_variable('mask_c',
-                (self._n_elems), DTYPE_INT)
-        self._land_sea_mask = self.mediator.get_grid_variable('mask',
-                (self._n_nodes), DTYPE_INT)
+        try:
+            self._land_sea_mask_c = self.mediator.get_grid_variable('mask_c',
+                    (self._n_elems), DTYPE_INT)
+        except KeyError:
+            # No mask - treat all points as being sea.
+            self._land_sea_mask_c = np.zeros(self._n_elems, dtype=DTYPE_INT)
+
+        try:
+            self._land_sea_mask = self.mediator.get_grid_variable('mask',
+                    (self._n_nodes), DTYPE_INT)
+        except KeyError:
+            # No mask - treat all points as being sea.
+            self._land_sea_mask = np.zeros(self._n_nodes, dtype=DTYPE_INT)
 
         # Element areas
         areas = self.mediator.get_grid_variable('area', (self._n_elems),
