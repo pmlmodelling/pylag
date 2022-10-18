@@ -948,34 +948,56 @@ class NetCDFDatasetReader(DatasetReader):
 #################################################
 
 
-def get_datetime_reader(config):
+def get_datetime_reader(config, data_source):
     """ Factory method for datetime readers
+
+    There is a hierarchy of data sources. At the top level, the
+    source may be associated with ocean, atmosphere or wave data. Below
+    that, in principle, there are multiple types of ocean, atmosphere
+    and wave data. The top-level data source is must be specified. This
+    is then used to construct the required date time reader.
 
     Parameters
     ----------
     config : ConfigParser
         Configuration object
 
+    data_source : str
+        String indicating what type of data the datetime objects will be
+        associated with. Options are: 'ocean', 'atmosphere', and 'wave'.
+
     Returns
     -------
      : DatetimeReader
          A DatetimeReader.
     """
-    data_source = config.get("OCEAN_CIRCULATION_MODEL", "name")
+    if data_source == 'ocean':
+        config_section_name = 'OCEAN_CIRCULATION_MODEL'
+    elif data_source == 'atmosphere':
+        config_section_name = 'ATMOSPHERE_DATA'
+    elif data_source == 'wave':
+        config_section_name = 'WAVE_DATA'
+    else:
+        raise PyLagValueError(f"Unsupported data source `{data_source}. "
+                              f"Valid options are `ocean`, `atmosphere` "
+                              f"and `wave`.")
 
-    if data_source == "FVCOM":
-        return FVCOMDateTimeReader(config)
+    # The name of the data source (e.g. FVCOM, ROMS etc)
+    name = config.get(config_section_name, "name")
 
-    return DefaultDateTimeReader(config)
+    if name == "FVCOM":
+        return FVCOMDateTimeReader(config, config_section_name)
+
+    return DefaultDateTimeReader(config, config_section_name)
 
 
 class DateTimeReader:
     """ Abstract base class for DateTimeReaders
 
     DatetimeReaders are responsible for reading in and processing
-    datetime data within NetCDF4 datasets. Abstract base class introduced
-    as datetime information is encoded in different ways in different
-    datasets.
+    datetime data within NetCDF4 datasets. Different models encode
+    time in different ways. Hence, we introduce a family of objects
+    to account for all possible approaches.
     """
     def get_datetime(self, dataset, time_index=None):
         """ Get dates/times for the given dataset
@@ -1004,16 +1026,24 @@ class DefaultDateTimeReader(DateTimeReader):
     ----------
     config : ConfigParser
         A run configuration object,
-    """
 
-    def __init__(self, config):
+    config_section_name : str
+        String identifying the type of data the time variable is associated
+        with.
+    """
+    def __init__(self, config, config_section_name):
         self.config = config
+        self.config_section_name = config_section_name
 
         # Time variable name
         try:
-            self._time_var_name = self.config.get("OCEAN_CIRCULATION_MODEL", "time_var_name").strip()
+            self._time_var_name = self.config.get(self.config_section_name,
+                                                  "time_var_name").strip()
         except configparser.NoOptionError:
             self._time_var_name = "time"
+
+        self.rounding_interval = self.config.getint(self.config_section_name,
+                                                    "rounding_interval")
 
     def get_datetime(self, dataset, time_index=None):
         """ Get dates/times for the given dataset
@@ -1030,13 +1060,14 @@ class DefaultDateTimeReader(DateTimeReader):
             Dataset object for an FVCOM data file.
 
         time_index : int, optional
-            The time index at which to extract data. Default behaviour is to return
-            the full time array as datetime objects.
+            The time index at which to extract data. Default behaviour
+            is to return the full time array as datetime objects.
 
         Returns
         -------
          : list[datetime]
-             If `time_index` is None, return a full list of datetime objects.
+             If `time_index` is None, return a full list of datetime
+             objects.
 
          : Datetime
              If `time_index` is not None, a single datetime object.
@@ -1044,15 +1075,12 @@ class DefaultDateTimeReader(DateTimeReader):
         time_raw = dataset.variables[self._time_var_name]
         units = dataset.variables[self._time_var_name].units
 
-        # Apply rounding
-        rounding_interval = self.config.getint("OCEAN_CIRCULATION_MODEL", "rounding_interval")
-
         if time_index is not None:
             datetime_raw = num2pydate(time_raw[time_index], units=units)
-            return round_time([datetime_raw], rounding_interval)[0]
+            return round_time([datetime_raw], self.rounding_interval)[0]
         else:
             datetime_raw = num2pydate(time_raw[:], units=units)
-            return round_time(datetime_raw, rounding_interval)
+            return round_time(datetime_raw, self.rounding_interval)
 
 
 class FVCOMDateTimeReader(DateTimeReader):
@@ -1061,14 +1089,35 @@ class FVCOMDateTimeReader(DateTimeReader):
     FVCOM datetime readers read in datetime information from a NetCDF input
     file generated by FVCOM.
 
+    Attributes
+    ----------
+    config : ConfigParser
+        See Parameters.
+
+    config_section_name : str
+        See Parameters.
+
+    rounding_interval : int
+        Apply rounding to datetime object using this interval, which is given
+        in seconds.
+
     Parameters
     ----------
     config : ConfigParser
         A run configuration object,
-    """
 
-    def __init__(self, config):
+    config_section_name : str
+        String identifying the type of data the time variable is associated
+        with.
+    """
+    def __init__(self, config, config_section_name):
         self.config = config
+        self.config_section_name = config_section_name
+
+        self.rounding_interval = self.config.getint(self.config_section_name,
+                                                    "rounding_interval")
+
+        self.days_per_milli_second = 1. / (1000. * 60. * 60. * 24.)
 
     def get_datetime(self, dataset, time_index=None):
         """ Get FVCOM dates/times for the given dataset
@@ -1089,19 +1138,16 @@ class FVCOMDateTimeReader(DateTimeReader):
 
          : Datetime
         """
-        time_raw = dataset.variables['Itime'][:] + dataset.variables['Itime2'][:] / 1000. / 60. / 60. / 24.
+        time_raw = (dataset.variables['Itime'][:] +
+                    dataset.variables['Itime2'][:] * self.days_per_milli_second)
         units = dataset.variables['Itime'].units
-
-        # Apply rounding
-        # TODO - Confirm this is necessary when using Itime and Itime2?
-        rounding_interval = self.config.getint("OCEAN_CIRCULATION_MODEL", "rounding_interval")
 
         if time_index is not None:
             datetime_raw = num2pydate(time_raw[time_index], units=units)
-            return round_time([datetime_raw], rounding_interval)[0]
+            return round_time([datetime_raw], self.rounding_interval)[0]
         else:
             datetime_raw = num2pydate(time_raw[:], units=units)
-            return round_time(datetime_raw, rounding_interval)
+            return round_time(datetime_raw, self.rounding_interval)
 
 
 __all__ = ["FileReader",
