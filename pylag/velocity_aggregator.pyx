@@ -39,7 +39,8 @@ cdef class VelocityAggregator:
     def __init__(self, config):
         # Ocean transport
         try:
-            ocean_product_name = config.get("OCEAN_CIRCULATION_MODEL", "name").strip().lower()
+            ocean_product_name = config.get("OCEAN_CIRCULATION_MODEL",
+                                            "name").strip().lower()
         except (configparser.NoSectionError, configparser.NoOptionError):
             self._apply_ocean_velocity_term = False
         else:
