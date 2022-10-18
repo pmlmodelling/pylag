@@ -93,7 +93,7 @@ def get_model(config, datetime_start, datetime_end):
     # Waves data
     # ----------
     try:
-        waves_product_name = config.get("WAVES_DATA", "source").strip()
+        waves_product_name = config.get("WAVE_DATA", "source").strip()
     except (configparser.NoSectionError, configparser.NoOptionError):
         waves_product_name = "none"
 

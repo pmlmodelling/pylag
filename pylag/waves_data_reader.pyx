@@ -135,7 +135,7 @@ cdef class WavesDataReader(DataReader):
                 'longitude': 'longitude_dim_name'}
         for dim_name, config_name in dim_config_names.items():
             self._dimension_names[dim_name] = \
-                    self.config.get('OCEAN_CIRCULATION_MODEL',
+                    self.config.get('WAVE_DATA',
                     config_name).strip()
 
         # Setup variable name mappings
@@ -143,7 +143,7 @@ cdef class WavesDataReader(DataReader):
         var_config_names = {'usdx': 'usdx_var_name', 'vsdx': 'vsdx_var_name'}
         for var_name, config_name in var_config_names.items():
             try:
-                var = self.config.get('OCEAN_CIRCULATION_MODEL',
+                var = self.config.get('WAVE_DATA',
                         config_name).strip()
                 if var:
                     self._variable_names[var_name] = var
