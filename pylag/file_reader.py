@@ -15,7 +15,7 @@ try:
 except ImportError:
     import ConfigParser as configparser
 
-from pylag.exceptions import PyLagValueError
+from pylag.exceptions import PyLagValueError, PyLagRuntimeError
 from pylag.data_types_python import DTYPE_FLOAT
 from pylag.numerics import get_global_time_step, get_time_direction
 from pylag.utils import round_time
@@ -174,9 +174,9 @@ class FileReader:
             logger.error(f"A grid metrics file was not given. Please provide "
                          f"one and try again. If one needs to be generated, "
                          f"please take a look at PyLag's online documentation.")
-            raise RuntimeError(f"A grid metrics file was not listed in the run "
-                               f"configuration file. See the log file for more "
-                               f"details.")
+            raise PyLagRuntimeError(f"A grid metrics file was not listed in "
+                                    f"the run configuration file. See the log "
+                                    f"file for more details.")
 
         # Time variable name
         try:
@@ -215,36 +215,45 @@ class FileReader:
         
         # First save output file names into a list
         logger.info('Searching for input data files.')
-        self.data_file_names = self.file_name_reader.get_file_names(self.data_dir, self.data_file_name_stem)
+        self.data_file_names = self.file_name_reader.get_file_names(
+                self.data_dir, self.data_file_name_stem)
     
         # Ensure files were found in the specified directory.
         if not self.data_file_names:
-            raise RuntimeError('No input files found in location {}.'.format(self.data_dir))
+            raise PyLagRuntimeError(f"No input files found in "
+                                    f"location {self.data_dir}.")
         else:
             self.n_data_files = len(self.data_file_names)
 
         # Log file names
-        logger.info("Found {} input data files in directory "\
-            "`{}'.".format(self.n_data_files, self.data_dir))
-        logger.info('Input data file names are: ' + ', '.join(self.data_file_names))
+        logger.info(f"Found {self.n_data_files} input data files in directory "
+                    f"`{self.data_dir}'.")
+        logger.info(f"Input data file names "
+                    f"are:" + ", ".join(self.data_file_names))
         
         # Open grid metrics file for reading
-        logger.info('Opening grid metrics file for reading.')
+        logger.info("Opening grid metrics file for reading.")
         
         # Try to read grid data from the grid metrics file
         try:
-            self.grid_file = self.dataset_reader.read_dataset(self.grid_metrics_file_name)
-            logger.info('Opened grid metrics file {}.'.format(self.grid_metrics_file_name))
+            self.grid_file = self.dataset_reader.read_dataset(
+                    self.grid_metrics_file_name)
+            logger.info(f"Opened grid metrics file "
+                        f"{self.grid_metrics_file_name}.")
 
             try:
-                if self.grid_file.getncattr('pylag-version-id') != version.git_revision:
-                    logger.warning('The grid metrics file was created with a different version of PyLag to that ' \
-                                   'being run. To avoid consistency issues, please update the grid metrics file.')
+                if self.grid_file.getncattr('pylag-version-id') != \
+                        version.git_revision:
+                    logger.warning(f"The grid metrics file was created with a "
+                                   f"different version of PyLag to that being "
+                                   f"run. To avoid consistency issues, please "
+                                   f"update the grid metrics file.")
             except AttributeError:
                 pass
         except RuntimeError:
-            logger.error('Failed to read grid metrics file {}.'.format(self.grid_metrics_file_name))
-            raise ValueError('Failed to read the grid metrics file.')
+            logger.error(f"Failed to read grid metrics file "
+                         f"`{self.pylag_grid_metrics_file_name}`.")
+            raise PyLagValueError("Failed to read the grid metrics file.")
 
         # Initialise data file names to None
         self.first_data_file_name = None
@@ -257,8 +266,8 @@ class FileReader:
     def setup_data_access(self, start_datetime, end_datetime):
         """Open data files for reading and initalise all time variables
 
-        Use the supplied start and end times to establish which input data file(s)
-        contain data spanning the specified start time. 
+        Use the supplied start and end times to establish which input data
+        file(s) contain data spanning the specified start time.
 
         Parameters
         ----------
@@ -273,46 +282,52 @@ class FileReader:
         logger.info('Setting up input data access.')
 
         if not self._check_date_time_is_valid(start_datetime):
-            raise ValueError('The start date/time {} lies '\
-                    'outside of the time period for which input data is '\
-                    'available.'.format(start_datetime))
+            raise PyLagValueError(f"The start date/time {start_datetime} lies "
+                                  f"outside of the time period for which input "
+                                  f"data is available.")
 
         if not self._check_date_time_is_valid(end_datetime):
-            raise ValueError('The end date/time {} lies '\
-                    'outside of the time period for which input data is '\
-                    'available.'.format(end_datetime))
+            raise PyLagValueError(f"The end date/time {end_datetime} lies "
+                                  f"outside of the time period for which input "
+                                  f"data is available.")
         
         # Save a reference to the simulation start time for time rebasing
         self.sim_start_datetime = start_datetime
         self.sim_end_datetime = end_datetime
 
-        # Determine which data file holds data covering the simulation start time
-        logger.info('Beginning search for the input data file spanning the '\
-            'specified simulation start point.')  
+        # Determine which data file holds data covering the simulation start
+        logger.info(f"Beginning search for the input data file spanning the "
+                    f"specified simulation start point.")
 
         # Check for unusable input data
         ds_first = self.dataset_reader.read_dataset(self.data_file_names[0])
         datetimes_first = self.datetime_reader.get_datetime(ds_first)
         if self.n_data_files == 1 and len(datetimes_first) == 1:
-            logger.info('The single input data file found contains just a single time point '\
-                        'which is insufficient to perform a simulation.')
-            raise RuntimeError('Only one time point value found in input dataset')
+            logger.info(f"The single input data file found contains just a "
+                        f"single time point which is insufficient to perform "
+                        f"a simulation.")
+            raise PyLagRuntimeError(f"Only one time point value found in "
+                                    f"input dataset")
 
         self.first_data_file_name = None
         self.second_data_file_name = None
         for idx, data_file_name in enumerate(self.data_file_names):
-            logger.info("Trying file `{}'".format(data_file_name))
+            logger.info(f"Trying file `{data_file_name}'")
             ds = self.dataset_reader.read_dataset(data_file_name)
         
-            data_start_datetime = self.datetime_reader.get_datetime(ds, time_index=0)
-            data_end_datetime = self.datetime_reader.get_datetime(ds, time_index=-1)
+            data_start_datetime = self.datetime_reader.get_datetime(ds,
+                    time_index=0)
+            data_end_datetime = self.datetime_reader.get_datetime(ds,
+                    time_index=-1)
 
             # Compute time delta
-            time_delta = self.compute_time_delta_between_datasets(data_file_name, forward=True)
+            time_delta = self.compute_time_delta_between_datasets(
+                    data_file_name, forward=True)
 
             ds.close()
 
-            if data_start_datetime <= self.sim_start_datetime < data_end_datetime + timedelta(seconds=time_delta):
+            if (data_start_datetime <= self.sim_start_datetime <
+                    data_end_datetime + timedelta(seconds=time_delta)):
                 # Set file names depending on time direction
                 if self.time_direction == 1:
 
@@ -321,11 +336,13 @@ class FileReader:
                     if self.sim_start_datetime < data_end_datetime:
                         self.second_data_file_name = data_file_name
                     else:
-                        self.second_data_file_name = self.data_file_names[idx + 1]
+                        self.second_data_file_name = \
+                                self.data_file_names[idx + 1]
                 else:
 
                     if self.sim_start_datetime == data_start_datetime:
-                        self.first_data_file_name = self.data_file_names[idx - 1]
+                        self.first_data_file_name = \
+                                self.data_file_names[idx - 1]
                         self.second_data_file_name = data_file_name
                     else:
                         if self.sim_start_datetime <= data_end_datetime:
@@ -333,19 +350,25 @@ class FileReader:
                             self.second_data_file_name = data_file_name
                         else:
                             self.first_data_file_name = data_file_name
-                            self.second_data_file_name = self.data_file_names[idx + 1]
+                            self.second_data_file_name = \
+                                    self.data_file_names[idx + 1]
                     
-                logger.info('Found first initial data file {}.'.format(self.first_data_file_name))
-                logger.info('Found second initial data file {}.'.format(self.second_data_file_name))
+                logger.info(f"Found first initial data file "
+                            f"{self.first_data_file_name}.")
+                logger.info(f"Found second initial data file "
+                            f"{self.second_data_file_name}.")
                 break
             else:
-                logger.info('Start point not found in file covering the period'\
-                ' {} to {}'.format(data_start_datetime, data_end_datetime))
+                logger.info(f"Start point not found in file covering the "
+                            f"period {data_start_datetime} to "
+                            f"{data_end_datetime}")
 
         # Ensure the search was a success
-        if (self.first_data_file_name is None) or (self.second_data_file_name is None):
-            raise RuntimeError('Could not find an input data file spanning the '\
-                    'specified start time: {}.'.format(self.sim_start_datetime))
+        if (self.first_data_file_name is None) or \
+                (self.second_data_file_name is None):
+            raise PyLagRuntimeError(f'Could not find an input data file '
+                                    f'spanning the specified start time: '
+                                    f'{self.sim_start_datetime}.')
                 
         # Open the data files for reading and initialise the time array
         self._open_data_files_for_reading()
@@ -356,7 +379,7 @@ class FileReader:
         # Set time indices for reading frames
         self._set_time_indices(0.0) # 0s as simulation start
 
-        # Check that the choice of start time and time step yields an even number
+        # Check the choice of start time and time step yields an even number
         # of time steps between the start time and the times at which data are
         # defined. We check against both the first and second times when input
         # data are defined to ensure the check is robust.
@@ -364,14 +387,15 @@ class FileReader:
         n_steps_before = self.first_time[self.tidx_first] / time_step
         n_steps_after = self.second_time[self.tidx_second] / time_step
         if not (n_steps_before.is_integer() and n_steps_after.is_integer()):
-            raise PyLagValueError(f'PyLag requires there to be an integer number of time '
-                                  f'steps (measured in seconds) between the simulation '
-                                  f'start time and the times when input data are defined. '
-                                  f'Please modify your start time or time step to ensure '
-                                  f'this is the case.')
+            raise PyLagValueError(f'PyLag requires there to be an integer '
+                                  f'number of time steps (measured in seconds) '
+                                  f'between the simulation start time and the '
+                                  f'times when input data are defined. '
+                                  f'Please modify your start time or time '
+                                  f'step to ensure this is the case.')
 
     def _check_date_time_is_valid(self, date_time):
-        """ Check that the given date time lies within the range covered by the input data
+        """ Check the given date lies within the range covered by the input data
 
         Parameters
         ----------
@@ -401,9 +425,9 @@ class FileReader:
 
         If there is only one dataset or the last data file is given a value
         of zero is returned. Otherwise, time delta is the time difference in
-        seconds between the last (first) time point in the named data file and the
+        seconds between the last (first) time point in the data file and the
         first (last) time point in the next (previous) data file, as stored in
-        `self.data_file_names`. The forward argument is used to determine whether
+        `self.data_file_names`. The forward argument is used to determine if
         time delta is computed as the difference between the next or last files.
 
         Parameters
@@ -412,10 +436,10 @@ class FileReader:
             Dataset file name.
 
         forward : bool
-            If True, compute time delta between the last time point in the current
-            file and the first time point in the next file. If False, compute
-            time delta between the first time point in the current file and the
-            last time point in the previous file.
+            If True, compute time delta between the last time point in the
+            current file and the first time point in the next file. If False,
+            compute time delta between the first time point in the current file
+            and the last time point in the previous file.
 
         Returns
         -------
@@ -423,8 +447,8 @@ class FileReader:
             The absolute time difference in seconds.
         """
         if self.n_data_files == 1:
-            # There is only one file or we are searching the last file in the set
-            # so we set time_delta to zero.
+            # There is only one file or we are searching the last file in the
+            # set so we set time_delta to zero.
             return 0.0
 
         # Array index of the given data file
@@ -449,11 +473,14 @@ class FileReader:
             time_index_b = -1
 
         ds_a = self.dataset_reader.read_dataset(data_file_name)
-        datetime_a = self.datetime_reader.get_datetime(ds_a, time_index=time_index_a)
+        datetime_a = self.datetime_reader.get_datetime(ds_a,
+                                                       time_index=time_index_a)
         ds_a.close()
 
-        ds_b = self.dataset_reader.read_dataset(self.data_file_names[file_idx_b])
-        datetime_b = self.datetime_reader.get_datetime(ds_b, time_index=time_index_b)
+        ds_b = self.dataset_reader.read_dataset(
+                self.data_file_names[file_idx_b])
+        datetime_b = self.datetime_reader.get_datetime(ds_b,
+                                                       time_index=time_index_b)
         ds_b.close()
 
         return abs((datetime_b - datetime_a).total_seconds())
@@ -471,58 +498,71 @@ class FileReader:
 
         """
         # Compute time delta
-        time_delta = self.compute_time_delta_between_datasets(self.first_data_file_name, forward=True)
+        time_delta = self.compute_time_delta_between_datasets(
+                self.first_data_file_name, forward=True)
 
         # Load data file covering the first time point, if necessary
         first_file_idx = None
 
         if self.time_direction == 1:
             if time < self.first_time[0]:
-                first_file_idx = self.data_file_names.index(self.first_data_file_name) - 1
+                first_file_idx = self.data_file_names.index(
+                    self.first_data_file_name) - 1
             elif time >= self.first_time[-1] + time_delta:
-                first_file_idx = self.data_file_names.index(self.first_data_file_name) + 1
+                first_file_idx = self.data_file_names.index(
+                    self.first_data_file_name) + 1
         else:
             if time <= self.first_time[0]:
-                first_file_idx = self.data_file_names.index(self.first_data_file_name) - 1
+                first_file_idx = self.data_file_names.index(
+                    self.first_data_file_name) - 1
             elif time > self.first_time[-1] + time_delta:
-                first_file_idx = self.data_file_names.index(self.first_data_file_name) + 1
+                first_file_idx = self.data_file_names.index(
+                    self.first_data_file_name) + 1
 
         if first_file_idx is not None:
             try:
                 self.first_data_file_name = self.data_file_names[first_file_idx]
             except IndexError:
                 logger = logging.getLogger(__name__)
-                logger.error('Failed to find the next required input data file.')
-                raise RuntimeError('Failed to find the next input data file.')
+                logger.error(f'Failed to find the next input data file.')
+                raise PyLagRuntimeError(f'Failed to find the next input '
+                                        f'data file.')
 
             self._open_first_data_file_for_reading()
 
             self._set_first_time_array()
 
         # Compute time delta
-        time_delta = self.compute_time_delta_between_datasets(self.second_data_file_name, forward=False)
+        time_delta = self.compute_time_delta_between_datasets(
+                self.second_data_file_name, forward=False)
 
         # Load data file covering the second time point, if necessary
         second_file_idx = None
 
         if self.time_direction == 1:
             if time < self.second_time[0] - time_delta:
-                second_file_idx = self.data_file_names.index(self.second_data_file_name) - 1
+                second_file_idx = self.data_file_names.index(
+                    self.second_data_file_name) - 1
             elif time >= self.second_time[-1]:
-                second_file_idx = self.data_file_names.index(self.second_data_file_name) + 1
+                second_file_idx = self.data_file_names.index(
+                    self.second_data_file_name) + 1
         else:
             if time <= self.second_time[0] - time_delta:
-                second_file_idx = self.data_file_names.index(self.second_data_file_name) - 1
+                second_file_idx = self.data_file_names.index(
+                    self.second_data_file_name) - 1
             elif time > self.second_time[-1]:
-                second_file_idx = self.data_file_names.index(self.second_data_file_name) + 1
+                second_file_idx = self.data_file_names.index(
+                    self.second_data_file_name) + 1
 
         if second_file_idx is not None:
             try:
-                self.second_data_file_name = self.data_file_names[second_file_idx]
+                self.second_data_file_name = \
+                    self.data_file_names[second_file_idx]
             except IndexError:
                 logger = logging.getLogger(__name__)
-                logger.error('Failed to find the next required input data file.')
-                raise RuntimeError('Failed to find the next input data file.')
+                logger.error(f'Failed to find the next input data file.')
+                raise PyLagRuntimeError(f'Failed to find the next input '
+                                        f'data file.')
 
             self._open_second_data_file_for_reading()
 
@@ -559,7 +599,8 @@ class FileReader:
          : NDArray
              The the grid variable.
         """
-        return np.ascontiguousarray(self.grid_file.variables[var_name][:].squeeze())
+        return np.ascontiguousarray(
+            self.grid_file.variables[var_name][:].squeeze())
 
     def get_time_at_last_time_index(self):
         """ Get the time and the last time index
@@ -687,7 +728,7 @@ class FileReader:
         if np.ma.isMaskedArray(var):
             return np.ascontiguousarray(var.mask)
 
-        raise RuntimeError('Variable {} is not a masked array.'.format(var_name))
+        raise PyLagRuntimeError(f'Variable {var_name} is not a masked array.')
 
     def get_mask_at_next_time_index(self, var_name):
         """ Get the mask at the next time index
@@ -708,7 +749,7 @@ class FileReader:
         if np.ma.isMaskedArray(var):
             return np.ascontiguousarray(var.mask)
 
-        raise RuntimeError('Variable {} is not a masked array.'.format(var_name))
+        raise PyLagRuntimeError(f'Variable {var_name} is not a masked array.')
 
     def _open_data_files_for_reading(self):
         """Open the first and second data files for reading
@@ -726,11 +767,14 @@ class FileReader:
 
         # Open the first data file
         try:
-            self.first_data_file = self.dataset_reader.read_dataset(self.first_data_file_name)
-            logger.info('Opened first data file {} for reading.'.format(self.first_data_file_name))
+            self.first_data_file = self.dataset_reader.read_dataset(
+                self.first_data_file_name)
+            logger.info(f'Opened first data file {self.first_data_file_name} '
+                        f'for reading.')
         except RuntimeError:
-            logger.error('Could not open data file {}.'.format(self.first_data_file_name))
-            raise RuntimeError('Could not open data file for reading.')
+            logger.error(f'Could not open data file '
+                         f'{self.first_data_file_name}.')
+            raise PyLagRuntimeError('Could not open data file for reading.')
 
     def _open_second_data_file_for_reading(self):
         logger = logging.getLogger(__name__)
@@ -741,11 +785,14 @@ class FileReader:
 
         # Open the second data file
         try:
-            self.second_data_file = self.dataset_reader.read_dataset(self.second_data_file_name)
-            logger.info('Opened second data file {} for reading.'.format(self.second_data_file_name))
+            self.second_data_file = self.dataset_reader.read_dataset(
+                self.second_data_file_name)
+            logger.info(f'Opened second data file {self.second_data_file_name} '
+                        f'for reading.')
         except RuntimeError:
-            logger.error('Could not open data file {}.'.format(self.second_data_file_name))
-            raise RuntimeError('Could not open data file for reading.')
+            logger.error(f'Could not open data file '
+                         f'{self.second_data_file_name}.')
+            raise PyLagRuntimeError('Could not open data file for reading.')
 
     def _set_time_arrays(self):
         self._set_first_time_array()
@@ -759,19 +806,22 @@ class FileReader:
         # Convert to seconds using datetime_start as a reference point
         first_time_seconds = []
         for time in first_datetime:
-            first_time_seconds.append((time - self.sim_start_datetime).total_seconds())
+            first_time_seconds.append((time -
+                self.sim_start_datetime).total_seconds())
 
         self.first_time = np.array(first_time_seconds, dtype=DTYPE_FLOAT)
 
     def _set_second_time_array(self):
         # Second time array
         # ----------------
-        second_datetime = self.datetime_reader.get_datetime(self.second_data_file)
+        second_datetime = self.datetime_reader.get_datetime(
+            self.second_data_file)
 
         # Convert to seconds using datetime_start as a reference point
         second_time_seconds = []
         for time in second_datetime:
-            second_time_seconds.append((time - self.sim_start_datetime).total_seconds())
+            second_time_seconds.append((time -
+                self.sim_start_datetime).total_seconds())
 
         self.second_time = np.array(second_time_seconds, dtype=DTYPE_FLOAT)
 
@@ -781,7 +831,8 @@ class FileReader:
         if idx < len(self.first_time) - 1:
             return self.first_time[idx+1] - self.first_time[idx]
         else:
-            return self.compute_time_delta_between_datasets(self.first_data_file_name, forward=True)
+            return self.compute_time_delta_between_datasets(
+                self.first_data_file_name, forward=True)
 
     def _compute_second_dataset_time_delta(self, idx):
         # Time delta between two time points in the second time array
@@ -789,7 +840,8 @@ class FileReader:
         if idx > 0:
             return self.second_time[idx] - self.second_time[idx-1]
         else:
-            return self.compute_time_delta_between_datasets(self.second_data_file_name, forward=False)
+            return self.compute_time_delta_between_datasets(
+                self.second_data_file_name, forward=False)
 
     def _set_time_indices(self, time):
         # Set first time index
@@ -816,9 +868,10 @@ class FileReader:
 
         if tidx_first == -1: 
             logger = logging.getLogger(__name__)
-            logger.info('The provided time {}s lies outside of the range for which '\
-            'there exists input data: {} to {}s'.format(time, self.first_time[0], self.first_time[-1]))
-            raise ValueError('Time out of range.')
+            logger.info(f'The provided time {time}s lies outside of the '
+                        f'range for which there exists input data: '
+                        f'{self.first_time[0]} to {self.first_time[-1]}s')
+            raise PyLagValueError('Time out of range.')
 
         # Set second time index
         # ---------------------
@@ -844,9 +897,10 @@ class FileReader:
                 
         if tidx_second == -1: 
             logger = logging.getLogger(__name__)
-            logger.info('The provided time {}s lies outside of the range for which '\
-            'there exists input data: {} to {}s'.format(time, self.second_time[0], self.second_time[-1]))
-            raise ValueError('Time out of range.')
+            logger.info(f'The provided time {time}s lies outside of the range '
+                        f'for which there exists input data: '
+                        f'{self.second_time[0]} to {self.second_time[-1]}s')
+            raise PyLagValueError('Time out of range.')
         
         # Save time indices
         self.tidx_first = tidx_first
@@ -886,6 +940,7 @@ class FileNameReader:
         """
         raise NotImplementedError
 
+
 class DiskFileNameReader(FileNameReader):
     """ Disk file name reader which reads in NetCDF file names from disk
 
@@ -910,7 +965,7 @@ class DiskFileNameReader(FileNameReader):
              A list of file names.
 
         """
-        return natsort.natsorted(glob.glob('{}/{}*.nc'.format(file_dir, file_name_stem)))
+        return natsort.natsorted(glob.glob(f'{file_dir}/{file_name_stem}*.nc'))
                 
 
 # Helper classes to assist in reading datasets
@@ -956,7 +1011,7 @@ class NetCDFDatasetReader(DatasetReader):
         file_name : str
             The name or path of the file to open
 
-        set_auto_mask_and_scale : bool
+        set_auto_maskandscale : bool
             Flag for masking
 
         Returns
@@ -1035,7 +1090,7 @@ class DefaultDateTimeReader(DateTimeReader):
     """ Default Datetime reader
 
     Default datetime readers read in datetime information from a single variable
-    in the supplied NetCDF dataset. The name of the time variable should be given
+    in the NetCDF dataset. The name of the time variable should be given
     in the run config file. If one is not given, it defaults to the name `time`.
 
     Parameters
@@ -1146,6 +1201,10 @@ class FVCOMDateTimeReader(DateTimeReader):
         ----------
         dataset : Dataset
             Dataset object for an FVCOM data file.
+
+        time_index : int, optional
+            The time index at which to extract data. Default behaviour
+            is to return the full time array as datetime objects.
 
         Returns
         -------
