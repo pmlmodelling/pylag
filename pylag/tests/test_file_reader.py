@@ -137,7 +137,7 @@ class FileReader_test(TestCase):
         self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
-        self.file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
 
     def test_use_end_datetime_equal_to_data_record_start(self):
         # Should be valid during reverse tracking
@@ -147,7 +147,7 @@ class FileReader_test(TestCase):
         self.config.set('SIMULATION', 'time_direction', 'reverse')
 
         # Create file reader
-        self.file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
 
     def test_use_start_datetime_equal_to_data_record_end(self):
         start_datetime = datetime.datetime(2000,1,1,0,8,0) # Invalid - 0 seconds after data record end
@@ -216,11 +216,11 @@ class FileReader_test(TestCase):
         self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
-        self.file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
 
         # Check file names
-        test.assert_array_equal('test_file_1', self.file_reader.first_data_file_name) 
-        test.assert_array_equal('test_file_1', self.file_reader.second_data_file_name) 
+        test.assert_array_equal('test_file_1', file_reader.first_data_file_name)
+        test.assert_array_equal('test_file_1', file_reader.second_data_file_name)
 
     def test_set_file_names_with_start_datetime_in_the_first_data_file(self):
         start_datetime = datetime.datetime(2000,1,1,0,1,0) # Valid = 60 seconds after data record start
@@ -229,11 +229,13 @@ class FileReader_test(TestCase):
         self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
-        self.file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+                                 self.dataset_reader, start_datetime,
+                                 end_datetime)
 
         # Check file names
-        test.assert_array_equal('test_file_1', self.file_reader.first_data_file_name) 
-        test.assert_array_equal('test_file_1', self.file_reader.second_data_file_name) 
+        test.assert_array_equal('test_file_1', file_reader.first_data_file_name)
+        test.assert_array_equal('test_file_1', file_reader.second_data_file_name)
 
     def test_set_file_names_with_start_datetime_equal_to_the_last_time_point_in_the_first_data_file(self):
         start_datetime = datetime.datetime(2000,1,1,0,2,0) # Valid = 120 seconds after data record start
@@ -242,11 +244,13 @@ class FileReader_test(TestCase):
         self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
-        self.file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+                                 self.dataset_reader, start_datetime,
+                                 end_datetime)
 
         # Check file names
-        test.assert_array_equal('test_file_1', self.file_reader.first_data_file_name) 
-        test.assert_array_equal('test_file_2', self.file_reader.second_data_file_name) 
+        test.assert_array_equal('test_file_1', file_reader.first_data_file_name)
+        test.assert_array_equal('test_file_2', file_reader.second_data_file_name)
 
     def test_set_file_names_with_start_datetime_inbetween_two_data_files(self):
         start_datetime = datetime.datetime(2000,1,1,0,2,30) # Valid = 150 seconds after data record start
@@ -255,11 +259,13 @@ class FileReader_test(TestCase):
         self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
-        self.file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+                                 self.dataset_reader, start_datetime,
+                                 end_datetime)
 
         # Check file names
-        test.assert_array_equal('test_file_1', self.file_reader.first_data_file_name) 
-        test.assert_array_equal('test_file_2', self.file_reader.second_data_file_name) 
+        test.assert_array_equal('test_file_1', file_reader.first_data_file_name)
+        test.assert_array_equal('test_file_2', file_reader.second_data_file_name)
 
     def test_set_file_names_with_start_datetime_in_the_second_data_file(self):
         start_datetime = datetime.datetime(2000,1,1,0,4,0) # Valid = 240 seconds after data record start
@@ -268,11 +274,13 @@ class FileReader_test(TestCase):
         self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
-        self.file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+                                 self.dataset_reader, start_datetime,
+                                 end_datetime)
 
         # Check file names
-        test.assert_array_equal('test_file_2', self.file_reader.first_data_file_name)
-        test.assert_array_equal('test_file_2', self.file_reader.second_data_file_name) 
+        test.assert_array_equal('test_file_2', file_reader.first_data_file_name)
+        test.assert_array_equal('test_file_2', file_reader.second_data_file_name)
 
     def test_set_file_names_with_time_points_repeated_between_adjacent_files(self):
         start_datetime = datetime.datetime(2000,1,1,0,5,0) # Valid = 300 seconds after data record start
@@ -281,11 +289,13 @@ class FileReader_test(TestCase):
         self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
-        self.file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+                                 self.dataset_reader, start_datetime,
+                                 end_datetime)
 
         # Check file names
-        test.assert_array_equal('test_file_3', self.file_reader.first_data_file_name)
-        test.assert_array_equal('test_file_3', self.file_reader.second_data_file_name)
+        test.assert_array_equal('test_file_3', file_reader.first_data_file_name)
+        test.assert_array_equal('test_file_3', file_reader.second_data_file_name)
 
     def test_set_start_datetime_and_time_step_to_give_an_integer_number_of_timesteps_after_data_record_start(self):
         start_datetime = datetime.datetime(2000, 1, 1, 0, 0, 0)
@@ -296,8 +306,9 @@ class FileReader_test(TestCase):
         self.config.set('NUMERICS', 'time_step_adv', '10')
 
         # Create file reader
-        self.file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime,
-                                      end_datetime)
+        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+                                 self.dataset_reader, start_datetime,
+                                 end_datetime)
 
     def test_set_start_datetime_and_time_step_to_give_a_non_integer_number_of_timesteps_after_data_record_start(self):
         start_datetime = datetime.datetime(2000, 1, 1, 0, 0, 0)
@@ -308,7 +319,8 @@ class FileReader_test(TestCase):
         self.config.set('NUMERICS', 'time_step_adv', '11')
 
         # Create file reader
-        self.assertRaises(PyLagValueError, FileReader, self.config, 'ocean', self.file_name_reader, self.dataset_reader,
+        self.assertRaises(PyLagValueError, FileReader, self.config, 'ocean',
+                          self.file_name_reader, self.dataset_reader,
                           start_datetime, end_datetime)
 
     def test_set_time_arrays_with_start_datetime_equal_to_data_record_start(self):
@@ -318,11 +330,13 @@ class FileReader_test(TestCase):
         self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
-        self.file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+                                 self.dataset_reader, start_datetime,
+                                 end_datetime)
 
         # Check time arrays
-        test.assert_array_almost_equal([0., 60., 120.], self.file_reader.first_time)
-        test.assert_array_almost_equal([0., 60., 120.], self.file_reader.second_time)
+        test.assert_array_almost_equal([0., 60., 120.], file_reader.first_time)
+        test.assert_array_almost_equal([0., 60., 120.], file_reader.second_time)
 
     def test_set_time_arrays_with_start_datetime_equal_to_the_last_time_point_in_the_first_data_file(self):
         start_datetime = datetime.datetime(2000,1,1,0,2,0) # Valid = 0 seconds after data record start
@@ -331,22 +345,26 @@ class FileReader_test(TestCase):
         self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
-        self.file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+                                 self.dataset_reader, start_datetime,
+                                 end_datetime)
 
         # Check time arrays
-        test.assert_array_almost_equal([-120., -60., 0.], self.file_reader.first_time)
-        test.assert_array_almost_equal([60., 120., 180.], self.file_reader.second_time)
+        test.assert_array_almost_equal([-120., -60., 0.], file_reader.first_time)
+        test.assert_array_almost_equal([60., 120., 180.], file_reader.second_time)
 
     def test_set_time_indices_with_start_datetime_equal_to_data_record_start(self):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid = 0 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
         # Create file reader
-        self.file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+                                 self.dataset_reader, start_datetime,
+                                 end_datetime)
 
         # Check time indices
-        test.assert_equal(0, self.file_reader.tidx_first)
-        test.assert_equal(1, self.file_reader.tidx_second)
+        test.assert_equal(0, file_reader.tidx_first)
+        test.assert_equal(1, file_reader.tidx_second)
 
     def test_set_time_indices_with_start_datetime_equal_to_the_last_time_point_in_the_first_data_file(self):
         start_datetime = datetime.datetime(2000,1,1,0,2,0) # Valid = 0 seconds after data record start
@@ -355,11 +373,13 @@ class FileReader_test(TestCase):
         self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
-        self.file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+                                 self.dataset_reader, start_datetime,
+                                 end_datetime)
 
         # Check time indices
-        test.assert_equal(2, self.file_reader.tidx_first)
-        test.assert_equal(0, self.file_reader.tidx_second)
+        test.assert_equal(2, file_reader.tidx_first)
+        test.assert_equal(0, file_reader.tidx_second)
 
     def test_set_time_indices_with_time_points_repeated_between_adjacent_files(self):
         start_datetime = datetime.datetime(2000,1,1,0,5,0) # Valid = 300 seconds after data record start
@@ -368,11 +388,13 @@ class FileReader_test(TestCase):
         self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
-        self.file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+                                 self.dataset_reader, start_datetime,
+                                 end_datetime)
 
         # Check time indices
-        test.assert_equal(0, self.file_reader.tidx_first)
-        test.assert_equal(1, self.file_reader.tidx_second)
+        test.assert_equal(0, file_reader.tidx_first)
+        test.assert_equal(1, file_reader.tidx_second)
 
     def test_set_file_names_when_updating_reading_frames_in_the_first_file(self):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid = 0 seconds after data record start
@@ -381,14 +403,16 @@ class FileReader_test(TestCase):
         self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
-        self.file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+                                 self.dataset_reader, start_datetime,
+                                 end_datetime)
 
         # Update reading frames
-        self.file_reader.update_reading_frames(time=60)
+        file_reader.update_reading_frames(time=60)
 
         # Check file names
-        test.assert_array_equal('test_file_1', self.file_reader.first_data_file_name)
-        test.assert_array_equal('test_file_1', self.file_reader.second_data_file_name)
+        test.assert_array_equal('test_file_1', file_reader.first_data_file_name)
+        test.assert_array_equal('test_file_1', file_reader.second_data_file_name)
 
     def test_set_time_indices_when_updating_reading_frames_in_the_first_file(self):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid = 0 seconds after data record start
@@ -397,14 +421,16 @@ class FileReader_test(TestCase):
         self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
-        self.file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+                                 self.dataset_reader, start_datetime,
+                                 end_datetime)
 
         # Update reading frames
-        self.file_reader.update_reading_frames(time=60)
+        file_reader.update_reading_frames(time=60)
 
         # Check time indices
-        test.assert_equal(1, self.file_reader.tidx_first)
-        test.assert_equal(2, self.file_reader.tidx_second)
+        test.assert_equal(1, file_reader.tidx_first)
+        test.assert_equal(2, file_reader.tidx_second)
 
     def test_set_file_names_when_updating_reading_frames_at_the_end_of_the_first_file(self):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid = 0 seconds after data record start
@@ -413,14 +439,16 @@ class FileReader_test(TestCase):
         self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
-        self.file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+                                 self.dataset_reader, start_datetime,
+                                 end_datetime)
 
         # Update reading frames
-        self.file_reader.update_reading_frames(time=120.)
+        file_reader.update_reading_frames(time=120.)
 
         # Check file names
-        test.assert_array_equal('test_file_1', self.file_reader.first_data_file_name)
-        test.assert_array_equal('test_file_2', self.file_reader.second_data_file_name)
+        test.assert_array_equal('test_file_1', file_reader.first_data_file_name)
+        test.assert_array_equal('test_file_2', file_reader.second_data_file_name)
 
     def test_set_time_indices_when_updating_reading_frames_at_the_end_of_the_first_file(self):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid = 0 seconds after data record start
@@ -429,14 +457,16 @@ class FileReader_test(TestCase):
         self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
-        self.file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+                                 self.dataset_reader, start_datetime,
+                                 end_datetime)
 
         # Update reading frames
-        self.file_reader.update_reading_frames(time=120.)
+        file_reader.update_reading_frames(time=120.)
 
         # Check time indices
-        test.assert_equal(2, self.file_reader.tidx_first)
-        test.assert_equal(0, self.file_reader.tidx_second)
+        test.assert_equal(2, file_reader.tidx_first)
+        test.assert_equal(0, file_reader.tidx_second)
 
     def test_set_file_names_when_updating_reading_frames_after_the_end_of_the_first_file(self):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid = 0 seconds after data record start
@@ -445,14 +475,16 @@ class FileReader_test(TestCase):
         self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
-        self.file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+                                 self.dataset_reader, start_datetime,
+                                 end_datetime)
 
         # Update reading frames
-        self.file_reader.update_reading_frames(time=150.)
+        file_reader.update_reading_frames(time=150.)
 
         # Check file names
-        test.assert_array_equal('test_file_1', self.file_reader.first_data_file_name)
-        test.assert_array_equal('test_file_2', self.file_reader.second_data_file_name)
+        test.assert_array_equal('test_file_1', file_reader.first_data_file_name)
+        test.assert_array_equal('test_file_2', file_reader.second_data_file_name)
 
     def test_set_time_indices_when_updating_reading_frames_after_the_end_of_the_first_file(self):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid = 0 seconds after data record start
@@ -461,14 +493,16 @@ class FileReader_test(TestCase):
         self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
-        self.file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+                                 self.dataset_reader, start_datetime,
+                                 end_datetime)
 
         # Update reading frames
-        self.file_reader.update_reading_frames(time=150.)
+        file_reader.update_reading_frames(time=150.)
 
         # Check time indices
-        test.assert_equal(2, self.file_reader.tidx_first)
-        test.assert_equal(0, self.file_reader.tidx_second)
+        test.assert_equal(2, file_reader.tidx_first)
+        test.assert_equal(0, file_reader.tidx_second)
 
     def test_set_file_names_when_updating_reading_frames_at_the_start_of_the_second_file(self):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid = 0 seconds after data record start
@@ -477,14 +511,16 @@ class FileReader_test(TestCase):
         self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
-        self.file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+                                 self.dataset_reader, start_datetime,
+                                 end_datetime)
 
         # Update reading frames
-        self.file_reader.update_reading_frames(time=180.)
+        file_reader.update_reading_frames(time=180.)
 
         # Check file names
-        test.assert_array_equal('test_file_2', self.file_reader.first_data_file_name)
-        test.assert_array_equal('test_file_2', self.file_reader.second_data_file_name)
+        test.assert_array_equal('test_file_2', file_reader.first_data_file_name)
+        test.assert_array_equal('test_file_2', file_reader.second_data_file_name)
 
     def test_set_time_indices_when_updating_reading_frames_at_the_start_of_the_second_file(self):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid = 0 seconds after data record start
@@ -493,14 +529,16 @@ class FileReader_test(TestCase):
         self.config.set('SIMULATION', 'time_direction', 'forward')
 
         # Create file reader
-        self.file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+                                 self.dataset_reader, start_datetime,
+                                 end_datetime)
 
         # Update reading frames
-        self.file_reader.update_reading_frames(time=180.)
+        file_reader.update_reading_frames(time=180.)
 
         # Check time indices
-        test.assert_equal(0, self.file_reader.tidx_first)
-        test.assert_equal(1, self.file_reader.tidx_second)
+        test.assert_equal(0, file_reader.tidx_first)
+        test.assert_equal(1, file_reader.tidx_second)
 
     def test_set_file_names_when_reverse_tracking(self):
         start_datetime = datetime.datetime(2000,1,1,0,3,0) # Valid = 180 seconds after data record start
@@ -509,11 +547,13 @@ class FileReader_test(TestCase):
         self.config.set('SIMULATION', 'time_direction', 'reverse')
 
         # Create file reader
-        self.file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+                                 self.dataset_reader, start_datetime,
+                                 end_datetime)
 
         # Check file names
-        test.assert_array_equal('test_file_1', self.file_reader.first_data_file_name)
-        test.assert_array_equal('test_file_2', self.file_reader.second_data_file_name)
+        test.assert_array_equal('test_file_1', file_reader.first_data_file_name)
+        test.assert_array_equal('test_file_2', file_reader.second_data_file_name)
 
     def test_set_file_names_when_updating_reading_frames_during_reverse_tracking_between_data_files(self):
         start_datetime = datetime.datetime(2000,1,1,0,3,0) # Valid = 180 seconds after data record start
@@ -522,14 +562,16 @@ class FileReader_test(TestCase):
         self.config.set('SIMULATION', 'time_direction', 'reverse')
 
         # Create file reader
-        self.file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+                                 self.dataset_reader, start_datetime,
+                                 end_datetime)
 
         # Update reading frames
-        self.file_reader.update_reading_frames(time=-60.)
+        file_reader.update_reading_frames(time=-60.)
 
         # Check file names
-        test.assert_array_equal('test_file_1', self.file_reader.first_data_file_name)
-        test.assert_array_equal('test_file_1', self.file_reader.second_data_file_name)
+        test.assert_array_equal('test_file_1', file_reader.first_data_file_name)
+        test.assert_array_equal('test_file_1', file_reader.second_data_file_name)
 
     def test_set_time_indices_when_reverse_tracking(self):
         start_datetime = datetime.datetime(2000,1,1,0,3,0) # Valid = 180 seconds after data record start
@@ -538,11 +580,13 @@ class FileReader_test(TestCase):
         self.config.set('SIMULATION', 'time_direction', 'reverse')
 
         # Create file reader
-        self.file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+                                 self.dataset_reader, start_datetime,
+                                 end_datetime)
 
         # Check time indices
-        test.assert_equal(2, self.file_reader.tidx_first)
-        test.assert_equal(0, self.file_reader.tidx_second)
+        test.assert_equal(2, file_reader.tidx_first)
+        test.assert_equal(0, file_reader.tidx_second)
 
     def test_set_time_indices_when_updating_reading_frames_during_reverse_tracking_between_data_files(self):
         start_datetime = datetime.datetime(2000,1,1,0,3,0) # Valid = 180 seconds after data record start
@@ -551,41 +595,47 @@ class FileReader_test(TestCase):
         self.config.set('SIMULATION', 'time_direction', 'reverse')
 
         # Create file reader
-        self.file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+                                 self.dataset_reader, start_datetime,
+                                 end_datetime)
 
         # Update reading frames
-        self.file_reader.update_reading_frames(time=-60.)
+        file_reader.update_reading_frames(time=-60.)
 
         # Check time indices
-        test.assert_equal(1, self.file_reader.tidx_first)
-        test.assert_equal(2, self.file_reader.tidx_second)
+        test.assert_equal(1, file_reader.tidx_first)
+        test.assert_equal(2, file_reader.tidx_second)
 
     def test_set_file_names_when_updating_reading_frames_during_reverse_tracking_into_first_file(self):
         start_datetime = datetime.datetime(2000,1,1,0,3,0) # Valid = 180 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid - 0 seconds before data record start
 
         # Create file reader
-        self.file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+                                 self.dataset_reader, start_datetime,
+                                 end_datetime)
 
         # Update reading frames
-        self.file_reader.update_reading_frames(time=-90.)
+        file_reader.update_reading_frames(time=-90.)
 
         # Check file names
-        test.assert_array_equal('test_file_1', self.file_reader.first_data_file_name)
-        test.assert_array_equal('test_file_1', self.file_reader.second_data_file_name)
+        test.assert_array_equal('test_file_1', file_reader.first_data_file_name)
+        test.assert_array_equal('test_file_1', file_reader.second_data_file_name)
 
     def test_set_time_indices_when_updating_reading_frames_during_reverse_tracking_into_first_file(self):
         start_datetime = datetime.datetime(2000,1,1,0,3,0) # Valid = 180 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid - 0 seconds before data record start
 
         # Create file reader
-        self.file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+                                 self.dataset_reader, start_datetime,
+                                 end_datetime)
 
         # Update reading frames
-        self.file_reader.update_reading_frames(time=-90.)
+        file_reader.update_reading_frames(time=-90.)
 
         # Check time indices
-        test.assert_equal(1, self.file_reader.tidx_first)
-        test.assert_equal(2, self.file_reader.tidx_second)
+        test.assert_equal(1, file_reader.tidx_first)
+        test.assert_equal(2, file_reader.tidx_second)
 
 
