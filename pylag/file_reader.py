@@ -45,6 +45,12 @@ class FileReader:
     config : ConfigParser
         Configuration object.
 
+    file_name_reader : FileNameReader
+        Object to assist with reading in file names.
+
+    dataset_reader : DatasetReader
+        Object to assist with reading in datasets
+
     datetime_start : Datetime
         Simulation start date/time.
 
