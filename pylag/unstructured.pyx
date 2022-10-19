@@ -42,7 +42,8 @@ cimport pylag.interpolation as interp
 from pylag.math cimport geographic_to_cartesian_coords, rotate_axes, det_third_order
 from pylag.math cimport great_circle_arc_segments_intersect
 from pylag.math cimport haversine
-from pylag.math cimport int_min, float_min, get_intersection_point, get_intersection_point_in_geographic_coordinates
+from pylag.math cimport int_min, float_min, get_intersection_point
+from pylag.math cimport get_intersection_point_in_geographic_coordinates
 from pylag.math cimport area_of_a_triangle, area_of_a_spherical_triangle
 
 cdef class Grid:
@@ -55,7 +56,7 @@ cdef class Grid:
     """
     def find_host_using_global_search_wrapper(self,
                                               ParticleSmartPtr particle):
-        """ Python wrapper for finding and setting the host element using a global search
+        """ Wrapper for finding and setting the host element using a global search
 
         Parameters
         ----------
@@ -110,10 +111,12 @@ cdef class Grid:
          : int
              Flag signifying whether the host element was found successfully.
         """
-        return self.find_host_using_particle_tracing(particle_old.get_ptr(), particle_new.get_ptr())
+        return self.find_host_using_particle_tracing(particle_old.get_ptr(),
+                particle_new.get_ptr())
 
-    cdef DTYPE_INT_t find_host_using_particle_tracing(self, Particle *particle_old,
-                                                      Particle *particle_new) except INT_ERR:
+    cdef DTYPE_INT_t find_host_using_particle_tracing(self,
+            Particle *particle_old,
+            Particle *particle_new) except INT_ERR:
         raise NotImplementedError
 
     def get_boundary_intersection_wrapper(self, ParticleSmartPtr particle_old,
@@ -144,7 +147,8 @@ cdef class Grid:
         cdef DTYPE_FLOAT_t end_point_c[2]
         cdef DTYPE_FLOAT_t intersection_c[2]
 
-        self.get_boundary_intersection(particle_old.get_ptr(), particle_new.get_ptr(), start_point_c,
+        self.get_boundary_intersection(particle_old.get_ptr(),
+                                       particle_new.get_ptr(), start_point_c,
                                        end_point_c, intersection_c)
 
         start_point, end_point, intersection = [], [], []
@@ -205,7 +209,7 @@ cdef class Grid:
         raise NotImplementedError
 
     def get_element_area_wrapper(self, ParticleSmartPtr particle):
-        """ Python wrapper for returning the area of the element in which the particle resides.
+        """ Wrapper for returning the area of the particle's host element
 
         Parameters
         ----------
@@ -222,7 +226,8 @@ cdef class Grid:
     cdef DTYPE_FLOAT_t get_element_area(self, Particle *particle) except FLOAT_ERR:
         raise NotImplementedError
 
-    cpdef vector[DTYPE_FLOAT_t] get_phi(self, const DTYPE_FLOAT_t &x1, const DTYPE_FLOAT_t &x2, const DTYPE_INT_t &host):
+    cpdef vector[DTYPE_FLOAT_t] get_phi(self, const DTYPE_FLOAT_t &x1,
+            const DTYPE_FLOAT_t &x2, const DTYPE_INT_t &host):
         raise NotImplementedError
 
     def get_grad_phi_wrapper(self, host):
@@ -269,11 +274,13 @@ cdef class Grid:
         """
         return self.interpolate_in_space(var_arr, particle.get_ptr())
 
-    cdef DTYPE_FLOAT_t interpolate_in_space(self, DTYPE_FLOAT_t[::1] var_arr, Particle *particle) except FLOAT_ERR:
+    cdef DTYPE_FLOAT_t interpolate_in_space(self, DTYPE_FLOAT_t[::1] var_arr,
+            Particle *particle) except FLOAT_ERR:
         raise NotImplementedError
 
-    def interpolate_in_time_and_space_2D_wrapper(self, var_last_arr, var_next_arr, time_fraction,
-                                                 ParticleSmartPtr particle):
+    def interpolate_in_time_and_space_2D_wrapper(self, var_last_arr,
+            var_next_arr, time_fraction,
+            ParticleSmartPtr particle):
         """ Python wrapper for interpolate in time and space 2D
 
         Parameters
@@ -287,14 +294,17 @@ cdef class Grid:
         particle : pylag.particle_cpp_wrapper.ParticleSmartPtr
             The particle at its current position.
         """
-        return self.interpolate_in_time_and_space_2D(var_last_arr, var_next_arr, time_fraction, particle.get_ptr())
+        return self.interpolate_in_time_and_space_2D(var_last_arr,
+                var_next_arr, time_fraction, particle.get_ptr())
 
-    cdef DTYPE_FLOAT_t interpolate_in_time_and_space_2D(self, DTYPE_FLOAT_t[::1] var_last_arr,
-                                                        DTYPE_FLOAT_t[::1] var_next_arr,
-                                                        DTYPE_FLOAT_t time_fraction, Particle *particle) except FLOAT_ERR:
+    cdef DTYPE_FLOAT_t interpolate_in_time_and_space_2D(self,
+            DTYPE_FLOAT_t[::1] var_last_arr,
+            DTYPE_FLOAT_t[::1] var_next_arr,
+            DTYPE_FLOAT_t time_fraction, Particle *particle) except FLOAT_ERR:
         raise NotImplementedError
 
-    def interpolate_in_time_and_space_wrapper(self, var_last_arr, var_next_arr, k, time_fraction, ParticleSmartPtr particle):
+    def interpolate_in_time_and_space_wrapper(self, var_last_arr, var_next_arr,
+            k, time_fraction, ParticleSmartPtr particle):
         """ Python wrapper for interpolate in time and space
 
         Parameters
@@ -314,11 +324,13 @@ cdef class Grid:
         particle : pylag.particle_cpp_wrapper.ParticleSmartPtr
             The particle at its current position.
         """
-        return self.interpolate_in_time_and_space(var_last_arr, var_next_arr, k, time_fraction, particle.get_ptr())
+        return self.interpolate_in_time_and_space(var_last_arr, var_next_arr,
+                k, time_fraction, particle.get_ptr())
 
-    cdef DTYPE_FLOAT_t interpolate_in_time_and_space(self, DTYPE_FLOAT_t[:, ::1] var_last_arr,
-                                                     DTYPE_FLOAT_t[:, ::1] var_next_arr, DTYPE_INT_t k,
-                                                     DTYPE_FLOAT_t time_fraction, Particle *particle) except FLOAT_ERR:
+    cdef DTYPE_FLOAT_t interpolate_in_time_and_space(self,
+            DTYPE_FLOAT_t[:, ::1] var_last_arr,
+            DTYPE_FLOAT_t[:, ::1] var_next_arr, DTYPE_INT_t k,
+            DTYPE_FLOAT_t time_fraction, Particle *particle) except FLOAT_ERR:
         raise NotImplementedError
 
     cdef void interpolate_grad_in_time_and_space(self, const DTYPE_FLOAT_t[:, ::1] &var_last_arr,
@@ -371,8 +383,10 @@ cdef class Grid:
         return self.shepard_interpolation(x, y, xpts_c, ypts_c, vals_c, valid_points_c)
 
     cdef DTYPE_FLOAT_t shepard_interpolation(self, const DTYPE_FLOAT_t &x,
-            const DTYPE_FLOAT_t &y, const DTYPE_FLOAT_t xpts[4], const DTYPE_FLOAT_t ypts[4],
-            const DTYPE_FLOAT_t vals[4], const DTYPE_INT_t valid_points[4]) except FLOAT_ERR:
+            const DTYPE_FLOAT_t &y, const DTYPE_FLOAT_t xpts[4],
+            const DTYPE_FLOAT_t ypts[4],
+            const DTYPE_FLOAT_t vals[4],
+            const DTYPE_INT_t valid_points[4]) except FLOAT_ERR:
         raise NotImplementedError
 
 
@@ -457,7 +471,8 @@ cdef class UnstructuredCartesianGrid(Grid):
     # Cell areas
     cdef DTYPE_FLOAT_t[::1] areas
 
-    def __init__(self, config, name, n_nodes, n_elems, nv, nbe, x, y, xc, yc, land_sea_mask_c, land_sea_mask, areas=None):
+    def __init__(self, config, name, n_nodes, n_elems, nv, nbe, x, y, xc, yc,
+            land_sea_mask_c, land_sea_mask, areas=None):
         self.config = config
 
         self.name = name
@@ -475,7 +490,8 @@ cdef class UnstructuredCartesianGrid(Grid):
             self.areas = areas
 
         # Containers for preserving the value of gradient calculations
-        self.barycentric_gradients_have_been_cached = np.zeros(self.n_elems, dtype=DTYPE_INT, order='C')
+        self.barycentric_gradients_have_been_cached = np.zeros(self.n_elems,
+                dtype=DTYPE_INT, order='C')
         self.dphi_dx = np.ones((self.n_elems, 3), dtype=DTYPE_FLOAT, order='C') * -999.
         self.dphi_dy = np.ones((self.n_elems, 3), dtype=DTYPE_FLOAT, order='C') * -999.
 
@@ -528,8 +544,8 @@ cdef class UnstructuredCartesianGrid(Grid):
         # Check for non-sensical start points.
         guess = particle.get_host_horizontal_elem(self.name)
         if guess < 0:
-            raise ValueError('Invalid start point for local host element '\
-                    'search. Start point = {}'.format(guess))
+            raise ValueError(f'Invalid start point for local host element '
+                             f'search. Start point = {guess}')
 
         host_found = False
         last_guess = -1
@@ -576,8 +592,8 @@ cdef class UnstructuredCartesianGrid(Grid):
             if guess == second_to_last_guess:
                 return BDY_ERROR
 
-    cdef DTYPE_INT_t find_host_using_particle_tracing(self, Particle *particle_old,
-                                                      Particle *particle_new) except INT_ERR:
+    cdef DTYPE_INT_t find_host_using_particle_tracing(self,
+            Particle *particle_old, Particle *particle_new) except INT_ERR:
         """ Try to find the new host element using the particle's pathline
 
         The algorithm navigates between elements by finding the exit point
@@ -988,7 +1004,8 @@ cdef class UnstructuredCartesianGrid(Grid):
 
         return area
 
-    cpdef vector[DTYPE_FLOAT_t] get_phi(self, const DTYPE_FLOAT_t &x1, const DTYPE_FLOAT_t &x2, const DTYPE_INT_t &host):
+    cpdef vector[DTYPE_FLOAT_t] get_phi(self, const DTYPE_FLOAT_t &x1,
+            const DTYPE_FLOAT_t &x2, const DTYPE_INT_t &host):
         """ Get barycentric coordinates.
 
         Compute and return barycentric coordinates for the point (x,y) within the
@@ -1138,7 +1155,8 @@ cdef class UnstructuredCartesianGrid(Grid):
             self.dphi_dx[host, i] = dphi_dx[i]
             self.dphi_dy[host, i] = dphi_dy[i]
 
-    cdef DTYPE_FLOAT_t interpolate_in_space(self, DTYPE_FLOAT_t[::1] var_arr,  Particle* particle) except FLOAT_ERR:
+    cdef DTYPE_FLOAT_t interpolate_in_space(self, DTYPE_FLOAT_t[::1] var_arr,
+            Particle* particle) except FLOAT_ERR:
         """ Interpolate the given field in space
 
         Interpolate the given field on the horizontal grid. The supplied fields
@@ -1179,13 +1197,15 @@ cdef class UnstructuredCartesianGrid(Grid):
 
         return interp.interpolate_within_element(var_nodes, phi)
 
-    cdef DTYPE_FLOAT_t interpolate_in_time_and_space_2D(self, DTYPE_FLOAT_t[::1] var_last_arr,
-                                                        DTYPE_FLOAT_t[::1] var_next_arr,
-                                                        DTYPE_FLOAT_t time_fraction, Particle* particle) except FLOAT_ERR:
+    cdef DTYPE_FLOAT_t interpolate_in_time_and_space_2D(self,
+            DTYPE_FLOAT_t[::1] var_last_arr,
+            DTYPE_FLOAT_t[::1] var_next_arr,
+            DTYPE_FLOAT_t time_fraction, Particle* particle) except FLOAT_ERR:
         """ Interpolate the given field in time and space 2D
 
-        Interpolate the given field in time and space on the horizontal grid. The supplied fields
-        should be 1D arrays of values defined at element nodes.
+        Interpolate the given field in time and space on the horizontal grid.
+        The supplied fields should be 1D arrays of values defined at element
+        nodes.
 
         Parameters
         ----------
@@ -1233,13 +1253,15 @@ cdef class UnstructuredCartesianGrid(Grid):
 
         return interp.interpolate_within_element(var_nodes, phi)
 
-    cdef DTYPE_FLOAT_t interpolate_in_time_and_space(self, DTYPE_FLOAT_t[:, ::1] var_last_arr,
-                                                     DTYPE_FLOAT_t[:, ::1] var_next_arr, DTYPE_INT_t k,
-                                                     DTYPE_FLOAT_t time_fraction, Particle* particle) except FLOAT_ERR:
+    cdef DTYPE_FLOAT_t interpolate_in_time_and_space(self,
+            DTYPE_FLOAT_t[:, ::1] var_last_arr,
+            DTYPE_FLOAT_t[:, ::1] var_next_arr, DTYPE_INT_t k,
+            DTYPE_FLOAT_t time_fraction, Particle* particle) except FLOAT_ERR:
         """ Interpolate the given field in time and space
 
-        Interpolate the given field in time and space on the horizontal grid. The supplied fields
-        should be 2D arrays of values defined at element nodes.
+        Interpolate the given field in time and space on the horizontal grid.
+        The supplied fields should be 2D arrays of values defined at element
+        nodes.
 
         Parameters
         ----------
@@ -1290,13 +1312,16 @@ cdef class UnstructuredCartesianGrid(Grid):
 
         return interp.interpolate_within_element(var_nodes, phi)
 
-    cdef void interpolate_grad_in_time_and_space(self, const DTYPE_FLOAT_t[:, ::1] &var_last_arr,
-                                                 const DTYPE_FLOAT_t[:, ::1] &var_next_arr, DTYPE_INT_t k,
-                                                 DTYPE_FLOAT_t time_fraction, Particle* particle, DTYPE_FLOAT_t var_prime[2]) except *:
+    cdef void interpolate_grad_in_time_and_space(self,
+            const DTYPE_FLOAT_t[:, ::1] &var_last_arr,
+            const DTYPE_FLOAT_t[:, ::1] &var_next_arr, DTYPE_INT_t k,
+            DTYPE_FLOAT_t time_fraction, Particle* particle,
+            DTYPE_FLOAT_t var_prime[2]) except *:
         """ Interpolate the gradient in the given field in time and space
 
-        Interpolate the gradient in the given field in time and space on the horizontal grid. The supplied fields
-        should be 2D arrays of values defined at element nodes.
+        Interpolate the gradient in the given field in time and space on the
+        horizontal grid. The supplied fields should be 2D arrays of values
+        defined at element nodes.
 
         Parameters
         ----------
@@ -1354,8 +1379,9 @@ cdef class UnstructuredCartesianGrid(Grid):
         return
 
     cdef DTYPE_FLOAT_t shepard_interpolation(self, const DTYPE_FLOAT_t &x,
-            const DTYPE_FLOAT_t &y, const DTYPE_FLOAT_t xpts[4], const DTYPE_FLOAT_t ypts[4],
-            const DTYPE_FLOAT_t vals[4], const DTYPE_INT_t valid_points[4]) except FLOAT_ERR:
+            const DTYPE_FLOAT_t &y, const DTYPE_FLOAT_t xpts[4],
+            const DTYPE_FLOAT_t ypts[4], const DTYPE_FLOAT_t vals[4],
+            const DTYPE_INT_t valid_points[4]) except FLOAT_ERR:
         """ Shepard interpolation in cartesian coordinates
 
         Distances are euclidian distances in the plane
@@ -1500,7 +1526,8 @@ cdef class UnstructuredGeographicGrid(Grid):
     # Element areas
     cdef DTYPE_FLOAT_t[::1] areas
 
-    def __init__(self, config, name, n_nodes, n_elems, nv, nbe, x, y, xc, yc, land_sea_mask_c, land_sea_mask, areas=None):
+    def __init__(self, config, name, n_nodes, n_elems, nv, nbe, x, y, xc, yc,
+            land_sea_mask_c, land_sea_mask, areas=None):
 
         self.config = config
 
@@ -1539,7 +1566,8 @@ cdef class UnstructuredGeographicGrid(Grid):
             self.areas = areas
 
         # Containers for preserving the value of gradient calculations
-        self.barycentric_gradients_have_been_cached = np.zeros(self.n_elems, dtype=DTYPE_INT, order='C')
+        self.barycentric_gradients_have_been_cached = np.zeros(self.n_elems,
+                dtype=DTYPE_INT, order='C')
         self.dphi_dx = np.ones((self.n_elems, 3), dtype=DTYPE_FLOAT, order='C') * -999.
         self.dphi_dy = np.ones((self.n_elems, 3), dtype=DTYPE_FLOAT, order='C') * -999.
 
@@ -1593,8 +1621,8 @@ cdef class UnstructuredGeographicGrid(Grid):
         # Check for non-sensical start points.
         guess = particle.get_host_horizontal_elem(self.name)
         if guess < 0:
-            raise ValueError('Invalid start point for local host element '\
-                    'search. Start point = {}'.format(guess))
+            raise ValueError(f'Invalid start point for local host element '
+                             f'search. Start point = {guess}')
 
         host_found = False
         last_guess = -1
@@ -1642,8 +1670,8 @@ cdef class UnstructuredGeographicGrid(Grid):
             if guess == second_to_last_guess:
                 return BDY_ERROR
 
-    cdef DTYPE_INT_t find_host_using_particle_tracing(self, Particle *particle_old,
-                                                      Particle *particle_new) except INT_ERR:
+    cdef DTYPE_INT_t find_host_using_particle_tracing(self,
+            Particle *particle_old,  Particle *particle_new) except INT_ERR:
         """ Try to find the new host element using the particle's pathline
 
         The algorithm navigates between elements by finding the exit point
@@ -1745,7 +1773,8 @@ cdef class UnstructuredGeographicGrid(Grid):
             # This keeps track of the element currently being checked
             current_elem = elem
 
-            # Loop over all sides of the element to find the land boundary the element crossed
+            # Loop over all sides of the element to find the land boundary
+            # the element crossed
             for i in xrange(3):
                 x1_idx = x1_indices[i]
                 x2_idx = x2_indices[i]
@@ -1798,7 +1827,9 @@ cdef class UnstructuredGeographicGrid(Grid):
             if current_elem == elem:
                 # The algorithm indicates the particle has not exited the current element; we
                 # check the tetrahedral coordinates to see if they are indeed all +ve.
-                self.get_tetrahedral_coords(particle_new.get_x1(), particle_new.get_x2(), current_elem, s)
+                self.get_tetrahedral_coords(particle_new.get_x1(),
+                                            particle_new.get_x2(),
+                                            current_elem, s)
                 s_test = float_min(float_min(s[0], s[1]), s[2])
                 if s_test >= 0.0:
                     # Methods agree. Flag particle as being in the domain.
@@ -1806,14 +1837,16 @@ cdef class UnstructuredGeographicGrid(Grid):
                     phi = self.get_normalised_tetrahedral_coords(s)
                     particle_new.set_phi(self.name, phi)
                 else:
-                    # Methods disagree. This can happen due to numerical precision issues. Respond
-                    # by moving the particle to a default location.
+                    # Methods disagree. This can happen due to numerical
+                    # precision issues. Respond by moving the particle to a
+                    # default location.
                     self.set_default_location(particle_new)
                 flag = IN_DOMAIN
 
                 return flag
 
-    cdef DTYPE_INT_t find_host_using_global_search(self, Particle *particle) except INT_ERR:
+    cdef DTYPE_INT_t find_host_using_global_search(self,
+            Particle *particle) except INT_ERR:
         """ Returns the host horizontal element through global searching.
 
         Sequentially search all elements for the given location. Set the particle
@@ -1945,7 +1978,8 @@ cdef class UnstructuredGeographicGrid(Grid):
             x_tri[i] = self.lon_nodes[vertex]
             y_tri[i] = self.lat_nodes[vertex]
 
-        # Loop over all sides of the element to find the land boundary the element crossed
+        # Loop over all sides of the element to find the land boundary the
+        # element crossed
         for i in xrange(3):
             x1_idx = x1_indices[i]
             x2_idx = x2_indices[i]
@@ -1953,7 +1987,8 @@ cdef class UnstructuredGeographicGrid(Grid):
 
             nbe = self.nbe[nbe_idx, particle_new.get_host_horizontal_elem(self.name)]
             if nbe != -1:
-                # Masked elements are treated as land too. If the neighbour isn't masked, continue the search.
+                # Masked elements are treated as land too. If the neighbour
+                # isn't masked, continue the search.
                 if self.land_sea_mask_c[nbe] != LAND:
                     continue
 
@@ -2067,8 +2102,9 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         return area
 
-    cpdef vector[DTYPE_FLOAT_t] get_phi(self, const DTYPE_FLOAT_t &x1, const DTYPE_FLOAT_t &x2, const DTYPE_INT_t &host):
-        """ Get normalised tetrahedral coordinates given a point's position and the host element
+    cpdef vector[DTYPE_FLOAT_t] get_phi(self, const DTYPE_FLOAT_t &x1,
+            const DTYPE_FLOAT_t &x2, const DTYPE_INT_t &host):
+        """ Get normalised tetrahedral coordinates
 
         Parameters
         ----------
@@ -2084,7 +2120,8 @@ cdef class UnstructuredGeographicGrid(Grid):
         Returns
         -------
         phi : vector[FLOAT]
-            Three vector giving a point's normalised tetrahedral coordinates within a spherical triangle.
+            Three vector giving a point's normalised tetrahedral coordinates
+            within a spherical triangle.
         """
         cdef DTYPE_FLOAT_t s[3]
 
@@ -2092,18 +2129,21 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         return self.get_normalised_tetrahedral_coords(s)
 
-    cdef vector[DTYPE_FLOAT_t] get_normalised_tetrahedral_coords(self, const DTYPE_FLOAT_t s[3]):
-        """ Get normalised tetrahedral coordinates given the tetrahedral coordinates
+    cdef vector[DTYPE_FLOAT_t] get_normalised_tetrahedral_coords(self,
+            const DTYPE_FLOAT_t s[3]):
+        """ Get normalised tetrahedral coordinates given tetrahedral coordinates
 
         Parameters
         ----------
         s : C array, [FLOAT]
-            Three vector giving a point's tetrahedral coordinates within a spherical triangle.
+            Three vector giving a point's tetrahedral coordinates within a
+            spherical triangle.
 
         Returns
         -------
         phi : vector[FLOAT]
-            Three vector giving a point's normalised tetrahedral coordinates within a spherical triangle.
+            Three vector giving a point's normalised tetrahedral coordinates
+            within a spherical triangle.
         """
         cdef vector[DTYPE_FLOAT_t] phi = vector[DTYPE_FLOAT_t](N_VERTICES, -999.)
         cdef DTYPE_FLOAT_t s_sum
@@ -2116,9 +2156,10 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         return phi
 
-    cdef get_tetrahedral_coords(self, const DTYPE_FLOAT_t &x1, const DTYPE_FLOAT_t &x2, const DTYPE_INT_t &host,
-                                DTYPE_FLOAT_t s[3]):
-        """ Get tetrahedral coordinates given a point's position and the host element
+    cdef get_tetrahedral_coords(self, const DTYPE_FLOAT_t &x1,
+            const DTYPE_FLOAT_t &x2, const DTYPE_INT_t &host,
+            DTYPE_FLOAT_t s[3]):
+        """ Get tetrahedral coordinates given the position and host element
 
         The method uses the approach described by Lawson (1984).
 
@@ -2166,7 +2207,7 @@ cdef class UnstructuredGeographicGrid(Grid):
             p1[i] = self.points_nodes[vertex_1, i]
             p2[i] = self.points_nodes[vertex_2, i]
 
-        # For the supplied point only, convert to cartesian coordinates on the unit sphere
+        # For the point convert to cartesian coordinates on the unit sphere
         geographic_to_cartesian_coords(x1, x2, 1.0, p)
 
         # Compute tetrahedral coordinates (NB clockwise point ordering)
@@ -2297,7 +2338,8 @@ cdef class UnstructuredGeographicGrid(Grid):
 
         return
 
-    cdef DTYPE_FLOAT_t interpolate_in_space(self, DTYPE_FLOAT_t[::1] var_arr,  Particle* particle) except FLOAT_ERR:
+    cdef DTYPE_FLOAT_t interpolate_in_space(self, DTYPE_FLOAT_t[::1] var_arr,
+            Particle* particle) except FLOAT_ERR:
         """ Interpolate the given field in space
 
         Interpolate the given field on the horizontal grid. The supplied fields
@@ -2341,20 +2383,25 @@ cdef class UnstructuredGeographicGrid(Grid):
             return interp.interpolate_within_element(var_nodes, phi)
 
         elif self.land_sea_mask_c[host_element] == BOUNDARY_ELEMENT:
-            # Boundary element with masked nodes. Adjust interpolation coefficients.
+            # Boundary element with masked nodes.
+            # Adjust interpolation coefficients.
             self._adjust_interpolation_coefficients(host_element, phi)
             return interp.interpolate_within_element(var_nodes, phi)
 
         else:
-            raise RuntimeError('Cannot interpolate within masked element `{}`.'.format(self.land_sea_mask_c[host_element]))
+            raise RuntimeError(f'Cannot interpolate within masked '
+                    f'element `{self.land_sea_mask_c[host_element]}`.')
 
-    cdef DTYPE_FLOAT_t interpolate_in_time_and_space_2D(self, DTYPE_FLOAT_t[::1] var_last_arr,
-                                                        DTYPE_FLOAT_t[::1] var_next_arr,
-                                                        DTYPE_FLOAT_t time_fraction, Particle* particle) except FLOAT_ERR:
+    cdef DTYPE_FLOAT_t interpolate_in_time_and_space_2D(
+            self, DTYPE_FLOAT_t[::1] var_last_arr,
+            DTYPE_FLOAT_t[::1] var_next_arr,
+            DTYPE_FLOAT_t time_fraction,
+            Particle* particle) except FLOAT_ERR:
         """ Interpolate the given field in time and space 2D
 
-        Interpolate the given field in time and space on the horizontal grid. The supplied fields
-        should be 1D arrays of values defined at element nodes.
+        Interpolate the given field in time and space on the horizontal grid.
+        The supplied fields should be 1D arrays of values defined at element
+        nodes.
 
         Parameters
         ----------
@@ -2394,7 +2441,9 @@ cdef class UnstructuredGeographicGrid(Grid):
             var_next = var_next_arr[vertex]
 
             if var_last != var_next:
-                var_nodes[i] = interp.linear_interp(time_fraction, var_last, var_next)
+                var_nodes[i] = interp.linear_interp(time_fraction,
+                                                    var_last,
+                                                    var_next)
             else:
                 var_nodes[i] = var_last
 
@@ -2405,16 +2454,19 @@ cdef class UnstructuredGeographicGrid(Grid):
             return interp.interpolate_within_element(var_nodes, phi)
 
         elif self.land_sea_mask_c[host_element] == BOUNDARY_ELEMENT:
-            # Boundary element with masked nodes. Adjust interpolation coefficients.
+            # Boundary element with masked nodes.
+            # Adjust interpolation coefficients.
             self._adjust_interpolation_coefficients(host_element, phi)
             return interp.interpolate_within_element(var_nodes, phi)
 
         else:
-            raise RuntimeError('Cannot interpolate within masked element `{}`.'.format(self.land_sea_mask_c[host_element]))
+            raise RuntimeError(f'Cannot interpolate within masked '
+                    f'element `{self.land_sea_mask_c[host_element]}`.')
 
-    cdef DTYPE_FLOAT_t interpolate_in_time_and_space(self, DTYPE_FLOAT_t[:, ::1] var_last_arr,
-                                                     DTYPE_FLOAT_t[:, ::1] var_next_arr, DTYPE_INT_t k,
-                                                     DTYPE_FLOAT_t time_fraction, Particle* particle) except FLOAT_ERR:
+    cdef DTYPE_FLOAT_t interpolate_in_time_and_space(self,
+            DTYPE_FLOAT_t[:, ::1] var_last_arr,
+            DTYPE_FLOAT_t[:, ::1] var_next_arr, DTYPE_INT_t k,
+            DTYPE_FLOAT_t time_fraction, Particle* particle) except FLOAT_ERR:
         """ Interpolate the given field in time and space
 
         Interpolate the given field in time and space on the horizontal grid. The supplied fields
@@ -2461,7 +2513,9 @@ cdef class UnstructuredGeographicGrid(Grid):
             var_next = var_next_arr[k, vertex]
 
             if var_last != var_next:
-                var_nodes[i] = interp.linear_interp(time_fraction, var_last, var_next)
+                var_nodes[i] = interp.linear_interp(time_fraction,
+                                                    var_last,
+                                                    var_next)
             else:
                 var_nodes[i] = var_last
 
@@ -2472,12 +2526,14 @@ cdef class UnstructuredGeographicGrid(Grid):
             return interp.interpolate_within_element(var_nodes, phi)
 
         elif self.land_sea_mask_c[host_element] == BOUNDARY_ELEMENT:
-            # Boundary element with masked nodes. Adjust interpolation coefficients.
+            # Boundary element with masked nodes.
+            # Adjust interpolation coefficients.
             self._adjust_interpolation_coefficients(host_element, phi)
             return interp.interpolate_within_element(var_nodes, phi)
 
         else:
-            raise RuntimeError('Cannot interpolate within masked element `{}`.'.format(self.land_sea_mask_c[host_element]))
+            raise RuntimeError(f'Cannot interpolate within masked '
+                    f'element `{self.land_sea_mask_c[host_element]}`.')
 
 
     cdef void _adjust_interpolation_coefficients(self, const DTYPE_INT_t host,
@@ -2541,14 +2597,16 @@ cdef class UnstructuredGeographicGrid(Grid):
         for i in range(N_VERTICES):
             phi[i] = phi_new[i]
 
-    cdef void interpolate_grad_in_time_and_space(self, const DTYPE_FLOAT_t[:, ::1] &var_last_arr,
-                                                 const DTYPE_FLOAT_t[:, ::1] &var_next_arr, DTYPE_INT_t k,
-                                                 DTYPE_FLOAT_t time_fraction, Particle* particle,
-                                                 DTYPE_FLOAT_t var_prime[2]) except *:
+    cdef void interpolate_grad_in_time_and_space(self,
+            const DTYPE_FLOAT_t[:, ::1] &var_last_arr,
+            const DTYPE_FLOAT_t[:, ::1] &var_next_arr, DTYPE_INT_t k,
+            DTYPE_FLOAT_t time_fraction, Particle* particle,
+            DTYPE_FLOAT_t var_prime[2]) except *:
         """ Interpolate the gradient in the given field in time and space
 
-        Interpolate the gradient in the given field in time and space on the horizontal grid. The supplied fields
-        should be 2D arrays of values defined at element nodes.
+        Interpolate the gradient in the given field in time and space on the
+        horizontal grid. The supplied fields should be 2D arrays of values
+        defined at element nodes.
 
         Parameters
         ----------
@@ -2606,12 +2664,13 @@ cdef class UnstructuredGeographicGrid(Grid):
         return
 
     cdef DTYPE_FLOAT_t shepard_interpolation(self, const DTYPE_FLOAT_t &x,
-            const DTYPE_FLOAT_t &y, const DTYPE_FLOAT_t xpts[4], const DTYPE_FLOAT_t ypts[4],
-            const DTYPE_FLOAT_t vals[4], const DTYPE_INT_t valid_points[4]) except FLOAT_ERR:
+            const DTYPE_FLOAT_t &y, const DTYPE_FLOAT_t xpts[4],
+            const DTYPE_FLOAT_t ypts[4], const DTYPE_FLOAT_t vals[4],
+            const DTYPE_INT_t valid_points[4]) except FLOAT_ERR:
         """ Shepard interpolation in geographic coordinates
 
-        Distances are here calculated as segments of great circles joining two points
-        on the sphere.
+        Distances are here calculated as segments of great circles joining two
+        points on the sphere.
 
         Parameters
         ----------
