@@ -21,9 +21,11 @@ import os
 import sys
 import argparse
 import logging
+import pathlib
 
 from pylag.configuration import get_config
 from pylag.simulator import get_simulator
+from pylag.exceptions import PyLagRuntimeError
 import pylag.random as random
 from pylag import version
 
@@ -31,7 +33,8 @@ from pylag import version
 def main():
     # Parse command line agruments
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--config', help='Path to the configuration file', metavar='')
+    parser.add_argument('-c', '--config',
+                        help='Path to the configuration file', metavar='')
     parsed_args = parser.parse_args(sys.argv[1:])
 
     # Read in run config
@@ -41,14 +44,14 @@ def main():
         print('Failed to create run config. Please make sure a config '\
               'file is given using the -c or --config command line '\
               'arguments.')
-        raise RuntimeError(re.message)
+        raise PyLagRuntimeError(re.message)
 
     # Create output directory if it does not exist already
-    if not os.path.isdir('{}'.format(config.get('GENERAL', 'out_dir'))):
-        os.mkdir('{}'.format(config.get('GENERAL', 'out_dir')))
+    out_dir = config.get('GENERAL', 'out_dir')
+    pathlib.Path(out_dir).mkdir(parents=True, exist_ok=True) 
     
     # Initiate logging
-    logging.basicConfig(filename="{}/pylag_out.log".format(config.get('GENERAL', 'out_dir')),
+    logging.basicConfig(filename=f"{out_dir}/pylag_out.log",
                         filemode='w',
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                         datefmt='%m/%d/%Y %I:%M:%S %p',
@@ -57,10 +60,10 @@ def main():
     
     # Save the version of the code used (current commit + status)
     logger.info('Starting PyLag')
-    logger.info('Using PyLag version: {}'.format(version.version))
+    logger.info(f"Using PyLag version: {version.version}")
     
     # Record configuration to file
-    with open("{}/pylag_out.cfg".format(config.get('GENERAL', 'out_dir')), 'w') as config_out:
+    with open(f"{out_dir}/pylag_out.cfg", 'w') as config_out:
         logger.info('Writing run config to file')
         config.write(config_out)
     
