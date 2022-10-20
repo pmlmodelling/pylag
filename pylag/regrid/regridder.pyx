@@ -124,7 +124,7 @@ cdef class Regridder:
         else:
             raise ValueError('Unsupported ocean circulation model.')
 
-        self.coordinate_system = config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system")
+        self.coordinate_system = config.get("SIMULATION", "coordinate_system")
 
         # Generate particle set, including interpolation coefficients
         print('Computing weights ', end='... ')
