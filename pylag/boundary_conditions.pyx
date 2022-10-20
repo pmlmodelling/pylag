@@ -18,6 +18,9 @@ try:
 except ImportError:
     import ConfigParser as configparser
 
+# PyLag Python imports
+from pylag.exceptions import PyLagValueError
+
 # PyLag cimports
 from pylag.particle_cpp_wrapper cimport ParticleSmartPtr
 from pylag.math cimport inner_product_two
@@ -643,24 +646,25 @@ def get_horiz_boundary_condition_calculator(config):
          A horizontal boundary condition calculator
     """
     try:
-        boundary_condition = config.get("BOUNDARY_CONDITIONS", "horiz_bound_cond")
+        boundary_condition = config.get("BOUNDARY_CONDITIONS",
+                                        "horiz_bound_cond")
     except (configparser.NoSectionError, configparser.NoOptionError) as e:
         return None
     else:
-        coordinate_system = config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system")
+        coordinate_system = config.get("SIMULATION",
+                                       "coordinate_system")
 
         if coordinate_system not in ['cartesian', 'geographic']:
-            raise ValueError('Unsupported coordinate system.')
+            raise PyLagValueError(f"Unsupported coordinate system "
+                                  f"`{coordinate_system}`")
 
         if boundary_condition == "restoring":
-            coordinate_system = config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system")
             if coordinate_system == "cartesian":
                 return RestoringHorizCartesianBoundaryConditionCalculator()
             elif coordinate_system == "geographic":
                 return RestoringHorizGeographicBoundaryConditionCalculator()
 
         elif boundary_condition == "reflecting":
-            coordinate_system = config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system")
             if coordinate_system == "cartesian":
                 return RefHorizCartesianBoundaryConditionCalculator()
             elif coordinate_system == "geographic":
@@ -669,7 +673,7 @@ def get_horiz_boundary_condition_calculator(config):
         elif boundary_condition == "None":
             return None
         else:
-            raise ValueError('Unsupported horizontal boundary condition.')
+            raise PyLagValueError('Unsupported horizontal boundary condition.')
 
 
 def get_vert_boundary_condition_calculator(config):
@@ -697,5 +701,5 @@ def get_vert_boundary_condition_calculator(config):
         elif boundary_condition == "None":
             return None
         else:
-            raise ValueError('Unsupported vertical boundary condtion.')
+            raise PyLagValueError('Unsupported vertical boundary condition.')
 

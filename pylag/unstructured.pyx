@@ -31,7 +31,7 @@ from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 # PyLag python imports
 from pylag.particle_cpp_wrapper cimport ParticleSmartPtr
 from pylag.math import geographic_to_cartesian_coords_python
-from pylag.exceptions import PyLagRuntimeError
+from pylag.exceptions import PyLagRuntimeError, PyLagValueError
 
 # PyLag cython imports
 from pylag.parameters cimport deg_to_radians, radians_to_deg, earth_radius, pi
@@ -2735,10 +2735,11 @@ def get_unstructured_grid(config, *args, **kwargs):
     config : ConfigParser
         Object of type ConfigParser.
     """
-    coordinate_system = config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system")
+    coordinate_system = config.get("SIMULATION", "coordinate_system")
     if coordinate_system == "cartesian":
         return UnstructuredCartesianGrid(config, *args, **kwargs)
     elif coordinate_system == "geographic":
         return UnstructuredGeographicGrid(config, *args, **kwargs)
     else:
-        raise ValueError("Unsupported coordinate_system `{}` specified".format(coordinate_system))
+        raise PyLagValueError(f"Unsupported coordinate_system "
+                              f"`{coordinate_system}` specified")

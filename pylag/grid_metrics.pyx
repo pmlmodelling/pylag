@@ -1914,8 +1914,8 @@ cpdef compute_psi_grid_element_mask(n_nodes, n_elements, nv, nbe, lon_grid_psi,
 
     # Create an UnstructuredGeographicGrid object to aid with host element searching
     config = configparser.ConfigParser()
-    config.add_section("OCEAN_CIRCULATION_MODEL")
-    config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'geographic')
+    config.add_section("SIMULATION")
+    config.set('SIMULATION', 'coordinate_system', 'geographic')
     grid_psi = get_unstructured_grid(config, b'grid_psi', n_nodes, n_elements,
             nv_cont, nbe_cont, lon_grid_psi_rad, lat_grid_psi_rad,
             lonc_grid_psi_rad, latc_grid_psi_rad, dummy_mask_elements_grid_psi,

@@ -64,7 +64,7 @@ class NetCDFLogger(object):
         self._simulation_time_units = f'seconds since {start_datetime}'
 
         # Read in the coordinate system
-        coordinate_system = self.config.get("OCEAN_CIRCULATION_MODEL",
+        coordinate_system = self.config.get("SIMULATION",
                                             "coordinate_system").strip().lower()
         if coordinate_system in ["cartesian", "geographic"]:
             self.coordinate_system = coordinate_system

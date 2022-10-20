@@ -308,7 +308,7 @@ cdef class OPTModel:
                     if flag != IN_DOMAIN:
                         raise ValueError(f"Supplied depth z "
                                 f"(= {particle_ptr.get_x3()}) is not within "
-                                f"the grid (h = {zmin}, zeta={zmax}).".)
+                                f"the grid (h = {zmin}, zeta={zmax}).")
 
                 else:
                     # Don't set vertical grid vars as this will fail if

@@ -13,6 +13,7 @@ from netCDF4 import Dataset, date2num
 
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from pylag import variable_library
+from pylag.exceptions import PyLagValueError, PyLagRuntimeError
 
 
 class RestartFileCreator(object):
@@ -35,23 +36,25 @@ class RestartFileCreator(object):
         self._restart_dir = self._config.get("RESTART", "restart_dir")
 
         # Read in the coordinate system
-        coordinate_system = self._config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system").strip().lower()
+        coordinate_system = self._config.get("SIMULATION",
+                "coordinate_system").strip().lower()
         if coordinate_system in ["cartesian", "geographic"]:
             self.coordinate_system = coordinate_system
         else:
-            raise ValueError("Unsupported model coordinate system `{}'".format(coordinate_system))
+            raise PyLagValueError(f"Unsupported model coordinate system "
+                                  f"`{coordinate_system}'")
 
         if not os.path.isdir(self._restart_dir):
             logger = logging.getLogger(__name__)
 
-            logger.info('Creating restart file directory {}.'.format(self._restart_dir))
+            logger.info(f"Creating restart file directory {self._restart_dir}.")
             os.mkdir(self._restart_dir)
 
     def create(self, filename_stem, n_particles, datetime, particle_data):
         """ Create a restart file
 
-        Restart files will be created in the directory `restart_dir`. The following
-        file naming convention is used:
+        Restart files will be created in the directory `restart_dir`.
+        The following file naming convention is used:
 
         <restart_dir>/<filename_stem>_YYYYMMDD-HHMMSS.nc
 
@@ -81,15 +84,12 @@ class RestartFileCreator(object):
         time_stamp = datetime.strftime('%Y%m%d-%H%M%S')
 
         # Construct the file name from the filename stem and time stamp
-        file_name = '{}/{}_{}.nc'.format(self._restart_dir, filename_stem, time_stamp)
+        file_name = f'{self._restart_dir}/{filename_stem}_{time_stamp}.nc'
 
         # Open the restart file for writing
-        try:
-            logger.info('Creating restart file {} at time {}.'.format(file_name, time_stamp))
-            nc_file = Dataset(file_name, mode='w', format='NETCDF4')
-        except:
-            logger.error('Failed to create restart file: {}.'.format(file_name))
-            raise
+        logger.info(f"Creating restart file {file_name} at "
+                    f"time {time_stamp}.")
+        nc_file = Dataset(file_name, mode='w', format='NETCDF4')
 
         # Variable names
         variable_names = particle_data.keys()
@@ -98,12 +98,14 @@ class RestartFileCreator(object):
         self._create_file_structure(nc_file, n_particles, variable_names)
 
         # Save the current time
-        nc_file.variables['time'][0] = date2num(datetime, units=nc_file.variables['time'].units)
+        nc_file.variables['time'][0] = date2num(datetime,
+                units=nc_file.variables['time'].units)
 
         # Save variable data
         for var_name in variable_names:
             if var_name in ['x1', 'x2', 'x3']:
-                var_name_key = variable_library.get_coordinate_variable_name(self.coordinate_system, var_name)
+                var_name_key = variable_library.get_coordinate_variable_name(
+                        self.coordinate_system, var_name)
             else:
                 var_name_key = var_name
             nc_file.variables[var_name_key][0, :] = particle_data[var_name]
@@ -148,12 +150,14 @@ class RestartFileCreator(object):
         # Add particle variables
         for var_name in variable_names:
             if var_name in ['x1', 'x2', 'x3']:
-                var_name = variable_library.get_coordinate_variable_name(self.coordinate_system, var_name)
+                var_name = variable_library.get_coordinate_variable_name(
+                        self.coordinate_system, var_name)
             data_type = variable_library.get_data_type(var_name)
             units = variable_library.get_units(var_name)
             long_name = variable_library.get_long_name(var_name)
 
-            var = nc_file.createVariable(var_name, data_type, ('time', 'particles',), **ncopts)
+            var = nc_file.createVariable(var_name, data_type,
+                                         ('time', 'particles',), **ncopts)
             var.units = units
             var.long_name = long_name
 

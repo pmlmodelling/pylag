@@ -42,6 +42,7 @@ from pylag.math cimport int_min, float_min
 
 # PyLag python imports
 from pylag import variable_library
+from pylag.exceptions import PyLagValueError
 from pylag.unstructured import get_unstructured_grid
 from pylag.numerics import get_time_direction
 
@@ -1211,7 +1212,8 @@ cdef class ArakawaADataReader(DataReader):
         self._permutation = self.mediator.get_grid_variable('permutation', (self._n_nodes), DTYPE_INT)
 
         # Raw grid x/y or lat/lon coordinates
-        coordinate_system = self.config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system").strip().lower()
+        coordinate_system = self.config.get("SIMULATION",
+                                            "coordinate_system").strip().lower()
 
         if coordinate_system == "geographic":
             x = self.mediator.get_grid_variable('longitude', (self._n_nodes), DTYPE_FLOAT)
@@ -1229,7 +1231,8 @@ cdef class ArakawaADataReader(DataReader):
             self._xmin = 0.0
             self._ymin = 0.0
         else:
-            raise ValueError("Unsupported model coordinate system `{}'".format(coordinate_system))
+            raise PyLagValueError(f"Unsupported model coordinate system "
+                             f"`{coordinate_system}'")
 
         # Land sea mask
         self._land_sea_mask_c = self.mediator.get_grid_variable('mask_c', (self._n_elems), DTYPE_INT)
