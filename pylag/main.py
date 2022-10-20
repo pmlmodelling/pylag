@@ -41,8 +41,8 @@ def main():
     try:
         config = get_config(config_filename=parsed_args.config)
     except RuntimeError as re:
-        print('Failed to create run config. Please make sure a config '\
-              'file is given using the -c or --config command line '\
+        print('Failed to create run config. Please make sure a config '
+              'file is given using the -c or --config command line '
               'arguments.')
         raise PyLagRuntimeError(re.message)
 
