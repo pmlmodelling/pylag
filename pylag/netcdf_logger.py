@@ -6,6 +6,7 @@ import logging
 from netCDF4 import Dataset
 from cftime import num2pydate
 from cftime import date2num
+import pathlib
 
 try:
     import configparser
@@ -53,6 +54,8 @@ class NetCDFLogger(object):
             self.file_name = file_name
         else:
             self.file_name = ''.join([file_name, '.nc'])
+
+        pathlib.Path(self.file_name).unlink(missing_ok=True)
 
         logger.info(f'Creating output file: {self.file_name}.')
         self._ncfile = Dataset(self.file_name, mode='w', format='NETCDF4')
