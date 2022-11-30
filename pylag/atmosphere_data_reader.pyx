@@ -139,7 +139,7 @@ cdef class AtmosphereDataReader(DataReader):
                 'longitude': 'longitude_dim_name'}
         for dim_name, config_name in dim_config_names.items():
             self._dimension_names[dim_name] = \
-                    self.config.get('OCEAN_CIRCULATION_MODEL',
+                    self.config.get('ATMOSPHERE_DATA',
                     config_name).strip()
 
         # Setup variable name mappings
@@ -147,7 +147,7 @@ cdef class AtmosphereDataReader(DataReader):
         var_config_names = {'u10': 'u10_var_name', 'v10': 'v10_var_name'}
         for var_name, config_name in var_config_names.items():
             try:
-                var = self.config.get('OCEAN_CIRCULATION_MODEL',
+                var = self.config.get('ATMOSPHERE_DATA',
                         config_name).strip()
                 if var:
                     self._variable_names[var_name] = var
