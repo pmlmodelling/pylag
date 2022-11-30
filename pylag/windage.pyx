@@ -104,7 +104,8 @@ cdef class FixedDragWindageCalculator(WindageCalculator):
 
     def __init__(self, config):
         self._config = config
-        self._drag_coefficient = config.getfloat('WINDAGE', 'drag_coefficient')
+        self._drag_coefficient = config.getfloat('FIXED_DRAG_WINDAGE_CALCULATOR',
+                                                 'drag_coefficient')
 
     cdef void get_velocity(self, DataReader data_reader,
             DTYPE_FLOAT_t time, Particle *particle,
