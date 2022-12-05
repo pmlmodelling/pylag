@@ -571,7 +571,7 @@ cdef class CompositeDataReader(DataReader):
         wind_vel : C array, float
             Horizontal wind velocity components in C array of length two.
         """
-        if self.using_atomsphere_data:
+        if self.using_atmosphere_data:
             self.atmosphere_data_reader.get_ten_meter_wind_velocity(time,
                     particle, wind_vel)
         else:

@@ -85,7 +85,7 @@ def get_model(config, datetime_start, datetime_end):
         data_source = 'atmosphere'
         atmos_mediator = SerialMediator(config, data_source, datetime_start,
                                         datetime_end)
-        if atmos_product_name == "Default":
+        if atmos_product_name == "standard":
             atmos_data_reader = AtmosphereDataReader(config, atmos_mediator)
         else:
             raise PyLagValueError(f"Unsupported atmosphere data product "
@@ -104,7 +104,7 @@ def get_model(config, datetime_start, datetime_end):
         data_source = 'wave'
         waves_mediator = SerialMediator(config, data_source, datetime_start,
                                         datetime_end)
-        if waves_product_name == "Default":
+        if waves_product_name == "standard":
             waves_data_reader = WavesDataReader(config, waves_mediator)
         else:
             raise PyLagValueError(f"Unsupported waves data product "
