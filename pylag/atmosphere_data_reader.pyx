@@ -486,8 +486,8 @@ cdef class AtmosphereDataReader(DataReader):
                 x, y, xc, yc, self._land_sea_mask_c, self._land_sea_mask,
                 areas=areas)
 
-        # Add 3D vars to shape and dimension indices dictionaries
-        var_names = ['uo', 'vo']
+        # Add vars to shape and dimension indices dictionaries
+        var_names = ['u10', 'v10']
         for var_name in var_names:
             self._variable_shapes[var_name] = \
                     self.mediator.get_variable_shape(self._variable_names[var_name])[1:]
