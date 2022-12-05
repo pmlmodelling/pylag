@@ -494,8 +494,7 @@ cdef class AtmosphereDataReader(DataReader):
             dimensions = \
                     self.mediator.get_variable_dimensions(self._variable_names[var_name])[1:]
             self._variable_dimension_indices[var_name] = \
-                    {'depth': dimensions.index(self._dimension_names['depth']),
-                     'latitude': dimensions.index(self._dimension_names['latitude']),
+                     {'latitude': dimensions.index(self._dimension_names['latitude']),
                      'longitude': dimensions.index(self._dimension_names['longitude'])}
 
     cdef _read_time_dependent_vars(self):
