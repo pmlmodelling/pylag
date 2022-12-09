@@ -26,6 +26,8 @@ try:
 except ImportError:
     import ConfigParser as configparser
 
+from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
+
 from pylag.windage import get_windage_calculator
 from pylag.stokes_drift import get_stokes_drift_calculator
 from pylag.settling import variable_names as settling_variable_names
@@ -83,6 +85,42 @@ cdef class VelocityAggregator:
 
         # TODO Support for this has not been included yet
         self._apply_behaviour_term = False
+
+
+    def get_velocity_wrapper(self, DataReader data_reader,
+                             DTYPE_FLOAT_t time,
+                             ParticleSmartPtr particle):
+        """ Python friendly wrapper for get_velocity()
+
+        Parameters
+        ----------
+        data_reader : pylag.data_reader.DataReader
+            A concrete PyLag data reader which inherits from the base class
+            `pylag.data_reader.DataReader`.
+
+        time : float
+            The time the crossing occurred.
+
+        particle : pylag.particle_cpp_wrapper.ParticleSmartPtr
+            A ParticleSmartPtr.
+
+        Returns
+        -------
+        velocity : NumPy array
+            Three component array giving the velocity.
+        """
+        cdef DTYPE_FLOAT_t velocity_c[3]
+        cdef DTYPE_INT_t i
+
+        self.get_velocity(data_reader, time, particle.get_ptr(),
+                velocity_c)
+
+        velocity = np.empty(3, dtype=DTYPE_FLOAT)
+        for i in range(3):
+                velocity[i] = velocity_c[i]
+
+        return velocity
+
 
     cdef void get_velocity(self, DataReader data_reader, DTYPE_FLOAT_t time,
             Particle *particle, DTYPE_FLOAT_t velocity[3]) except +:
