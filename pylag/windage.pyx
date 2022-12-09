@@ -17,6 +17,8 @@ try:
 except ImportError:
     import ConfigParser as configparser
 
+from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
+
 from pylag.exceptions import PyLagValueError
 
 from pylag.particle_cpp_wrapper cimport ParticleSmartPtr
