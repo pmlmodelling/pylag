@@ -49,7 +49,7 @@ cdef class WindageCalculator:
         Returns
         -------
         windage_velocity : NumPy array
-            Two component array giving the velocity due to Stoke's drift.
+            Two component array giving the velocity due to windage.
         """
         cdef DTYPE_FLOAT_t windage_velocity_c[2]
         cdef DTYPE_INT_t i
