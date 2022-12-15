@@ -6,6 +6,8 @@ include "constants.pxi"
 
 import numpy as np
 
+from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
+
 from pylag.particle_cpp_wrapper cimport ParticleSmartPtr
 
 cdef class DataReader:
