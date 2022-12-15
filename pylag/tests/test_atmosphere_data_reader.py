@@ -241,12 +241,10 @@ class AtmosphereDataReader_test(TestCase):
                                         x2=self.deg_to_radians*12.666666667,
                                         host_elements={'atmosphere': 10})
         particle_new = ParticleSmartPtr(x1=self.deg_to_radians*2.333333333,
-                                        x2=self.deg_to_radians*13.1,
+                                        x2=self.deg_to_radians*14.1,
                                         host_elements={'atmosphere': -999})
         flag = self.data_reader.find_host_wrapper(particle_old, particle_new)
-        test.assert_equal(flag, -1)
-        test.assert_equal(particle_new.get_host_horizontal_elem('atmosphere'),
-                          10)
+        test.assert_equal(flag, -2)
 
     def test_get_ten_meter_wind_velocity(self):
         x1 = self.deg_to_radians * 2.0
