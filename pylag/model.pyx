@@ -479,9 +479,12 @@ cdef class OPTModel:
                 # Step the model forward in time
                 flag = self.num_method.step(self.data_reader, time, particle_ptr)
 
-                if flag == OPEN_BDY_CROSSED or flag == BOTTOM_BDY_CROSSED:
+                if flag == IN_DOMAIN:
+                    pass
+                elif (flag == OPEN_BDY_CROSSED or
+                      flag == BOTTOM_BDY_CROSSED or
+                      flag == IS_PERMANENTLY_BEACHED):
                     particle_ptr.set_in_domain(False)
-                    continue
                 elif flag == BDY_ERROR:
                     s = to_string(particle_ptr)
                     msg = "WARNING BDY_ERROR encountered at time {} \n\n"\
@@ -497,7 +500,6 @@ cdef class OPTModel:
 
                     particle_ptr.set_in_domain(False)
                     particle_ptr.set_status(1)
-                    continue
 
             # Update the particle's age
             particle_ptr.set_age(new_time)

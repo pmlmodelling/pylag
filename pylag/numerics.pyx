@@ -188,8 +188,8 @@ cdef class StdNumMethod(NumMethod):
         # Compute Delta
         flag = self._iterative_method.step(data_reader, time, &_particle_copy, &_delta_X)
 
-        # Return if the particle crossed an open boundary
-        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+        # Return if the particle is not in the domain
+        if flag != IN_DOMAIN:
             return flag
                 
         # Compute new position
@@ -199,8 +199,8 @@ cdef class StdNumMethod(NumMethod):
         if flag == LAND_BDY_CROSSED:
             flag = self._horiz_bc_calculator.apply(data_reader, particle, &_particle_copy)
 
-        # Second check for an open boundary crossing
-        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+        # Return if the particle is not in the domain
+        if flag != IN_DOMAIN:
             return flag
         
         # Restore to a fixed depth?
@@ -395,8 +395,8 @@ cdef class OS0NumMethod(NumMethod):
         # Compute Delta
         flag = self._adv_iterative_method.step(data_reader, time, &_particle_copy_a, &_delta_X)
 
-        # Return if the particle crossed an open boundary
-        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+        # Return if the particle is not in the domain
+        if flag != IN_DOMAIN:
             return flag
 
         # Compute new position
@@ -404,10 +404,10 @@ cdef class OS0NumMethod(NumMethod):
         flag = data_reader.find_host(particle, &_particle_copy_a)
 
         if flag == LAND_BDY_CROSSED:
-                flag = self._horiz_bc_calculator.apply(data_reader, particle, &_particle_copy_a)
+            flag = self._horiz_bc_calculator.apply(data_reader, particle, &_particle_copy_a)
 
-        # Second check for an open boundary crossing
-        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+        # Return if the particle is not in the domain
+        if flag != IN_DOMAIN:
             return flag
 
         # Check to see if the particle has beached. NB use time `time',
@@ -444,8 +444,8 @@ cdef class OS0NumMethod(NumMethod):
             reset(&_delta_X)
             flag = self._diff_iterative_method.step(data_reader, t, &_particle_copy_b, &_delta_X)
 
-            # Return if the particle crossed an open boundary
-            if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+            # Return if the particle is not in the domain
+            if flag != IN_DOMAIN:
                 return flag
 
             # Compute new position
@@ -455,7 +455,8 @@ cdef class OS0NumMethod(NumMethod):
             if flag == LAND_BDY_CROSSED:
                 flag = self._horiz_bc_calculator.apply(data_reader, &_particle_copy_a, &_particle_copy_b)
 
-            if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+            # Return if the particle is not in the domain
+            if flag != IN_DOMAIN:
                 return flag
 
             # Check to see if the particle has beached
@@ -640,8 +641,8 @@ cdef class OS1NumMethod(NumMethod):
         reset(&_delta_X)
         flag = self._diff_iterative_method.step(data_reader, time, &_particle_copy_a, &_delta_X)
 
-        # Return if the particle crossed an open boundary
-        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+        # Return if the particle is not in the domain
+        if flag != IN_DOMAIN:
             return flag
 
         # Compute new position
@@ -649,10 +650,10 @@ cdef class OS1NumMethod(NumMethod):
         flag = data_reader.find_host(particle, &_particle_copy_a)
 
         if flag == LAND_BDY_CROSSED:
-                flag = self._horiz_bc_calculator.apply(data_reader, particle, &_particle_copy_a)
+            flag = self._horiz_bc_calculator.apply(data_reader, particle, &_particle_copy_a)
 
-        # Second check for an open boundary crossing
-        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+        # Return if the particle is not in the domain
+        if flag != IN_DOMAIN:
             return flag
 
         # Check is beached status. NB evaluated at time `time', since this is when the
@@ -687,8 +688,8 @@ cdef class OS1NumMethod(NumMethod):
         reset(&_delta_X)
         flag = self._adv_iterative_method.step(data_reader, t, &_particle_copy_b, &_delta_X)
 
-        # Return if the particle crossed an open boundary
-        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+        # Return if the particle is not in the domain
+        if flag != IN_DOMAIN:
             return flag
 
         # Compute new position
@@ -696,10 +697,10 @@ cdef class OS1NumMethod(NumMethod):
         flag = data_reader.find_host(&_particle_copy_a, &_particle_copy_b)
 
         if flag == LAND_BDY_CROSSED:
-                flag = self._horiz_bc_calculator.apply(data_reader, &_particle_copy_a, &_particle_copy_b)
+            flag = self._horiz_bc_calculator.apply(data_reader, &_particle_copy_a, &_particle_copy_b)
 
-        # Second check for an open boundary crossing
-        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+        # Return if the particle is not in the domain
+        if flag != IN_DOMAIN:
             return flag
 
         # 2nd Diffusion step
@@ -733,8 +734,8 @@ cdef class OS1NumMethod(NumMethod):
         reset(&_delta_X)
         flag = self._diff_iterative_method.step(data_reader, t, &_particle_copy_b, &_delta_X)
 
-        # Return if the particle crossed an open boundary
-        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+        # Return if the particle is not in the domain
+        if flag != IN_DOMAIN:
             return flag
 
         # Compute new position
@@ -742,10 +743,10 @@ cdef class OS1NumMethod(NumMethod):
         flag = data_reader.find_host(&_particle_copy_a, &_particle_copy_b)
 
         if flag == LAND_BDY_CROSSED:
-                flag = self._horiz_bc_calculator.apply(data_reader, &_particle_copy_a, &_particle_copy_b)
+            flag = self._horiz_bc_calculator.apply(data_reader, &_particle_copy_a, &_particle_copy_b)
 
-        # Second check for an open boundary crossing
-        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+        # Return if the particle is not in the domain
+        if flag != IN_DOMAIN:
             return flag
 
         # All steps complete - update the original particle's position
@@ -954,8 +955,8 @@ cdef class AdvRK42DItMethod(ItMethod):
         if flag == LAND_BDY_CROSSED:
             flag = self._horiz_bc_calculator.apply(data_reader, particle, &_particle)
 
-        # Check for open boundary crossing
-        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+        # Return if the particle is not in the domain
+        if flag != IN_DOMAIN:
             return flag
 
         # Update particle local coordinates
@@ -987,8 +988,9 @@ cdef class AdvRK42DItMethod(ItMethod):
         if flag == LAND_BDY_CROSSED:
             flag = self._horiz_bc_calculator.apply(data_reader, particle, &_particle)
 
-        # Check for open boundary crossing
-        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR: return flag
+        # Return if the particle is not in the domain
+        if flag != IN_DOMAIN:
+            return flag
 
         # Update particle local coordinates
         flag = data_reader.set_vertical_grid_vars(t, &_particle)
@@ -1019,8 +1021,8 @@ cdef class AdvRK42DItMethod(ItMethod):
         if flag == LAND_BDY_CROSSED:
             flag = self._horiz_bc_calculator.apply(data_reader, particle, &_particle)
 
-        # Check for open boundary crossing
-        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+        # Return if the particle is not in the domain
+        if flag != IN_DOMAIN:
             return flag
 
         # Update particle local coordinates
@@ -1165,8 +1167,8 @@ cdef class AdvRK43DItMethod(ItMethod):
         if flag == LAND_BDY_CROSSED:
             flag = self._horiz_bc_calculator.apply(data_reader, particle, &_particle)
 
-        # Check for open boundary crossing
-        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+        # Return if the particle is not in the domain
+        if flag != IN_DOMAIN:
             return flag
 
         # Check for wet/dry status - return early if the particle has beached
@@ -1208,8 +1210,8 @@ cdef class AdvRK43DItMethod(ItMethod):
         if flag == LAND_BDY_CROSSED:
             flag = self._horiz_bc_calculator.apply(data_reader, particle, &_particle)
 
-        # Check for open boundary crossing
-        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+        # Return if the particle is not in the domain
+        if flag != IN_DOMAIN:
             return flag
 
         # Check for wet/dry status - return early if the particle has beached
@@ -1251,8 +1253,8 @@ cdef class AdvRK43DItMethod(ItMethod):
         if flag == LAND_BDY_CROSSED:
             flag = self._horiz_bc_calculator.apply(data_reader, particle, &_particle)
 
-        # Check for open boundary crossing
-        if flag == OPEN_BDY_CROSSED or flag == BDY_ERROR:
+        # Return if the particle is not in the domain
+        if flag != IN_DOMAIN:
             return flag
 
         # Check for wet/dry status - return early if the particle has beached

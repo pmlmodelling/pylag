@@ -92,6 +92,18 @@ cdef class RestoringHorizBoundaryConditionCalculator(HorizBoundaryConditionCalcu
         return BDY_ERROR
 
 
+cdef class AbsorbingHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator):
+    """ Absorbing horizontal boundary condition calculator
+
+    Absorbing horizontal boundary condition calculators simply return a flag
+    signifying the particle has beached permanently.
+    """
+    cdef DTYPE_INT_t apply(self, DataReader data_reader, Particle *particle_old,
+                           Particle *particle_new) except INT_ERR:
+
+        return IS_PERMANENTLY_BEACHED
+
+
 # Boundary condition calculators that are specific to the coordinate system
 # being used below here.
 
@@ -637,6 +649,8 @@ def get_horiz_boundary_condition_calculator(config):
     else:
         if boundary_condition == "restoring":
             return RestoringHorizBoundaryConditionCalculator()
+        elif boundary_condition == "absorbing":
+            return AbsorbingHorizBoundaryConditionCalculator()
 
         # The calculator is specific to the coordinate system
         coordinate_system = config.get("SIMULATION",
