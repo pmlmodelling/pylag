@@ -70,11 +70,12 @@ cdef class HorizBoundaryConditionCalculator:
         raise NotImplementedError
 
 
-cdef class RestoringHorizCartesianBoundaryConditionCalculator(HorizBoundaryConditionCalculator):
-    """ Restoring horizontal boundary condition calculator for cartesian grids
+cdef class RestoringHorizBoundaryConditionCalculator(HorizBoundaryConditionCalculator):
+    """ Restoring horizontal boundary condition calculator
 
-    Restoring horizontal boundary condition calculators for cartesian coordinate
-    grids simply move the particle back to its last valid position.
+    Restoring horizontal boundary condition calculators simply move the particle
+    back to its last valid position. They are agnostic with respect to the
+    coordinate system being used.
     """
     cdef DTYPE_INT_t apply(self, DataReader data_reader, Particle *particle_old,
                            Particle *particle_new) except INT_ERR:
@@ -89,6 +90,10 @@ cdef class RestoringHorizCartesianBoundaryConditionCalculator(HorizBoundaryCondi
             return flag
 
         return BDY_ERROR
+
+
+# Boundary condition calculators that are specific to the coordinate system
+# being used below here.
 
 
 cdef class RefHorizCartesianBoundaryConditionCalculator(HorizBoundaryConditionCalculator):
@@ -253,27 +258,6 @@ cdef class RefHorizCartesianBoundaryConditionCalculator(HorizBoundaryConditionCa
                 return flag
             
             counter_a += 1
-
-        return BDY_ERROR
-
-
-cdef class RestoringHorizGeographicBoundaryConditionCalculator(HorizBoundaryConditionCalculator):
-    """ Restoring horizontal boundary condition calculator for geographic grids
-
-    Restoring horizontal boundary condition calculators for geographic coordinate
-    grids simply move the particle back to its last valid position.
-    """
-    cdef DTYPE_INT_t apply(self, DataReader data_reader, Particle *particle_old,
-                           Particle *particle_new) except INT_ERR:
-        cdef DTYPE_INT_t flag
-
-        # Move the particle back to its last known valid position
-        particle_new.set_x1(particle_old.get_x1())
-        particle_new.set_x2(particle_old.get_x2())
-        flag = data_reader.find_host(particle_old, particle_new)
-
-        if flag == IN_DOMAIN:
-            return flag
 
         return BDY_ERROR
 
@@ -651,6 +635,10 @@ def get_horiz_boundary_condition_calculator(config):
     except (configparser.NoSectionError, configparser.NoOptionError) as e:
         return None
     else:
+        if boundary_condition == "restoring":
+            return RestoringHorizBoundaryConditionCalculator()
+
+        # The calculator is specific to the coordinate system
         coordinate_system = config.get("SIMULATION",
                                        "coordinate_system")
 
@@ -658,13 +646,7 @@ def get_horiz_boundary_condition_calculator(config):
             raise PyLagValueError(f"Unsupported coordinate system "
                                   f"`{coordinate_system}`")
 
-        if boundary_condition == "restoring":
-            if coordinate_system == "cartesian":
-                return RestoringHorizCartesianBoundaryConditionCalculator()
-            elif coordinate_system == "geographic":
-                return RestoringHorizGeographicBoundaryConditionCalculator()
-
-        elif boundary_condition == "reflecting":
+        if boundary_condition == "reflecting":
             if coordinate_system == "cartesian":
                 return RefHorizCartesianBoundaryConditionCalculator()
             elif coordinate_system == "geographic":
