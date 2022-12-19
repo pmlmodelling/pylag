@@ -529,7 +529,8 @@ cdef class OPTModel:
 
         # Initialise lists
         diags = {'x1': [], 'x2': [], 'x3': [], 'h': [], 'zeta': [], 'is_beached': [],
-                 'in_domain': [], 'status': [], 'age': [], 'is_alive': []}
+                 'in_domain': [], 'status': [], 'age': [], 'is_alive': [],
+                 'land_boundary_encounters': []}
 
         # Initialise host data
         for grid_name in self.get_grid_names():
@@ -562,6 +563,8 @@ cdef class OPTModel:
             diags['status'].append(particle_smart_ptr.status)
             diags['age'].append(particle_smart_ptr.age / seconds_per_day)
             diags['is_alive'].append(particle_smart_ptr.is_alive)
+            diags['land_boundary_encounters'].append(
+                particle_smart_ptr.land_boundary_encounters)
 
             # Grid variables
             if particle_smart_ptr.in_domain:

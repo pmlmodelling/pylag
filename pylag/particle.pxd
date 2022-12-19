@@ -91,6 +91,10 @@ cdef extern from "particle.h" namespace "particles":
         void set_is_alive(const bint&) except +
         bint get_is_alive() except +
 
+        void set_land_boundary_encounters(const DTYPE_INT_t&) except +
+        DTYPE_INT_t get_land_boundary_encounters() except +
+        void register_land_boundary_encounter() except +
+
         void set_parameter(const string&, const DTYPE_FLOAT_t&) except +
         DTYPE_FLOAT_t get_parameter(const string&) except +
 

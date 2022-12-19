@@ -32,7 +32,8 @@ cdef class ParticleSmartPtr:
                   DTYPE_INT_t k_layer=INT_INVALID, bint in_vertical_boundary_layer=False,
                   DTYPE_INT_t k_lower_layer=INT_INVALID, DTYPE_INT_t k_upper_layer=INT_INVALID,
                   DTYPE_INT_t id=INT_INVALID, DTYPE_INT_t status=0, DTYPE_FLOAT_t age=FLOAT_INVALID,
-                  bint is_alive=False, bint restore_to_fixed_depth=False, DTYPE_FLOAT_t fixed_depth=FLOAT_INVALID,
+                  bint is_alive=False, DTYPE_INT_t land_boundary_encounters=0,
+                  bint restore_to_fixed_depth=False, DTYPE_FLOAT_t fixed_depth=FLOAT_INVALID,
                   parameters={}, state_variables={}, diagnostic_variables={},
                   boolean_flags={}, ParticleSmartPtr particle_smart_ptr=None):
 
@@ -66,6 +67,7 @@ cdef class ParticleSmartPtr:
             self._particle.set_fixed_depth(fixed_depth)
             self._particle.set_age(age)
             self._particle.set_is_alive(is_alive)
+            self._particle.set_land_boundary_encounters(land_boundary_encounters)
 
             # Set local coordinates on all grids
             self.set_all_phis(phis)
@@ -572,6 +574,10 @@ cdef class ParticleSmartPtr:
         """ Boolean flag indicating whether the particle is alive or dead """
         return self._particle.get_is_alive()
 
+    @property
+    def land_boundary_encounters(self):
+        """ The number of times the particle has crossed a land boundary"""
+        return self._particle.get_land_boundary_encounters()
 
 cdef ParticleSmartPtr copy(ParticleSmartPtr particle_smart_ptr):
     """ Create a copy of a ParticleSmartPtr object

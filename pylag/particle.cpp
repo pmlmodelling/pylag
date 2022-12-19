@@ -25,6 +25,7 @@ namespace particles {
           fixed_depth(-999.),
           age(-999.),
           is_alive(false),
+          land_boundary_encounters(0),
           parameters{},
           state_variables{},
           diagnostic_variables{},
@@ -53,6 +54,7 @@ namespace particles {
           fixed_depth(rhs.fixed_depth),
           age(rhs.age),
           is_alive(rhs.is_alive),
+          land_boundary_encounters(rhs.land_boundary_encounters),
           parameters(rhs.parameters),
           state_variables(rhs.state_variables),
           diagnostic_variables(rhs.diagnostic_variables),
@@ -82,6 +84,7 @@ namespace particles {
         fixed_depth = rhs.fixed_depth;
         age = rhs.age;
         is_alive = rhs.is_alive;
+        land_boundary_encounters = rhs.land_boundary_encounters;
         parameters = rhs.parameters;
         state_variables = rhs.state_variables;
         diagnostic_variables = rhs.diagnostic_variables;
@@ -298,6 +301,18 @@ namespace particles {
 
     void Particle::set_is_alive(const bool& rhs) {
         is_alive = rhs;
+    }
+
+    void Particle::set_land_boundary_encounters(const int& rhs) {
+        land_boundary_encounters = rhs;
+    }
+
+    int Particle::get_land_boundary_encounters() const {
+        return land_boundary_encounters;
+    }
+
+    void Particle::register_land_boundary_encounter() {
+        land_boundary_encounters += 1;
     }
 
     void Particle::set_parameter(const std::string& name, const float& value) {

@@ -197,6 +197,7 @@ cdef class StdNumMethod(NumMethod):
         flag = data_reader.find_host(particle, &_particle_copy)
         
         if flag == LAND_BDY_CROSSED:
+            _particle_copy.register_land_boundary_encounter()
             flag = self._horiz_bc_calculator.apply(data_reader, particle, &_particle_copy)
 
         # Return if the particle is not in the domain
@@ -404,6 +405,7 @@ cdef class OS0NumMethod(NumMethod):
         flag = data_reader.find_host(particle, &_particle_copy_a)
 
         if flag == LAND_BDY_CROSSED:
+            _particle_copy_a.register_land_boundary_encounter()
             flag = self._horiz_bc_calculator.apply(data_reader, particle, &_particle_copy_a)
 
         # Return if the particle is not in the domain
@@ -453,6 +455,7 @@ cdef class OS0NumMethod(NumMethod):
             flag = data_reader.find_host(&_particle_copy_a, &_particle_copy_b)
 
             if flag == LAND_BDY_CROSSED:
+                _particle_copy_b.register_land_boundary_encounter()
                 flag = self._horiz_bc_calculator.apply(data_reader, &_particle_copy_a, &_particle_copy_b)
 
             # Return if the particle is not in the domain
@@ -650,6 +653,7 @@ cdef class OS1NumMethod(NumMethod):
         flag = data_reader.find_host(particle, &_particle_copy_a)
 
         if flag == LAND_BDY_CROSSED:
+            _particle_copy_a.register_land_boundary_encounter()
             flag = self._horiz_bc_calculator.apply(data_reader, particle, &_particle_copy_a)
 
         # Return if the particle is not in the domain
@@ -697,6 +701,7 @@ cdef class OS1NumMethod(NumMethod):
         flag = data_reader.find_host(&_particle_copy_a, &_particle_copy_b)
 
         if flag == LAND_BDY_CROSSED:
+            _particle_copy_b.register_land_boundary_encounter()
             flag = self._horiz_bc_calculator.apply(data_reader, &_particle_copy_a, &_particle_copy_b)
 
         # Return if the particle is not in the domain
@@ -743,6 +748,7 @@ cdef class OS1NumMethod(NumMethod):
         flag = data_reader.find_host(&_particle_copy_a, &_particle_copy_b)
 
         if flag == LAND_BDY_CROSSED:
+            _particle_copy_b.register_land_boundary_encounter()
             flag = self._horiz_bc_calculator.apply(data_reader, &_particle_copy_a, &_particle_copy_b)
 
         # Return if the particle is not in the domain
@@ -953,6 +959,7 @@ cdef class AdvRK42DItMethod(ItMethod):
         flag = data_reader.find_host(particle, &_particle)
 
         if flag == LAND_BDY_CROSSED:
+            particle.register_land_boundary_encounter()
             flag = self._horiz_bc_calculator.apply(data_reader, particle, &_particle)
 
         # Return if the particle is not in the domain
@@ -986,6 +993,7 @@ cdef class AdvRK42DItMethod(ItMethod):
         flag = data_reader.find_host(particle, &_particle)
 
         if flag == LAND_BDY_CROSSED:
+            particle.register_land_boundary_encounter()
             flag = self._horiz_bc_calculator.apply(data_reader, particle, &_particle)
 
         # Return if the particle is not in the domain
@@ -1019,6 +1027,7 @@ cdef class AdvRK42DItMethod(ItMethod):
         flag = data_reader.find_host(particle, &_particle)
 
         if flag == LAND_BDY_CROSSED:
+            particle.register_land_boundary_encounter()
             flag = self._horiz_bc_calculator.apply(data_reader, particle, &_particle)
 
         # Return if the particle is not in the domain
@@ -1165,6 +1174,7 @@ cdef class AdvRK43DItMethod(ItMethod):
         flag = data_reader.find_host(particle, &_particle)
 
         if flag == LAND_BDY_CROSSED:
+            particle.register_land_boundary_encounter()
             flag = self._horiz_bc_calculator.apply(data_reader, particle, &_particle)
 
         # Return if the particle is not in the domain
@@ -1208,6 +1218,7 @@ cdef class AdvRK43DItMethod(ItMethod):
         flag = data_reader.find_host(particle, &_particle)
 
         if flag == LAND_BDY_CROSSED:
+            particle.register_land_boundary_encounter()
             flag = self._horiz_bc_calculator.apply(data_reader, particle, &_particle)
 
         # Return if the particle is not in the domain
@@ -1251,6 +1262,7 @@ cdef class AdvRK43DItMethod(ItMethod):
         flag = data_reader.find_host(particle, &_particle)
 
         if flag == LAND_BDY_CROSSED:
+            particle.register_land_boundary_encounter()
             flag = self._horiz_bc_calculator.apply(data_reader, particle, &_particle)
 
         # Return if the particle is not in the domain

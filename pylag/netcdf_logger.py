@@ -200,6 +200,14 @@ class NetCDFLogger(object):
         self._zeta.long_name = variable_library.get_long_name('zeta')
         self._zeta.invalid = f"{variable_library.get_invalid_value('zeta')}"
 
+        # Add number of land boundary encounters
+        self._land_boundary_encounters = self._ncfile.createVariable(
+            'land_boundary_encounters', DTYPE_INT, ('time', 'particles',),
+            **self._ncopts)
+        self._land_boundary_encounters.units = 'None'
+        self._land_boundary_encounters.long_name = \
+            'Number of land boundary encounters'
+
         for var_name in self.environmental_variables:
             data_type = variable_library.get_data_type(var_name)
             units = variable_library.get_units(var_name)
@@ -259,6 +267,8 @@ class NetCDFLogger(object):
         self._status[tidx, :] = particle_data['status']
         self._age[tidx, :] = particle_data['age']
         self._is_alive[tidx, :] = particle_data['is_alive']
+        self._land_boundary_encounters[tidx, :] = \
+            particle_data['land_boundary_encounters']
 
         # Add host horizontal elements
         for grid_name in self.grid_names:
