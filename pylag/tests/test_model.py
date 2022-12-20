@@ -7,6 +7,7 @@ try:
 except ImportError:
     import ConfigParser as configparser
 
+from pylag.exceptions import PyLagValueError, PyLagRuntimeError
 from pylag.model import OPTModel
 
 from pylag.mock import MockOPTModelDataReader
@@ -22,13 +23,12 @@ class OPTModel_test1(TestCase):
         config.set('GENERAL', 'log_level', 'info')
         config.add_section("SIMULATION")
         config.set('SIMULATION', 'initialisation_method', 'init_file')
+        config.set('SIMULATION', 'coordinate_system', 'cartesian')
         config.set('SIMULATION', 'depth_coordinates', 'depth_below_surface')
         config.add_section("NUMERICS")
         config.set('NUMERICS', 'num_method', 'test')
         config.set('NUMERICS', 'time_step_adv', '1.0')
-        config.add_section("OCEAN_CIRCULATION_MODEL")
-        config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'cartesian')
-        
+
         # Create test data reader
         data_reader = MockOPTModelDataReader()
         
@@ -45,7 +45,7 @@ class OPTModel_test1(TestCase):
         z_positions = np.array([-1., -1.])
         time = 0.0
         self.model.set_particle_data(group_ids, x_positions, y_positions, z_positions)
-        self.assertRaises(RuntimeError, self.model.seed, time)
+        self.assertRaises(PyLagRuntimeError, self.model.seed, time)
 
 
 class OPTModel_test2(TestCase):
@@ -62,13 +62,12 @@ class OPTModel_test2(TestCase):
         config.set('GENERAL', 'log_level', 'info')
         config.add_section("SIMULATION")
         config.set('SIMULATION', 'initialisation_method', 'init_file')
+        config.set('SIMULATION', 'coordinate_system', 'cartesian')
         config.set('SIMULATION', 'depth_coordinates', 'depth_below_surface')
         config.add_section("NUMERICS")
         config.set('NUMERICS', 'num_method', 'test')
         config.set('NUMERICS', 'time_step_adv', '1.0')
-        config.add_section("OCEAN_CIRCULATION_MODEL")
-        config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'cartesian')
-        
+
         # Create test data reader
         data_reader = MockOPTModelDataReader()
         
@@ -85,7 +84,7 @@ class OPTModel_test2(TestCase):
         z_positions = np.array([0.1])
         time = 0.0
         self.model.set_particle_data(group_ids, x_positions, y_positions, z_positions)
-        self.assertRaises(ValueError, self.model.seed, time)
+        self.assertRaises(PyLagValueError, self.model.seed, time)
 
 
 class OPTModel_test3(TestCase):
@@ -102,13 +101,12 @@ class OPTModel_test3(TestCase):
         config.set('GENERAL', 'log_level', 'info')
         config.add_section("SIMULATION")
         config.set('SIMULATION', 'initialisation_method', 'init_file')
+        config.set('SIMULATION', 'coordinate_system', 'cartesian')
         config.set('SIMULATION', 'depth_coordinates', 'height_above_bottom')
         config.add_section("NUMERICS")
         config.set('NUMERICS', 'num_method', 'test')
         config.set('NUMERICS', 'time_step_adv', '1.0')
-        config.add_section("OCEAN_CIRCULATION_MODEL")
-        config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'cartesian')
-        
+
         # Create test data reader
         data_reader = MockOPTModelDataReader()
         
@@ -125,4 +123,4 @@ class OPTModel_test3(TestCase):
         z_positions = np.array([-0.1])
         time = 0.0
         self.model.set_particle_data(group_ids, x_positions, y_positions, z_positions)
-        self.assertRaises(ValueError, self.model.seed, time)
+        self.assertRaises(PyLagValueError, self.model.seed, time)

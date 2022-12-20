@@ -27,6 +27,7 @@ from pylag.variable_library import get_invalid_value
 
 from pylag.numerics import get_num_method, get_global_time_step
 from pylag.settling import get_settling_velocity_calculator
+from pylag.exceptions import PyLagValueError, PyLagRuntimeError
 
 from libcpp.vector cimport vector
 
@@ -98,26 +99,33 @@ cdef class OPTModel:
         # If depth restoring is also being used, raise a warning
         if self.settling_velocity_calculator is not None:
             try:
-                depth_restoring = self.config.getboolean("SIMULATION", "depth_restoring")
+                depth_restoring = self.config.getboolean("SIMULATION",
+                                                         "depth_restoring")
             except (configparser.NoSectionError, configparser.NoOptionError) as e:
                 depth_restoring = False
 
             if depth_restoring == True:
                 logger = logging.getLogger(__name__)
-                logger.warning('Depth restoring (`depth_restoring = True`) is being used with settling. The impact '\
-                               'of settling may be ignored or conflict with this setting. To run with settling and '\
-                               'no depth restoring, set `depth_restoring = False`.')
+                logger.warning(f'Depth restoring (`depth_restoring = True`) is '
+                               f'being used with settling. The impact '
+                               f'of settling may be ignored or conflict with '
+                               f'this setting. To run with settling and '
+                               f'no depth restoring, set `depth_restoring = '
+                               f'False`.')
 
         # Read in the coordinate system
-        coordinate_system = self.config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system").strip().lower()
+        coordinate_system = self.config.get("SIMULATION",
+                                            "coordinate_system").strip().lower()
         if coordinate_system in ["cartesian", "geographic"]:
             self.coordinate_system = coordinate_system
         else:
-            raise ValueError("Unsupported model coordinate system `{}'".format(coordinate_system))
+            raise PyLagValueError(f"Unsupported model coordinate "
+                                  f"system `{coordinate_system}`")
 
         # Save a list of environmental variables to be returned as diagnostics
         try:
-            var_names = self.config.get("OUTPUT", "environmental_variables").strip().split(',')
+            var_names = self.config.get("OUTPUT",
+                    "environmental_variables").strip().split(',')
             self.environmental_variables = [var_name.strip() for var_name in var_names]
         except (configparser.NoSectionError, configparser.NoOptionError) as e:
             self.environmental_variables = []
@@ -126,14 +134,16 @@ cdef class OPTModel:
 
         # Are we running with biology?
         try:
-            self.use_bio_model = self.config.getboolean("BIO_MODEL", "use_bio_model")
+            self.use_bio_model = self.config.getboolean("BIO_MODEL",
+                                                        "use_bio_model")
         except (configparser.NoSectionError, configparser.NoOptionError) as e:
             self.use_bio_model = False
 
         if self.use_bio_model:
             self.bio_model = BioModel(config)
 
-    def set_particle_data(self, group_ids, x1_positions, x2_positions, x3_positions):
+    def set_particle_data(self, group_ids, x1_positions, x2_positions,
+                          x3_positions):
         """Initialise memory views for data describing the particle seed.
 
         Parameters
@@ -230,28 +240,40 @@ cdef class OPTModel:
                 zmin = self.data_reader.get_zmin(time, particle_ptr)
                 zmax = self.data_reader.get_zmax(time, particle_ptr)
 
-                # If not starting from a restart, set z depending on the specified coordinate system
-                if self.config.get("SIMULATION", "initialisation_method") != "restart_file":
+                # If not starting from a restart, set z depending on the
+                # specified coordinate system
+                if self.config.get("SIMULATION",
+                                   "initialisation_method") != "restart_file":
 
-                    if self.config.get("SIMULATION", "depth_coordinates") == "depth_below_surface":
+                    if self.config.get("SIMULATION",
+                            "depth_coordinates") == "depth_below_surface":
                         z_test = particle_ptr.get_x3() + zmax
 
-                        # Block the user from trying to start particles off above the free surface
+                        # Block the user from trying to start particles off
+                        # above the free surface
                         if z_test > zmax:
-                            raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(particle_ptr.get_x3(), zmax))
+                            raise PyLagValueError(f"Supplied depth z  "
+                                                  f"(= {particle_ptr.get_x3()})"
+                                                  f" lies above the free "
+                                                  f"surface (zeta = {zmax}).")
 
-                        # If z_test lies below the sea floor, move it up so that the particle starts on the sea floor
+                        # If z_test lies below the sea floor, move it up so
+                        # that the particle starts on the sea floor
                         if z_test < zmin:
                             z_test = zmin
 
                         particle_ptr.set_x3(z_test)
 
-                    elif self.config.get("SIMULATION", "depth_coordinates") == "height_above_bottom":
+                    elif self.config.get("SIMULATION",
+                            "depth_coordinates") == "height_above_bottom":
                         z_test = particle_ptr.get_x3() + zmin
 
-                        # Block the user from trying to start off particles below the sea floor
+                        # Block the user from trying to start off particles
+                        # below the sea floor
                         if z_test < zmin:
-                            raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(particle_ptr.get_x3(), zmin))
+                            raise PyLagValueError(f"Supplied depth z "
+                                    f"(= {particle_ptr.get_x3()}) lies below "
+                                    f"the sea floor (h = {zmin}).")
 
                         # Shift down to the sea floor
                         if zmin > zmax and z_test > zmin:
@@ -261,7 +283,8 @@ cdef class OPTModel:
                         if zmax > zmin and z_test > zmax:
                             z_test = zmax
 
-                        # x3 is given as the height above the sea floor. Use this and h (zmin) to compute z
+                        # x3 is given as the height above the sea floor.
+                        # Use this and h (zmin) to compute z
                         particle_ptr.set_x3(z_test)
 
                 # Determine if the host element is presently dry
@@ -270,18 +293,26 @@ cdef class OPTModel:
 
                     # Confirm the given depth is valid for wet cells
                     if particle_ptr.get_x3() < zmin:
-                        raise ValueError("Supplied depth z (= {}) lies below the sea floor (h = {}).".format(particle_ptr.get_x3(), zmin))
+                        raise PyLagValueError(f"Supplied depth z "
+                                f"(= {particle_ptr.get_x3()}) lies below the "
+                                f"sea floor (h = {zmin}).")
                     elif particle_ptr.get_x3() > zmax:
-                        raise ValueError("Supplied depth z (= {}) lies above the free surface (zeta = {}).".format(particle_ptr.get_x3(), zmax))
+                        raise ValueError(f"Supplied depth z "
+                                f"(= {particle_ptr.get_x3()}) lies above the "
+                                f"free surface (zeta = {zmax}).")
 
                     # Find the host z layer
-                    flag = self.data_reader.set_vertical_grid_vars(time, particle_ptr)
+                    flag = self.data_reader.set_vertical_grid_vars(time,
+                                                                   particle_ptr)
 
                     if flag != IN_DOMAIN:
-                        raise ValueError("Supplied depth z (= {}) is not within the grid (h = {}, zeta={}).".format(particle_ptr.get_x3(), zmin, zmax))
+                        raise ValueError(f"Supplied depth z "
+                                f"(= {particle_ptr.get_x3()}) is not within "
+                                f"the grid (h = {zmin}, zeta={zmax}).")
 
                 else:
-                    # Don't set vertical grid vars as this will fail if zeta < h. They will be set later.
+                    # Don't set vertical grid vars as this will fail if
+                    # zeta < h. They will be set later.
                     particle_ptr.set_is_beached(1)
 
                 # Initialise the age of the particle to 0 s.
@@ -289,10 +320,13 @@ cdef class OPTModel:
 
                 # Initialise bio particle properties
                 if self.use_bio_model:
-                    if self.config.get("SIMULATION", "initialisation_method") != "restart_file":
+                    if self.config.get("SIMULATION",
+                            "initialisation_method") != "restart_file":
                         self.bio_model.set_initial_particle_properties(particle_ptr)
                     else:
-                        raise NotImplementedError('It is not yet possible to run bio models with restarts')
+                        raise NotImplementedError('It is not yet possible to '
+                                                  'run bio models with '
+                                                  'restarts')
 
             self.particle_smart_ptrs.append(particle_smart_ptr)
             self.particle_ptrs.push_back(particle_ptr)
@@ -327,50 +361,63 @@ cdef class OPTModel:
         host_elements = None
         particles_in_domain = 0
         id = 0
-        for group, x1, x2, x3 in zip(self._group_ids, self._x1_positions, self._x2_positions, self._x3_positions):
+        for group, x1, x2, x3 in zip(self._group_ids, self._x1_positions,
+                                     self._x2_positions, self._x3_positions):
             # Unique particle ID.
             id += 1
 
             # Create particle
-            particle_smart_ptr = ParticleSmartPtr(group_id=group, x1=x1-xmin, x2=x2-ymin, x3=x3, id=id)
+            particle_smart_ptr = ParticleSmartPtr(group_id=group, x1=x1-xmin,
+                                                  x2=x2-ymin, x3=x3, id=id)
 
             # Find particle host element
             if host_elements is not None:
                 # Try a local search first using guess as a starting point
                 particle_smart_ptr.set_all_host_horizontal_elems(host_elements)
-                flag = self.data_reader.find_host_using_local_search(particle_smart_ptr.get_ptr())
+                flag = self.data_reader.find_host_using_local_search(
+                        particle_smart_ptr.get_ptr())
                 if flag != IN_DOMAIN:
-                    # Local search failed. Check to see if the particle is in a masked element. If not, do a global search.
+                    # Local search failed. Check to see if the particle is in a
+                    # masked element. If not, do a global search.
                     if flag != IN_MASKED_ELEM:
-                        flag = self.data_reader.find_host_using_global_search(particle_smart_ptr.get_ptr())
+                        flag = self.data_reader.find_host_using_global_search(
+                                particle_smart_ptr.get_ptr())
             else:
                 # Global search ...
-                flag = self.data_reader.find_host_using_global_search(particle_smart_ptr.get_ptr())
+                flag = self.data_reader.find_host_using_global_search(
+                        particle_smart_ptr.get_ptr())
 
             if flag == IN_DOMAIN:
                 particle_smart_ptr.get_ptr().set_in_domain(True)
 
                 # Will the depth of the particle be restored to a fixed depth?
                 try:
-                    depth_restoring = self.config.getboolean("SIMULATION", "depth_restoring")
+                    depth_restoring = self.config.getboolean("SIMULATION",
+                                                             "depth_restoring")
                 except (configparser.NoSectionError, configparser.NoOptionError) as e:
                     depth_restoring = False
 
-                particle_smart_ptr.get_ptr().set_restore_to_fixed_depth(depth_restoring)
+                particle_smart_ptr.get_ptr().set_restore_to_fixed_depth(
+                        depth_restoring)
 
                 try:
-                    fixed_depth_below_surface = self.config.getfloat("SIMULATION", "fixed_depth")
+                    fixed_depth_below_surface = self.config.getfloat(
+                            "SIMULATION", "fixed_depth")
                 except (configparser.NoSectionError, configparser.NoOptionError) as e:
                     if depth_restoring == True:
-                        raise RuntimeError('Depth restoring is being used but a restoring depth has not been given. '\
-                                           'You can choose a restoring depth with the configuration option `fixed_depth`.')
+                        raise PyLagRuntimeError(f'Depth restoring is being used '
+                                f'but a restoring depth has not been given. '
+                                f'You can choose a restoring depth with the '
+                                f'configuration option `fixed_depth`.')
                     fixed_depth_below_surface = FLOAT_ERR
 
-                particle_smart_ptr.get_ptr().set_fixed_depth(fixed_depth_below_surface)
+                particle_smart_ptr.get_ptr().set_fixed_depth(
+                        fixed_depth_below_surface)
 
                 # Initialise particle settling velocity parameters
                 if self.settling_velocity_calculator is not None:
-                    self.settling_velocity_calculator.init_particle_settling_velocity(particle_smart_ptr.get_ptr())
+                    self.settling_velocity_calculator.init_particle_settling_velocity(
+                            particle_smart_ptr.get_ptr())
 
                 # Add particle to the particle set
                 self.particle_seed_smart_ptrs.append(particle_smart_ptr)
@@ -388,11 +435,14 @@ cdef class OPTModel:
                 self.particle_seed_smart_ptrs.append(particle_smart_ptr)
 
         if particles_in_domain == 0:
-            raise RuntimeError('All seed particles lie outside of the model domain!')
+            raise PyLagRuntimeError(f'All seed particles lie outside of '
+                                    f'the model domain!')
 
         if self.config.get('GENERAL', 'log_level') == 'DEBUG':
             logger = logging.getLogger(__name__)
-            logger.info('{} of {} particles are located in the model domain.'.format(particles_in_domain, len(self.particle_seed_smart_ptrs)))
+            logger.info(f'{particles_in_domain} of '
+                        f'{len(self.particle_seed_smart_ptrs)} particles are '
+                        f'located in the model domain.')
     
     cpdef update(self, DTYPE_FLOAT_t time):
         """ Compute and update each particle's position.
@@ -423,14 +473,18 @@ cdef class OPTModel:
             if particle_ptr.get_in_domain():
                 # Update the settling velocity
                 if self.settling_velocity_calculator is not None:
-                    self.settling_velocity_calculator.set_particle_settling_velocity(self.data_reader, time, particle_ptr)
+                    self.settling_velocity_calculator.set_particle_settling_velocity(
+                            self.data_reader, time, particle_ptr)
 
                 # Step the model forward in time
                 flag = self.num_method.step(self.data_reader, time, particle_ptr)
 
-                if flag == OPEN_BDY_CROSSED or flag == BOTTOM_BDY_CROSSED:
+                if flag == IN_DOMAIN:
+                    pass
+                elif (flag == OPEN_BDY_CROSSED or
+                      flag == BOTTOM_BDY_CROSSED or
+                      flag == IS_PERMANENTLY_BEACHED):
                     particle_ptr.set_in_domain(False)
-                    continue
                 elif flag == BDY_ERROR:
                     s = to_string(particle_ptr)
                     msg = "WARNING BDY_ERROR encountered at time {} \n\n"\
@@ -446,7 +500,6 @@ cdef class OPTModel:
 
                     particle_ptr.set_in_domain(False)
                     particle_ptr.set_status(1)
-                    continue
 
             # Update the particle's age
             particle_ptr.set_age(new_time)
@@ -476,7 +529,8 @@ cdef class OPTModel:
 
         # Initialise lists
         diags = {'x1': [], 'x2': [], 'x3': [], 'h': [], 'zeta': [], 'is_beached': [],
-                 'in_domain': [], 'status': [], 'age': [], 'is_alive': []}
+                 'in_domain': [], 'status': [], 'age': [], 'is_alive': [],
+                 'land_boundary_encounters': []}
 
         # Initialise host data
         for grid_name in self.get_grid_names():
@@ -509,6 +563,8 @@ cdef class OPTModel:
             diags['status'].append(particle_smart_ptr.status)
             diags['age'].append(particle_smart_ptr.age / seconds_per_day)
             diags['is_alive'].append(particle_smart_ptr.is_alive)
+            diags['land_boundary_encounters'].append(
+                particle_smart_ptr.land_boundary_encounters)
 
             # Grid variables
             if particle_smart_ptr.in_domain:
@@ -523,7 +579,8 @@ cdef class OPTModel:
             # Environmental variables
             for var_name in self.environmental_variables:
                 if particle_smart_ptr.in_domain:
-                    var = self.data_reader.get_environmental_variable(var_name, time, particle_smart_ptr.get_ptr())
+                    var = self.data_reader.get_environmental_variable(var_name,
+                            time, particle_smart_ptr.get_ptr())
                     diags[var_name].append(var)
                 else:
                     diags[var_name].append(get_invalid_value(var_name))

@@ -105,6 +105,10 @@ namespace particles {
             void set_is_alive(const bool& rhs);
             bool get_is_alive() const;
 
+            void set_land_boundary_encounters(const int& rhs);
+            int get_land_boundary_encounters() const;
+            void register_land_boundary_encounter();
+
             // Generic getters and setters below here, with values stores in map objects
             // -------------------------------------------------------------------------
 
@@ -210,6 +214,9 @@ namespace particles {
 
             // Particle is living?
             bool is_alive;
+
+            // Number of boundary encounters
+            int land_boundary_encounters;
 
             // Particle parameters. Format is: <name, value>.
             std::unordered_map<std::string, float> parameters;

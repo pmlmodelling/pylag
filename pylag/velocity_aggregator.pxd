@@ -7,7 +7,8 @@ from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 # PyLag cimports
 from pylag.data_reader cimport DataReader
 from pylag.particle cimport Particle
-
+from pylag.windage cimport WindageCalculator
+from pylag.stokes_drift cimport StokesDriftCalculator
 
 # Velocity aggregator
 cdef class VelocityAggregator:
@@ -17,11 +18,15 @@ cdef class VelocityAggregator:
 
     cdef bint _apply_stokes_drift_term
 
-    cdef bint _apply_sail_effect_term
+    cdef bint _apply_windage_term
 
     cdef bint _apply_settling_term
 
     cdef bint _apply_behaviour_term
+
+    # Calculators
+    cdef WindageCalculator _windage_calculator
+    cdef StokesDriftCalculator _stokes_drift_calculator
 
     # Parameter names
     cdef string _settling_velocity_variable_name

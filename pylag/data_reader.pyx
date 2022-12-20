@@ -6,6 +6,8 @@ include "constants.pxi"
 
 import numpy as np
 
+from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
+
 from pylag.particle_cpp_wrapper cimport ParticleSmartPtr
 
 cdef class DataReader:
@@ -553,6 +555,78 @@ cdef class DataReader:
         """
         return self.get_environmental_variable(var_name, time, particle.get_ptr())
 
-    cdef DTYPE_FLOAT_t get_environmental_variable(self, var_name, DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR:
+    cdef DTYPE_FLOAT_t get_environmental_variable(self, var_name,
+            DTYPE_FLOAT_t time, Particle *particle) except FLOAT_ERR:
         raise NotImplementedError
 
+    def get_ten_meter_wind_velocity_wrapper(self, DTYPE_FLOAT_t time,
+            ParticleSmartPtr particle):
+        """ Return the 10 m wind velocity
+
+        This function will return a two component vector giving the
+        10 m wind velocity at the given time and the particle's
+        current location.
+
+        Parameters
+        ----------
+        time : float
+            The current time.
+
+        particle : pylag.particle_cpp_wrapper.ParticleSmartPtr
+            The particle at its current position.
+
+        Returns
+        -------
+        wind_velocity : 1D NumPy array of length two.
+            The horizontal wind velocity.
+        """
+        cdef DTYPE_FLOAT_t wind_vel_c[2]
+
+        self.get_ten_meter_wind_velocity(time, particle.get_ptr(),
+                wind_vel_c)
+
+        wind_vel = np.empty(2, dtype=DTYPE_FLOAT)
+        for i in range(2):
+            wind_vel[i] = wind_vel_c[i]
+
+        return wind_vel
+
+    cdef void get_ten_meter_wind_velocity(self, DTYPE_FLOAT_t time,
+            Particle *particle, DTYPE_FLOAT_t wind_vel[2]) except +:
+        raise NotImplementedError
+
+    def get_surface_stokes_drift_velocity_wrapper(self, DTYPE_FLOAT_t time,
+            ParticleSmartPtr particle):
+        """ Return surface Stoke's drift velocity
+
+        This function will return a two component vector giving the
+        surface Stoke's drift velocity at the given time and the particle's
+        location.
+
+        Parameters
+        ----------
+        time : float
+            The current time.
+
+        particle : pylag.particle_cpp_wrapper.ParticleSmartPtr
+            The particle at its current position.
+
+        Returns
+        -------
+        stokes_drift : 1D NumPy array of length two.
+            The surface Stoke's drift velocity.
+        """
+        cdef DTYPE_FLOAT_t stokes_drift_c[2]
+
+        self.get_surface_stokes_drift_velocity(time, particle.get_ptr(),
+                stokes_drift_c)
+
+        stokes_drift = np.empty(2, dtype=DTYPE_FLOAT)
+        for i in xrange(2):
+            stokes_drift[i] = stokes_drift_c[i]
+
+        return stokes_drift
+
+    cdef void get_surface_stokes_drift_velocity(self, DTYPE_FLOAT_t time,
+            Particle *particle, DTYPE_FLOAT_t stokes_drift[2]) except +:
+        raise NotImplementedError

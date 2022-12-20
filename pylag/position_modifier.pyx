@@ -1,6 +1,7 @@
 """
 Position modifiers which manage the application of deltas to particle positions.
-Included within a separate module in order to support multiple coordinate systems.
+Included within a separate module in order to support multiple coordinate
+systems.
 
 Note
 ----
@@ -10,7 +11,14 @@ API is exposed in Python with accompanying documentation.
 
 include "constants.pxi"
 
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
+
 from libc.math cimport cos
+
+from pylag.exceptions import PyLagValueError
 
 from pylag.parameters cimport deg_to_radians, earth_radius
 
@@ -23,7 +31,8 @@ cdef class PositionModifier:
     * :meth: `update_position`
     """
 
-    cdef void update_position(self, Particle *particle, Delta *delta_X) except *:
+    cdef void update_position(self, Particle *particle,
+                              Delta *delta_X) except *:
         raise NotImplementedError
 
 cdef class CartesianPositionModifier(PositionModifier):
@@ -95,15 +104,19 @@ def get_position_modifier(config):
     config : ConfigParser
         Object of type ConfigParser.
     """
-    if not config.has_option("OCEAN_CIRCULATION_MODEL", "coordinate_system"):
-        raise ValueError("Failed to find the option `coordinate_system' in the "\
-                "supplied configuration file.")
+    try:
+        coordinate_system = config.get("SIMULATION",
+                                       "coordinate_system").strip()
+    except (configparser.NoSectionError, configparser.NoOptionError):
+        raise PyLagValueError(f"Failed to find the option `coordinate_system` "
+                              f"in the section SIMULATION of the supplied "
+                              f"configuration file.")
 
     # Return the specified numerical integrator.
-    if config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system") == "cartesian":
+    if config.get("SIMULATION", "coordinate_system") == "cartesian":
         return CartesianPositionModifier()
-    elif config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system") == "geographic":
+    elif config.get("SIMULATION", "coordinate_system") == "geographic":
         return GeographicPositionModifier()
     else:
-        raise ValueError("Unsupported coordinate system specified")
+        raise PyLagValueError("Unsupported coordinate system specified")
 

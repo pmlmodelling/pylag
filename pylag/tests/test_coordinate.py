@@ -15,7 +15,7 @@ from pylag.exceptions import PyLagOutOfBoundsError
 Coordinates = namedtuple('Coordinates', ('lon', 'lat', 'easting', 'northing', 'epsg_code'))
 
 
-class FileReader_test(TestCase):
+class Coordinate_test(TestCase):
 
     def _back_forth(self, lon_arg, lat_arg, epsg_code_arg: Optional[int] = None):
         """ Simple back and forth test of the functions with a given lat/lon pair

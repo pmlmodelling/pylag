@@ -12,6 +12,8 @@ of input data (e.g. "temp" in FVCOM).
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from pylag.data_types_python import INT_INVALID, FLOAT_INVALID
 
+from pylag.exceptions import PyLagValueError
+
 
 def get_data_type(var_name):
     """ Get variable data type
@@ -103,7 +105,8 @@ def get_coordinate_variable_name(coordinate_system, variable_name):
     elif coordinate_system == "geographic":
         return geographic_coordinate_variable_names[variable_name]
     else:
-        raise ValueError("Unsupported model coordinate system `{}'".format(coordinate_system))
+        raise PyLagValueError(f"Unsupported model coordinate "
+                              f"system `{coordinate_system}'")
 
 
 # Dictionaries holding variable attributes

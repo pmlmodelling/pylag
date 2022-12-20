@@ -58,8 +58,8 @@ class Simulator(object):
 class TraceSimulator(Simulator):
     """ Trace simulator
 
-    Simulator for tracing particle pathlines through time. Trace simulators can perform
-    forward or backward in time integrations.
+    Simulator for tracing particle pathlines through time. Trace
+    simulators can perform forward or backward in time integrations.
 
     Parameters
     ----------
@@ -79,7 +79,8 @@ class TraceSimulator(Simulator):
         self.time_manager = TimeManager(self._config)
 
         # Model object
-        self.model = get_model(self._config, self.time_manager.datetime_start, self.time_manager.datetime_end)
+        self.model = get_model(self._config, self.time_manager.datetime_start,
+                               self.time_manager.datetime_end)
 
         # Initial particle state readers are used to read in intial
         # particle state data. This only happens on the lead process,
@@ -88,7 +89,8 @@ class TraceSimulator(Simulator):
         self.initial_particle_state_reader = None
 
         # Flag indicating whether or not restart files should be created
-        self.create_restarts = self._config.getboolean('RESTART', 'create_restarts') 
+        self.create_restarts = self._config.getboolean('RESTART',
+                                                       'create_restarts')
 
         # Restart creators create restart files. This only happens on
         # the lead process, so we initialise it to None here, then
@@ -97,7 +99,8 @@ class TraceSimulator(Simulator):
 
         # Overrides when on the root process
         if rank == 0:
-            self.initial_particle_state_reader = get_initial_particle_state_reader(self._config)
+            self.initial_particle_state_reader = \
+                get_initial_particle_state_reader(self._config)
      
             if self.create_restarts:
                 self.restart_creator = RestartFileCreator(self._config)
@@ -136,23 +139,24 @@ class TraceSimulator(Simulator):
 
             if n_particles == len(group_ids):
                 self.n_particles = n_particles
-                logger.info('Particle seed contains {} '\
-                    'particles.'.format(self.n_particles))
+                logger.info(f'Particle seed contains {self.n_particles} '
+                            f'particles.')
             else:
-                logger.error('Error reading particle initial positions from '\
-                    'file. The number of particles specified in the file is '\
-                    '{}. The actual number found while parsing the file was '\
-                    '{}.'.format(self.n_particles, len(group_ids)))
+                logger.error(f'Error reading particle initial positions from '
+                             f'file. The number of particles specified in the '
+                             f'file is {self.n_particles}. The actual number '
+                             f'found while parsing the file was '
+                             f'{len(group_ids)}.')
                 comm.Abort()
 
             # Insist on the even distribution of particles
             if self.n_particles % size == 0:
                 my_n_particles = self.n_particles//size
             else:
-                logger.error('For now the total number of particles must '\
-                    'divide equally among the set of workers. The total '\
-                    'number of particles = {}. The total number of workers = '\
-                    '{}.'.format(self.n_particles,size))
+                logger.error(f'For now the total number of particles must '
+                             f'divide equally among the set of workers. The '
+                             f'total number of particles = {self.n_particles}. '
+                             f'The total number of workers = {size}.')
                 comm.Abort()
         else:
             group_ids = None
@@ -179,10 +183,12 @@ class TraceSimulator(Simulator):
 
         # Display particle count if running in debug mode
         if self._config.get('GENERAL', 'log_level') == 'DEBUG':
-            print('Processor with rank {} is managing {} particles.'.format(rank, my_n_particles))
+            print(f'Processor with rank {rank} is managing {my_n_particles} '
+                  f'particles.')
 
         # Initialise particle arrays
-        self.model.set_particle_data(my_group_ids, my_x1_positions, my_x2_positions, my_x3_positions)
+        self.model.set_particle_data(my_group_ids, my_x1_positions,
+                                     my_x2_positions, my_x3_positions)
 
         # Run the ensemble
         run_simulation = True
@@ -195,26 +201,32 @@ class TraceSimulator(Simulator):
 
             if rank == 0:
                 # Data logger on the root process
-                file_name = ''.join([self._config.get('GENERAL', 'output_file'), '_{}'.format(self.time_manager.current_release)])
+                file_name = ''.join([self._config.get('GENERAL', 'output_file'),
+                                     f'_{self.time_manager.current_release}'])
                 start_datetime = self.time_manager.datetime_start
                 grid_names = self.model.get_grid_names()
-                self.data_logger = NetCDFLogger(self._config, file_name, start_datetime, n_particles, grid_names)
+                self.data_logger = NetCDFLogger(self._config, file_name,
+                                                start_datetime, n_particles,
+                                                grid_names)
 
                 # Write particle group ids to file
                 self.data_logger.write_group_ids(group_ids)
 
             # Write initial state to file
-            particle_diagnostics = self.model.get_diagnostics(self.time_manager.time)
+            particle_diagnostics = self.model.get_diagnostics(
+                self.time_manager.time)
             self._save_data(particle_diagnostics)
 
             # The main update loop
             if rank == 0:
-                logger.info('Starting ensemble member {} ...'.format(self.time_manager.current_release))
+                logger.info(f'Starting ensemble member '
+                            f'{self.time_manager.current_release} ...')
             while abs(self.time_manager.time) < abs(self.time_manager.time_end):
                 if rank == 0:
-                    percent_complete = abs(self.time_manager.time) / abs(self.time_manager.time_end) * 100
+                    percent_complete = abs(self.time_manager.time) / \
+                                       abs(self.time_manager.time_end) * 100
                     if percent_complete % 10 == 0:
-                        logger.info('{}% complete ...'.format(int(percent_complete)))
+                        logger.info(f'{int(percent_complete)}% complete ...')
                 try:
                     # Update
                     self.model.update(self.time_manager.time)
@@ -222,7 +234,8 @@ class TraceSimulator(Simulator):
 
                     # Save diagnostic data
                     if self.time_manager.write_output_to_file() == 1:
-                        particle_diagnostics = self.model.get_diagnostics(self.time_manager.time)
+                        particle_diagnostics = self.model.get_diagnostics(
+                            self.time_manager.time)
                         self._save_data(particle_diagnostics)
 
                     # Sync diagnostic data to disk
@@ -263,7 +276,8 @@ class TraceSimulator(Simulator):
         global_diags = {}
         for diag in list(diags.keys()):
             if rank == 0:
-                global_diags[diag] = np.empty(self.n_particles, dtype=type(diags[diag][0]))
+                global_diags[diag] = np.empty(self.n_particles,
+                                              dtype=type(diags[diag][0]))
             else:
                 global_diags[diag] = None
 
@@ -299,7 +313,8 @@ class TraceSimulator(Simulator):
         global_data = {}
         for key in list(data.keys()):
             if rank == 0:
-                global_data[key] = np.empty(self.n_particles, dtype=type(data[key][0]))
+                global_data[key] = np.empty(self.n_particles,
+                                            dtype=type(data[key][0]))
             else:
                 global_data[key] = None
 
@@ -309,9 +324,10 @@ class TraceSimulator(Simulator):
 
         # Write to file
         if rank == 0:
-            file_name_stem = 'restart_{}'.format(self.time_manager.current_release)
+            file_name_stem = f'restart_{self.time_manager.current_release}'
             datetime_current = self.time_manager.datetime_current
-            self.restart_creator.create(file_name_stem, self.n_particles, datetime_current, global_data)
+            self.restart_creator.create(file_name_stem, self.n_particles,
+                                        datetime_current, global_data)
 
 
 __all__ = ['Simulator',

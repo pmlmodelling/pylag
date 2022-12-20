@@ -42,6 +42,7 @@ from pylag.math cimport int_min, float_min
 
 # PyLag python imports
 from pylag import variable_library
+from pylag.exceptions import PyLagValueError, PyLagRuntimeError
 from pylag.numerics import get_time_direction
 from pylag.unstructured import get_unstructured_grid
 
@@ -1352,7 +1353,7 @@ cdef class ROMSDataReader(DataReader):
 
 
         # Raw grid x/y or lat/lon coordinates
-        coordinate_system = self.config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system").strip().lower()
+        coordinate_system = self.config.get("SIMULATION", "coordinate_system").strip().lower()
 
         if coordinate_system == "geographic":
             x_grid_u = self.mediator.get_grid_variable('longitude_grid_u', (self._n_nodes_grid_u), DTYPE_FLOAT) * deg_to_radians

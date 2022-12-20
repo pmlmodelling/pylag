@@ -17,9 +17,7 @@ class Numerics_test(TestCase):
         config.set("SIMULATION", "depth_restoring", 'False')
         config.set("SIMULATION", "fixed_depth", '0.0')
         config.set("SIMULATION", "time_direction", 'forward')
-
-        config.add_section("OCEAN_CIRCULATION_MODEL")
-        config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'cartesian')
+        config.set('SIMULATION', 'coordinate_system', 'cartesian')
 
         config.add_section("BOUNDARY_CONDITIONS")
         config.set('BOUNDARY_CONDITIONS', 'horiz_bound_cond', 'None')
@@ -44,9 +42,7 @@ class Numerics_test(TestCase):
         config.set("SIMULATION", "depth_restoring", 'False')
         config.set("SIMULATION", "fixed_depth", '0.0')
         config.set("SIMULATION", "time_direction", 'forward')
-
-        config.add_section("OCEAN_CIRCULATION_MODEL")
-        config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'cartesian')
+        config.set('SIMULATION', 'coordinate_system', 'cartesian')
 
         config.add_section("BOUNDARY_CONDITIONS")
         config.set('BOUNDARY_CONDITIONS', 'horiz_bound_cond', 'None')
@@ -71,9 +67,7 @@ class Numerics_test(TestCase):
         config.set("SIMULATION", "depth_restoring", 'False')
         config.set("SIMULATION", "fixed_depth", '0.0')
         config.set("SIMULATION", "time_direction", 'forward')
-
-        config.add_section("OCEAN_CIRCULATION_MODEL")
-        config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'cartesian')
+        config.set('SIMULATION', 'coordinate_system', 'cartesian')
 
         config.add_section("BOUNDARY_CONDITIONS")
         config.set('BOUNDARY_CONDITIONS', 'horiz_bound_cond', 'None')
@@ -98,9 +92,7 @@ class Numerics_test(TestCase):
         config.set("SIMULATION", "depth_restoring", 'False')
         config.set("SIMULATION", "fixed_depth", '0.0')
         config.set("SIMULATION", "time_direction", 'forward')
-
-        config.add_section("OCEAN_CIRCULATION_MODEL")
-        config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'cartesian')
+        config.set('SIMULATION', 'coordinate_system', 'cartesian')
 
         config.add_section("BOUNDARY_CONDITIONS")
         config.set('BOUNDARY_CONDITIONS', 'horiz_bound_cond', 'None')
@@ -125,9 +117,7 @@ class Numerics_test(TestCase):
         config.set("SIMULATION", "depth_restoring", 'False')
         config.set("SIMULATION", "fixed_depth", '0.0')
         config.set("SIMULATION", "time_direction", 'forward')
-
-        config.add_section("OCEAN_CIRCULATION_MODEL")
-        config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'cartesian')
+        config.set('SIMULATION', 'coordinate_system', 'cartesian')
 
         config.add_section("BOUNDARY_CONDITIONS")
         config.set('BOUNDARY_CONDITIONS', 'horiz_bound_cond', 'None')

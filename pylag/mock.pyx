@@ -469,6 +469,114 @@ cdef class MockVelocityEddyDiffusivityDataReader(DataReader):
         return 1
 
 
+cdef class MockOceanDataReader(DataReader):
+    """ Mock ocean data reader
+
+    Mock Data Reader to assist with testing PyLag components
+    that use ocean data.
+    """
+    cdef DTYPE_FLOAT_t u
+    cdef DTYPE_FLOAT_t v
+    cdef DTYPE_FLOAT_t w
+
+    def __init__(self, u, v, w):
+        self.u = u
+        self.v = v
+        self.w = w
+
+    cdef void get_velocity(self, DTYPE_FLOAT_t time, Particle* particle,
+            DTYPE_FLOAT_t vel[3]) except +:
+        """ Returns the velocity u(t,x,y,z) through linear interpolation
+
+        Returns the velocity u(t,x,y,z) through interpolation for a particle.
+
+        Parameters
+        ----------
+        time : float
+            Time at which to interpolate.
+
+        particle: *Particle
+            Pointer to a Particle object.
+
+        Return
+        ------
+        vel : C array, float
+            u/v/w velocity components stored in a C array.
+        """
+        vel[0] = self.u
+        vel[1] = self.v
+        vel[2] = self.w
+
+        return
+
+
+cdef class MockAtmosphereDataReader(DataReader):
+    """ Mock atmosphere data reader
+
+    Mock Data Reader to assist with testing PyLag components
+    that use atmospheric data.
+    """
+    cdef DTYPE_FLOAT_t u10
+    cdef DTYPE_FLOAT_t v10
+
+    def __init__(self, u10, v10):
+        self.u10 = u10
+        self.v10 = v10
+
+    cdef void get_ten_meter_wind_velocity(self, DTYPE_FLOAT_t time,
+            Particle *particle, DTYPE_FLOAT_t wind_vel[2]) except +:
+        """ Returns the ten meter wind velocity
+
+        Parameters:
+        -----------
+        time : float
+            Time at which to interpolate.
+
+        particle: *Particle
+            Pointer to a Particle object.
+
+        wind_vel : C array, float
+            Horizontal wind velocity components in C array of length two.
+        """
+        wind_vel[0] = self.u10
+        wind_vel[1] = self.v10
+
+        return
+
+
+cdef class MockWavesDataReader(DataReader):
+    """ Mock waves data reader
+
+    Mock Data Reader to assist with testing PyLag components
+    that use wave data.
+    """
+    cdef DTYPE_FLOAT_t stokes_drift_u_component
+    cdef DTYPE_FLOAT_t stokes_drift_v_component
+
+    def __init__(self, stokes_drift_u_component, stokes_drift_v_component):
+        self.stokes_drift_u_component = stokes_drift_u_component
+        self.stokes_drift_v_component = stokes_drift_v_component
+
+    cdef void get_surface_stokes_drift_velocity(self, DTYPE_FLOAT_t time,
+            Particle *particle, DTYPE_FLOAT_t stokes_drift[2]) except +:
+        """ Returns the surface Stoke's drift velocity
+
+        Parameters:
+        -----------
+        time : float
+            Time at which to interpolate.
+
+        particle: *Particle
+            Pointer to a Particle object.
+
+        stokes_drift : C array, float
+            Surface Stoke's drift velocity components in C array of length two.
+        """
+        stokes_drift[0] = self.stokes_drift_u_component
+        stokes_drift[1] = self.stokes_drift_v_component
+        return
+
+
 cdef class MockOneDNumMethod:
     """ Helper class for performing integrations in 1D
     

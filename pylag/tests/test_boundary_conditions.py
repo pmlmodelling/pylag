@@ -5,6 +5,7 @@ try:
 except ImportError:
     import ConfigParser as configparser
 
+from pylag.exceptions import PyLagValueError
 from pylag import boundary_conditions as bc
 
 
@@ -21,23 +22,39 @@ class BoundaryConditions_test(TestCase):
         hbc = bc.get_horiz_boundary_condition_calculator(config)
         assert hbc is None
 
-    def test_get_reflecting_horiz_boundary_condition_calculator(self):
+    def test_get_restoring_horiz_boundary_condition_calculator(self):
+        config = configparser.ConfigParser()
+        config.add_section('BOUNDARY_CONDITIONS')
+        config.set('BOUNDARY_CONDITIONS', 'horiz_bound_cond', 'restoring')
+        hbc = bc.get_horiz_boundary_condition_calculator(config)
+        assert isinstance(hbc, bc.RestoringHorizBoundaryConditionCalculator)
+
+    def test_get_reflecting_cartesian_horiz_boundary_condition_calculator(self):
         config = configparser.ConfigParser()
         config.add_section('BOUNDARY_CONDITIONS')
         config.set('BOUNDARY_CONDITIONS', 'horiz_bound_cond', 'reflecting')
-        config.add_section('OCEAN_CIRCULATION_MODEL')
-        config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'cartesian')
+        config.add_section('SIMULATION')
+        config.set('SIMULATION', 'coordinate_system', 'cartesian')
         hbc = bc.get_horiz_boundary_condition_calculator(config)
         assert isinstance(hbc, bc.RefHorizCartesianBoundaryConditionCalculator)
 
+    def test_get_reflecting_geographic_horiz_boundary_condition_calculator(self):
+        config = configparser.ConfigParser()
+        config.add_section('BOUNDARY_CONDITIONS')
+        config.set('BOUNDARY_CONDITIONS', 'horiz_bound_cond', 'reflecting')
+        config.add_section('SIMULATION')
+        config.set('SIMULATION', 'coordinate_system', 'geographic')
+        hbc = bc.get_horiz_boundary_condition_calculator(config)
+        assert isinstance(hbc, bc.RefHorizGeographicBoundaryConditionCalculator)
+
     def test_get_invalid_horiz_boundary_condition_calculator(self):
         config = configparser.ConfigParser()
-        config.add_section('OCEAN_CIRCULATION_MODEL')
-        config.set('OCEAN_CIRCULATION_MODEL', 'coordinate_system', 'cartesian')
+        config.add_section('SIMULATION')
+        config.set('SIMULATION', 'coordinate_system', 'cartesian')
         config.add_section('BOUNDARY_CONDITIONS')
         config.set('BOUNDARY_CONDITIONS', 'horiz_bound_cond', 'does_not_exist')
 
-        self.assertRaises(ValueError, bc.get_horiz_boundary_condition_calculator, config)
+        self.assertRaises(PyLagValueError, bc.get_horiz_boundary_condition_calculator, config)
 
     def test_get_vert_boundary_condition_calculator_returns_none_when_one_is_not_specified_in_the_run_config(self):
         # No section of option
@@ -62,4 +79,4 @@ class BoundaryConditions_test(TestCase):
         config.add_section('BOUNDARY_CONDITIONS')
         config.set('BOUNDARY_CONDITIONS', 'vert_bound_cond', 'does_not_exist')
 
-        self.assertRaises(ValueError, bc.get_vert_boundary_condition_calculator, config)
+        self.assertRaises(PyLagValueError, bc.get_vert_boundary_condition_calculator, config)

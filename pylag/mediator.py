@@ -234,6 +234,10 @@ class SerialMediator(Mediator):
     config : ConfigParser
         Run configuration object
 
+    data_source : str
+        String indicating what type of data the datetime objects will be
+        associated with. Options are: 'ocean', 'atmosphere', and 'wave'.
+
     start_datetime : Datetime
         Simulation start date/time.
 
@@ -250,14 +254,16 @@ class SerialMediator(Mediator):
 
     """
 
-    def __init__(self, config, datetime_start, datetime_end):
+    def __init__(self, config, data_source, datetime_start, datetime_end):
         self.config = config
 
         file_name_reader = DiskFileNameReader()
 
         dataset_reader = NetCDFDatasetReader()
 
-        self.file_reader = FileReader(config, file_name_reader, dataset_reader, datetime_start, datetime_end)
+        self.file_reader = FileReader(config, data_source, file_name_reader,
+                                      dataset_reader, datetime_start,
+                                      datetime_end)
 
     def setup_data_access(self, datetime_start, datetime_end):
         self.file_reader.setup_data_access(datetime_start, datetime_end)

@@ -23,6 +23,7 @@ import os
 import sys
 import argparse
 import logging
+import pathlib
 
 from mpi4py import MPI
 
@@ -41,21 +42,22 @@ def main():
     if rank == 0:
         # Parse command line agruments
         parser = argparse.ArgumentParser()
-        parser.add_argument('-c', '--config', help='Path to the configuration file', metavar='')
+        parser.add_argument('-c', '--config',
+                            help='Path to the configuration file', metavar='')
         parsed_args = parser.parse_args(sys.argv[1:])
 
         # Read in run config
         try:
             config = get_config(config_filename=parsed_args.config)
         except RuntimeError:
-            print('Failed to create run config. Please make sure a config '\
-                'file iss given using the -c or --config command line '\
-                'arguments.')
+            print('Failed to create run config. Please make sure a config '
+                  'file iss given using the -c or --config command line '
+                  'arguments.')
             comm.Abort()
 
         # Create output directory if it does not exist already
-        if not os.path.isdir('{}'.format(config.get('GENERAL', 'out_dir'))):
-            os.mkdir('{}'.format(config.get('GENERAL', 'out_dir')))
+        out_dir = config.get('GENERAL', 'out_dir')
+        pathlib.Path(out_dir).mkdir(parents=True, exist_ok=True)
     else:
         config = None
 
@@ -64,7 +66,8 @@ def main():
     
     # Initiate logging
     if rank == 0:
-        logging.basicConfig(filename="{}/pylag_out.log".format(config.get('GENERAL', 'out_dir')),
+        out_dir = config.get('GENERAL', 'out_dir')
+        logging.basicConfig(filename=f"{out_dir}/pylag_out.log",
                             filemode='w',
                             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                             datefmt='%m/%d/%Y %I:%M:%S %p',
@@ -72,19 +75,20 @@ def main():
         logger = logging.getLogger(__name__)
 
         # Save the version of the code used (current commit + status)
-        logger.info('Starting PyLag-MPI')
-        logger.info('Using PyLag version: {}'.format(version.version))
-        logger.info('Using {} processors'.format(comm.Get_size()))
+        logger.info(f'Starting PyLag-MPI')
+        logger.info(f'Using PyLag version: {version.version}')
+        logger.info(f'Using {comm.Get_size()} processors')
 
         # Record configuration to file
-        with open("{}/pylag_out.cfg".format(config.get('GENERAL', 'out_dir')), 'w') as config_out:
+        with open(f"{out_dir}/pylag_out.cfg", 'w') as config_out:
             logger.info('Writing run config to file')
             config.write(config_out)
 
     # Seed the random number generator
     random.seed()
     if config.get('GENERAL', 'log_level') == 'DEBUG':
-        print('Random seed for processor with rank {} is {}'.format(rank, random.get_seed()))
+        print(f'Random seed for processor with rank {rank} is '
+              f'{random.get_seed()}')
     
     # Run the simulation
     simulator = get_simulator(config)

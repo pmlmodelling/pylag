@@ -9,7 +9,7 @@ from pylag.particle cimport Particle
 from pylag.data_reader cimport DataReader
 
 
-# Base class for PositionModifier objects
+# Base class for mortality calculators
 cdef class MortalityCalculator:
 
     cdef void set_initial_particle_properties(self, Particle *particle) except *

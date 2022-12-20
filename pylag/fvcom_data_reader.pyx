@@ -40,6 +40,7 @@ from pylag.math cimport int_min, float_min
 
 # PyLag python imports
 from pylag import variable_library
+from pylag.exceptions import PyLagValueError, PyLagRuntimeError
 from pylag.numerics import get_time_direction
 from pylag.unstructured import get_unstructured_grid
 
@@ -180,18 +181,22 @@ cdef class FVCOMDataReader(DataReader):
         self._time_direction = <int>get_time_direction(config)
 
         # Coordinate system
-        coordinate_system = self.config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system").strip().lower()
+        coordinate_system = self.config.get("SIMULATION",
+                                            "coordinate_system").strip().lower()
         if coordinate_system == "cartesian":
             self._coordinate_system = cartesian
         elif coordinate_system == "geographic":
             self._coordinate_system = geographic
         else:
-            raise ValueError("Unsupported model coordinate system `{}'".format(coordinate_system))
+            raise PyLagValueError(f"Unsupported model coordinate system "
+                                  f"`{coordinate_system}'")
 
         # Set options for handling the vertical eddy diffusivity
-        self._Kz_method_name = self.config.get('OCEAN_CIRCULATION_MODEL', 'Kz_method').strip().lower()
+        self._Kz_method_name = self.config.get('OCEAN_CIRCULATION_MODEL',
+                                               'Kz_method').strip().lower()
         if self._Kz_method_name not in ['none', 'file']:
-            raise RuntimeError('Invalid option for `Kz_method` ({})'.format(self._Kz_method_name))
+            raise PyLagRuntimeError(f"Invalid option for `Kz_method` "
+                                    f"({self._Kz_method_name}).")
 
         if self._Kz_method_name == "none":
             self._Kz_method = 0
@@ -199,9 +204,11 @@ cdef class FVCOMDataReader(DataReader):
             self._Kz_method = 1
 
         # Set options for handling the horizontal eddy diffusivity
-        self._Ah_method_name = self.config.get('OCEAN_CIRCULATION_MODEL', 'Ah_method').strip().lower()
+        self._Ah_method_name = self.config.get('OCEAN_CIRCULATION_MODEL',
+                                               'Ah_method').strip().lower()
         if self._Ah_method_name not in ['none', 'file']:
-            raise RuntimeError('Invalid option for `Ah_method` ({})'.format(self._Ah_method_name))
+            raise PyLagRuntimeError(f"Invalid option for `Ah_method` "
+                                    f"({self._Ah_method_name}).")
 
         if self._Ah_method_name == "none":
             self._Ah_method = 0
@@ -209,11 +216,13 @@ cdef class FVCOMDataReader(DataReader):
             self._Ah_method = 1
 
         # Set flags from config
-        self._has_is_wet = self.config.getboolean("OCEAN_CIRCULATION_MODEL", "has_is_wet")
+        self._has_is_wet = self.config.getboolean("OCEAN_CIRCULATION_MODEL",
+                                                  "has_is_wet")
 
         # Check to see if any environmental variables are being saved.
         try:
-            env_var_names = self.config.get("OUTPUT", "environmental_variables").strip().split(',')
+            env_var_names = self.config.get("OUTPUT",
+                    "environmental_variables").strip().split(',')
         except (configparser.NoSectionError, configparser.NoOptionError) as e:
             env_var_names = []
 
@@ -224,7 +233,8 @@ cdef class FVCOMDataReader(DataReader):
                 if env_var_name in variable_library.fvcom_variable_names.keys():
                     self.env_var_names.append(env_var_name)
                 else:
-                    raise ValueError('Received unsupported variable {}'.format(env_var_name))
+                    raise PyLagValueError(f"Received unsupported variable "
+                                          f"{env_var_name}")
 
         self._read_grid()
 

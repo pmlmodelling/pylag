@@ -15,6 +15,7 @@ import datetime
 
 from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 
+from pylag.exceptions import PyLagValueError
 from pylag import variable_library
 
 
@@ -45,8 +46,8 @@ class ASCIIInitialParticleStateReader(InitialParticleStateReader):
 
     TODO
     ----
-    * At the moment, such objects only read in particle position info. It may be desirable
-      to have them read other types of data in the future.
+    * At the moment, such objects only read in particle position info.
+    It may be desirable to have them read other types of data in the future.
     """
     def __init__(self, config):
         self._config = config
@@ -105,14 +106,17 @@ class RestartInitialParticleStateReader(InitialParticleStateReader):
     def __init__(self, config):
         self._config = config
 
-        self._restart_file_name = self._config.get('RESTART', 'restart_file_name')
+        self._restart_file_name = self._config.get('RESTART',
+                                                   'restart_file_name')
 
         # Read in the coordinate system
-        coordinate_system = self.config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system").strip().lower()
+        coordinate_system = self.config.get("SIMULATION",
+                                            "coordinate_system").strip().lower()
         if coordinate_system in ["cartesian", "geographic"]:
             self.coordinate_system = coordinate_system
         else:
-            raise ValueError("Unsupported model coordinate system `{}'".format(coordinate_system))
+            raise PyLagValueError(f"Unsupported model coordinate "
+                                  f"system `{coordinate_system}`")
 
     def get_particle_data(self):
         """ Get particle data
@@ -121,39 +125,49 @@ class RestartInitialParticleStateReader(InitialParticleStateReader):
         using an object of type RestartFileCreator.
         """
         logger = logging.getLogger(__name__)
-        logger.info('Using restart file {}'.format(self._restart_file_name))
+        logger.info(f'Using restart file {self._restart_file_name}')
 
         # Open the file for reading
         try:
             restart = Dataset(self._restart_file_name, 'r')
-            logger.info('Opened data file {} for reading.'.format(self._restart_file_name))
+            logger.info(f'Opened data file {self._restart_file_name} '
+                        f'for reading.')
         except Exception:
-            logger.error('Failed to open restart file {}.'.format(self._restart_file_name))
+            logger.error(f'Failed to open restart file '
+                         f'{self._restart_file_name}.')
             raise
 
         # Check time
         datetime_start_str = self._config.get("SIMULATION", "start_datetime")
-        datetime_start = datetime.datetime.strptime(datetime_start_str, "%Y-%m-%d %H:%M:%S")
+        datetime_start = datetime.datetime.strptime(datetime_start_str,
+                                                    "%Y-%m-%d %H:%M:%S")
         datetime_restart = num2pydate(restart.variables['time'][0],
-                                    units=restart.variables['time'].units,
-                                    calendar=restart.variables['time'].calendar)
+                                      units=restart.variables['time'].units,
+                                      calendar=restart.variables['time'].calendar)
 
         if datetime_start != datetime_restart:
             datetime_restart_str = datetime_restart.strftime("%Y-%m-%d %H:%M:%S")
-            logger.error("The specified start time `{}' and restart time `{}' do not match".format(datetime_start_str, datetime_restart_str))
-            raise ValueError("When restarting the model, the specified start time should match that given in the restart file.")
+            logger.error(f"The specified start time "
+                         f"`{datetime_start_str}' and restart time "
+                         f"`{datetime_restart_str}' do not match")
+            raise PyLagValueError(f"When restarting the model, the specified "
+                                  f"start time should match that given in the "
+                                  f"restart file.")
 
         # Extract particle data
         n_particles = restart.dimensions['particles'].size
         group_ids = restart.variables['group_id'][0, :]
 
-        x1_var_name = variable_library.get_coordinate_variable_name(self.coordinate_system, 'x1')
+        x1_var_name = variable_library.get_coordinate_variable_name(
+                self.coordinate_system, 'x1')
         x1_positions = restart.variables[x1_var_name][0, :]
 
-        x2_var_name = variable_library.get_coordinate_variable_name(self.coordinate_system, 'x2')
+        x2_var_name = variable_library.get_coordinate_variable_name(
+                self.coordinate_system, 'x2')
         x2_positions = restart.variables[x2_var_name][0, :]
 
-        x3_var_name = variable_library.get_coordinate_variable_name(self.coordinate_system, 'x3')
+        x3_var_name = variable_library.get_coordinate_variable_name(
+                self.coordinate_system, 'x3')
         x3_positions = restart.variables[x3_var_name][0, :]
 
         restart.close()
@@ -175,11 +189,13 @@ def get_initial_particle_state_reader(config):
         Particle initial state reader
 
     """
-    if config.get("SIMULATION", "initialisation_method") == "init_file":
+    initialisation_method = config.get("SIMULATION", "initialisation_method")
+    if initialisation_method == "init_file":
         return ASCIIInitialParticleStateReader(config)
-    elif config.get("SIMULATION", "initialisation_method") == "restart_file":
+    elif initialisation_method == "restart_file":
         return RestartInitialParticleStateReader(config)
-    elif config.get("SIMULATION", "initialisation_method") == "rectangular_grid":
+    elif initialisation_method == "rectangular_grid":
         raise NotImplementedError
     else:
-        raise ValueError('Unrecognised initialisation method {}'.format(initialisation_method))
+        raise PyLagValueError(f'Unrecognised initialisation method '
+                              f'{initialisation_method}')
