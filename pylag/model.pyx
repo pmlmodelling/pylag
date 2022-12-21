@@ -67,6 +67,7 @@ cdef class OPTModel:
     cdef ParticleStateNumMethod particle_state_num_method
     cdef SettlingVelocityCalculator settling_velocity_calculator
     cdef object environmental_variables
+    cdef object extra_grid_variables
     cdef object particle_seed_smart_ptrs
     cdef object particle_smart_ptrs
     cdef vector[Particle*] particle_ptrs
@@ -134,6 +135,15 @@ cdef class OPTModel:
             self.environmental_variables = [var_name.strip() for var_name in var_names]
         except (configparser.NoSectionError, configparser.NoOptionError) as e:
             self.environmental_variables = []
+
+        # Save a list of extra grid variables to be returned as diagnostics
+        try:
+            var_names = self.config.get("OUTPUT",
+                    "extra_grid_variables").strip().split(',')
+            self.extra_grid_variables = \
+                    [var_name.strip() for var_name in var_names]
+        except (configparser.NoSectionError, configparser.NoOptionError) as e:
+            self.extra_grid_variables = []
 
         self._global_time_step = get_global_time_step(self.config)
 
@@ -575,8 +585,8 @@ cdef class OPTModel:
             diags[var_name] = np.empty(self._n_particles,
                 dtype=variable_library.get_integer_type(self.precision))
 
-        # Grid diagnostic vars
-        for var_name in ['h', 'zeta']:
+        # Extra grid variables
+        for var_name in self.extra_grid_variables:
             dtype = variable_library.get_data_type(var_name, self.precision)
             diags[var_name] = np.empty(self._n_particles, dtype)
 
@@ -622,17 +632,25 @@ cdef class OPTModel:
             diags['in_domain'][i] = particle_smart_ptr.in_domain
             diags['status'][i] = particle_smart_ptr.status
 
-            # Grid diagnostic vars
-            if particle_smart_ptr.in_domain:
-                h = self.data_reader.get_zmin(time,
-                                              particle_smart_ptr.get_ptr())
-                zeta = self.data_reader.get_zmax(time,
-                                                 particle_smart_ptr.get_ptr())
-            else:
-                h = variable_library.get_invalid_value(diags['h'].dtype)
-                zeta = variable_library.get_invalid_value(diags['zeta'].dtype)
-            diags['h'][i] = h
-            diags['zeta'][i] = zeta
+            # Extra grid variables
+            if 'h' in self.extra_grid_variables:
+                if particle_smart_ptr.in_domain:
+                    h = self.data_reader.get_zmin(time,
+                            particle_smart_ptr.get_ptr())
+                else:
+                    h = variable_library.get_invalid_value(diags['h'].dtype)
+
+                diags['h'][i] = h
+
+            if 'zeta' in self.extra_grid_variables:
+                if particle_smart_ptr.in_domain:
+                    zeta = self.data_reader.get_zmax(time,
+                            particle_smart_ptr.get_ptr())
+                else:
+                    zeta = variable_library.get_invalid_value(
+                            diags['zeta'].dtype)
+
+                diags['zeta'][i] = zeta
 
             # Number of boundary encounters
             diags['land_boundary_encounters'][i] = \

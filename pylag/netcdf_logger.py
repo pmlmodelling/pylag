@@ -109,7 +109,15 @@ class NetCDFLogger(object):
                     [var_name.strip() for var_name in var_names]
         except (configparser.NoSectionError, configparser.NoOptionError) as e:
             self.environmental_variables = []
-            pass
+
+        # Save a list of extra grid variables to be returned as diagnostics
+        try:
+            var_names = self.config.get("OUTPUT",
+                    "extra_grid_variables").strip().split(',')
+            self.extra_grid_variables = \
+                    [var_name.strip() for var_name in var_names]
+        except (configparser.NoSectionError, configparser.NoOptionError) as e:
+            self.extra_grid_variables = []
 
         # Grid names
         self.grid_names = grid_names
@@ -196,20 +204,23 @@ class NetCDFLogger(object):
                 ('time', 'particles',), **self._ncopts)
         self._is_beached.long_name = 'Is beached'
 
-        # Add grid variables
-        data_type = variable_library.get_data_type('h', self._precision)
-        self._h = self._ncfile.createVariable('h', data_type,
-                ('time', 'particles',), **self._ncopts)
-        self._h.units = variable_library.get_units('h')
-        self._h.long_name = variable_library.get_long_name('h')
-        self._h.invalid = f'{variable_library.get_invalid_value(data_type)}'
+        # Extra grid variables
+        if 'h' in self.extra_grid_variables:
+            data_type = variable_library.get_data_type('h', self._precision)
+            self._h = self._ncfile.createVariable('h', data_type,
+                    ('time', 'particles',), **self._ncopts)
+            self._h.units = variable_library.get_units('h')
+            self._h.long_name = variable_library.get_long_name('h')
+            self._h.invalid = f'{variable_library.get_invalid_value(data_type)}'
 
-        data_type = variable_library.get_data_type('zeta', self._precision)
-        self._zeta = self._ncfile.createVariable('zeta', data_type,
-                ('time', 'particles',), **self._ncopts)
-        self._zeta.units = variable_library.get_units('zeta')
-        self._zeta.long_name = variable_library.get_long_name('zeta')
-        self._zeta.invalid = f'{variable_library.get_invalid_value(data_type)}'
+        if 'zeta' in self.extra_grid_variables:
+            data_type = variable_library.get_data_type('zeta', self._precision)
+            self._zeta = self._ncfile.createVariable('zeta', data_type,
+                    ('time', 'particles',), **self._ncopts)
+            self._zeta.units = variable_library.get_units('zeta')
+            self._zeta.long_name = variable_library.get_long_name('zeta')
+            self._zeta.invalid = \
+                    f'{variable_library.get_invalid_value(data_type)}'
 
         # Add number of land boundary encounters
         self._land_boundary_encounters = self._ncfile.createVariable(
@@ -290,8 +301,6 @@ class NetCDFLogger(object):
         self._x1[tidx, :] = particle_data['x1']
         self._x2[tidx, :] = particle_data['x2']
         self._x3[tidx, :] = particle_data['x3']
-        self._h[tidx, :] = particle_data['h']
-        self._zeta[tidx, :] = particle_data['zeta']
         self._is_beached[tidx, :] = particle_data['is_beached']
         self._in_domain[tidx, :] = particle_data['in_domain']
         self._status[tidx, :] = particle_data['status']
@@ -302,6 +311,12 @@ class NetCDFLogger(object):
         for grid_name in self.grid_names:
             self._host_vars[grid_name][tidx, :] = \
                     particle_data[f'host_{grid_name}']
+
+        # Add extra grid variables
+        if 'h' in self.extra_grid_variables:
+            self._h[tidx, :] = particle_data['h']
+        if 'zeta' in self.extra_grid_variables:
+            self._zeta[tidx, :] = particle_data['zeta']
 
         # Add environmental variables
         for var_name in self.environmental_variables:
