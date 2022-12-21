@@ -590,11 +590,12 @@ cdef class OPTModel:
             diags[var_name] = np.empty(self._n_particles, dtype)
 
         # Bio model variables
-        diags['is_alive'] = np.empty(self._n_particles,
-            dtype=variable_library.get_integer_type(self.precision))
+        if self.use_bio_model:
+            diags['is_alive'] = np.empty(self._n_particles,
+                dtype=variable_library.get_integer_type(self.precision))
 
-        diags['age'] = np.empty(self._n_particles,
-            dtype=variable_library.get_real_type(self.precision))
+            diags['age'] = np.empty(self._n_particles,
+                dtype=variable_library.get_real_type(self.precision))
 
 
         # Fill the diagnostic arrays with data
@@ -649,8 +650,9 @@ cdef class OPTModel:
                 diags[var_name][i] = var
 
             # Bio model variables
-            diags['age'][i] = particle_smart_ptr.age / seconds_per_day
-            diags['is_alive'][i] = particle_smart_ptr.is_alive
+            if self.use_bio_model:
+                diags['age'][i] = particle_smart_ptr.age / seconds_per_day
+                diags['is_alive'][i] = particle_smart_ptr.is_alive
 
         return diags
 

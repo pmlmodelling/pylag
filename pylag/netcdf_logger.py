@@ -76,6 +76,13 @@ class NetCDFLogger(object):
             raise PyLagValueError(f"Unsupported model coordinate "
                                   f"system `{coordinate_system}'")
 
+        # Are we saving biological variables
+        try:
+            self.with_biology = self.config.getboolean("BIO_MODEL",
+                                                       "use_bio_model")
+        except (configparser.NoSectionError, configparser.NoOptionError) as e:
+            self.with_biology = False
+
         # Set precision for diagnostic variables
         try:
             precision = self.config.get("OUTPUT", "precision")
@@ -228,18 +235,20 @@ class NetCDFLogger(object):
             self._env_vars[var_name].invalid = f'{invalid}'
 
         # Bio model variables
-        data_type = variable_library.get_data_type('age', self._precision)
-        self._age = self._ncfile.createVariable('age',
-                data_type, ('time', 'particles',), **self._ncopts)
-        self._age.units = variable_library.get_units('age')
-        self._age.long_name = variable_library.get_long_name('age')
-        self._age.invalid = f"{variable_library.get_invalid_value(data_type)}"
+        if self.with_biology:
+            data_type = variable_library.get_data_type('age', self._precision)
+            self._age = self._ncfile.createVariable('age',
+                    data_type, ('time', 'particles',), **self._ncopts)
+            self._age.units = variable_library.get_units('age')
+            self._age.long_name = variable_library.get_long_name('age')
+            self._age.invalid = \
+                    f"{variable_library.get_invalid_value(data_type)}"
 
-        self._is_alive = self._ncfile.createVariable('is_alive',
-                variable_library.get_integer_type(self._precision),
-                ('time', 'particles',), **self._ncopts)
-        self._is_alive.units = 'None'
-        self._is_alive.long_name = 'Is alive flag (1 - yes; 0 - no)'
+            self._is_alive = self._ncfile.createVariable('is_alive',
+                    variable_library.get_integer_type(self._precision),
+                    ('time', 'particles',), **self._ncopts)
+            self._is_alive.units = 'None'
+            self._is_alive.long_name = 'Is alive flag (1 - yes; 0 - no)'
 
     def write_group_ids(self, group_ids):
         """ Write particle group IDs to file
@@ -286,8 +295,6 @@ class NetCDFLogger(object):
         self._is_beached[tidx, :] = particle_data['is_beached']
         self._in_domain[tidx, :] = particle_data['in_domain']
         self._status[tidx, :] = particle_data['status']
-        self._age[tidx, :] = particle_data['age']
-        self._is_alive[tidx, :] = particle_data['is_alive']
         self._land_boundary_encounters[tidx, :] = \
             particle_data['land_boundary_encounters']
 
@@ -299,6 +306,11 @@ class NetCDFLogger(object):
         # Add environmental variables
         for var_name in self.environmental_variables:
             self._env_vars[var_name][tidx, :] = particle_data[var_name]
+
+        # Add bio model variables
+        if self.with_biology:
+            self._age[tidx, :] = particle_data['age']
+            self._is_alive[tidx, :] = particle_data['is_alive']
 
     def sync(self):
         """ Sync data to disk
