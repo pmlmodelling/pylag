@@ -601,12 +601,11 @@ cdef class OPTModel:
 
         # Bio model variables
         if self.use_bio_model:
-            diags['is_alive'] = np.empty(self._n_particles,
-                dtype=variable_library.get_integer_type(self.precision))
+            dtype = variable_library.get_data_type('age', self.precision)
+            diags['age'] = np.empty(self._n_particles, dtype)
 
-            diags['age'] = np.empty(self._n_particles,
-                dtype=variable_library.get_real_type(self.precision))
-
+            dtype = variable_library.get_data_type('is_alive', self.precision)
+            diags['is_alive'] = np.empty(self._n_particles, dtype)
 
         # Fill the diagnostic arrays with data
         # ------------------------------------

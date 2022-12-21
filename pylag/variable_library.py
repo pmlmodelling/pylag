@@ -247,9 +247,19 @@ _variable_long_names['zeta'] = 'Sea surface elevation'
 
 # Status variables
 # ---------------
+
+# Bio model variables
+# -------------------
+
+# Particle age
 _variable_data_types['age'] = 'REAL'
 _variable_units['age'] = 'days (d)'
 _variable_long_names['age'] = 'Particle age'
+
+# Alive/dead status
+_variable_data_types['is_alive'] = 'INT'
+_variable_units['is_alive'] = 'None'
+_variable_long_names['is_alive'] = 'Is alive flag (1 - yes; 0 - no)'
 
 
 # Environmental variables

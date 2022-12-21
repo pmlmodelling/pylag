@@ -255,11 +255,13 @@ class NetCDFLogger(object):
             self._age.invalid = \
                     f"{variable_library.get_invalid_value(data_type)}"
 
+            data_type = variable_library.get_data_type('is_alive',
+                                                       self._precision)
             self._is_alive = self._ncfile.createVariable('is_alive',
-                    variable_library.get_integer_type(self._precision),
-                    ('time', 'particles',), **self._ncopts)
-            self._is_alive.units = 'None'
-            self._is_alive.long_name = 'Is alive flag (1 - yes; 0 - no)'
+                    data_type, ('time', 'particles',), **self._ncopts)
+            self._is_alive.units = variable_library.get_units('is_alive')
+            self._is_alive.long_name = \
+                    variable_library.get_long_name('is_alive')
 
     def write_group_ids(self, group_ids):
         """ Write particle group IDs to file
