@@ -187,22 +187,26 @@ class NetCDFLogger(object):
             self._host_vars[grid_name].invalid = f"{INT_INVALID}"
         
         # Add status variables
-        self._status = self._ncfile.createVariable('status',
-                variable_library.get_integer_type(self._precision),
+        data_type = variable_library.get_data_type('error_status',
+                                                   self._precision)
+        self._status = self._ncfile.createVariable('error_status', data_type,
                 ('time', 'particles',), **self._ncopts)
-        self._status.units = 'None'
-        self._status.long_name = 'Status flag (1 - error state; 0 - ok)'
+        self._status.units = variable_library.get_units('error_status')
+        self._status.long_name = variable_library.get_long_name('error_status')
 
-        self._in_domain = self._ncfile.createVariable('in_domain',
-                variable_library.get_integer_type(self._precision),
+        data_type = variable_library.get_data_type('in_domain', self._precision)
+        self._in_domain = self._ncfile.createVariable('in_domain', data_type,
                 ('time', 'particles',), **self._ncopts)
-        self._in_domain.units = 'None'
-        self._in_domain.long_name = 'In domain flag (1 - yes; 0 - no)'
+        self._in_domain.units = variable_library.get_units('in_domain')
+        self._in_domain.long_name = variable_library.get_long_name('in_domain')
 
-        self._is_beached = self._ncfile.createVariable('is_beached',
-                variable_library.get_integer_type(self._precision),
+        data_type = variable_library.get_data_type('is_beached',
+                                                   self._precision)
+        self._is_beached = self._ncfile.createVariable('is_beached', data_type,
                 ('time', 'particles',), **self._ncopts)
-        self._is_beached.long_name = 'Is beached'
+        self._is_beached.units = variable_library.get_units('is_beached')
+        self._is_beached.long_name = \
+                variable_library.get_long_name('is_beached')
 
         # Extra grid variables
         if 'h' in self.extra_grid_variables:
@@ -305,7 +309,7 @@ class NetCDFLogger(object):
         self._x3[tidx, :] = particle_data['x3']
         self._is_beached[tidx, :] = particle_data['is_beached']
         self._in_domain[tidx, :] = particle_data['in_domain']
-        self._status[tidx, :] = particle_data['status']
+        self._status[tidx, :] = particle_data['error_status']
         self._land_boundary_encounters[tidx, :] = \
             particle_data['land_boundary_encounters']
 

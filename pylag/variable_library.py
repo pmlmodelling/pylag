@@ -247,6 +247,17 @@ _variable_long_names['zeta'] = 'Sea surface elevation'
 
 # Status variables
 # ---------------
+_variable_data_types['error_status'] = 'INT'
+_variable_units['error_status'] = 'None'
+_variable_long_names['error_status'] = 'Status flag (1 - error state; 0 - ok)'
+
+_variable_data_types['in_domain'] = 'INT'
+_variable_units['in_domain'] = 'None'
+_variable_long_names['in_domain'] = 'In domain flag (1 - yes; 0 - no)'
+
+_variable_data_types['is_beached'] = 'INT'
+_variable_units['is_beached'] = 'None'
+_variable_long_names['is_beached'] = 'Is beached (1 - yes; 0 - no)'
 
 # Bio model variables
 # -------------------

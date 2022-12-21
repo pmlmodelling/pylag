@@ -581,9 +581,9 @@ cdef class OPTModel:
                 dtype=variable_library.get_integer_type(self.precision))
 
         # Status variables
-        for var_name in ['status', 'in_domain', 'is_beached']:
-            diags[var_name] = np.empty(self._n_particles,
-                dtype=variable_library.get_integer_type(self.precision))
+        for var_name in ['error_status', 'in_domain', 'is_beached']:
+            dtype = variable_library.get_data_type(var_name, self.precision)
+            diags[var_name] = np.empty(self._n_particles, dtype)
 
         # Extra grid variables
         for var_name in self.extra_grid_variables:
@@ -629,7 +629,7 @@ cdef class OPTModel:
             # Status variables
             diags['is_beached'][i] = particle_smart_ptr.is_beached
             diags['in_domain'][i] = particle_smart_ptr.in_domain
-            diags['status'][i] = particle_smart_ptr.status
+            diags['error_status'][i] = particle_smart_ptr.status
 
             # Extra grid variables
             if 'h' in self.extra_grid_variables:
