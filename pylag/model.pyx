@@ -591,8 +591,9 @@ cdef class OPTModel:
             diags[var_name] = np.empty(self._n_particles, dtype)
 
         # Number of boundary encounters
-        diags['land_boundary_encounters'] = np.empty(self._n_particles,
-            dtype=variable_library.get_integer_type(self.precision))
+        dtype = variable_library.get_data_type('land_boundary_encounters',
+                                               self.precision)
+        diags['land_boundary_encounters'] = np.empty(self._n_particles, dtype)
 
         # Environmental variables
         for var_name in self.environmental_variables:

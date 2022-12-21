@@ -227,13 +227,15 @@ class NetCDFLogger(object):
                     f'{variable_library.get_invalid_value(data_type)}'
 
         # Add number of land boundary encounters
+        data_type = variable_library.get_data_type('land_boundary_encounters',
+                                                   self._precision)
         self._land_boundary_encounters = self._ncfile.createVariable(
-                'land_boundary_encounters',
-                variable_library.get_integer_type(self._precision),
+                'land_boundary_encounters', data_type,
                 ('time', 'particles',), **self._ncopts)
-        self._land_boundary_encounters.units = 'None'
+        self._land_boundary_encounters.units = \
+            variable_library.get_units('land_boundary_encounters')
         self._land_boundary_encounters.long_name = \
-            'Number of land boundary encounters'
+            variable_library.get_long_name('land_boundary_encounters')
 
         # Add environmental variables
         for var_name in self.environmental_variables:

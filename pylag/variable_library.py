@@ -244,6 +244,11 @@ _variable_data_types['zeta'] = 'REAL'
 _variable_units['zeta'] = 'meters (m)'
 _variable_long_names['zeta'] = 'Sea surface elevation'
 
+# Number of land boundary encounters
+_variable_data_types['land_boundary_encounters'] = 'INT'
+_variable_units['land_boundary_encounters'] = 'None'
+_variable_long_names['land_boundary_encounters'] = \
+        'Number of land boundary encounters'
 
 # Status variables
 # ---------------
