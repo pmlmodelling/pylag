@@ -11,6 +11,7 @@ API is exposed in Python with accompanying documentation.
 include "constants.pxi"
 
 import logging
+import numpy as np
 
 try:
     import configparser
@@ -22,8 +23,8 @@ from pylag.data_types_python import DTYPE_INT, DTYPE_FLOAT
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 # Error flagging
-from pylag.data_types_python import INT_INVALID, FLOAT_INVALID
-from pylag.variable_library import get_invalid_value
+from pylag.data_types_python import INT_INVALID
+from pylag import variable_library
 
 from pylag.numerics import get_num_method, get_global_time_step
 from pylag.settling import get_settling_velocity_calculator
@@ -66,11 +67,13 @@ cdef class OPTModel:
     cdef ParticleStateNumMethod particle_state_num_method
     cdef SettlingVelocityCalculator settling_velocity_calculator
     cdef object environmental_variables
+    cdef object extra_grid_variables
     cdef object particle_seed_smart_ptrs
     cdef object particle_smart_ptrs
     cdef vector[Particle*] particle_ptrs
     
     # Seed particle data (as read from file)
+    cdef DTYPE_INT_t _n_particles
     cdef DTYPE_INT_t[:] _group_ids
     cdef DTYPE_FLOAT_t[:] _x1_positions
     cdef DTYPE_FLOAT_t[:] _x2_positions
@@ -82,6 +85,9 @@ cdef class OPTModel:
     # Include a biological model?
     cdef bint use_bio_model
     cdef BioModel bio_model
+
+    # Data precision, used when constructing diagnostic variable arrays
+    cdef object precision
 
     def __init__(self, config, data_reader):
         # Initialise config
@@ -130,6 +136,15 @@ cdef class OPTModel:
         except (configparser.NoSectionError, configparser.NoOptionError) as e:
             self.environmental_variables = []
 
+        # Save a list of extra grid variables to be returned as diagnostics
+        try:
+            var_names = self.config.get("OUTPUT",
+                    "extra_grid_variables").strip().split(',')
+            self.extra_grid_variables = \
+                    [var_name.strip() for var_name in var_names]
+        except (configparser.NoSectionError, configparser.NoOptionError) as e:
+            self.extra_grid_variables = []
+
         self._global_time_step = get_global_time_step(self.config)
 
         # Are we running with biology?
@@ -141,6 +156,22 @@ cdef class OPTModel:
 
         if self.use_bio_model:
             self.bio_model = BioModel(config)
+
+        # Initialise n_particles to zero as the seed has not been created yet
+        self._n_particles = 0
+
+        # Set precision for diagnostic variables
+        try:
+            precision = self.config.get("OUTPUT", "precision")
+        except (configparser.NoSectionError, configparser.NoOptionError) as e:
+            precision = "single"
+
+        if precision == "single":
+            self.precision = 's'
+        elif precision == "double":
+            self.precision = 'd'
+        else:
+            raise PyLagValueError(f'Unknown precision flag `{precision}')
 
     def set_particle_data(self, group_ids, x1_positions, x2_positions,
                           x3_positions):
@@ -438,6 +469,9 @@ cdef class OPTModel:
             raise PyLagRuntimeError(f'All seed particles lie outside of '
                                     f'the model domain!')
 
+        # Save the total number of particles
+        self._n_particles = len(self.particle_seed_smart_ptrs)
+
         if self.config.get('GENERAL', 'log_level') == 'DEBUG':
             logger = logging.getLogger(__name__)
             logger.info(f'{particles_in_domain} of '
@@ -527,63 +561,116 @@ cdef class OPTModel:
             xmin = 0.0
             ymin = 0.0
 
-        # Initialise lists
-        diags = {'x1': [], 'x2': [], 'x3': [], 'h': [], 'zeta': [], 'is_beached': [],
-                 'in_domain': [], 'status': [], 'age': [], 'is_alive': [],
-                 'land_boundary_encounters': []}
+        # Initialise diagnostic variable arrays
+        # -------------------------------------
+        diags = {}
 
-        # Initialise host data
+        # x1, x2, x3
+        for var_name in ['x1', 'x2', 'x3']:
+            # Get the variable name which is specific to the coordinate system
+            _var_name = variable_library.get_coordinate_variable_name(
+                self.coordinate_system, var_name)
+
+            # Add to the diagnostics dictionary
+            diags[var_name] = np.empty(self._n_particles,
+                dtype=variable_library.get_data_type(_var_name, self.precision))
+
+        # Host elements
         for grid_name in self.get_grid_names():
-            diags['host_{}'.format(grid_name)] = []
+            diags[f'host_{grid_name}'] = np.empty(self._n_particles,
+                dtype=variable_library.get_integer_type(self.precision))
 
-        # Initialise env var lists
+        # Status variables
+        for var_name in ['error_status', 'in_domain', 'is_beached']:
+            dtype = variable_library.get_data_type(var_name, self.precision)
+            diags[var_name] = np.empty(self._n_particles, dtype)
+
+        # Extra grid variables
+        for var_name in self.extra_grid_variables:
+            dtype = variable_library.get_data_type(var_name, self.precision)
+            diags[var_name] = np.empty(self._n_particles, dtype)
+
+        # Number of boundary encounters
+        dtype = variable_library.get_data_type('land_boundary_encounters',
+                                               self.precision)
+        diags['land_boundary_encounters'] = np.empty(self._n_particles, dtype)
+
+        # Environmental variables
         for var_name in self.environmental_variables:
-            diags[var_name] = []
+            dtype = variable_library.get_data_type(var_name, self.precision)
+            diags[var_name] = np.empty(self._n_particles, dtype)
 
-        for particle_smart_ptr in self.particle_smart_ptrs:
+        # Bio model variables
+        if self.use_bio_model:
+            dtype = variable_library.get_data_type('age', self.precision)
+            diags['age'] = np.empty(self._n_particles, dtype)
+
+            dtype = variable_library.get_data_type('is_alive', self.precision)
+            diags['is_alive'] = np.empty(self._n_particles, dtype)
+
+        # Fill the diagnostic arrays with data
+        # ------------------------------------
+        for i, particle_smart_ptr in enumerate(self.particle_smart_ptrs):
 
             # Particle location data
             if self.coordinate_system == "cartesian":
-                diags['x1'].append(particle_smart_ptr.x1 + xmin)
-                diags['x2'].append(particle_smart_ptr.x2 + ymin)
+                diags['x1'][i] = particle_smart_ptr.x1 + xmin
+                diags['x2'][i] = particle_smart_ptr.x2 + ymin
             elif self.coordinate_system == "geographic":
-                diags['x1'].append(particle_smart_ptr.x1 * radians_to_deg)
-                diags['x2'].append(particle_smart_ptr.x2 * radians_to_deg)
+                diags['x1'][i] = particle_smart_ptr.x1 * radians_to_deg
+                diags['x2'][i] = particle_smart_ptr.x2 * radians_to_deg
 
-            diags['x3'].append(particle_smart_ptr.x3)
+            diags['x3'][i] = particle_smart_ptr.x3
 
             # Grid specific host element data
             host_elements = particle_smart_ptr.get_all_host_horizontal_elems()
             for grid_name, host in host_elements.items():
-                diags['host_{}'.format(grid_name)].append(host)
+                diags[f'host_{grid_name}'][i] = host
 
-            # Particle state data
-            diags['is_beached'].append(particle_smart_ptr.is_beached)
-            diags['in_domain'].append(particle_smart_ptr.in_domain)
-            diags['status'].append(particle_smart_ptr.status)
-            diags['age'].append(particle_smart_ptr.age / seconds_per_day)
-            diags['is_alive'].append(particle_smart_ptr.is_alive)
-            diags['land_boundary_encounters'].append(
-                particle_smart_ptr.land_boundary_encounters)
+            # Status variables
+            diags['is_beached'][i] = particle_smart_ptr.is_beached
+            diags['in_domain'][i] = particle_smart_ptr.in_domain
+            diags['error_status'][i] = particle_smart_ptr.status
 
-            # Grid variables
-            if particle_smart_ptr.in_domain:
-                h = self.data_reader.get_zmin(time, particle_smart_ptr.get_ptr())
-                zeta = self.data_reader.get_zmax(time, particle_smart_ptr.get_ptr())
-            else:
-                h = get_invalid_value('h')
-                zeta = get_invalid_value('zeta')
-            diags['h'].append(h)
-            diags['zeta'].append(zeta)
+            # Extra grid variables
+            if 'h' in self.extra_grid_variables:
+                if particle_smart_ptr.in_domain:
+                    h = self.data_reader.get_zmin(time,
+                            particle_smart_ptr.get_ptr())
+                else:
+                    h = variable_library.get_invalid_value(diags['h'].dtype)
+
+                diags['h'][i] = h
+
+            if 'zeta' in self.extra_grid_variables:
+                if particle_smart_ptr.in_domain:
+                    zeta = self.data_reader.get_zmax(time,
+                            particle_smart_ptr.get_ptr())
+                else:
+                    zeta = variable_library.get_invalid_value(
+                            diags['zeta'].dtype)
+
+                diags['zeta'][i] = zeta
+
+            # Number of boundary encounters
+            diags['land_boundary_encounters'][i] = \
+                particle_smart_ptr.land_boundary_encounters
 
             # Environmental variables
             for var_name in self.environmental_variables:
                 if particle_smart_ptr.in_domain:
                     var = self.data_reader.get_environmental_variable(var_name,
                             time, particle_smart_ptr.get_ptr())
-                    diags[var_name].append(var)
                 else:
-                    diags[var_name].append(get_invalid_value(var_name))
+                    var = variable_library.get_invalid_value(
+                        diags[var_name].dtype)
+
+                diags[var_name][i] = var
+
+            # Bio model variables
+            if self.use_bio_model:
+                diags['age'][i] = particle_smart_ptr.age / seconds_per_day
+                diags['is_alive'][i] = particle_smart_ptr.is_alive
 
         return diags
 
