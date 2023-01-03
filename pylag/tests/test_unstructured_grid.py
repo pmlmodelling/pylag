@@ -148,11 +148,13 @@ class UnstructuredCartesianGrid_test(TestCase):
         val = self.unstructured_grid.shepard_interpolation_wrapper(0.0, 0.0, xpts, ypts, vals, valid_points)
         test.assert_almost_equal(val, 0.44444444444)
 
+
 class UnstructuredGeographicGrid_test(TestCase):
     """ Unit tests for unstructured Geographic grids
 
-    The tests use the same grid as is used with the Arakawa A data reader tests. Some
-    of the tests are also the same, but here they don't go through Arakawa A data reader.
+    The tests use the same grid as is used with the Arakawa A data reader tests.
+    Some of the tests are also the same, but here they don't go through
+    Arakawa A data reader.
     """
 
     def setUp(self):
