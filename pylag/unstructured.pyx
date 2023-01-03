@@ -1441,8 +1441,8 @@ cdef class UnstructuredGeographicGrid(Grid):
     """ Unstructured geographic grid
 
     Objects of type UnstructuredGeographicGrid can perform grid searches,
-    compute local coordinates to assist with interpolation and help identify grid
-    boundary crossings for unstructured geographic (lat/lon) grids.
+    compute local coordinates to assist with interpolation and help identify
+    grid boundary crossings for unstructured geographic (lat/lon) grids.
 
     Parameters
     ----------
@@ -1466,16 +1466,16 @@ cdef class UnstructuredGeographicGrid(Grid):
         Memory view of elements surrounding elements. With shape [3, n_elems]
 
     x : 1D memory view
-        x-coordinates of grid nodes in degrees longitude.
+        x-coordinates of grid nodes in radians.
 
     y : 1D memory view
-        y-coordinates of grid nodes in degrees latitude.
+        y-coordinates of grid nodes in radians.
 
     xc : 1D memory view
-        x-coordinates of element centres in degrees longitude.
+        x-coordinates of element centres in radians.
 
     yc : 1D memory view
-        y-coordinates of element centres in degrees latitude.
+        y-coordinates of element centres in radians.
 
     land_sea_mask_c : 1D memory view
         Land sea element mask
