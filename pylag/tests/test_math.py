@@ -141,6 +141,41 @@ def test_geographic_to_cartesian_coords():
     test.assert_array_almost_equal(coords, [0., 10., 0.])
 
 
+def test_geographic_to_cartesian_coords_on_zero_to_360_degree_longitude_grid():
+    """ Test sensitivity to the longitude grid limits
+
+    Some datasets use a longitude grid that ranges from -180 to 180 degrees,
+    centered on the Greenwich prime meridian. Others use a longitude grid that
+    ranges from 0 to 360 degrees. This test is intended to verify that PyLag
+    handles these two cases seamlessly; and without any need to convert one in
+    to the other before running the model.
+
+    In the below:
+
+    grid_a - A point on a longitude grid with -180 and 180 degree limits.
+    grid_b - A point on a longitude grid with 0 and 360 degree limits.
+    """
+    deg_to_radians = np.radians(1)
+
+    # Grid a. Test point at -90 degrees longitude.
+    lon_grid_a = -90. * deg_to_radians
+    lat_grid_a = 0.0 * deg_to_radians
+    r = 10.0
+
+    coords_grid_a = math.geographic_to_cartesian_coords_wrapper(lon_grid_a,
+                                                                lat_grid_a, r)
+    test.assert_array_almost_equal(coords_grid_a, [0., -10., 0.])
+
+    # Grid b. Test point at 270 degrees longitude.
+    lon_grid_b = 270. * deg_to_radians
+    lat_grid_b = 0.0 * deg_to_radians
+    r = 10.0
+
+    coords_grid_b = math.geographic_to_cartesian_coords_wrapper(lon_grid_b,
+                                                                lat_grid_b, r)
+    test.assert_array_almost_equal(coords_grid_b, [0., -10., 0.])
+
+
 def test_cartesian_to_geographic_coords():
     coords_cart = [0., 1., 0.]
 
