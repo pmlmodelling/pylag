@@ -463,17 +463,18 @@ cdef class AtmosphereDataReader(DataReader):
 
         # Land sea mask
         try:
+            use_mask = self.config.getboolean('ATMOSPHERE_DATA', 'use_mask').strip()
+        except configparser.NoOptionError:
+            use_mask = False
+
+        if use_mask:
             self._land_sea_mask_c = self.mediator.get_grid_variable('mask_c',
                     (self._n_elems), DTYPE_INT)
-        except KeyError:
-            # No mask - treat all points as being sea.
-            self._land_sea_mask_c = np.zeros(self._n_elems, dtype=DTYPE_INT)
-
-        try:
             self._land_sea_mask = self.mediator.get_grid_variable('mask',
                     (self._n_nodes), DTYPE_INT)
-        except KeyError:
+        else:
             # No mask - treat all points as being sea.
+            self._land_sea_mask_c = np.zeros(self._n_elems, dtype=DTYPE_INT)
             self._land_sea_mask = np.zeros(self._n_nodes, dtype=DTYPE_INT)
 
         # Element areas
