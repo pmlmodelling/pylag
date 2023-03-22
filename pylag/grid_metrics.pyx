@@ -583,8 +583,8 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',
 
     elif len(lon_var.shape) == 2:
         # Sort axes
-        lon2d = sort_axes(lon_var)
-        lat2d = sort_axes(lat_var)
+        lon2d = sort_axes(lon_var, lon_name=lon_dim_name, lat_name=lat_dim_name)
+        lat2d = sort_axes(lat_var, lon_name=lon_dim_name, lat_name=lat_dim_name)
 
         # Save original lon and lat sizes
         n_longitude = lon_var.shape[0]
