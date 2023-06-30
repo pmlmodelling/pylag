@@ -192,7 +192,7 @@ class GridMetricsFileCreator(object):
             raise RuntimeError('Problem closing file')
 
 @cython.wraparound(True)
-def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name,
+def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name=None,
         obc_file_delimiter=' ', grid_metrics_file_name = './grid_metrics.nc'):
     """Create FVCOM grid metrics file
 
@@ -208,7 +208,9 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name,
         The path to an FVCOM output file that can be read in a processed
 
     obc_file_name : str
-        The path to the text file containing a list of open boundary nodes
+        The path to the text file containing a list of open boundary nodes,
+        as read in by FVCOM. If the file is not provided, all boundaries
+        will be treated as land boundaries. Optional, default: None. 
 
     obc_file_delimiter : str
         The delimiter used in the obc ascii file. To specify a tab delimited
@@ -339,11 +341,15 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name,
     nv_data = nv_data.T
 
     # Add open boundary flags
-    open_boundary_nodes = get_fvcom_open_boundary_nodes(obc_file_name,
-                                                        obc_file_delimiter)
-    nbe_data = add_fvcom_open_boundary_flags(nv_data, nbe_data,
-                                              open_boundary_nodes)
-
+    if obc_file_name is not None:
+        open_boundary_nodes = get_fvcom_open_boundary_nodes(obc_file_name,
+                                                            obc_file_delimiter)
+        nbe_data = add_fvcom_open_boundary_flags(nv_data, nbe_data,
+                                                 open_boundary_nodes)
+    else:
+        print('\nWARNING - an open boundary node file has not been provided. Assuming '
+              'no open boundaries in the FVCOM grid - all boundaries wiill be '
+              'treated as land boundaries.')
 
     # Add variable
     dtype = DTYPE_INT
@@ -2041,11 +2047,12 @@ def get_fvcom_open_boundary_nodes(file_name, delimiter=' '):
 
 
 def add_fvcom_open_boundary_flags(nv, nbe, ob_nodes):
-    """Add open boundary flags
+    """Add open boundary flags to the nbe array
 
     For each element, the method checks to see if two of the element's nodes lie
-    on the open boundary. If they do, it flags the corresponding neighbour
-    element with a -2, rather than a -1 as is the case in FVCOM output files.
+    on the open boundary. The nodes that lie on the open boundary are listed
+    in the array ob_nodes. If they do, it flags the corresponding neighbour
+    element with a `-2`, rather than a `-1` as is the case in FVCOM output files.
 
     Parameters
     ----------
