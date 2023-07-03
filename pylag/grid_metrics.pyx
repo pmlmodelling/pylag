@@ -19,6 +19,7 @@ try:
 except ImportError:
     import ConfigParser as configparser
 
+from typing import Optional
 import numpy as np
 from scipy.spatial import Delaunay, cKDTree
 import stripy as stripy
@@ -192,20 +193,87 @@ class GridMetricsFileCreator(object):
             raise RuntimeError('Problem closing file')
 
 @cython.wraparound(True)
-def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name=None,
-        obc_file_delimiter=' ', grid_metrics_file_name = './grid_metrics.nc'):
+def create_fvcom_grid_metrics_file(fvcom_file_name: str,
+                                   dimension_names: Optional[dict]={},
+                                   variable_names: Optional[dict]={},
+                                   obc_file_name: Optional[str]=None,
+                                   obc_file_delimiter: Optional[str]=' ',
+                                   grid_metrics_file_name: Optional[str]='./grid_metrics.nc'):
     """Create FVCOM grid metrics file
 
-    In FVCOM output files, the grid variables nv and nbe are not ordered in the
-    way PyLag expects them to be. Nor do FVCOM output files distinguish between
-    open and land boundary nodes - all sides lying along a boundary are simply
-    given a -1 flag. This function rectifies these problems by generating a
-    separate grid metrics file that can be passed to PyLag.
+    This function creates a FVCOM grid metrics file for use with PyLag
+    given a FVCOM output file.
+
+    At a minimum, the FVCOM output file must contain the following
+    dimension variables for 3D runs:
+
+    time - the number of time points,
+    node - the number of nodes in the unstructured horizontal triangular mesh,
+    nele - the number of elements in the unstructured horizontal triangular mesh,
+    siglay - the number of sigma layers.
+
+    and the following variables:
+
+    Itime and Itime2 - time variables,
+    x,  y and/or lon, lat - nodal coordinates,
+    xc, yc and/or lonc, latc - element centre coordinates,
+    nv - nodes surrounding each element,
+    siglay - sigma coordinates of layer centres,
+    h - bathymetry,
+    zeta - sea surface elevation,
+    u, v - lateral velocity components,
+    ww - vertical velocity component.
+
+    NB `zeta` and the velocity components are not required to generate the
+    grid metrics file.
+
+    If the FVCOM output file contains non-standard names for the
+    dimensions or variables, these can be specified using the optional
+    `dimension_names` and `variable_names` arguments. The above default
+    names will be adopted for any dimensions or variables not specified
+    in these dictionaries.
+
+    In FVCOM output files, the grid variables nv and nbe are odered in the
+    opposite direction to what PyLag requires. These variables are reordered
+    here before being written to the grid metrics file.
+
+    If the `siglev` variable is missing, then it will be estimated through
+    a combination of linear interpolation and extrapolation using the
+    `siglay` variable, which is mandatory.
+
+    FVCOM does not distinguish between open and land boundary nodes - all
+    sides lying along a boundary are simply given a -1 flag. To distinguish
+    between open and land boundaries, a list of open boundary nodes can be
+    specified using the  optional `obc_file_name` argument. Nominally, this
+    file is the same as that used in the original FVCOM run. Given this
+    information, PyLag will flag all open boundary nodes with a distinct
+    -2 flag. If the `obc_file_name` argument is not given, all boundary
+    nodes will be given a -1 flag.
 
     Parameters
     ----------
     fvcom_file_name : str
-        The path to an FVCOM output file that can be read in a processed
+        The path to an FVCOM output file for the domain of interest.
+
+    dimension_names : dict
+        A dictionary containing the names of the dimensions in the FVCOM
+        output file. Supported keys include: `node`, `nele`, `siglay`,
+        `siglev`. The values should be the name of the corresponding
+        dimensions in the FVCOM output file. Default FVCOM names will
+        be tried if a given key/value pair are not provided, or the
+        dictionary itself is not given. The dimensions `node`, `element`
+        and `siglay` are mandatory, and must be present within the FVCOM
+        output file. If `siglev` is not given, the model will estimate
+        values for `siglev` through interpolation. Optional, default: {}.
+
+    variables_names : dict
+        A dictionary containing the names of the variables in the FVCOM
+        output file. Supported keys include: `Itime`, `Itime2`, `x`, `y`,
+        `lon`, `lat`, `xc`, `yc`, `lonc`, `latc`, `nv`, `nbe`, `siglay`,
+        `siglev`, `h`. The values should be the name of the corresponding
+        variables in the FVCOM output file. Default FVCOM names will
+        be tried if a given key/value pair are not provided, or the
+        dictionary itself is not given. Optional, default: {}.
 
     obc_file_name : str
         The path to the text file containing a list of open boundary nodes,
@@ -225,15 +293,83 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name=None,
     grid metrics file generated can be reused by all future simulations.
 
     """
+    # Set dimension names using dictionary values if given
+    if dimension_names:
+        node_dim_name = dimension_names.get('node', 'node')
+        elem_dim_name = dimension_names.get('nele', 'nele')
+        siglay_dim_name = dimension_names.get('siglay', 'siglay')
+        siglev_dim_name = dimension_names.get('siglev', 'siglev')
+    else:
+        node_dim_name = 'node'
+        elem_dim_name = 'nele'
+        siglay_dim_name = 'siglay'
+        siglev_dim_name = 'siglev'
+    
+    # Set variable names using dictionary values if given
+    if variable_names:
+        Itime_var_name = variable_names.get('Itime', 'Itime')
+        Itime2_var_name = variable_names.get('Itime2', 'Itime2')
+        x_var_name = variable_names.get('x', 'x')
+        y_var_name = variable_names.get('y', 'y')
+        lon_var_name = variable_names.get('lon', 'lon')
+        lat_var_name = variable_names.get('lat', 'lat')
+        xc_var_name = variable_names.get('xc', 'xc')
+        yc_var_name = variable_names.get('yc', 'yc')
+        lonc_var_name = variable_names.get('lonc', 'lonc')
+        latc_var_name = variable_names.get('latc', 'latc')
+        nv_var_name = variable_names.get('nv', 'nv')
+        nbe_var_name = variable_names.get('nbe', 'nbe')
+        siglay_var_name = variable_names.get('siglay', 'siglay')
+        siglev_var_name = variable_names.get('siglev', 'siglev')
+        h_var_name = variable_names.get('h', 'h')
+    else:
+        Itime_var_name = 'Itime'
+        Itime2_var_name = 'Itime2'
+        x_var_name = 'x'
+        y_var_name = 'y'
+        lon_var_name = 'lon'
+        lat_var_name = 'lat'
+        xc_var_name = 'xc'
+        yc_var_name = 'yc'
+        lonc_var_name = 'lonc'
+        latc_var_name = 'latc'
+        nv_var_name = 'nv'
+        nbe_var_name = 'nbe'
+        siglay_var_name = 'siglay'
+        siglev_var_name = 'siglev'
+        h_var_name = 'h'
+
+    # Create a mapping between FVCOM dimension names and PyLag names
+    pylag_dim_names = {node_dim_name: 'node',
+                       elem_dim_name: 'element',
+                       siglay_dim_name: 'siglay',
+                       siglev_dim_name: 'siglev'}
+
+    # Create a mapping between FVCOM variable names and PyLag names
+    pylag_var_names = {x_var_name: 'x',
+                       y_var_name: 'y',
+                       lon_var_name: 'longitude',
+                       lat_var_name: 'latitude',
+                       xc_var_name: 'xc',
+                       yc_var_name: 'yc',
+                       lonc_var_name: 'longitude_c',
+                       latc_var_name: 'latitude_c',
+                       siglay_var_name: 'siglay',
+                       h_var_name: 'h'}
+
     # Open the FVCOM dataset for reading
     fvcom_dataset = Dataset(fvcom_file_name, 'r')
 
     # Read in dimension variables
-    n_nodes = fvcom_dataset.dimensions['node'].size
-    n_elems = fvcom_dataset.dimensions['nele'].size
-    n_siglev = fvcom_dataset.dimensions['siglev'].size
-    n_siglay = fvcom_dataset.dimensions['siglay'].size
+    n_nodes = fvcom_dataset.dimensions[node_dim_name].size
+    n_elems = fvcom_dataset.dimensions[elem_dim_name].size
+    n_siglay = fvcom_dataset.dimensions[siglay_dim_name].size
 
+    # TODO - allow for siglev to be interpolated if not given
+    n_siglev = fvcom_dataset.dimensions[siglev_dim_name].size
+
+    # Create the grid metrics file
+    # ----------------------------
     print(f'Creating FVCOM grid metrics file {grid_metrics_file_name}')
 
     # Instantiate file creator
@@ -243,18 +379,17 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name=None,
     gm_file_creator.create_file()
 
     # Add dimension variables
-    gm_file_creator.create_dimension('node', n_nodes)
-    gm_file_creator.create_dimension('element', n_elems)
-    gm_file_creator.create_dimension('siglev', n_siglev)
-    gm_file_creator.create_dimension('siglay', n_siglay)
+    # -----------------------
+    gm_file_creator.create_dimension(pylag_dim_names[node_dim_name], n_nodes)
+    gm_file_creator.create_dimension(pylag_dim_names[elem_dim_name], n_elems)
+    gm_file_creator.create_dimension(pylag_dim_names[siglay_dim_name], n_siglay)
+    gm_file_creator.create_dimension(pylag_dim_names[siglev_dim_name], n_siglev)
 
     # Add grid coordinate variables
     # -----------------------------
-    fvcom_var_names = ['x', 'y', 'xc', 'yc', 'lat', 'lon', 'latc',
-                       'lonc', 'siglay', 'h']
-    mapped_var_names = ['x', 'y', 'xc', 'yc', 'latitude', 'longitude',
-                        'latitude_c', 'longitude_c', 'siglay', 'h']
-    for fvcom_var_name, var_name in zip(fvcom_var_names, mapped_var_names):
+
+    # Loop over all key-value pairs
+    for fvcom_var_name, var_name in pylag_var_names.items():
         nc_var = fvcom_dataset.variables[fvcom_var_name]
 
         var_data = nc_var[:]
@@ -262,9 +397,9 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name=None,
         dtype = nc_var.dtype.name
 
         dimensions = nc_var.dimensions
-        if 'nele' in dimensions:
+        if elem_dim_name in dimensions:
             dimensions = list(dimensions)
-            dimensions[dimensions.index('nele')] = 'element'
+            dimensions[dimensions.index(elem_dim_name)] = pylag_dim_names[elem_dim_name]
             dimensions = tuple(dimensions)
 
         # Form dictionary of attributes
@@ -276,7 +411,7 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name=None,
 
     # Add siglev array after checking for erroneously masked values
     # -------------------------------------------------------------
-    siglev_var = fvcom_dataset.variables['siglev']
+    siglev_var = fvcom_dataset.variables[siglev_var_name]
     siglev_data = siglev_var[:]
     if np.ma.is_masked(siglev_data):
         # Determine which levels (interfaces) contain at least some masked points
@@ -318,11 +453,11 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name=None,
 
     # Add modified nv array
     # ---------------------
-    nv_var = fvcom_dataset.variables['nv']
+    nv_var = fvcom_dataset.variables[nv_var_name]
     nv_data = np.asarray(nv_var[:] - 1, dtype=DTYPE_INT)
     dtype = DTYPE_INT
     dimensions = list(nv_var.dimensions)
-    dimensions[dimensions.index('nele')] = 'element'
+    dimensions[dimensions.index(elem_dim_name)] = pylag_dim_names[elem_dim_name]
     dimensions = tuple(dimensions)
     attrs = {}
     for attr_name in nv_var.ncattrs():
@@ -332,7 +467,7 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name=None,
 
     # Add modified nbe array
     # ----------------------
-    nbe_var = fvcom_dataset.variables['nbe']
+    nbe_var = fvcom_dataset.variables[nbe_var_name]
     nbe_data = np.asarray(nbe_var[:] - 1, dtype=DTYPE_INT)
     nbe_data = nbe_data.T
     nv_data = nv_data.T
@@ -354,7 +489,7 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name=None,
     # Add variable
     dtype = DTYPE_INT
     dimensions = list(nv_var.dimensions)
-    dimensions[dimensions.index('nele')] = 'element'
+    dimensions[dimensions.index(elem_dim_name)] = pylag_dim_names[elem_dim_name]
     dimensions = tuple(dimensions)
     attrs = {}
     for attr_name in nbe_var.ncattrs():
@@ -374,7 +509,7 @@ def create_fvcom_grid_metrics_file(fvcom_file_name, obc_file_name=None,
                   'long_name': 'Land-sea mask: sea = 0, land = 1'}
 
     gm_file_creator.create_variable('mask_c', land_sea_mask_elements,
-            ('element',), DTYPE_INT, attrs=mask_attrs)
+            (pylag_dim_names[elem_dim_name],), DTYPE_INT, attrs=mask_attrs)
 
     # Close FVCOM dataset
     # -------------------
