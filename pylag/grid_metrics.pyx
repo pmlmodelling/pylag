@@ -423,6 +423,19 @@ def create_fvcom_grid_metrics_file(fvcom_file_name: str,
         attrs = {}
         for attr_name in nc_var.ncattrs():
             attrs[attr_name] = nc_var.getncattr(attr_name)
+        
+        # Correct longitudes to be in the range -180 to 180
+        if var_name in ['longitude', 'longitude_c']:
+            if np.any(var_data > 180.0):
+                print(f'INFO - detected longitudes greater than 180.0 in variable {fvcom_var_name}. '
+                      f'Assuming longitude limits are in the range 0 - 360. '
+                      f'Correcting these to be in the range -180 to 180.')
+
+                var_data = np.where(var_data > 180.0, var_data - 360.0, var_data)
+        
+            # Set valid min and max values
+            attrs['valid_min'] = -180.0
+            attrs['valid_max'] = 180.0
 
         gm_file_creator.create_variable(var_name, var_data, dimensions, dtype, attrs=attrs)
 
