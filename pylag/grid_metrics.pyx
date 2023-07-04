@@ -292,6 +292,12 @@ def create_fvcom_grid_metrics_file(fvcom_file_name: str,
     This function only needs to be called once per model grid - the
     grid metrics file generated can be reused by all future simulations.
 
+    TODO
+    ----
+    1) Create the nbe array if it is not present.
+    2) Add support for creating a grid based on surface
+    values only.
+
     """
     # Set dimension names using dictionary values if given
     if dimension_names:
@@ -365,9 +371,21 @@ def create_fvcom_grid_metrics_file(fvcom_file_name: str,
     n_elems = fvcom_dataset.dimensions[elem_dim_name].size
     n_siglay = fvcom_dataset.dimensions[siglay_dim_name].size
 
-    # TODO - allow for siglev to be interpolated if not given
-    n_siglev = fvcom_dataset.dimensions[siglev_dim_name].size
+    # Allow for siglev to be interpolated if not given
+    has_siglev = True
+    if ((siglev_dim_name not in fvcom_dataset.dimensions) or 
+        (siglev_var_name not in fvcom_dataset.variables)):
 
+        # Set flag to indicate that siglev is not present
+        has_siglev = False
+
+    # Set siglev size
+    if has_siglev:
+        n_siglev = fvcom_dataset.dimensions[siglev_dim_name].size
+    else:
+        # Manually set siglev size to one more than siglay
+        n_siglev = n_siglay + 1
+    
     # Create the grid metrics file
     # ----------------------------
     print(f'Creating FVCOM grid metrics file {grid_metrics_file_name}')
@@ -409,45 +427,58 @@ def create_fvcom_grid_metrics_file(fvcom_file_name: str,
 
         gm_file_creator.create_variable(var_name, var_data, dimensions, dtype, attrs=attrs)
 
-    # Add siglev array after checking for erroneously masked values
-    # -------------------------------------------------------------
-    siglev_var = fvcom_dataset.variables[siglev_var_name]
-    siglev_data = siglev_var[:]
-    if np.ma.is_masked(siglev_data):
-        # Determine which levels (interfaces) contain at least some masked points
-        masked_levels = np.unique(np.asarray(siglev_data.mask==True).nonzero()[0])
+    # Add siglev array. Reconstruct if not given.
+    # -------------------------------------------
+    if has_siglev:
+        # Read in siglev data
+        siglev_var = fvcom_dataset.variables[siglev_var_name]
 
-        # Error checking
-        if len(masked_levels) != 1:
-            raise PyLagRuntimeError(f'More than one sigma level contains masked values. '
-                                    f'Please check the consistency of sigma in your FVCOM '
-                                    f'data file. NB - PyLag will attempt to flush the value '
-                                    f'of sigma to -1.0 at the bottom interface if that '
-                                    f'level contains masked values. These may arise due to '
-                                    f'floating point precision errors in FVCOM itself.')
+        # Get depth dimensions index
+        dimensions = list(siglev_var.dimensions)
+        depth_dim_index = dimensions.index(siglev_dim_name)
 
-        masked_level = masked_levels[0]
-        if masked_level != n_siglev - 1:
-            raise PyLagRuntimeError(f'Masked nodes found in siglev array at level {masked_level}. '
-                                    f'Please check the consistency of sigma in your FVCOM '
-                                    f'data file. NB - PyLag will attempt to flush the value '
-                                    f'of sigma to -1.0 at the bottom interface in the siglev array '
-                                    f'if that level contains masked values. These may arise due to '
-                                    f'floating point precision errors in FVCOM itself. This is not '
-                                    f'the bottom level/interface, hence this error.')
+        # When working with the raw FVCOM data, flush the bottom
+        # level to -1.0 and the top to 0.0 to guard
+        # against floating point precision errors.
+        siglev_data = siglev_var[:]
+        if depth_dim_index == 0:
+            siglev_data[0, :] = 0.0
+            siglev_data[-1, :] = -1.0
+        else:
+            siglev_data[:, 0] = 0.0
+            siglev_data[:, -1] = -1.0
 
-        # Fix up the siglev array
-        print(f'WARNING - found masked points in the last level of the '
-              f'FVCOM siglev array. To facilitate grid searching in PyLag, '
-              f'these values will be flushed to an exact value of -1.0.')
-        siglev_data[-1, :] = -1.0
+        # Extract variable data
+        dtype = siglev_var.dtype.name
+        dimensions = siglev_var.dimensions
+        attrs = {}
+        for attr_name in siglev_var.ncattrs():
+            attrs[attr_name] = siglev_var.getncattr(attr_name)
 
-    # Extract variable data and save
-    dtype = siglev_var.dtype.name
-    dimensions = siglev_var.dimensions
-    attrs = {}
-    for attr_name in siglev_var.ncattrs():
-        attrs[attr_name] = siglev_var.getncattr(attr_name)
+    else:
+        # Remake the siglev array from the siglay array
+        siglay_var = fvcom_dataset.variables[siglay_var_name]
+        siglev_data, dtype = remake_siglev(siglay_var[:], n_siglev)
+
+        # Get depth dimensions index
+        dimensions = list(siglay_var.dimensions)
+        depth_dim_index = dimensions.index(siglay_dim_name)
+
+        # Set dimension names for the siglev array
+        if depth_dim_index == 0:
+            dimensions = (pylag_dim_names[siglev_dim_name], pylag_dim_names[node_dim_name])
+        else:
+            dimensions = (pylag_dim_names[node_dim_name], pylag_dim_names[siglev_dim_name])
+
+        # Form dictionary of attributes
+        attrs = {}
+        attrs['long_name'] = 'Sigma levels (interpolated from siglay by PyLag)'
+        attrs['standard_name'] = 'ocean_sigma/general_coordinate'
+        attrs['positive'] = 'up'
+        attrs['valid_min'] = -1.0
+        attrs['valid_max'] = 0.0
+
+    # Create the siglev variable
     gm_file_creator.create_variable('siglev', siglev_data, dimensions,
             dtype, attrs=attrs)
 
@@ -2138,6 +2169,59 @@ cpdef mask_elements_with_two_land_boundaries(const DTYPE_INT_t[:,:] nbe,
             if counter == 2:
                 element_mask[i] = 1
 
+
+def remake_siglev(siglay_var, siglay_dim_name):
+    """ Construct siglev array the siglay variable
+    
+    Parameters
+    ----------
+    siglay : NetCDF4 variable
+        NetCDF4 variable for sigma layers
+
+    siglay_dim_name : str
+        Name of the depth dimension
+
+    Returns
+    -------
+    siglev : ndarray
+        Array of sigma level values
+    
+    dtype : dtype
+        Data type of the siglev array
+    """
+    # Save data type
+    dtype = siglay_var.dtype
+
+    # Get depth dimension index
+    dimensions = list(siglay_var.dimensions)
+    depth_dim_index = dimensions.index(siglay_dim_name)
+
+    # Compute the shape of the siglev array
+    shape = list(siglay_var.shape)
+    shape[depth_dim_index] += 1
+
+    # Create the siglev array
+    siglev = np.empty(tuple(shape), dtype=dtype)
+
+    # Set the uppper and lower sigma levels to 0 and -1 respectively
+    # and interpolate the sigma layers to the sigma levels
+    if depth_dim_index == 0:
+        siglev[0, :] = 0.0
+        siglev[-1, :] = -1.0
+
+        # Interpolate from the sigma layers to the sigma levels
+        for i in range(shape[1]):
+            siglev[1:-1, i] = (siglay_var[:-1, i] + siglay_var[1:, i]) / 2.0
+    else:
+        siglev[:, 0] = 0.0
+        siglev[:, -1] = -1.0
+
+        # Interpolate from the sigma layers to the sigma levels
+        for i in range(shape[0]):
+            siglev[i, 1:-1] = (siglay_var[i, :-1] + siglay_var[i, 1:]) / 2.0
+    
+    return siglev, dtype
+ 
 
 @cython.wraparound(True)
 def get_fvcom_open_boundary_nodes(file_name, delimiter=' '):
