@@ -455,9 +455,12 @@ def create_fvcom_grid_metrics_file(fvcom_file_name: str,
             attrs[attr_name] = siglev_var.getncattr(attr_name)
 
     else:
+        print(f'INFO - {siglev_var_name} variable not found in the FVCOM file. The '
+              f'siglev variable will be reconstructed using the siglay variable.')
+        
         # Remake the siglev array from the siglay array
         siglay_var = fvcom_dataset.variables[siglay_var_name]
-        siglev_data, dtype = remake_siglev(siglay_var[:], n_siglev)
+        siglev_data, dtype = remake_siglev(siglay_var, siglay_dim_name)
 
         # Get depth dimensions index
         dimensions = list(siglay_var.dimensions)
@@ -508,7 +511,7 @@ def create_fvcom_grid_metrics_file(fvcom_file_name: str,
     has_nbe_array = True
     if nbe_var_name not in fvcom_dataset.variables:
         has_nbe_array = False
-        print(f'WARNING - {nbe_var_name} variable not found in the FVCOM file. The '
+        print(f'INFO - {nbe_var_name} variable not found in the FVCOM file. The '
               f'nbe variable will be reconstructed from the nv variable.')
 
     if has_nbe_array:
@@ -537,10 +540,9 @@ def create_fvcom_grid_metrics_file(fvcom_file_name: str,
         # Reconstruct the nbe array from the nv array
         x = fvcom_dataset.variables[x_var_name][:]
         y = fvcom_dataset.variables[y_var_name][:]
-        nv = fvcom_dataset.variables[nv_var_name][:]
 
         # Create a triangulation
-        tri = Triangulation(x, y, nv.T)
+        tri = Triangulation(x, y, nv_data.T)
 
         # Perform type conversion here to aid later processing
         # of the nbe array. Take off 1 to convert to zero-based
@@ -571,8 +573,8 @@ def create_fvcom_grid_metrics_file(fvcom_file_name: str,
         nbe_data = add_fvcom_open_boundary_flags(nv_data, nbe_data,
                                                  open_boundary_nodes)
     else:
-        print('\nWARNING - an open boundary node file has not been provided. Assuming '
-              'no open boundaries in the FVCOM grid - all boundaries wiill be '
+        print('WARNING - an open boundary node file has not been provided. Assuming '
+              'no open boundaries in the FVCOM grid - all boundaries will be '
               'treated as land boundaries.')
 
     # Add variable
@@ -2221,7 +2223,7 @@ cpdef mask_elements_with_two_land_boundaries(const DTYPE_INT_t[:,:] nbe,
                 element_mask[i] = 1
 
 
-def remake_siglev(siglay_var, siglay_dim_name):
+def remake_siglev(siglay_var, siglay_dim_name: str):
     """ Construct siglev array the siglay variable
     
     Parameters
