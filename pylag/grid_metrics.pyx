@@ -294,8 +294,7 @@ def create_fvcom_grid_metrics_file(fvcom_file_name: str,
 
     TODO
     ----
-    1) Create the nbe array if it is not present.
-    2) Add support for creating a grid based on surface
+    1) Add support for creating a grid based on surface
     values only.
 
     """
@@ -485,21 +484,80 @@ def create_fvcom_grid_metrics_file(fvcom_file_name: str,
     # Add modified nv array
     # ---------------------
     nv_var = fvcom_dataset.variables[nv_var_name]
-    nv_data = np.asarray(nv_var[:] - 1, dtype=DTYPE_INT)
-    dtype = DTYPE_INT
+    
+    # Perform type conversion here to aid later processing
+    # of the nbe array. Take off 1 to convert to zero-based
+    # indexing.
+    dtype = DTYPE_INT 
+    nv_data = np.asarray(nv_var[:] - 1, dtype=dtype)
+
+    # Dimensions and attributes
     dimensions = list(nv_var.dimensions)
     dimensions[dimensions.index(elem_dim_name)] = pylag_dim_names[elem_dim_name]
     dimensions = tuple(dimensions)
     attrs = {}
     for attr_name in nv_var.ncattrs():
         attrs[attr_name] = nv_var.getncattr(attr_name)
+
+    # Save to file
     gm_file_creator.create_variable('nv', nv_data, dimensions, dtype,
             attrs=attrs)
 
     # Add modified nbe array
     # ----------------------
-    nbe_var = fvcom_dataset.variables[nbe_var_name]
-    nbe_data = np.asarray(nbe_var[:] - 1, dtype=DTYPE_INT)
+    has_nbe_array = True
+    if nbe_var_name not in fvcom_dataset.variables:
+        has_nbe_array = False
+        print(f'WARNING - {nbe_var_name} variable not found in the FVCOM file. The '
+              f'nbe variable will be reconstructed from the nv variable.')
+
+    if has_nbe_array:
+        nbe_var = fvcom_dataset.variables[nbe_var_name]
+
+        # Perform type conversion here to aid later processing
+        # of the nbe array. Take off 1 to convert to zero-based
+        # indexing.
+        dtype = DTYPE_INT
+        nbe_data = np.asarray(nbe_var[:] - 1, dtype=dtype)
+
+        # Dimensions and attributes
+        dimensions = list(nbe_var.dimensions)
+        dimensions[dimensions.index(elem_dim_name)] = pylag_dim_names[elem_dim_name]
+        dimensions = tuple(dimensions)
+        attrs = {}
+        for attr_name in nbe_var.ncattrs():
+            attrs[attr_name] = nbe_var.getncattr(attr_name)
+    else:
+        try:
+            from matplotlib.tri.triangulation import Triangulation
+        except ImportError:
+            raise ImportError('matplotlib is required to reconstruct '
+                              'the FVCOM nbe array from the nv array.')
+
+        # Reconstruct the nbe array from the nv array
+        x = fvcom_dataset.variables[x_var_name][:]
+        y = fvcom_dataset.variables[y_var_name][:]
+        nv = fvcom_dataset.variables[nv_var_name][:]
+
+        # Create a triangulation
+        tri = Triangulation(x, y, nv.T)
+
+        # Perform type conversion here to aid later processing
+        # of the nbe array. Take off 1 to convert to zero-based
+        # indexing.
+        dtype = DTYPE_INT
+        nbe_data = np.asarray(tri.neighbors.T, dtype=dtype)
+
+        # Take dimensions from the nv array - they are the same
+        dimensions = list(nv_var.dimensions)
+        dimensions[dimensions.index(elem_dim_name)] = pylag_dim_names[elem_dim_name]
+        dimensions = tuple(dimensions)
+
+        # Form dictionary of attributes
+        attrs = {}
+        attrs['long_name'] = 'elements surrounding each element'
+
+    # Sort the nbe array to assure ordering matches that expected by PyLag 
     nbe_data = nbe_data.T
     nv_data = nv_data.T
     sort_adjacency_array(nv_data, nbe_data)
@@ -518,13 +576,6 @@ def create_fvcom_grid_metrics_file(fvcom_file_name: str,
               'treated as land boundaries.')
 
     # Add variable
-    dtype = DTYPE_INT
-    dimensions = list(nv_var.dimensions)
-    dimensions[dimensions.index(elem_dim_name)] = pylag_dim_names[elem_dim_name]
-    dimensions = tuple(dimensions)
-    attrs = {}
-    for attr_name in nbe_var.ncattrs():
-        attrs[attr_name] = nbe_var.getncattr(attr_name)
     gm_file_creator.create_variable('nbe', nbe_data, dimensions, dtype, attrs=attrs)
 
     # Create land-sea mask
