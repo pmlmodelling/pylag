@@ -198,6 +198,7 @@ def create_fvcom_grid_metrics_file(fvcom_file_name: str,
                                    variable_names: Optional[dict]={},
                                    obc_file_name: Optional[str]=None,
                                    obc_file_delimiter: Optional[str]=' ',
+                                   central_latitude: Optional[int]=0.0,
                                    grid_metrics_file_name: Optional[str]='./grid_metrics.nc'):
     """Create FVCOM grid metrics file
 
@@ -232,6 +233,19 @@ def create_fvcom_grid_metrics_file(fvcom_file_name: str,
     `dimension_names` and `variable_names` arguments. The above default
     names will be adopted for any dimensions or variables not specified
     in these dictionaries.
+
+    PyLag expects longitudes to be in the range -180 to 180 degrees. If
+    the longitudes in the FVCOM output file are in the range 0 to 360,
+    then this will be automatically detected and the longitudes will be
+    converted to the range -180 to 180 degrees. The central longitude
+    of the FVCOM longitude variable must be 0 degrees. Similarly,
+    PyLag expects latitudes to be in the range -90 to 90 degrees. If
+    the latitudes in the FVCOM output file are in the range 0 to 180,
+    then this can be specified using the optional `central_latitude`
+    argument, which should be set to 90 degrees in this scenario.
+    PyLag will then automatically convert the latitudes to the range
+    -90 to 90 degrees. Other types of latitude/longitude grids are not
+    supported. 
 
     In FVCOM output files, the grid variables nv and nbe are odered in the
     opposite direction to what PyLag requires. These variables are reordered
@@ -284,6 +298,13 @@ def create_fvcom_grid_metrics_file(fvcom_file_name: str,
         The delimiter used in the obc ascii file. To specify a tab delimited
         file, set this equal to '\t'. Default: ' '.
 
+    central_latitude : int
+        The central latitude of the FVCOM grid. If the latitudes in the
+        FVCOM output file are in the range 0 to 180, then this should be
+        set to 90 degrees. PyLag will then automatically convert the
+        latitudes to the range -90 to 90 degrees. Other types of
+        latitude/longitude grids are not supported. Optional, default: 0.
+
     grid_metrics_file_name : str, optional
         The name of the grid metrics file that will be created
 
@@ -296,8 +317,11 @@ def create_fvcom_grid_metrics_file(fvcom_file_name: str,
     ----
     1) Add support for creating a grid based on surface
     values only.
-
     """
+    # Assert central_latitude is either 0.0 or 90.0 degrees
+    assert central_latitude in [0, 90], \
+        'central_latitude must be set to either 0 or 90 degrees'
+
     # Set dimension names using dictionary values if given
     if dimension_names:
         node_dim_name = dimension_names.get('node', 'node')
@@ -436,6 +460,18 @@ def create_fvcom_grid_metrics_file(fvcom_file_name: str,
             # Set valid min and max values
             attrs['valid_min'] = -180.0
             attrs['valid_max'] = 180.0
+
+        # Correct latitudes to be in the range -90 to 90
+        if var_name in ['latitude', 'latitude_c']:
+            if central_latitude == 90:
+                print(f'INFO - central latitude given as {central_latitude}. '
+                      f'Correcting latitudes to be in the range -90 to 90, and '
+                      f'centered on 0.')
+                var_data = var_data - 90.0
+
+            # Set valid min and max values
+            attrs['valid_min'] = -90.0
+            attrs['valid_max'] = 90.0
 
         gm_file_creator.create_variable(var_name, var_data, dimensions, dtype, attrs=attrs)
 
