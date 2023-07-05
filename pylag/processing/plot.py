@@ -1688,7 +1688,7 @@ def create_figure(figure_size=(10., 10.),  font_size=10, axis_position=None, pro
 
     axes = figure.add_subplot(1, 1, 1, projection=projection, facecolor=bg_color)
 
-    if axis_position:
+    if axis_position is not None:
         axes.set_position(axis_position)
 
     axes.tick_params(axis='both', which='major', labelsize=font_size)
