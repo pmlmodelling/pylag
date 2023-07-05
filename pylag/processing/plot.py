@@ -197,7 +197,8 @@ class PyLagPlotter:
                 self._add_ticks(ax)
         else:
             scatter_plot = ax.scatter(x, y, zorder=zorder, **kwargs)
-            ax.set_extent(extents)
+            ax.set_xlim(extents[:2])
+            ax.set_ylim(extents[2:])
 
             ax.set_xlabel('x (m)', fontsize=self.font_size)
             ax.set_ylabel('y (m)', fontsize=self.font_size)
