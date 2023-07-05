@@ -1651,9 +1651,9 @@ class GOTMPlotter(object):
         cbar.ax.tick_params(labelsize=self.font_size)
         cbar.set_label(cb_label, fontsize=self.font_size)
 
-    def set_title(self, title):
+    def set_title(self, ax, title):
         """ Set title """
-        self.axes.set_title(title, fontsize=self.font_size)
+        ax.set_title(title, fontsize=self.font_size)
 
 
 def create_figure(figure_size=(10., 10.),  font_size=10, axis_position=None, projection=None, bg_color='white'):
