@@ -1574,7 +1574,7 @@ cdef class DiffConst2DItMethod(ItMethod):
         # Set time step
         self._time_step = config.getfloat('NUMERICS', 'time_step_diff')
 
-        self._Ah = config.getfloat("OCEAN_CIRCULATION_MODEL", "horizontal_eddy_diffusivity_constant")
+        self._Ah = config.getfloat("OCEAN_DATA", "horizontal_eddy_diffusivity_constant")
 
         self._multiplier = sqrt(2.0 * self._Ah * self._time_step)
         

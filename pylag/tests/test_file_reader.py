@@ -107,12 +107,12 @@ class FileReader_test(TestCase):
     def setUp(self):
         # Create config
         self.config = configparser.ConfigParser()
-        self.config.add_section("OCEAN_CIRCULATION_MODEL")
-        self.config.set('OCEAN_CIRCULATION_MODEL', 'name', 'TEST')
-        self.config.set('OCEAN_CIRCULATION_MODEL', 'data_dir', '')
-        self.config.set('OCEAN_CIRCULATION_MODEL', 'data_file_stem', '')
-        self.config.set('OCEAN_CIRCULATION_MODEL', 'grid_metrics_file', 'grid_metrics')
-        self.config.set('OCEAN_CIRCULATION_MODEL', 'rounding_interval', rounding_interval)
+        self.config.add_section("OCEAN_DATA")
+        self.config.set('OCEAN_DATA', 'name', 'TEST')
+        self.config.set('OCEAN_DATA', 'data_dir', '')
+        self.config.set('OCEAN_DATA', 'data_file_stem', '')
+        self.config.set('OCEAN_DATA', 'grid_metrics_file', 'grid_metrics')
+        self.config.set('OCEAN_DATA', 'rounding_interval', rounding_interval)
         self.config.add_section("SIMULATION")
         self.config.add_section("NUMERICS")
         self.config.set('NUMERICS', 'num_method', 'test')

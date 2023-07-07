@@ -230,7 +230,7 @@ cdef class ROMSDataReader(DataReader):
         self._time_direction = <int>get_time_direction(config)
 
         # Grid type - rectilinear or curvilinear
-        self._grid_type = self.config.get("OCEAN_CIRCULATION_MODEL", "grid_type").strip().lower()
+        self._grid_type = self.config.get("OCEAN_DATA", "grid_type").strip().lower()
         if self._grid_type not in ['rectilinear', 'curvilinear']:
             raise RuntimeError('Invalid grid type {}. Valid choices are `rectilinear` or `curvilinear`.'.format(self._grid_type))
 
@@ -249,7 +249,7 @@ cdef class ROMSDataReader(DataReader):
                             'longitude_grid_psi': 'longitude_dim_name_grid_psi'}
 
         for dim_name, config_name in dim_config_names.items():
-            self._dimension_names[dim_name] = self.config.get('OCEAN_CIRCULATION_MODEL', config_name).strip()
+            self._dimension_names[dim_name] = self.config.get('OCEAN_DATA', config_name).strip()
 
         # Setup variable name mappings
         self._variable_names = {}
@@ -258,7 +258,7 @@ cdef class ROMSDataReader(DataReader):
                             'so': 'so_var_name', 'wetdry_mask_rho': 'wetdry_var_name'}
         for var_name, config_name in var_config_names.items():
             try:
-                var = self.config.get('OCEAN_CIRCULATION_MODEL', config_name).strip()
+                var = self.config.get('OCEAN_DATA', config_name).strip()
                 if var:
                     self._variable_names[var_name] = var
             except (configparser.NoOptionError) as e:
@@ -273,7 +273,7 @@ cdef class ROMSDataReader(DataReader):
         self._has_w = True if 'wo' in self._variable_names else False
 
         # Set options for handling the vertical eddy diffusivity
-        self._Kz_method_name = self.config.get('OCEAN_CIRCULATION_MODEL', 'Kz_method').strip().lower()
+        self._Kz_method_name = self.config.get('OCEAN_DATA', 'Kz_method').strip().lower()
         if self._Kz_method_name not in ['none', 'file']:
             raise RuntimeError('Invalid option for `Kz_method` ({})'.format(self._Kz_method_name))
 
@@ -289,7 +289,7 @@ cdef class ROMSDataReader(DataReader):
 
 
         # Set options for handling the horizontal eddy diffusivity
-        self._Ah_method_name = self.config.get('OCEAN_CIRCULATION_MODEL', 'Ah_method').strip().lower()
+        self._Ah_method_name = self.config.get('OCEAN_DATA', 'Ah_method').strip().lower()
         if self._Ah_method_name not in ['none', 'file']:
             raise RuntimeError('Invalid option for `Ah_method` ({})'.format(self._Ah_method_name))
 
@@ -304,7 +304,7 @@ cdef class ROMSDataReader(DataReader):
             self._Ah_method = 1
 
         # Has is wet flag?
-        self._has_is_wet = self.config.getboolean("OCEAN_CIRCULATION_MODEL", "has_is_wet")
+        self._has_is_wet = self.config.getboolean("OCEAN_DATA", "has_is_wet")
 
         # Check to see if any environmental variables are being saved.
         try:

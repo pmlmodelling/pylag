@@ -192,7 +192,7 @@ cdef class FVCOMDataReader(DataReader):
                                   f"`{coordinate_system}'")
 
         # Set options for handling the vertical eddy diffusivity
-        self._Kz_method_name = self.config.get('OCEAN_CIRCULATION_MODEL',
+        self._Kz_method_name = self.config.get('OCEAN_DATA',
                                                'Kz_method').strip().lower()
         if self._Kz_method_name not in ['none', 'file']:
             raise PyLagRuntimeError(f"Invalid option for `Kz_method` "
@@ -204,7 +204,7 @@ cdef class FVCOMDataReader(DataReader):
             self._Kz_method = 1
 
         # Set options for handling the horizontal eddy diffusivity
-        self._Ah_method_name = self.config.get('OCEAN_CIRCULATION_MODEL',
+        self._Ah_method_name = self.config.get('OCEAN_DATA',
                                                'Ah_method').strip().lower()
         if self._Ah_method_name not in ['none', 'file']:
             raise PyLagRuntimeError(f"Invalid option for `Ah_method` "
@@ -216,7 +216,7 @@ cdef class FVCOMDataReader(DataReader):
             self._Ah_method = 1
 
         # Set flags from config
-        self._has_is_wet = self.config.getboolean("OCEAN_CIRCULATION_MODEL",
+        self._has_is_wet = self.config.getboolean("OCEAN_DATA",
                                                   "has_is_wet")
 
         # Check to see if any environmental variables are being saved.
