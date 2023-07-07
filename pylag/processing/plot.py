@@ -219,15 +219,12 @@ class PyLagPlotter:
         ax.set_title(title, fontsize=self.font_size)
 
     def _add_ticks(self, ax):
-        gl = ax.gridlines(linewidth=self.line_width, draw_labels=True, linestyle='--', color='k')
+        gl = ax.gridlines(linewidth=self.line_width,
+                          draw_labels={"bottom": "x", "left": "y"},
+                          linestyle='--', color='k')
 
         gl.xlabel_style = {'fontsize': self.font_size}
         gl.ylabel_style = {'fontsize': self.font_size}
-
-        gl.top_labels = False
-        gl.right_labels = False
-        gl.bottom_labels = True
-        gl.left_labels = True
 
         gl.xformatter = LONGITUDE_FORMATTER
         gl.yformatter = LATITUDE_FORMATTER
