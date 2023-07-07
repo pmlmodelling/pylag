@@ -197,7 +197,8 @@ class PyLagPlotter:
                 self._add_ticks(ax)
         else:
             scatter_plot = ax.scatter(x, y, zorder=zorder, **kwargs)
-            ax.set_extent(extents)
+            ax.set_xlim(extents[:2])
+            ax.set_ylim(extents[2:])
 
             ax.set_xlabel('x (m)', fontsize=self.font_size)
             ax.set_ylabel('y (m)', fontsize=self.font_size)
@@ -1650,9 +1651,9 @@ class GOTMPlotter(object):
         cbar.ax.tick_params(labelsize=self.font_size)
         cbar.set_label(cb_label, fontsize=self.font_size)
 
-    def set_title(self, title):
+    def set_title(self, ax, title):
         """ Set title """
-        self.axes.set_title(title, fontsize=self.font_size)
+        ax.set_title(title, fontsize=self.font_size)
 
 
 def create_figure(figure_size=(10., 10.),  font_size=10, axis_position=None, projection=None, bg_color='white'):
@@ -1688,7 +1689,7 @@ def create_figure(figure_size=(10., 10.),  font_size=10, axis_position=None, pro
 
     axes = figure.add_subplot(1, 1, 1, projection=projection, facecolor=bg_color)
 
-    if axis_position:
+    if axis_position is not None:
         axes.set_position(axis_position)
 
     axes.tick_params(axis='both', which='major', labelsize=font_size)

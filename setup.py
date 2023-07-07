@@ -212,4 +212,9 @@ setup(name="PyLag",
           "stripy",
           "pyproj",
       ],
+      extras_require={
+          "DOCS": ["sphinx", "nbsphinx", "sphinx_rtd_theme", "sphinxcontrib-napoleon",
+                   "sphinx-copybutton", "jupyter", "jupyter_client", "ipykernel",
+                   "cmocean", "matplotlib", "shapely", "cartopy"],
+      },
 )

@@ -1,15 +1,31 @@
-"""
+r"""
 A velocity aggregator pulls together and combines different
-terms that together yield a particle's velocity. These include:
+terms that together yield a particle's velocity.
+
+These include:
 
 1) The effect of ocean currents
-2) The effect of Stokes Drift
+2) The effect of Stoke's Drift
 3) The effect of direct wind forcing, i.e. sail effects
 4) The effect of buoyancy, i.e. settling or rising
 5) The effect of movement (under development)
 
 Any combination of the above effects may be used at any one time, with the
-choice determined using the run configuration file.
+choice determined using the run configuration file. In most cases, each
+velocity term is calculated using a dedicated `Calculator`, which is
+chosen by the user from a family of supported `Calculators`. This is
+designed to give flexibility in how the input fields are used to compute
+the velocity terms.
+
+Separate terms are summed to give the resultant velocity experienced by the
+particle. Thus, if accounting for advection by surface ocean currents (v\ :sub:`o`)
+and direct wind forcing (v\ :sub:`w`), the velocity of the particle (v\ :sub:`p`)
+would be:
+
+.. math::
+    v_{p} = v_{o} + v_{w},
+
+and v\ :sub:`p` would be returned to the caller.
 
 Note
 ----
@@ -99,7 +115,7 @@ cdef class VelocityAggregator:
             `pylag.data_reader.DataReader`.
 
         time : float
-            The time the crossing occurred.
+            The current time.
 
         particle : pylag.particle_cpp_wrapper.ParticleSmartPtr
             A ParticleSmartPtr.
@@ -107,7 +123,7 @@ cdef class VelocityAggregator:
         Returns
         -------
         velocity : NumPy array
-            Three component array giving the velocity.
+            Three component array giving the particle's velocity.
         """
         cdef DTYPE_FLOAT_t velocity_c[3]
         cdef DTYPE_INT_t i
