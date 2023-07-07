@@ -13,6 +13,7 @@ try:
 except ImportError:
     import ConfigParser as configparser
 
+
 def get_config(config_filename=None):
     """ Get the run config
 
@@ -55,6 +56,8 @@ def get_config(config_filename=None):
         # In the future, there may be a scenario when a useful config could be
         # created from defaults alone.
         raise RuntimeError('No configuration file provided.')
+
+    return _config
 
 
 # ConfigParser
