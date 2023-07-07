@@ -149,7 +149,7 @@ class FileReader:
 
         # Determine the appropriate section config name from the data source
         if data_source == 'ocean':
-            self.config_section_name = 'OCEAN_CIRCULATION_MODEL'
+            self.config_section_name = 'OCEAN_DATA'
         elif data_source == 'atmosphere':
             self.config_section_name = 'ATMOSPHERE_DATA'
         elif data_source == 'wave':

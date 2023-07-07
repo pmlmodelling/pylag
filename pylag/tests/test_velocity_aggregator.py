@@ -23,8 +23,8 @@ class VelocityAggregator_test(TestCase):
 
     def test_get_ocean_only_velocity(self):
         config = configparser.ConfigParser()
-        config.add_section('OCEAN_CIRCULATION_MODEL')
-        config.set('OCEAN_CIRCULATION_MODEL', 'name', 'test')
+        config.add_section('OCEAN_DATA')
+        config.set('OCEAN_DATA', 'name', 'test')
 
         vel_agg = VelocityAggregator(config)
 
@@ -90,8 +90,8 @@ class VelocityAggregator_test(TestCase):
 
     def test_get_ocean_and_windage_velocity(self):
         config = configparser.ConfigParser()
-        config.add_section('OCEAN_CIRCULATION_MODEL')
-        config.set('OCEAN_CIRCULATION_MODEL', 'name', 'test')
+        config.add_section('OCEAN_DATA')
+        config.set('OCEAN_DATA', 'name', 'test')
         config.add_section('WINDAGE')
         config.set('WINDAGE', 'name', 'test')
         config.set('WINDAGE', 'windage_calculator', 'fixed_drag')
@@ -129,8 +129,8 @@ class VelocityAggregator_test(TestCase):
 
     def test_get_ocean_and_stokes_drift_velocity(self):
         config = configparser.ConfigParser()
-        config.add_section('OCEAN_CIRCULATION_MODEL')
-        config.set('OCEAN_CIRCULATION_MODEL', 'name', 'test')
+        config.add_section('OCEAN_DATA')
+        config.set('OCEAN_DATA', 'name', 'test')
         config.add_section('STOKES_DRIFT')
         config.set('STOKES_DRIFT', 'stokes_drift_calculator', 'surface')
 

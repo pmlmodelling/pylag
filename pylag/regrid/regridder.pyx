@@ -112,13 +112,13 @@ cdef class Regridder:
         self.datetime_end = datetime_end
 
         # Intialise the data reader
-        if config.get("OCEAN_CIRCULATION_MODEL", "name") == "ArakawaA":
+        if config.get("OCEAN_DATA", "name") == "ArakawaA":
             mediator = SerialMediator(config, datetime_start, datetime_end)
             self.data_reader = ArakawaADataReader(config, mediator)
-        elif config.get("OCEAN_CIRCULATION_MODEL", "name") == "FVCOM":
+        elif config.get("OCEAN_DATA", "name") == "FVCOM":
             mediator = SerialMediator(config, datetime_start, datetime_end)
             self.data_reader = FVCOMDataReader(config, mediator)
-        elif config.get("OCEAN_CIRCULATION_MODEL", "name") == "ROMS":
+        elif config.get("OCEAN_DATA", "name") == "ROMS":
             mediator = SerialMediator(config, datetime_start, datetime_end)
             self.data_reader = ROMSDataReader(config, mediator)
         else:
@@ -188,7 +188,7 @@ cdef class Regridder:
 
         # Check that the coordinate system is supported
         # TODO if support for Cartesian input grids is added, will need to apply xmin and xmax offsets
-        self.coordinate_system = self.config.get("OCEAN_CIRCULATION_MODEL", "coordinate_system").strip().lower()
+        self.coordinate_system = self.config.get("OCEAN_DATA", "coordinate_system").strip().lower()
         if not self.coordinate_system == "geographic":
             raise ValueError('Input oordinate sytem {} is not supported in regridding tasks.'.format(self.coordinate_system))
 

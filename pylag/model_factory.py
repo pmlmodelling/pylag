@@ -51,7 +51,7 @@ def get_model(config, datetime_start, datetime_end):
     # Ocean data
     # ----------
     try:
-        ocean_product_name = config.get("OCEAN_CIRCULATION_MODEL",
+        ocean_product_name = config.get("OCEAN_DATA",
                                         "name").strip()
     except (configparser.NoSectionError, configparser.NoOptionError):
         ocean_product_name = "none"

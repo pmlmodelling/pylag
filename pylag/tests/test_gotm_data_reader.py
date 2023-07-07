@@ -68,8 +68,8 @@ class GOTMDataReader_test(TestCase):
         config = configparser.ConfigParser()
         config.add_section("SIMULATION")
         config.set('SIMULATION', 'time_direction', 'forward')
-        config.add_section("OCEAN_CIRCULATION_MODEL")
-        config.set('OCEAN_CIRCULATION_MODEL', 'vertical_interpolation_scheme', 'linear')
+        config.add_section("OCEAN_DATA")
+        config.set('OCEAN_DATA', 'vertical_interpolation_scheme', 'linear')
         
         # Create mediator
         mediator = MockGOTMMediator()
@@ -257,8 +257,8 @@ class GOTMReflectingVertBoundaryCondition_test(TestCase):
         config = configparser.ConfigParser()
         config.add_section("SIMULATION")
         config.set('SIMULATION', 'time_direction', 'forward')
-        config.add_section("OCEAN_CIRCULATION_MODEL")
-        config.set('OCEAN_CIRCULATION_MODEL', 'vertical_interpolation_scheme', 'linear')
+        config.add_section("OCEAN_DATA")
+        config.set('OCEAN_DATA', 'vertical_interpolation_scheme', 'linear')
         
         # Create mediator
         mediator = MockGOTMMediator()
