@@ -5,6 +5,7 @@ This module provides the following functionality:
 
 1) Reading of particle initialisation files
 2) Reading of model restart files
+
 """
 
 import numpy as np
