@@ -1,5 +1,5 @@
 """
-WindageCalculators are used to determine the contribution of windage to a
+WindageCalculators are used to determine the impact of windage on a
 particle's velocity.
 
 Note
@@ -85,8 +85,13 @@ cdef class WindageCalculator:
         raise NotImplementedError
 
 
-cdef class FixedDragWindageCalculator(WindageCalculator):
-    """ Velocity computed from drag coefficient and the ten meter wind speed
+cdef class ZeroDeflectionWindageCalculator(WindageCalculator):
+    """ Velocity proportional to wind velocity
+
+    Basic calcuator which returns a velocity proportional to the
+    wind velocity: :math:`\\mathbf{v}_{windage} = \\alpha \\mathbf{v}_{wwind}`,
+    where :math:`\\alpha` is the wind factor and can be set in
+    the run configuration file.
 
     Parameters
     ----------
@@ -98,16 +103,16 @@ cdef class FixedDragWindageCalculator(WindageCalculator):
     _config : ConfigParser
         Configuration object.
 
-    _drag_coefficient : float
-        Drag coefficient.
+    _wind_factor : float
+        The wind factor, which should be a fraction of the wind speed.
     """
     cdef object _config
-    cdef DTYPE_FLOAT_t _drag_coefficient
+    cdef DTYPE_FLOAT_t _wind_factor
 
     def __init__(self, config):
         self._config = config
-        self._drag_coefficient = config.getfloat('FIXED_DRAG_WINDAGE_CALCULATOR',
-                                                 'drag_coefficient')
+        self._wind_factor = config.getfloat('ZERO_DEFLECTION_WINDAGE_CALCULATOR',
+                                            'wind_factor')
 
     cdef void get_velocity(self, DataReader data_reader,
             DTYPE_FLOAT_t time, Particle *particle,
@@ -134,7 +139,7 @@ cdef class FixedDragWindageCalculator(WindageCalculator):
         data_reader.get_ten_meter_wind_velocity(time, particle, wind_velocity)
 
         for i in range(2):
-            windage_velocity[i] = self._drag_coefficient * wind_velocity[i]
+            windage_velocity[i] = self._wind_factor * wind_velocity[i]
 
 def get_windage_calculator(config):
     """ Factory method for windage calculators
@@ -154,8 +159,8 @@ def get_windage_calculator(config):
     except (configparser.NoSectionError, configparser.NoOptionError) as e:
         return None
     else:
-        if windage == "fixed_drag":
-            return FixedDragWindageCalculator(config)
+        if windage == "zero_deflection":
+            return ZeroDeflectionWindageCalculator(config)
         elif windage == "none":
             return None
         else:
