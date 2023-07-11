@@ -31,13 +31,13 @@ class Windage_test(TestCase):
     def test_get_windage_calculator(self):
         config = configparser.ConfigParser()
         config.add_section('WINDAGE')
-        config.set('WINDAGE', 'windage_calculator', 'fixed_drag')
-        config.add_section("FIXED_DRAG_WINDAGE_CALCULATOR")
-        config.set('FIXED_DRAG_WINDAGE_CALCULATOR', 'drag_coefficient',
+        config.set('WINDAGE', 'windage_calculator', 'zero_deflection')
+        config.add_section("ZERO_DEFLECTION_WINDAGE_CALCULATOR")
+        config.set('ZERO_DEFLECTION_WINDAGE_CALCULATOR', 'wind_factor',
                    '0.5')
         windage_calculator = windage.get_windage_calculator(config)
         assert isinstance(windage_calculator,
-                          windage.FixedDragWindageCalculator)
+                          windage.ZeroDeflectionWindageCalculator)
 
     def test_get_invalid_windage_calculator(self):
         config = configparser.ConfigParser()
@@ -64,9 +64,9 @@ class Windage_test(TestCase):
         """
         config = configparser.ConfigParser()
         config.add_section('WINDAGE')
-        config.set('WINDAGE', 'windage_calculator', 'fixed_drag')
-        config.add_section("FIXED_DRAG_WINDAGE_CALCULATOR")
-        config.set('FIXED_DRAG_WINDAGE_CALCULATOR', 'drag_coefficient',
+        config.set('WINDAGE', 'windage_calculator', 'zero_deflection')
+        config.add_section("ZERO_DEFLECTION_WINDAGE_CALCULATOR")
+        config.set('ZERO_DEFLECTION_WINDAGE_CALCULATOR', 'wind_factor',
                    '0.5')
 
         windage_calculator = windage.get_windage_calculator(config)

@@ -47,9 +47,9 @@ class VelocityAggregator_test(TestCase):
         config = configparser.ConfigParser()
         config.add_section('WINDAGE')
         config.set('WINDAGE', 'name', 'test')
-        config.set('WINDAGE', 'windage_calculator', 'fixed_drag')
-        config.add_section("FIXED_DRAG_WINDAGE_CALCULATOR")
-        config.set('FIXED_DRAG_WINDAGE_CALCULATOR', 'drag_coefficient',
+        config.set('WINDAGE', 'windage_calculator', 'zero_deflection')
+        config.add_section("ZERO_DEFLECTION_WINDAGE_CALCULATOR")
+        config.set('ZERO_DEFLECTION_WINDAGE_CALCULATOR', 'wind_factor',
                    '1.0')
 
         vel_agg = VelocityAggregator(config)
@@ -94,9 +94,9 @@ class VelocityAggregator_test(TestCase):
         config.set('OCEAN_DATA', 'name', 'test')
         config.add_section('WINDAGE')
         config.set('WINDAGE', 'name', 'test')
-        config.set('WINDAGE', 'windage_calculator', 'fixed_drag')
-        config.add_section("FIXED_DRAG_WINDAGE_CALCULATOR")
-        config.set('FIXED_DRAG_WINDAGE_CALCULATOR', 'drag_coefficient',
+        config.set('WINDAGE', 'windage_calculator', 'zero_deflection')
+        config.add_section("ZERO_DEFLECTION_WINDAGE_CALCULATOR")
+        config.set('ZERO_DEFLECTION_WINDAGE_CALCULATOR', 'wind_factor',
                    '1.0')
 
         vel_agg = VelocityAggregator(config)
