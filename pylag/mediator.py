@@ -113,13 +113,17 @@ class Mediator:
         """
         raise NotImplementedError
 
-    def get_variable_dimensions(self, var_name):
+    def get_variable_dimensions(self, var_name, include_time=True):
         """ Wrapper for FileReader's get_variable_dimension
 
         Parameters
         ----------
         var_name : str
             The name of the variable.
+
+        include_time : bool
+            If True, the time dimension is included. Optional,
+            default is True.
 
         Returns
         -------
@@ -128,13 +132,17 @@ class Mediator:
         """
         raise NotImplementedError
 
-    def get_variable_shape(self, var_name):
+    def get_variable_shape(self, var_name, include_time=True):
         """ Wrapper for FileReader's get_variable_shape
 
         Parameters
         ----------
         var_name : str
             The name of the variable.
+        
+        include_time : bool
+            If True, the time dimension is included. Optional,
+            default is True.
 
         Returns
         -------
@@ -286,11 +294,11 @@ class SerialMediator(Mediator):
     def get_grid_variable_dimensions(self, var_name):
         return self.file_reader.get_grid_variable_dimensions(var_name)
 
-    def get_variable_dimensions(self, var_name):
-        return self.file_reader.get_variable_dimensions(var_name)
+    def get_variable_dimensions(self, var_name, include_time=True):
+        return self.file_reader.get_variable_dimensions(var_name, include_time)
 
-    def get_variable_shape(self, var_name):
-        return self.file_reader.get_variable_shape(var_name)
+    def get_variable_shape(self, var_name, include_time=True):
+        return self.file_reader.get_variable_shape(var_name, include_time)
 
     def get_time_dependent_variable_at_last_time_index(self, var_name, var_dims, var_type):
         return self.file_reader.get_time_dependent_variable_at_last_time_index(var_name).astype(var_type)

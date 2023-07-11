@@ -209,14 +209,15 @@ class MPIMediator(Mediator):
 
         return dimensions
 
-    def get_variable_dimensions(self, var_name):
+    def get_variable_dimensions(self, var_name, include_time=True):
         # MPI objects and variables
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
 
         if rank == 0:
             try:
-                dimensions = self.file_reader.get_variable_dimensions(var_name)
+                dimensions = self.file_reader.get_variable_dimensions(var_name,
+                                                                      include_time)
             except Exception as e:
                 logger = logging.getLogger(__name__)
                 logger.error('Caught exception when getting variable dimensions. ' \
@@ -230,14 +231,15 @@ class MPIMediator(Mediator):
 
         return dimensions
 
-    def get_variable_shape(self, var_name):
+    def get_variable_shape(self, var_name, include_time=True):
         # MPI objects and variables
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
 
         if rank == 0:
             try:
-                shape = self.file_reader.get_variable_shape(var_name)
+                shape = self.file_reader.get_variable_shape(var_name,
+                                                            include_time)
             except Exception as e:
                 logger = logging.getLogger(__name__)
                 logger.error('Caught exception when getting variable shape. ' \

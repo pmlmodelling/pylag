@@ -1270,12 +1270,17 @@ cdef class ArakawaADataReader(DataReader):
         # If zeta is being read in from file, add zeta shape and
         # dimension indices to the appropriate dictionaries
         if self._has_zeta:
-            self._variable_shapes['zos'] = self.mediator.get_variable_shape(self._variable_names['zos'])[1:]
-            dimensions = self.mediator.get_variable_dimensions(self._variable_names['zos'])[1:]
-            self._variable_dimension_indices['zos'] = {'latitude': dimensions.index(self._dimension_names['latitude']),
-                                                       'longitude': dimensions.index(self._dimension_names['longitude'])}
+            self._variable_shapes['zos'] = self.mediator.get_variable_shape(
+                self._variable_names['zos'],
+                include_time=False)
+            dimensions = self.mediator.get_variable_dimensions(
+                self._variable_names['zos'],
+                include_time=False)
+            self._variable_dimension_indices['zos'] = {
+                'latitude': dimensions.index(self._dimension_names['latitude']),
+                'longitude': dimensions.index(self._dimension_names['longitude'])}
 
-        # Add 3D vars to shape and dimension indices dictionaries
+        # Add other vars to shape and dimension indices dictionaries
         var_names = ['uo', 'vo']
         if self._has_w: var_names.append('wo')
         if self._Kz_method == 1: var_names.append('Kz')
@@ -1283,11 +1288,23 @@ cdef class ArakawaADataReader(DataReader):
         if 'thetao' in self.env_var_names: var_names.append('thetao')
         if 'so' in self.env_var_names: var_names.append('so')
         for var_name in var_names:
-            self._variable_shapes[var_name] = self.mediator.get_variable_shape(self._variable_names[var_name])[1:]
-            dimensions = self.mediator.get_variable_dimensions(self._variable_names[var_name])[1:]
-            self._variable_dimension_indices[var_name] = {'depth': dimensions.index(self._dimension_names['depth']),
-                                                          'latitude': dimensions.index(self._dimension_names['latitude']),
-                                                          'longitude': dimensions.index(self._dimension_names['longitude'])}
+            self._variable_shapes[var_name] = self.mediator.get_variable_shape(
+                self._variable_names[var_name],
+                include_time=False)
+            dimensions = self.mediator.get_variable_dimensions(
+                self._variable_names[var_name],
+                include_time=False)
+
+            # Allow for the possibility that the depth dimension is not present
+            if self._dimension_names['depth'] in dimensions:
+                self._variable_dimension_indices[var_name] = {
+                    'depth': dimensions.index(self._dimension_names['depth']),
+                    'latitude': dimensions.index(self._dimension_names['latitude']),
+                    'longitude': dimensions.index(self._dimension_names['longitude'])}
+            else:
+                self._variable_dimension_indices[var_name] = {
+                    'latitude': dimensions.index(self._dimension_names['latitude']),
+                    'longitude': dimensions.index(self._dimension_names['longitude'])}
 
     cdef _read_time_dependent_vars(self):
         """ Update time variables and memory views for data fields.
@@ -1333,24 +1350,28 @@ cdef class ArakawaADataReader(DataReader):
         u_var_name = self._variable_names['uo']
         u_last = self.mediator.get_time_dependent_variable_at_last_time_index(u_var_name,
                 self._variable_shapes['uo'], DTYPE_FLOAT)
-        self._u_last = self._reshape_var(u_last, self._variable_dimension_indices['uo'])
+        self._u_last = self._reshape_var(u_last, self._variable_dimension_indices['uo'],
+            add_depth_axis=True)
         del(u_last)
 
         u_next = self.mediator.get_time_dependent_variable_at_next_time_index(u_var_name,
                 self._variable_shapes['uo'], DTYPE_FLOAT)
-        self._u_next = self._reshape_var(u_next, self._variable_dimension_indices['uo'])
+        self._u_next = self._reshape_var(u_next, self._variable_dimension_indices['uo'],
+            add_depth_axis=True)
         del(u_next)
 
         # Update memory views for v
         v_var_name = self._variable_names['vo']
         v_last = self.mediator.get_time_dependent_variable_at_last_time_index(v_var_name,
                 self._variable_shapes['vo'], DTYPE_FLOAT)
-        self._v_last = self._reshape_var(v_last, self._variable_dimension_indices['vo'])
+        self._v_last = self._reshape_var(v_last, self._variable_dimension_indices['vo'],
+            add_depth_axis=True)
         del(v_last)
 
         v_next = self.mediator.get_time_dependent_variable_at_next_time_index(v_var_name,
                 self._variable_shapes['vo'], DTYPE_FLOAT)
-        self._v_next = self._reshape_var(v_next, self._variable_dimension_indices['vo'])
+        self._v_next = self._reshape_var(v_next, self._variable_dimension_indices['vo'],
+            add_depth_axis=True)
         del(v_next)
 
         # Update memory views for w
@@ -1358,12 +1379,14 @@ cdef class ArakawaADataReader(DataReader):
             w_var_name = self._variable_names['wo']
             w_last = self.mediator.get_time_dependent_variable_at_last_time_index(w_var_name,
                     self._variable_shapes['wo'], DTYPE_FLOAT)
-            self._w_last = self._reshape_var(w_last, self._variable_dimension_indices['wo'])
+            self._w_last = self._reshape_var(w_last, self._variable_dimension_indices['wo'],
+                add_depth_axis=True)
             del(w_last)
 
             w_next = self.mediator.get_time_dependent_variable_at_next_time_index(w_var_name,
                     self._variable_shapes['wo'], DTYPE_FLOAT)
-            self._w_next = self._reshape_var(w_next, self._variable_dimension_indices['wo'])
+            self._w_next = self._reshape_var(w_next, self._variable_dimension_indices['wo'],
+                add_depth_axis=True)
             del(w_next)
 
         # Update depth mask
@@ -1389,12 +1412,14 @@ cdef class ArakawaADataReader(DataReader):
             Kz_var_name = self._variable_names['Kz']
             Kz_last = self.mediator.get_time_dependent_variable_at_last_time_index(Kz_var_name,
                     self._variable_shapes['Kz'], DTYPE_FLOAT)
-            self._Kz_last = self._reshape_var(Kz_last, self._variable_dimension_indices['Kz'])
+            self._Kz_last = self._reshape_var(Kz_last, self._variable_dimension_indices['Kz'],
+                add_depth_axis=True)
             del(Kz_last)
 
             Kz_next = self.mediator.get_time_dependent_variable_at_next_time_index(Kz_var_name,
                     self._variable_shapes['Kz'], DTYPE_FLOAT)
-            self._Kz_next = self._reshape_var(Kz_next, self._variable_dimension_indices['Kz'])
+            self._Kz_next = self._reshape_var(Kz_next, self._variable_dimension_indices['Kz'],
+                add_depth_axis=True)
             del(Kz_next)
 
         # Update memory views for Ah
@@ -1402,12 +1427,14 @@ cdef class ArakawaADataReader(DataReader):
             ah_var_name = self._variable_names['Ah']
             ah_last = self.mediator.get_time_dependent_variable_at_last_time_index(ah_var_name,
                     self._variable_shapes['Ah'], DTYPE_FLOAT)
-            self._ah_last = self._reshape_var(ah_last, self._variable_dimension_indices['Ah'])
+            self._ah_last = self._reshape_var(ah_last, self._variable_dimension_indices['Ah'],
+                add_depth_axis=True)
             del(ah_last)
 
             ah_next = self.mediator.get_time_dependent_variable_at_next_time_index(ah_var_name,
                     self._variable_shapes['Ah'], DTYPE_FLOAT)
-            self._ah_next = self._reshape_var(ah_next, self._variable_dimension_indices['Ah'])
+            self._ah_next = self._reshape_var(ah_next, self._variable_dimension_indices['Ah'],
+                add_depth_axis=True)
             del(ah_next)
 
         # Set is wet status
@@ -1430,31 +1457,37 @@ cdef class ArakawaADataReader(DataReader):
         # Read in data as requested
         if 'thetao' in self.env_var_names:
             var_name = self._variable_names['thetao']
-            thetao_next = self.mediator.get_time_dependent_variable_at_next_time_index(var_name,
-                    self._variable_shapes['thetao'], DTYPE_FLOAT)
-            self._thetao_next = self._reshape_var(thetao_next, self._variable_dimension_indices['thetao'])
-            del(thetao_next)
 
             thetao_last = self.mediator.get_time_dependent_variable_at_last_time_index(var_name,
                     self._variable_shapes['thetao'], DTYPE_FLOAT)
-            self._thetao_last = self._reshape_var(thetao_last, self._variable_dimension_indices['thetao'])
+            self._thetao_last = self._reshape_var(thetao_last, self._variable_dimension_indices['thetao'],
+                    add_depth_axis=True)
             del(thetao_last)
+            
+            thetao_next = self.mediator.get_time_dependent_variable_at_next_time_index(var_name,
+                    self._variable_shapes['thetao'], DTYPE_FLOAT)
+            self._thetao_next = self._reshape_var(thetao_next, self._variable_dimension_indices['thetao'],
+                    add_depth_axis=True)
+            del(thetao_next)
 
         if 'so' in self.env_var_names:
             var_name = self._variable_names['so']
-            so_next = self.mediator.get_time_dependent_variable_at_next_time_index(var_name,
-                    self._variable_shapes['so'], DTYPE_FLOAT)
-            self._so_next = self._reshape_var(so_next, self._variable_dimension_indices['so'])
-            del(so_next)
 
             so_last = self.mediator.get_time_dependent_variable_at_last_time_index(var_name,
                     self._variable_shapes['so'], DTYPE_FLOAT)
-            self._so_last = self._reshape_var(so_last, self._variable_dimension_indices['so'])
+            self._so_last = self._reshape_var(so_last, self._variable_dimension_indices['so'],
+                    add_depth_axis=True)
             del(so_last)
+
+            so_next = self.mediator.get_time_dependent_variable_at_next_time_index(var_name,
+                    self._variable_shapes['so'], DTYPE_FLOAT)
+            self._so_next = self._reshape_var(so_next, self._variable_dimension_indices['so'],
+                    add_depth_axis=True)
+            del(so_next)
 
         return
 
-    def _reshape_var(self, var, dimension_indices):
+    def _reshape_var(self, var, dimension_indices, add_depth_axis=False):
         """ Reshape variable for PyLag
 
         Variables with the following dimensions are supported:
@@ -1463,7 +1496,9 @@ cdef class ArakawaADataReader(DataReader):
 
         3D - [depth, lat, lon] in any order
 
-        Latitude trimming is applied as required.
+        Latitude trimming is applied as required. If the variable is 2D
+        and add_depth_axis is True, then a new axis is added at the start
+        of the array.
 
         Parameters
         ----------
@@ -1472,6 +1507,9 @@ cdef class ArakawaADataReader(DataReader):
 
         dimension_indices : dict
             Dictionary of dimension indices
+
+        add_depth_axis : bool
+            If True, add a new axis at the start of the array
 
         Returns
         -------
@@ -1493,7 +1531,11 @@ cdef class ArakawaADataReader(DataReader):
             if self._trim_last_latitude == 1:
                 var = var[:, :-1]
 
-            return var.reshape(np.prod(var.shape), order='C')[self._permutation]
+            # Add depth axis if required
+            if add_depth_axis:
+                var = var[np.newaxis, :, :]
+
+            return np.ascontiguousarray(var.reshape(np.prod(var.shape), order='C')[self._permutation])
 
         elif n_dimensions == 3:
             depth_index = dimension_indices['depth']

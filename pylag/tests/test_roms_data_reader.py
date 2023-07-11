@@ -220,11 +220,17 @@ class MockROMSMediator(Mediator):
     def get_grid_variable_dimensions(self, var_name):
         return self._grid_var_dimensions[var_name]
 
-    def get_variable_dimensions(self, var_name):
-        return self._time_dep_var_dimensions[var_name]
+    def get_variable_dimensions(self, var_name, include_time=True):
+        if include_time:
+            return self._time_dep_var_dimensions[var_name]
+        else:
+            return self._time_dep_var_dimensions[var_name][1:]
 
-    def get_variable_shape(self, var_name):
-        return self._time_dep_vars_last[var_name].shape
+    def get_variable_shape(self, var_name, include_time=True):
+        if include_time:
+            return self._time_dep_vars_last[var_name].shape
+        else:
+            return self._time_dep_vars_last[var_name].shape[1:]
 
     def get_time_dependent_variable_at_last_time_index(self, var_name, var_dims, var_type):
         var = self._time_dep_vars_last[var_name][:].astype(var_type)
