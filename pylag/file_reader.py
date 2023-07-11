@@ -179,14 +179,6 @@ class FileReader:
                                     f"the run configuration file. See the log "
                                     f"file for more details.")
 
-        # Time variable name
-        try:
-            self._time_var_name = self.config.get(self.config_section_name,
-                                                  "time_var_name").strip()
-        except configparser.NoOptionError:
-            # Adopt default name `time`
-            self._time_var_name = "time"
-
         # Time direction
         self.time_direction = int(get_time_direction(config))
 
