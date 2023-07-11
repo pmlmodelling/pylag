@@ -491,9 +491,9 @@ cdef class WavesDataReader(DataReader):
         var_names = ['vsdx', 'vsdy']
         for var_name in var_names:
             self._variable_shapes[var_name] = self.mediator.get_variable_shape(
-                    self._variable_names[var_name])[1:]
+                    self._variable_names[var_name], include_time=False)
             dimensions = self.mediator.get_variable_dimensions(
-                    self._variable_names[var_name])[1:]
+                    self._variable_names[var_name], include_time=False)
             self._variable_dimension_indices[var_name] = \
                     {'latitude': dimensions.index(self._dimension_names['latitude']),
                      'longitude': dimensions.index(self._dimension_names['longitude'])}

@@ -637,7 +637,7 @@ class FileReader:
         """
         return self.grid_file.variables[var_name].dimensions
 
-    def get_variable_dimensions(self, var_name):
+    def get_variable_dimensions(self, var_name, include_time=True):
         """ Get the variable dimensions
 
         Parameters
@@ -645,14 +645,24 @@ class FileReader:
         var_name : str
             The name of the variable.
 
+        include_time : bool
+            If False, the time dimension is not included in the dimensions.
+            Optional, default: True.
+
         Returns
         -------
          : tuple(str)
              The variable's dimensions
         """
-        return self.first_data_file.variables[var_name].dimensions
+        if include_time:
+            return self.first_data_file.variables[var_name].dimensions
+        else:
+            dimensions = self.first_data_file.variables[var_name].dimensions
+            dimensions = list(dimensions)
+            dimensions.remove(self._time_dim_name)
+            return tuple(dimensions)
 
-    def get_variable_shape(self, var_name):
+    def get_variable_shape(self, var_name, include_time=True):
         """ Get the variable shape
 
         Parameters
@@ -660,12 +670,25 @@ class FileReader:
         var_name : str
             The name of the variable.
 
+        include_time : bool
+            If False, the time dimension is not included in the shape.
+            Optional, default: True.
+
         Returns
         -------
          : tuple(int)
              The variable's shape
         """
-        return self.first_data_file.variables[var_name].shape
+        if include_time:
+            return self.first_data_file.variables[var_name].shape
+        else:
+            dimensions = self.get_variable_dimensions(var_name)
+            time_dim_idx = dimensions.index(self._time_dim_name)
+
+            shape = list(self.first_data_file.variables[var_name].shape)
+            shape.pop(time_dim_idx)
+
+            return tuple(shape)
 
     def get_time_dependent_variable_at_last_time_index(self, var_name):
         """ Get the variable at the last time index
@@ -681,7 +704,13 @@ class FileReader:
              The variable array
 
         """
-        var = self.first_data_file.variables[var_name][self.tidx_first, :]
+        # Get time dimension index
+        var_dims = self.get_variable_dimensions(var_name)
+        time_dim_idx = var_dims.index(self._time_dim_name)
+
+        # Get variable
+        nc_var = self.first_data_file.variables[var_name]
+        var = self._get_time_slice(nc_var, time_dim_idx, self.tidx_first)
 
         if np.ma.isMaskedArray(var):
             var = var.filled(0.0)
@@ -702,7 +731,13 @@ class FileReader:
              The variable array
 
         """
-        var = self.second_data_file.variables[var_name][self.tidx_second, :]
+        # Get time dimension index
+        var_dims = self.get_variable_dimensions(var_name)
+        time_dim_idx = var_dims.index(self._time_dim_name)
+
+        # Get variable
+        nc_var = self.second_data_file.variables[var_name]
+        var = self._get_time_slice(nc_var, time_dim_idx, self.tidx_second)
 
         if np.ma.isMaskedArray(var):
             var = var.filled(0.0)
@@ -723,7 +758,13 @@ class FileReader:
              The variable mask
 
         """
-        var = self.first_data_file.variables[var_name][self.tidx_first, :]
+        # Get time dimension index
+        var_dims = self.get_variable_dimensions(var_name)
+        time_dim_idx = var_dims.index(self._time_dim_name)
+
+        # Get variable
+        nc_var = self.first_data_file.variables[var_name]
+        var = self._get_time_slice(nc_var, time_dim_idx, self.tidx_first)
 
         if np.ma.isMaskedArray(var):
             return np.ascontiguousarray(var.mask)
@@ -744,12 +785,66 @@ class FileReader:
              The variable mask
 
         """
-        var = self.second_data_file.variables[var_name][self.tidx_second, :]
+        # Get time dimension index
+        var_dims = self.get_variable_dimensions(var_name)
+        time_dim_idx = var_dims.index(self._time_dim_name)
+
+        # Get variable
+        nc_var = self.second_data_file.variables[var_name]
+        var = self._get_time_slice(nc_var, time_dim_idx, self.tidx_second)
 
         if np.ma.isMaskedArray(var):
             return np.ascontiguousarray(var.mask)
 
         raise PyLagRuntimeError(f'Variable {var_name} is not a masked array.')
+
+    def _get_time_slice(self, nc_var, time_dim_idx: int, time_idx: int):
+        """ Get the variable at the specified time index
+        
+        Parameters
+        ----------
+        nc_var : NetCDF4.Variable
+            The NetCDF4 variable
+        
+        time_dim_idx : int
+            The time dimension index
+        
+        time_idx : int
+            The time index
+        
+        Returns
+        -------
+         : NDArray
+             The variable array
+        """
+        n_dims = len(nc_var.shape)
+
+        if n_dims == 1:
+            return nc_var[time_idx]
+        elif n_dims == 2:
+            if time_dim_idx == 0:
+                return nc_var[time_idx, :]
+            elif time_dim_idx == 1:
+                return nc_var[:, time_idx]
+        elif n_dims == 3:
+            if time_dim_idx == 0:
+                return nc_var[time_idx, :, :]
+            elif time_dim_idx == 1:
+                return nc_var[:, time_idx, :]
+            elif time_dim_idx == 2:
+                return nc_var[:, :, time_idx]
+        elif n_dims == 4:
+            if time_dim_idx == 0:
+                return nc_var[time_idx, :, :, :]
+            elif time_dim_idx == 1:
+                return nc_var[:, time_idx, :, :]
+            elif time_dim_idx == 2:
+                return nc_var[:, :, time_idx, :]
+            elif time_dim_idx == 3:
+                return nc_var[:, :, :, time_idx]
+        else:
+            raise PyLagRuntimeError('Variable has more than 4 dimensions - such variables '
+                                    'are not supported.')
 
     def _open_data_files_for_reading(self):
         """Open the first and second data files for reading

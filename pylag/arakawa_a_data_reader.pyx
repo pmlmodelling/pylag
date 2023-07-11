@@ -1270,8 +1270,10 @@ cdef class ArakawaADataReader(DataReader):
         # If zeta is being read in from file, add zeta shape and
         # dimension indices to the appropriate dictionaries
         if self._has_zeta:
-            self._variable_shapes['zos'] = self.mediator.get_variable_shape(self._variable_names['zos'])[1:]
-            dimensions = self.mediator.get_variable_dimensions(self._variable_names['zos'])[1:]
+            self._variable_shapes['zos'] = self.mediator.get_variable_shape(self._variable_names['zos'],
+                                                                            include_time=False)
+            dimensions = self.mediator.get_variable_dimensions(self._variable_names['zos'],
+                                                               include_time=False)
             self._variable_dimension_indices['zos'] = {'latitude': dimensions.index(self._dimension_names['latitude']),
                                                        'longitude': dimensions.index(self._dimension_names['longitude'])}
 
@@ -1283,8 +1285,10 @@ cdef class ArakawaADataReader(DataReader):
         if 'thetao' in self.env_var_names: var_names.append('thetao')
         if 'so' in self.env_var_names: var_names.append('so')
         for var_name in var_names:
-            self._variable_shapes[var_name] = self.mediator.get_variable_shape(self._variable_names[var_name])[1:]
-            dimensions = self.mediator.get_variable_dimensions(self._variable_names[var_name])[1:]
+            self._variable_shapes[var_name] = self.mediator.get_variable_shape(self._variable_names[var_name],
+                                                                               include_time=False)
+            dimensions = self.mediator.get_variable_dimensions(self._variable_names[var_name],
+                                                               include_time=False)
             self._variable_dimension_indices[var_name] = {'depth': dimensions.index(self._dimension_names['depth']),
                                                           'latitude': dimensions.index(self._dimension_names['latitude']),
                                                           'longitude': dimensions.index(self._dimension_names['longitude'])}

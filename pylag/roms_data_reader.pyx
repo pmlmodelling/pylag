@@ -1450,15 +1450,19 @@ cdef class ROMSDataReader(DataReader):
 
         # Add zeta to shape and dimension indices to dictionaries
         if self._has_zeta:
-            self._variable_shapes['zos'] = self.mediator.get_variable_shape(self._variable_names['zos'])[1:]
-            dimensions = self.mediator.get_variable_dimensions(self._variable_names['zos'])[1:]
+            self._variable_shapes['zos'] = self.mediator.get_variable_shape(self._variable_names['zos'],
+                                                                            include_time=False)
+            dimensions = self.mediator.get_variable_dimensions(self._variable_names['zos'],
+                                                               include_time=False)
             self._variable_dimension_indices['zos'] = {'latitude_grid_rho': dimensions.index(self._dimension_names['latitude_grid_rho']),
                                                        'longitude_grid_rho': dimensions.index(self._dimension_names['longitude_grid_rho'])}
 
         # Add is wet/dry mask shape and dimension indices to dictionaries
         if self._has_is_wet:
-            self._variable_shapes['wetdry_mask_rho'] = self.mediator.get_variable_shape(self._variable_names['wetdry_mask_rho'])[1:]
-            dimensions = self.mediator.get_variable_dimensions(self._variable_names['wetdry_mask_rho'])[1:]
+            self._variable_shapes['wetdry_mask_rho'] = self.mediator.get_variable_shape(self._variable_names['wetdry_mask_rho'],
+                                                                                        include_time=False)
+            dimensions = self.mediator.get_variable_dimensions(self._variable_names['wetdry_mask_rho'],
+                                                               include_time=False)
             self._variable_dimension_indices['wetdry_mask_rho'] = {'latitude_grid_rho': dimensions.index(self._dimension_names['latitude_grid_rho']),
                                                                    'longitude_grid_rho': dimensions.index(self._dimension_names['longitude_grid_rho'])}
 
@@ -1499,8 +1503,10 @@ cdef class ROMSDataReader(DataReader):
 
         # Construct dictionary of variable shapes and dimension indices
         for var_name, grid_name, depth_grid_name in zip(var_names, grid_names, depth_grid_names):
-            self._variable_shapes[var_name] = self.mediator.get_variable_shape(self._variable_names[var_name])[1:]
-            dimensions = self.mediator.get_variable_dimensions(self._variable_names[var_name])[1:]
+            self._variable_shapes[var_name] = self.mediator.get_variable_shape(self._variable_names[var_name],
+                                                                               include_time=False)
+            dimensions = self.mediator.get_variable_dimensions(self._variable_names[var_name],
+                                                               include_time=False)
             self._variable_dimension_indices[var_name] = {'depth': dimensions.index(self._dimension_names['depth_{}'.format(depth_grid_name)]),
                                                           'latitude': dimensions.index(self._dimension_names['latitude_{}'.format(grid_name)]),
                                                           'longitude': dimensions.index(self._dimension_names['longitude_{}'.format(grid_name)])}
