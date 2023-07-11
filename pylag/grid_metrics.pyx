@@ -912,14 +912,20 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',
             raise PyLagRuntimeError(f'Reference variable is not a masked '
                     f'array. Cannot generate land-sea mask and/or bathymetry.')
 
-        if len(ref_var.shape) != 4:
-            raise PyLagValueError('Reference variable is not 4D ([t, z, y, x]).')
+        if len(ref_var.shape) < 3 or len(ref_var.shape) > 4:
+            raise PyLagValueError('Reference variable should be 3D or 4D).')
 
         # Trim latitudes
-        if trim_first_latitude == 1:
-            ref_var = ref_var[:, :, :, 1:]
-        if trim_last_latitude == 1:
-            ref_var = ref_var[:, :, :, :-1]
+        if ref_var.shape == 3:
+            if trim_first_latitude == 1:
+                ref_var = ref_var[:, :, 1:]
+            if trim_last_latitude == 1:
+                ref_var = ref_var[:, :, :-1]
+        else:
+            if trim_first_latitude == 1:
+                ref_var = ref_var[:, :, :, 1:]
+            if trim_last_latitude == 1:
+                ref_var = ref_var[:, :, :, :-1]
 
     # Create the Triangulation
     print('\nCreating the triangulation ', end='... ')
@@ -1038,7 +1044,13 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',
             mask_attrs['long_name'] = "Land-sea mask: sea = 0 ; land = 1"
 
         else:
-            land_sea_mask_nodes = ref_var.mask[0, 0, :, :]
+            if len(ref_var.shape) == 3:
+                land_sea_mask_nodes = ref_var.mask[0, :, :]
+            elif len(ref_var.shape) == 4:
+                land_sea_mask_nodes = ref_var.mask[0, 0, :, :]
+            else:
+                raise PyLagValueError(f'Unsupported land sea mask with '
+                                      f'shape {ref_var.shape}')
 
             # Add standard attributes
             mask_attrs = {'standard_name': 'sea_binary_mask',
@@ -1634,7 +1646,7 @@ def sort_axes(nc_var, time_name='time', depth_name='depth', lat_name='latitude',
 
     2D - [lat, lon] in any order
 
-    3D - [depth, lat, lon] in any order
+    3D - [depth, lat, lon] or [time, lat, lon] in any order
 
     4D - [time, depth, lat, lon] in any order
 
@@ -1667,6 +1679,12 @@ def sort_axes(nc_var, time_name='time', depth_name='depth', lat_name='latitude',
 
     var = nc_var[:]
     dimensions = nc_var.dimensions
+
+    # Check that lat and lon dimensions are present
+    if lat_name not in dimensions or lon_name not in dimensions:
+        raise PyLagValueError(f'Problem with {nc_var.name}. Latitude '
+                              f'and longitude dimensions must be present.')
+
     if len(dimensions) == 2:
         lon_index = _get_dimension_index(dimensions, lon_name)
 
@@ -1678,19 +1696,29 @@ def sort_axes(nc_var, time_name='time', depth_name='depth', lat_name='latitude',
         return var
 
     elif len(dimensions) == 3:
-        depth_index = _get_dimension_index(dimensions, depth_name)
+        # Allow for the third coordinate dimension to be time or depth
+        if time_name in dimensions:
+            coord_name = time_name
+        elif depth_name in dimensions:
+            coord_name = depth_name
+        else:
+            raise PyLagValueError(f'Problem with {nc_var.name}. Time or '
+                                  f'depth dimensions must be present.')  
+
+        coord_index = _get_dimension_index(dimensions, coord_name)
         lat_index = _get_dimension_index(dimensions, lat_name)
         lon_index = _get_dimension_index(dimensions, lon_name)
 
-        # Shift axes to give [z, x, y]
-        var = np.moveaxis(var, depth_index, 0)
+        # Make coord_name the first dimension
+        var = np.moveaxis(var, coord_index, 0)
 
         # Update lat/lon indices if needed
-        if depth_index > lat_index:
+        if coord_index > lat_index:
             lat_index += 1
-        if depth_index > lon_index:
+        if coord_index > lon_index:
             lon_index += 1
 
+        # Make longitude the second dimension
         var = np.moveaxis(var, lon_index, 1)
 
         print('done')
