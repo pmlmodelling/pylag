@@ -28,7 +28,7 @@ With *miniconda3* installed and configured, create a new environment in which to
 
 .. code-block:: bash
 
-    conda create -n pylag python=3.9
+    conda create -n pylag python=3.10
     conda activate pylag
 
 Conda will automatically prepend ``(pylag) $`` to the prompt, indicating you are now working in the new *pylag* environment. Finally, install *PyLag*:
@@ -92,7 +92,7 @@ The new step here is the installation of conda-build and conda-verify. Note we d
 
 .. code-block:: bash
 
-    conda create -n pylag python=3.9
+    conda create -n pylag python=3.10
     conda activate pylag
 
 And finally, in the PyLag source code directory, build and install *PyLag*.
@@ -100,7 +100,7 @@ And finally, in the PyLag source code directory, build and install *PyLag*.
 .. code-block:: bash
 
     cd $HOME/code/git/PyLag/PyLag
-    conda build . --numpy 1.20
+    conda build . --numpy 1.25
     conda install -n pylag --use-local pylag
 
 Occasionally, when building *PyLag* this way, users have hit upon clashes with locally installed packages. To get around this problem, you may find it useful to add the following aliases to your bashrc file, which you can use to activate and deactivate *Conda*:
