@@ -55,6 +55,7 @@ Submodules
    pylag.variable_library
    pylag.velocity_aggregator
    pylag.version
+   pylag.windage
 
 Module contents
 ---------------
