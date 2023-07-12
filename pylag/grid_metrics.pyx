@@ -659,6 +659,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',
         reference_var_name=None, bathymetry_var_name=None, dim_names=None,
         is_global=False, surface_only=False, save_mask=True, prng_seed=10,
         masked_vertices_per_element=0,
+        central_latitude: Optional[int]=0.0,
         grid_metrics_file_name='./grid_metrics.nc'):
     """ Create a Arakawa A-grid metrics file
 
@@ -757,6 +758,13 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',
         along the boundary. If masked vertices are allowed, the model will ignore
         these when interpolating within the element. Optional, default : 0.
 
+    central_latitude : int
+        The central latitude of the FVCOM grid. If the latitudes in the
+        output file are in the range 0 to 180, then this should be
+        set to 90 degrees. PyLag will then automatically convert the
+        latitudes to the range -90 to 90 degrees. Other types of
+        latitude/longitude grids are not supported. Optional, default: 0.
+
     grid_metrics_file_name : str, optional
         The name of the grid metrics file that will be created. Optional,
         default : `grid_metrics.nc`.
@@ -767,6 +775,10 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',
     grid metrics file generated can be reused by all future simulations.
 
     """
+    # Assert central_latitude is either 0.0 or 90.0 degrees
+    assert central_latitude in [0, 90], \
+        'central_latitude must be set to either 0 or 90 degrees'
+
     # Seed the PRNG to make indexing permutations reproducible
     np.random.seed(prng_seed)
 
@@ -808,7 +820,8 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',
     lat_var, lat_attrs_orig = _get_variable(input_dataset, lat_var_name)
 
     if len(lon_var.shape) != len(lat_var.shape):
-        raise PyLagValueError('Lon and lat variables have a different number of dimensions')
+        raise PyLagValueError('Lon and lat variables have a different number '
+                              'of dimensions')
 
     # Filter attributes so that we include just the main ones
     lon_attrs = {}
@@ -822,6 +835,38 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',
             lat_attrs[attr] = lat_attrs_orig[attr]
         except KeyError:
             pass
+
+    # Get lons and lats as arrays
+    if len(lon_var.shape) == 1:
+        lon_var = lon_var[:]
+        lat_var = lat_var[:]
+    elif len(lon_var.shape) == 2:
+        # Sort axes
+        lon_var = sort_axes(lon_var, lon_name=lon_dim_name, lat_name=lat_dim_name)
+        lat_var = sort_axes(lat_var, lon_name=lon_dim_name, lat_name=lat_dim_name)
+
+    # Correct longitude and latitude limits if necessary
+    if np.any(lon_var > 180.0):
+        print(f'INFO - detected longitudes greater than 180.0. '
+                f'Assuming longitude limits are in the range 0 - 360. '
+                f'Correcting these to be in the range -180 to 180.')
+
+        lon_var = np.where(lon_var > 180.0, lon_var - 360.0, lon_var)
+
+    # Set valid min and max values
+    lon_attrs['valid_min'] = -180.0
+    lon_attrs['valid_max'] = 180.0
+
+    # Fix up latitudes if necessary
+    if central_latitude == 90:
+        print(f'INFO - central latitude given as {central_latitude}. '
+                f'Correcting latitudes to be in the range -90 to 90, and '
+                f'centered on 0.')
+        lat_var = lat_var - 90.0
+
+    # Set valid min and max values
+    lat_attrs['valid_min'] = -90.0
+    lat_attrs['valid_max'] = 90.0
 
     # Trim the poles if they have been included (we don't want duplicate points). Assumes
     # the poles are the first or last points and that they are given in geographic coordinates.
@@ -856,21 +901,17 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',
         points = np.array([lon_nodes, lat_nodes], dtype=DTYPE_FLOAT).T
 
     elif len(lon_var.shape) == 2:
-        # Sort axes
-        lon2d = sort_axes(lon_var, lon_name=lon_dim_name, lat_name=lat_dim_name)
-        lat2d = sort_axes(lat_var, lon_name=lon_dim_name, lat_name=lat_dim_name)
-
         # Save original lon and lat sizes
         n_longitude = lon_var.shape[0]
         n_latitude = lon_var.shape[1]
         
         # Save lons and lats at nodes
-        lon_nodes = lon2d.flatten(order='C').astype(DTYPE_FLOAT)
-        lat_nodes = lat2d.flatten(order='C').astype(DTYPE_FLOAT)
+        lon_nodes = lon_var.flatten(order='C').astype(DTYPE_FLOAT)
+        lat_nodes = lat_var.flatten(order='C').astype(DTYPE_FLOAT)
         
         # Create a regular grid based on lon/lat indices from which to create the triangulation
-        xi = np.arange(lon2d.shape[0])
-        yi = np.arange(lon2d.shape[1])
+        xi = np.arange(lon_var.shape[0])
+        yi = np.arange(lon_var.shape[1])
         xi2d, yi2d = np.meshgrid(xi, yi, indexing='ij')
         points = np.array([xi2d.flatten(order='C'), yi2d.flatten(order='C')],
                 dtype=DTYPE_FLOAT).T
