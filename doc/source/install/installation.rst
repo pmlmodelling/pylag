@@ -28,7 +28,7 @@ With *miniconda3* installed and configured, create a new environment in which to
 
 .. code-block:: bash
 
-    conda create -n pylag python=3.10
+    conda create -n pylag python=3.11
     conda activate pylag
 
 Conda will automatically prepend ``(pylag) $`` to the prompt, indicating you are now working in the new *pylag* environment. Finally, install *PyLag*:
@@ -92,7 +92,7 @@ The new step here is the installation of conda-build and conda-verify. Note we d
 
 .. code-block:: bash
 
-    conda create -n pylag python=3.10
+    conda create -n pylag python=3.11
     conda activate pylag
 
 And finally, in the PyLag source code directory, build and install *PyLag*.
