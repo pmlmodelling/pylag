@@ -1735,14 +1735,16 @@ def colourmap(variable):
 
     Parameters
     ----------
-    variable : str, iterable
-        For the given variable name(s), return the appropriate colour palette from the cmocean/matplotlib colour maps.
-        If the variable is not in the pre-defined variables here, the returned values will be `viridis`.
+    variable : str
+        For the given variable name, return the appropriate colour
+        palette from the cmocean/matplotlib colour maps. If the
+        variable is not in the pre-defined variables here, the
+        returned values will be `viridis`.
 
     Returns
     -------
-    colourmaps : matplotlib.colours.cmap, dict
-        The colour map(s) for the variable(s) given.
+    colourmaps : matplotlib.colours.cmap
+        The colour map for the variable given.
 
     """
 
@@ -1832,21 +1834,10 @@ def colourmap(variable):
              'tracer1_c': cm.dense,
              'DYE': cm.dense}
 
-    if isinstance(variable, collections.Iterable) and not isinstance(variable, str):
-        colourmaps = []
-        for var in variable:
-            if var in cmaps:
-                colourmaps.append(cmaps[var])
-            else:
-                colourmaps.append(default_cmap)
-        # If we got a list of a single value, return the value rather than a list.
-        if len(colourmaps) == 1:
-            colourmaps = colourmaps[0]
+    if variable in cmaps:
+        colourmaps = cmaps[variable]
     else:
-        if variable in cmaps:
-            colourmaps = cmaps[variable]
-        else:
-            colourmaps = default_cmap
+        colourmaps = default_cmap
 
     return colourmaps
 
