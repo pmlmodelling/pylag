@@ -2,10 +2,9 @@ name: pylag
 channels:
   - nodefaults
   - conda-forge
-  - geo-down-under
   - JimClark
 dependencies:
-  - python=3.9
+  - python=3.10
   - pylag
   - matplotlib
   - cartopy
