@@ -2,6 +2,20 @@
 
 PyLag is still very much in development. This page will be updated when future releases are made.
 
+## Version 0.7.0 12/07/2023
+
+* Address issue #94 relating to the number of FVCOM open boundary nodes.
+
+* Address issue #96 relating to FVCOM sigma level precision.
+
+* Address issue #102 relating to the modelling Stoke's Drift and windage.
+
+* Address issue #116 relating to the name of the OCEAN_DATA config section.
+
+* Address issue #118 relating to hardcoded assumptions about dimension ordering.
+
+* Address issue #119 relating to longitude and latitude grids with different limits and central values.
+
 ## Version 0.6.1 01/03/2022
 
 * Switch to using CRS and Transform classes from pyproj for UTM transformations, with the CRS defined by EPSG codes rather than UTM zone numbers.
