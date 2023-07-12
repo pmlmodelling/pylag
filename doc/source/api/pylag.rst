@@ -18,11 +18,14 @@ Submodules
    :maxdepth: 4
 
    pylag.arakawa_a_data_reader
+   pylag.atmosphere_data_reader
    pylag.bio_model
    pylag.boundary_conditions
+   pylag.composite_data_reader
    pylag.configuration
    pylag.data_reader
    pylag.data_types_python
+   pylag.datetime_reader
    pylag.delta
    pylag.exceptions
    pylag.file_reader
@@ -49,12 +52,14 @@ Submodules
    pylag.settling
    pylag.simulator
    pylag.spline_cpp_wrapper
+   pylag.stokes_drift
    pylag.time_manager
    pylag.unstructured
    pylag.utils
    pylag.variable_library
    pylag.velocity_aggregator
    pylag.version
+   pylag.waves_data_reader
    pylag.windage
 
 Module contents

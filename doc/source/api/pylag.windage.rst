@@ -1,5 +1,5 @@
 pylag.windage module
-=====================
+====================
 
 .. automodule:: pylag.windage
    :members:
