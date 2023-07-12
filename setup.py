@@ -9,8 +9,8 @@ from Cython.Build import cythonize
 import numpy
 
 MAJOR               = 0
-MINOR               = 6
-PATCH               = 1
+MINOR               = 7
+PATCH               = 0
 ISRELEASED          = True
 VERSION = '{}.{}.{}'.format(MAJOR, MINOR, PATCH)
 
@@ -191,6 +191,8 @@ setup(name="PyLag",
           'Programming Language :: Python :: 3.7',
           'Programming Language :: Python :: 3.8',
           'Programming Language :: Python :: 3.9',
+          'Programming Language :: Python :: 3.10',
+          'Programming Language :: Python :: 3.11',
           'Programming Language :: Python :: 3',
           'Operating System :: UNIX',
       ],
