@@ -1,7 +1,7 @@
 name: Test PyLag in Linux using Marketplace Miniconda
 on:
   push:
-    branches: [ master ]
+    branches: [ github-actions ]
   pull_request:
     branches: [ master ]
 jobs:
@@ -11,15 +11,19 @@ jobs:
     strategy:
         matrix:
             os: ["ubuntu-latest"]
+            python-version: ["3.9", "3.10", "3.11"]
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
         with:
-          activate-environment: test
-          environment-file: environment.yml
-          python-version: 3.11
+          activate-environment: "pylag_test"
           auto-activate-base: false
+          channels: conda-forge,JimClark
+          auto-update-conda: true
+          environment-file: environment.yml
+          python-version: ${{ matrix.python-version }}
       - name: Show conda env
+        shell: bash -l {0}
         run: |
           conda info
           conda list
@@ -30,6 +34,7 @@ jobs:
 #            python -m flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
 #            python -m flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
       - name: Run pytest
+        shell: bash -l {0}
         run: |
             conda install pytest
             pytest
