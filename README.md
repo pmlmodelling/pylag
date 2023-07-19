@@ -1,8 +1,8 @@
 # PyLag
 
-[![Build Status](https://travis-ci.com/jimc101/PyLag.svg?token=xhJEih8gZ2xQGCcgLLsu&branch=master)](https://travis-ci.com/jimc101/PyLag)
+[![Build and test](https://github.com/pmlmodelling/pylag/actions/workflows/pylag-package-conda-linux.yml/badge.svg)](https://github.com/pmlmodelling/pylag/actions)
 [![Documentation Status](https://readthedocs.org/projects/pylag/badge/?version=latest)](https://pylag.readthedocs.io/en/latest/?badge=latest)
-[![Anaconda-Server Badge](https://anaconda.org/jimclark/pylag/badges/installer/conda.svg)](https://conda.anaconda.org/jimclark)
+[![Anaconda-Server Badge](https://anaconda.org/jimclark/pylag/badges/version.svg)](https://anaconda.org/jimclark/pylag)
 [![Anaconda-Server Badge](https://anaconda.org/jimclark/pylag/badges/downloads.svg)](https://anaconda.org/jimclark/pylag)
 
 
