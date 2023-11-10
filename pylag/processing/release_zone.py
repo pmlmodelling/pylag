@@ -877,9 +877,11 @@ def _find_release_zone_location(r1, r2, r3, r14_length):
 
     # Error checking
     if r24_length_a_is_valid and r24_length_b_is_valid:
-        raise ValueError('Two apparently valid roots identified: a) {:f} and b) {:f}.'.format(r24_length_a[0], r24_length_b[0]))
+        raise ValueError(f"Two apparently valid roots identified: a) "
+                         f"{r24_length_a[0]:f} and b) {r24_length_b[0]:f}.")
     if not r24_length_a_is_valid and not r24_length_b_is_valid:
-        raise ValueError('No valid roots found: a) {:f} and b) {:f}.'.format(r24_length_a[0], r24_length_b[0]))
+        raise ValueError(f"No valid roots found: a) {r24_length_a[0]:f} "
+                         f"and b) {r24_length_b[0]:f}.")
 
     # Set r24_length equal to the valid root
     if r24_length_a_is_valid:
