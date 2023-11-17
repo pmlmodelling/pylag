@@ -535,7 +535,7 @@ def create_release_zones_along_cord(r1, r2, group_id=1, radius=100.0,
 def create_release_zones_around_shape_section(
         polygon: shapely.geometry.Polygon,
         start_point: shapely.geometry.Point,
-        target_length: float,
+        target_length: Optional[float] = None,
         release_zone_radius: Optional[float] = 100.0,
         n_particles: Optional[int] = 100,
         group_id: Optional[int] = 0,
@@ -562,8 +562,10 @@ def create_release_zones_around_shape_section(
         coordinates. The actual start point will be the nearest
         vertex on the polygon to the given coordinates.
 
-    target_length : float
-        Distance along which to position release zones in m.
+    target_length : float, optional
+        Distance along which to position release zones in m. Optional,
+        defaults to None. If None, the release zones will be created
+        around the full perimeter of the polygon.
 
     release_zone_radius : float, optional
         Radius of each circular release zone in m. Optional, defaults
@@ -661,8 +663,13 @@ def create_release_zones_around_shape_section(
     # target length.
     counter = 1
     while True:
-        if counter > n_points or distance_travelled > target_length:
-            break
+        if target_length is None:
+            if counter > n_points:
+                # Full perimeter has been traversed. Break.
+                break
+        else:
+            if counter > n_points or distance_travelled > target_length:
+                break
 
         x, y, _ = utm_from_lonlat(points[idx, 0], points[idx, 1],
                                   epsg_code=epsg_code)
