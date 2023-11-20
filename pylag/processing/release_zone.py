@@ -26,23 +26,56 @@ class ReleaseZone(object):
 
     Parameters
     ----------
-    group_id : int
-        Group ID associated with the release zone
+    group_id : int, optional
+        Group ID associated with the release zone. Optional,
+        defaults to 1.
 
-    radius : float
-        The radius of the release zone in m.
+    radius : float, optional
+        The radius of the release zone in m. Optional, defaults to 100.0 m.
 
-    centre : array_like
+    centre : array_like, optional
         Two element array giving the coordinates of the centre of the
-        release zone.
+        release zone. Optional, defaults to [0.0, 0.0].
+    
+    coordinate_system : str, optional
+        Coordinate system used to interpret the given `centre` coordinates.
+        The options are 'geographic' or 'cartesian' (default). If 'geographic'
+        is given, the coordinates are assumed to be in lon/lat. If 'cartesian'
+        is given, the coordinates are assumed to be in x/y.
     """
-    def __init__(self, group_id=1, radius=100.0, centre=[0.0, 0.0]):
+    def __init__(self, group_id: Optional[int] = 1,
+                 radius: Optional[float] = 100.0,
+                 centre = [0.0, 0.0],
+                 coordinate_system: Optional[str]='cartesian'):
         self.__group_id = group_id
         self.__radius = radius
-        self.__centre = centre
+        self.__coordinate_system = coordinate_system
+
+        if self.__coordinate_system == 'geographic':
+            eastings, northings, epsg_code = utm_from_lonlat(
+                centre[0], centre[1])
+
+            self.__centre = [eastings[0], northings[0]]
+            self.__epsg_code = epsg_code
+
+        elif self.__coordinate_system == 'cartesian':
+            self.__centre = [centre[0], centre[1]]
+            self.__epsg_code = None
+        
+        else:
+            raise ValueError(f"Unrecognised coordinate system "
+                             f"{self.__coordinate_system}. "
+                             f"Options are 'geographic' or 'cartesian'.")
+
+        # The particle set is a list of tuples of the form (x, y, z)
+        # where x, y and z are the particle coordinates. Initially, the
+        # particle set is empty. Particles are added to the set using
+        # the add_particle method. 
         self.__particle_set = []
 
-    def create_particle_set(self, n_particles=100, z=0.0, random=True):
+    def create_particle_set(self, n_particles: Optional[int]=100,
+                            z: Optional[float]=0.0,
+                            random: Optional[bool]=True):
         """ Create a new particle set
 
         Create a new particle set (`n=n_particles`). The spatial coordinates
@@ -54,23 +87,24 @@ class ReleaseZone(object):
         `n <= n_particles` where `|n - n_particles| / n -> 1` for large n.
         The former guarantees that positions for exactly n particles are
         created. However, for small n the particle distribution with be
-        patchy. All particles are created are given the same depth
+        patchy. All particles created are given the same depth
         coordinates.
 
         Parameters
         ----------
         n_particles : int, optional
             The number of particles to be created and added to the
-            release zone.
+            release zone. Defaults to 100.
 
         z : float, optional
-            The depth of the particles.
+            The depth of the particles. Defaults to 0.0 m.
 
         random : bool, optional
             If True (default) create particle positions at random. This
             guarantees that n_particles will be added to the release zone. If
             False, particles are regularly spaced on a Cartesian grid, which
-            is then filtered for the area of the circle.
+            is then filtered for the area of the circle. Optional, defaults to
+            True.
 
         Returns
         -------
