@@ -182,7 +182,7 @@ class ReleaseZone(object):
 
     @property
     def centre(self):
-        return self.__centre
+        return [x for x in self.__centre]
 
     @centre.setter
     def centre(self, value: Optional[list]):
@@ -211,7 +211,7 @@ class ReleaseZone(object):
 
     @property
     def particle_set(self):
-        return self.__particle_set
+        return [p for p in self.__particle_set]
 
     @particle_set.setter
     def particle_set(self, value: Optional[list]):
