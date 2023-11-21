@@ -225,7 +225,9 @@ class ReleaseZone(object):
         -------
          : None
         """
-        if np.sqrt((x-self.__centre[0]) * (x-self.__centre[0]) + (y-self.__centre[1]) * (y-self.__centre[1])) <= self.__radius:
+        delta_x = x - self.__centre[0]
+        delta_y = y - self.__centre[1]
+        if np.sqrt(delta_x * delta_x + delta_y * delta_y) <= self.__radius:
             self.__particle_set.append((x, y, z))
             return
         raise ValueError('Particle coordinates lie outside of the '
