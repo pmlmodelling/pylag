@@ -10,7 +10,9 @@ from scipy.spatial import ConvexHull
 from typing import Optional
 
 from pylag.exceptions import PyLagAttributeError
-from pylag.processing.coordinate import utm_from_lonlat, get_epsg_code
+from pylag.processing.coordinate import utm_from_lonlat
+from pylag.processing.coordinate import lonlat_from_utm
+from pylag.processing.coordinate import get_epsg_code
 
 have_shapely = True
 try:
@@ -188,7 +190,7 @@ class ReleaseZone(object):
 
     @property
     def epsg_code(self):
-        if self.coordinate_system == 'geographic':
+        if self.__coordinate_system == 'geographic':
             return self.__epsg_code
         else:
             raise PyLagAttributeError("No EPSG code available for "
@@ -206,6 +208,104 @@ class ReleaseZone(object):
     @particle_set.setter
     def particle_set(self, value: Optional[list]):
         raise PyLagAttributeError("Particle set is immutable.")
+
+    # Methods used to get the coordinates of particles in the release zone
+    # ---------------------------------------------------------------------
+
+    @property
+    def x_coordinates(self):
+        if self.__coordinate_system == 'cartesian':
+            return [coords[0] for coords in self.__particle_set]
+        else:
+            x = [coords[0] for coords in self.__particle_set]
+            y = [coords[1] for coords in self.__particle_set]
+            lons, _ = lonlat_from_utm(x, y, self.__epsg_code)
+            
+            return lons
+
+    @x_coordinates.setter
+    def x_coordinates(self, value: Optional[list]):
+        raise PyLagAttributeError("X coordinates are immutable.")
+
+    @property
+    def y_coordinates(self):
+        if self.__coordinate_system == 'cartesian':
+            return [coords[1] for coords in self.__particle_set]
+        else:
+            x = [coords[0] for coords in self.__particle_set]
+            y = [coords[1] for coords in self.__particle_set]
+            _, lats = lonlat_from_utm(x, y, self.__epsg_code)
+            
+            return lats
+
+    @y_coordinates.setter
+    def y_coordinates(self, value: Optional[list]):
+        raise PyLagAttributeError("Y coordinates are immutable.")
+
+    @property
+    def z_coordinates(self):
+        return [coords[2] for coords in self.__particle_set]
+
+    @z_coordinates.setter
+    def z_coordinates(self, value: Optional[list]):
+        raise PyLagAttributeError("Z coordinates are immutable.")
+
+    def get_coordinates(self):
+        """ Get particle coordinates
+
+        Returns
+        -------
+         : array_like
+            Particle x-coordinates
+
+         : array_like
+            Particle y-coordinates
+
+         : array_like
+            Particle z-coordinates
+        """
+        return self.x_coordinates, self.y_coordinates, self.z_coordinates
+
+    def get_utm_coordinates(self):
+        """ Get particle UTM coordinates
+        
+        Return UTM coordiantes for all particles in the set. This
+        method will raise an exception if the release zone is defined
+        in cartesian coordinates. For release zones defined in
+        geographic coordinates, convert these coordinates to UTM
+        coordiantes and return. The returned coordinates are in the
+        form (eastings, northings, depths). The EPSG code used to
+        transform from geographic to UTM coordinates is also returned.
+
+        Parameters
+        ----------
+        N/A
+
+        Returns
+        -------
+        eastings : array_like
+            Eastings in m.
+        
+        northings : array_like
+            Northings in m.
+        
+        depths : array_like
+            Depths in m.
+        
+        epsg_code : str
+            EPSG code used to transform from geographic to UTM
+            coordinates.
+        """
+        if self.__coordinate_system == "geographic":
+            eastings = [coords[0] for coords in self.__particle_set]
+            northings = [coords[1] for coords in self.__particle_set]
+            depths = [coords[2] for coords in self.__particle_set]
+
+            return eastings, northings, depths, self.__epsg_code
+        else:
+            raise PyLagAttributeError("Cannot return UTM coordinates for "
+                                      "release zones defined in cartesian "
+                                      "coordinates.")
 
     def add_particle(self, x, y, z):
         """ Add a particle to the release zone
@@ -230,6 +330,7 @@ class ReleaseZone(object):
         if np.sqrt(delta_x * delta_x + delta_y * delta_y) <= self.__radius:
             self.__particle_set.append((x, y, z))
             return
+
         raise ValueError('Particle coordinates lie outside of the '
                          'release zone')
 
@@ -242,52 +343,6 @@ class ReleaseZone(object):
             The total number of particles
         """
         return np.shape(self.__particle_set)[0]
-
-    def get_coords(self):
-        """ Get particle coordinates
-
-        Returns
-        -------
-         : array_like
-            Eastings
-
-         : array_like
-            Northings
-
-         : array_like
-            Depths
-        """
-        return self.get_eastings(), self.get_northings(), self.get_depths()
-
-    def get_eastings(self):
-        """
-
-        Returns
-        -------
-         : array_like
-            Eastings
-        """
-        return [particle_coords[0] for particle_coords in self.__particle_set]
-
-    def get_northings(self):
-        """ Get northings
-
-        Returns
-        -------
-         : array_like
-            Northings
-        """
-        return [particle_coords[1] for particle_coords in self.__particle_set]
-
-    def get_depths(self):
-        """ Get depths
-
-        Returns
-        -------
-         : array_like
-            Depths
-        """
-        return [particle_coords[2] for particle_coords in self.__particle_set]
 
     def get_zone_polygon(self):
         """ Make a polygon of the points in the zone (based on its convex hull)
