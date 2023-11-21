@@ -9,6 +9,7 @@ import numbers
 from scipy.spatial import ConvexHull
 from typing import Optional
 
+from pylag.exceptions import PyLagAttributeError
 from pylag.processing.coordinate import utm_from_lonlat, get_epsg_code
 
 have_shapely = True
@@ -149,72 +150,62 @@ class ReleaseZone(object):
                 pass
         return
 
-    def get_group_id(self):
-        """ Return the group ID
-
-        Returns
-        -------
-         : int
-             The group ID.
-        """
+    @property
+    def group_id(self):
         return self.__group_id
+    
+    @group_id.setter
+    def group_id(self, value: Optional[int]):
+        self.__group_id = value
 
-    def set_group_id(self, id):
-        """ Set the group ID
-
-        Parameters
-        ----------
-        id : int
-            The group ID.
-
-        Returns
-        -------
-         : None
-        """
-        self.__group_id = id
-
-    def get_radius(self):
-        """ Get the radius
-
-        Returns
-        -------
-         : float
-            The radius of the relase zone
-
-        """
+    @property
+    def radius(self):
         return self.__radius
+    
+    @radius.setter
+    def radius(self, value: Optional[float]):
+        raise PyLagAttributeError("Radius is immutable.")
 
-    def get_area(self):
-        """ Get the area
-
-        Returns
-        -------
-         : float
-            The area of the release zone
-
-        """
+    @property
+    def area(self):
         return np.pi * self.__radius * self.__radius
 
-    def get_centre(self):
-        """ Get the central coordinates
-
-        Returns
-        -------
-         : array_list
-            Array of central coordinates [x, y].
-
-        """
+    @property
+    def centre(self):
         return self.__centre
 
-    def get_particle_set(self):
-        """ Get the particle set
+    @centre.setter
+    def centre(self, value: Optional[list]):
+        raise PyLagAttributeError("Centre is immutable.")
 
-        Returns
-        -------
-         : list[tuple]
-             List of tuples of particle coordinates
-        """
+    @property
+    def coordinate_system(self):
+        return self.__coordinate_system
+
+    @coordinate_system.setter
+    def coordinate_system(self, value: Optional[str]):
+        raise PyLagAttributeError("Coordinate system is immutable.")
+
+    @property
+    def epsg_code(self):
+        if self.coordinate_system == 'geographic':
+            return self.__epsg_code
+        else:
+            raise PyLagAttributeError("No EPSG code available for "
+                                      "release zones defined in "
+                                      "cartesian coordinates.")
+
+    @epsg_code.setter
+    def epsg_code(self, value: Optional[str]):
+        raise PyLagAttributeError("EPSG code is immutable.")
+
+    @property
+    def particle_set(self):
         return self.__particle_set
+
+    @particle_set.setter
+    def particle_set(self, value: Optional[list]):
+        raise PyLagAttributeError("Particle set is immutable.")
 
     def add_particle(self, x, y, z):
         """ Add a particle to the release zone
