@@ -5,7 +5,6 @@ A set of classes and functions to help with creating particle release zones.
 from __future__ import division, print_function
 
 import numpy as np
-import numbers
 from scipy.spatial import ConvexHull
 from typing import Optional
 
@@ -45,21 +44,30 @@ class ReleaseZone(object):
         The options are 'geographic' or 'cartesian' (default). If 'geographic'
         is given, the coordinates are assumed to be in lon/lat. If 'cartesian'
         is given, the coordinates are assumed to be in x/y.
+    
+    epsg_code : str, optional
+        EPSG code which should be used to covert to UTM coordiantes. If
+        not given, the EPSG code will be inferred from `centre`. If working
+        in cartesian coordinates, this argument is ignored.
     """
     def __init__(self, group_id: Optional[int] = 1,
                  radius: Optional[float] = 100.0,
                  centre = [0.0, 0.0],
-                 coordinate_system: Optional[str]='cartesian'):
+                 coordinate_system: Optional[str]='cartesian',
+                 epsg_code: Optional[str]=None):
         self.__group_id = group_id
         self.__radius = radius
         self.__coordinate_system = coordinate_system
+        self.__epsg_code = epsg_code
 
         if self.__coordinate_system == 'geographic':
-            eastings, northings, epsg_code = utm_from_lonlat(
+            eastings, northings, epsg_code_centre = utm_from_lonlat(
                 centre[0], centre[1])
 
             self.__centre = [eastings[0], northings[0]]
-            self.__epsg_code = epsg_code
+
+            if epsg_code is None:
+                self.__epsg_code = epsg_code_centre
 
         elif self.__coordinate_system == 'cartesian':
             self.__centre = [centre[0], centre[1]]
@@ -133,7 +141,7 @@ class ReleaseZone(object):
         # Filtered cartesian grid. Assume each particle sits at the centre
         # of a square of length delta, which is then equivalent to the
         # particle separation.
-        delta = np.sqrt(self.get_area() / float(n_particles))
+        delta = np.sqrt(self.area / float(n_particles))
         n_coords_xy = int(2.0 * self.__radius / delta)
 
         # Form a regular square grid of particle positions centered on centre
@@ -266,6 +274,20 @@ class ReleaseZone(object):
         """
         return self.x_coordinates, self.y_coordinates, self.z_coordinates
 
+    def get_centre_utm_coordinates(self):
+        """ Get UTM transformed centre coordinates
+        """
+        if self.coordinate_system == 'geographic':
+            # Transform centre coordinates to UTM
+            easting, northing, _ = utm_from_lonlat(self.__centre[0],
+                                                   self.__centre[1],
+                                                   self.__epsg_code)
+            return [easting[0], northing[0]]
+        else:
+            raise PyLagAttributeError("Cannot return UTM coordinates for "
+                                      "release zones defined in cartesian "
+                                      "coordinates.")
+
     def get_utm_coordinates(self):
         """ Get particle UTM coordinates
         
@@ -370,8 +392,9 @@ class ReleaseZone(object):
 
 def create_release_zone(group_id: Optional[int] = 1,
                         radius: Optional[float] = 100.0,
-                        centre=[0.0, 0.0],
-                        coordinate_system: Optional[str]='cartesian',
+                        centre = [0.0, 0.0],
+                        coordinate_system: Optional[str] = 'cartesian',
+                        epsg_code: Optional[str] = None,
                         n_particles: Optional[int] = 100,
                         depth: Optional[float] = 0.0,
                         random: Optional[bool] = True) -> ReleaseZone:
@@ -395,6 +418,11 @@ def create_release_zone(group_id: Optional[int] = 1,
         is given, the coordinates are assumed to be in lon/lat. If 'cartesian'
         is given, the coordinates are assumed to be in x/y.
 
+    epsg_code : str, optional
+        EPSG code which should be used to covert to UTM coordiantes. If
+        not given, the EPSG code will be inferred from `centre`. If working
+        in cartesian coordinates, this argument is ignored.
+
     n_particles : integer, optional
         The number of particles. Optional, defaults to 100.
  
@@ -414,11 +442,12 @@ def create_release_zone(group_id: Optional[int] = 1,
     release_zone = ReleaseZone(group_id=group_id,
                                radius=radius,
                                centre=centre,
-                               coordinate_system=coordinate_system)
+                               coordinate_system=coordinate_system,
+                               epsg_code=epsg_code)
 
     # Create a new particle set of n_particles at the given depth
     release_zone.create_particle_set(n_particles=n_particles,
-                                     depth=depth,
+                                     z=depth,
                                      random=random)
 
     return release_zone
@@ -427,6 +456,7 @@ def create_release_zone(group_id: Optional[int] = 1,
 def create_release_zones_along_cord(
         start_point, end_point,
         coordinate_system: Optional[str] = 'cartesian',
+        epsg_code: Optional[str] = None,
         group_id: Optional[int] = 1,
         radius: Optional[float] = 100.0,
         n_particles: Optional[int] = 100,
@@ -437,13 +467,11 @@ def create_release_zones_along_cord(
 
     Return particle positions along a line `r`, defined by the
     position vectors `start_point` and `end_point`.
-    `start_point` and `end_point` may be defined
-    in Cartesian or geographic coordinates. If they are defined in
-    geographic coordiantes, as specified by the `coordinate_system`
-    argument, they are transformed into UTM coordinates before
-    release zones are created, with the correct UTM EPSG code
-    calculated from `start_point`. Particles are packed into circlular zones
-    of radius `radius`, running along `r`. Positions
+    `start_point` and `end_point` may be defined in Cartesian or geographic
+    coordinates. Optionally, a epsg_code code can be provided.
+    If provided, this will be used to convert geographic coordinates into
+    UTM coordinates so distances can be calculated.Particles are packed into
+    circlular zones of radius `radius`, running along `r`. Positions
     for approximately `n` particles (`= n` if random is `True`) are
     returned per zone. If `2*radius` is `> |r|`, no zones are created.
 
@@ -462,6 +490,11 @@ def create_release_zones_along_cord(
     coordinate_system : str, optional
         Coordinate system used to interpret the given `r1` and `r2`
         coordinates. The options are 'geographic' or 'cartesian'.
+
+    epsg_code : str, optional
+        EPSG code which should be used to covert to UTM coordiantes. If
+        not given, the EPSG code will be inferred from `start_point`.
+        If working in cartesian coordinates, this argument is ignored.
 
     group_id : integer, optional
         Group id for the 1st release zone created along the cord.
@@ -487,23 +520,32 @@ def create_release_zones_along_cord(
     zones : list
         List of release zone objects along the cord.
     """
-    if coordinate_system == 'cartesian':
-        r1 = np.array(start_point, dtype=float)
-        r2 = np.array(end_point, dtype=float)
-    elif coordinate_system == 'geographic':
-        x1, y1, epsg_code= utm_from_lonlat(start_point[0], start_point[1])
-        x2, y2, _ = utm_from_lonlat(end_point[0], end_point[1], epsg_code)
-
-        r1 = np.array([x1, y1], dtype=float)
-        r2 = np.array([x2, y2], dtype=float)
-    else:
+    if coordinate_system not in ['geographic', 'cartesian']:
         raise ValueError(f"Unrecognised coordinate system "
                          f"{coordinate_system}. Options are "
                          f"'geographic' or 'cartesian'.")
 
+    if coordinate_system == 'geographic':
+        if epsg_code is None:
+            epsg_code = get_epsg_code(start_point[0], start_point[1])
+
+        x1, y1, _ = utm_from_lonlat(start_point[0],
+                                    start_point[1],
+                                    epsg_code=epsg_code)
+        
+        x2, y2, _ = utm_from_lonlat(end_point[0],
+                                    end_point[1],
+                                    epsg_code)
+
+        r1 = np.array([x1[0], y1[0]], dtype=float)
+        r2 = np.array([x2[0], y2[0]], dtype=float)
+    else:
+        r1 = np.array(start_point, dtype=float)
+        r2 = np.array(end_point, dtype=float)
+
     # Use the line vector running between the position vectors r1 and r2
     # to calculate the no. of release zones.
-    r3 = r1 - r2
+    r3 = r2 - r1
     r3_length = np.sqrt((r3*r3).sum())
     r3_unit_vector = r3 / r3_length
     n_zones, buffer_zone = divmod(r3_length, 2.0*radius)
@@ -523,41 +565,76 @@ def create_release_zones_along_cord(
     for n in np.arange(n_zones, dtype=int):
         r3_prime = (2.0 * float(n) * radius +
                     radius + buffer_zone/2.0) * r3_unit_vector
-        centre = r1 + r3_prime
+        centre_xy = r1 + r3_prime
 
-        release_zone = create_release_zone(group_id,
-                                           radius,
-                                           centre,
-                                           n_particles,
-                                           depth,
-                                           random)
+        if coordinate_system == 'geographic':
+            centre_lon, centre_lat = lonlat_from_utm(centre_xy[0],
+                                                     centre_xy[1],
+                                                     epsg_code)
+            centre = np.array([centre_lon[0], centre_lat[0]])
+        else:
+            centre = np.array(centre_xy[0], centre_xy[1])
+
+        release_zone = create_release_zone(
+            group_id=group_id,
+            radius=radius,
+            centre=centre,
+            coordinate_system=coordinate_system,
+            epsg_code=epsg_code,
+            n_particles=n_particles,
+            depth=depth,
+            random=random)
+
         if verbose:
-            np = release_zone.get_number_of_particles()
-            print(f"Zone {n} (group_id = {group_id}) contains {np} particles.")
+            particles = release_zone.get_number_of_particles()
+            print(f"Zone {n} (group_id = {group_id}) contains {particles} particles.")
         release_zones.append(release_zone)
         group_id += 1
 
     return release_zones
 
 
-def create_release_zones_around_shape_section(
+def create_release_zones_around_shape(
         polygon: shapely.geometry.Polygon,
         start_point: shapely.geometry.Point,
+        coordinate_system: Optional[str] = 'cartesian',
+        epsg_code: Optional[str] = None,
         target_length: Optional[float] = None,
         release_zone_radius: Optional[float] = 100.0,
         n_particles: Optional[int] = 100,
         group_id: Optional[int] = 0,
-        depth: Optional[float] = 0.0, epsg_code: Optional[str] = None,
+        depth: Optional[float] = 0.0,
         random: Optional[bool] = True,
         check_overlaps: Optional[bool] = False,
         overlap_tol: Optional[float] = 0.0001,
-        verbose: Optional[bool] = False):
-    """ Create a set of adjacent release zones around shape section
+        verbose: Optional[bool] = False) -> list:
+    """ Create a set of adjacent release zones around a shape
 
-    This function is distinct from the function
-    `create_release_zones_around_shape` in the sense that it a) only
-    creates release zones around a specified length of the polygon, and
-    b) gives each release zone a separate individual ID tag.
+    This function will create a set of release zones around the
+    perimeter of a polygon. The release zones are created by stepping
+    around the perimeter of the polygon, starting at the point
+    `start_point`. `start_point` does not need to be exactly on the
+    perimeter of the polygon - the method will find the nearest
+    vertex and use this as the actual start point. The release zones
+    are created such that they are adjacent to one another,
+    and each release zone is given a unique groud ID.
+
+    The coordinates used to defined the polygon and the start point
+    should be the same, and consistent with the `coordinate_system`
+    argument. Valid options for `coordinate_system` are
+    'geographic' or 'cartesian'. If 'geographic' is given, the
+    coordinates are assumed to be in lon/lat. To compute distances,
+    lon/lat coordinates are converted to UTM coordinates using the
+    EPSG code given by `epsg_code`. If `epsg_code` is not given, the
+    EPSG code is inferred from the start point coordinates. If
+    'cartesian' is given, the coordinates are assumed to be in x/y
+    and not further coordinate transformations are performed.
+    
+    The argument `target_length` can be used to specify the length of the
+    polygon section around which release zones should be created. If None,
+    the release zones will be created around the full perimeter of the
+    polygon. The argument `release_zone_radius` specifies the radius
+    of each release zone.
 
     Parameters
     ----------
@@ -569,6 +646,15 @@ def create_release_zones_around_shape_section(
         Approximate start point for release zones in lon/lat
         coordinates. The actual start point will be the nearest
         vertex on the polygon to the given coordinates.
+
+    coordinate_system : str, optional
+        Coordinate system used to interpret the coordinates of
+        the `polygon` and `start_point` objects. The options are
+        'geographic' or 'cartesian'. Optional, defaults to 'cartesian'.
+
+    epsg_code : str, optional
+        EPSG code which should be used to covert to UTM coordiantes. If
+        not given, the EPSG code will be inferred from `start_point`.
 
     target_length : float, optional
         Distance along which to position release zones in m. Optional,
@@ -590,10 +676,6 @@ def create_release_zones_around_shape_section(
     depth : float, optional
         Zone depth in m. Defaults to a depth of 0.0 m.
 
-    epsg_code : str, optional
-        EPSG code which should be used to covert to UTM coordiantes. If
-        not given, the EPSG code will be inferred from `start_point`.
-
     random : boolean, optional
         If true create a random uniform distribution of particles within each
         zone. Optional, defaults to True.
@@ -609,41 +691,72 @@ def create_release_zones_around_shape_section(
     verbose : boolean, optional
         Hide warnings and progress details. Optional, default False.
 
+    Returns
+    -------
+    release_zones : list
+        List of release zone objects.
+
     TODO
     ----
     1) Allow users to provide a set of finish coordinates as an
     alternative to a length, which can then be used to determine the
     location of the last release zone to be created.
     """
-    # Extract the points from the polygon.
+    # Check the given coordinate system is valid
+    if coordinate_system not in ['geographic', 'cartesian']:
+        raise ValueError(f"Unrecognised coordinate system "
+                         f"{coordinate_system}. Options are "
+                         f"'geographic' or 'cartesian'.")
+
+    # Extract the points that make up the polygon.
     points = np.array(polygon.exterior.xy).T
 
-    # Total number of points in this part
-    n_points = points.shape[0]
+    # Create a second 'working' copy of of the points array. If the original
+    # points array is specified in geographic coordinates, transform these
+    # to UTM coordinates.
+    if coordinate_system == 'geographic':
+        if epsg_code is None:
+            epsg_code = get_epsg_code(start_point.x, start_point.y)
+        
+        # Convert start_point to UTM coordinates
+        start_point_x, start_point_y, _ = utm_from_lonlat(start_point.x,
+                                                          start_point.y,
+                                                          epsg_code=epsg_code)
+        
+        # Convert points to UTM coordinates
+        x, y, _ = utm_from_lonlat(points[:, 0], points[:, 1],
+                                  epsg_code=epsg_code)
+        points_xy = np.array([x, y]).T
+    else:
+        start_point_x = start_point.x
+        start_point_y = start_point.y
+        points_xy = points.copy()
+
+    # Total number of points
+    n_points = points_xy.shape[0]
 
     # Establish whether or not the shapefile is ordered in a clockwise
     # or anticlockwise manner
-    clockwise_ordering = _is_clockwise_ordered(points)
+    clockwise_ordering = _is_clockwise_ordered(points_xy)
 
-    # Set the epsg_code from the start coordinates?
-    if epsg_code is None:
-        epsg_code = get_epsg_code(start_point.x, start_point.y)
-
-    # Find starting location
-    start_idx = _find_start_index(points, start_point.x, start_point.y,
-                                  epsg_code=epsg_code)
+    # Find starting location using the working points array
+    start_idx = _find_start_index(points_xy, start_point_x, start_point_y)
 
     # Form the first release zone centred on the point for start_idx
     # --------------------------------------------------------------
     release_zones = []
     idx = start_idx - n_points if clockwise_ordering else start_idx
-    x, y, _ = utm_from_lonlat(points[idx, 0], points[idx, 1],
-                              epsg_code=epsg_code)
  
-    # Coordinates of zone centre
-    centre_ref = np.array([x[0], y[0]])
-    release_zone = create_release_zone(group_id, release_zone_radius,
-                                       centre_ref, n_particles, depth, random)
+    # Coordinates of zone centre (NB from the original points array)
+    centre_ref = np.array([points[idx, 0], points[idx, 1]])
+    centre_ref_xy = np.array([points_xy[idx, 0], points_xy[idx, 1]])
+    release_zone = create_release_zone(group_id=group_id,
+                                       radius=release_zone_radius,
+                                       coordinate_system=coordinate_system,
+                                       centre=centre_ref,
+                                       n_particles=n_particles,
+                                       depth = depth,
+                                       random = random)
     if verbose:
         n_particles_in_release_zone = release_zone.get_number_of_particles()
         print(f"Zone (group_id = {group_id}) contains "
@@ -659,7 +772,7 @@ def create_release_zones_around_shape_section(
     distance_travelled = 0.0
 
     # Coordinates of the last vertex, used for length calculation
-    last_vertex = centre_ref
+    last_vertex = centre_ref_xy
 
     # Update group id
     group_id += 1
@@ -679,28 +792,37 @@ def create_release_zones_around_shape_section(
             if counter > n_points or distance_travelled > target_length:
                 break
 
-        x, y, _ = utm_from_lonlat(points[idx, 0], points[idx, 1],
-                                  epsg_code=epsg_code)
-        current_separation = _get_length(centre_ref, np.array([x[0], y[0]]))
+        current_vertex = np.array([points_xy[idx, 0], points_xy[idx, 1]])
+
+        # Compute current separation
+        current_separation = _get_length(centre_ref_xy, current_vertex)
+
         if current_separation >= target_separation:
             # Track back along the last cord to find the point
             # giving a release zone separation of 2*radius.
-            #
-            # Approach:
-            # At present we know position vectors r1 (=centre_ref, coords for
-            # centre of the last release zone), r2 (=last_vertex, coords for
-            # the last vertex in the polygon, and r3 (the current vertex in
-            # the polygon [x, y]). We also know that |r4-r1| must equal
-            # target_separation (i.e. 2x the radius of a relase zone). The
-            # task is then to find r4, which lies on the line joining r2 and
-            # r3. This is managed by the method find_release_zone_location().
-            r4 = _find_release_zone_location(centre_ref, last_vertex,
-                                             np.array([x[0], y[0]]),
-                                             target_separation)
+            centre_xy = _find_release_zone_location(centre_ref_xy, last_vertex,
+                                                    current_vertex,
+                                                    target_separation)
+            
+            # Convert back to lon/lat if necessary
+            if coordinate_system == 'geographic':
+                centre_lon, centre_lat = lonlat_from_utm(
+                    centre_xy[0], centre_xy[1], epsg_code)
+                centre = np.array([centre_lon[0], centre_lat[0]])
+            else:
+                centre = np.array(centre_xy[0], centre_xy[1])
 
-            # Create location
-            release_zone = create_release_zone(group_id, release_zone_radius,
-                                               r4, n_particles, depth, random)
+            # Create the release zone
+            release_zone = create_release_zone(
+                group_id=group_id,
+                radius=release_zone_radius,
+                centre=centre,
+                coordinate_system=coordinate_system,
+                epsg_code=epsg_code,
+                n_particles=n_particles,
+                depth=depth,
+                random=random)
+
             if verbose:
                 n = release_zone.get_number_of_particles()
                 print(f"Zone (group_id = {group_id}) contains {n} particles.")
@@ -708,13 +830,20 @@ def create_release_zones_around_shape_section(
             # Check if the new release zone overlaps with non-adjacent zones
             if check_overlaps:
                 for zone_test in release_zones:
-                    centre_test = zone_test.get_centre()
-                    zone_separation = _get_length(r4, centre_test)
+                    # Get centre
+                    centre_test = zone_test.centre
+                    if coordinate_system == 'geographic':
+                        easting, northing, _ = utm_from_lonlat(
+                            centre_test[0], centre_test[1], epsg_code)
+                        centre_test = np.array([easting[0], northing[0]])
+
+                    # Computer separation
+                    zone_separation = _get_length(centre_xy, centre_test)
                     offset = (target_separation - zone_separation)
                     if offset / target_separation > overlap_tol:
                         print(f"WARNING: Area overlap detected between "
-                              f"release zones {zone_test.get_group_id()} "
-                              f"and {release_zone.get_group_id()}. "
+                              f"release zones {zone_test.group_id} "
+                              f"and {release_zone.group_id}. "
                               f"Target separation = {target_separation}. "
                               f"Actual separation = {zone_separation}.")
 
@@ -722,13 +851,12 @@ def create_release_zones_around_shape_section(
             release_zones.append(release_zone)
 
             # Update references and counters
-            centre_ref = r4
+            centre_ref_xy = centre_xy
             group_id += 1
         else:
             # Update counters
-            distance_travelled += _get_length(last_vertex,
-                                              np.array([x[0], y[0]]))
-            last_vertex = np.array([x[0], y[0]])
+            distance_travelled += _get_length(last_vertex, current_vertex)
+            last_vertex = current_vertex
             idx = _update_idx(idx, clockwise_ordering)
             counter += 1
 
@@ -781,33 +909,26 @@ def _is_clockwise_ordered(points: np.ndarray) -> bool:
     return is_clockwise
 
 
-def _find_start_index(points: np.ndarray, lon: float, lat: float,
-                      tolerance: Optional[float] = None,
-                      epsg_code: Optional[str] = None) -> int:
+def _find_start_index(points: np.ndarray, x: float, y: float,
+                      tolerance: Optional[float] = None) -> int:
     """ Find start index for release zone creation.
 
     Parameters
     ----------
     points: ndarray
-        2D array (n,2) containing lon/lat coordinates for n locations. Ordering
-        is criticial, and must adhere to points[:,0] -> lon values, points[:,1]
-        -> lat values.
+        2D array (n,2) containing x/y coordinates for n locations. Ordering
+        is criticial, and must adhere to points[:,0] -> x values, points[:,1]
+        -> y values.
 
-    lon: float
-        Target longitude
+    x: float
+        Target x
 
-    lat: float
-        Target latitude
+    y: float
+        Target y
 
     tolerance: float, optional
-        Raise ValueError if the target lat/lon values lie beyond this distance
+        Raise ValueError if the target x/y values lie beyond this distance
         (in m) from the shape_obj.
-
-    epsg_code : str, optional
-        Give a EPSG code to use when transforming lat and lon coordinates to m.
-        If not provided, the supplied lat and lon values are used to infer the
-        EPSG code. Useful for large domains which spread over multiple UTM
-        zones.
 
     Returns
     -------
@@ -815,22 +936,17 @@ def _find_start_index(points: np.ndarray, lon: float, lat: float,
         Start index in array points[start_idx,:].
 
     """
-    if epsg_code is None:
-        epsg_code = get_epsg_code(lon, lat)
+    x_points = points[:, 0]
+    y_points = points[:, 1]
 
-    x_start, y_start, _ = utm_from_lonlat(lon, lat, epsg_code=epsg_code)
-
-    x_points, y_points, _ = utm_from_lonlat(points[:, 0], points[:, 1],
-                                            epsg_code=epsg_code)
-
-    # Find the position on the boundary closest to the supplied lat/lon values.
-    distances = np.hypot(x_points - x_start[0], y_points - y_start[0])
+    # Find the position on the boundary closest to the supplied x/y values.
+    distances = np.hypot(x_points - x, y_points - y)
     distance_min = np.min(distances)
     if tolerance is not None:
         if distance_min < tolerance:
             start_idx = np.argmin(distances)
         else:
-            raise ValueError(f"Supplied lat/lon values are further away that "
+            raise ValueError(f"Supplied x/y values are further away than "
                              f"{tolerance} m to the nearest vertex of the "
                              f"supplied shape.")
     else:
@@ -856,11 +972,6 @@ def _get_length(r1: np.ndarray, r2: np.ndarray) -> float:
        Length in m.
 
     """
-    if ~isinstance(r1, np.ndarray):
-        r1 = np.array(r1)
-    if ~isinstance(r2, np.ndarray):
-        r2 = np.array(r2)
-
     r12 = r2 - r1
 
     return np.sqrt((r12*r12).sum())
@@ -886,7 +997,10 @@ def _update_idx(idx: int, clockwise_ordering: bool) -> int:
     return idx + 1 if clockwise_ordering else idx - 1
 
 
-def _find_release_zone_location(r1, r2, r3, r14_length) -> np.ndarray:
+def _find_release_zone_location(r1: np.ndarray,
+                                r2: np.ndarray,
+                                r3: np.ndarray,
+                                r14_length: float) -> np.ndarray:
     """ Find release zone location
 
     Find the position vector r4 that sits on the line joining the position
@@ -908,13 +1022,6 @@ def _find_release_zone_location(r1, r2, r3, r14_length) -> np.ndarray:
         The position vector r4.
 
     """
-    if ~isinstance(r1, np.ndarray):
-        r1 = np.array(r1)
-    if ~isinstance(r2, np.ndarray):
-        r2 = np.array(r2)
-    if ~isinstance(r3, np.ndarray):
-        r3 = np.array(r3)
-
     # Vector running from r1 to r2
     r12 = r2 - r1
 
