@@ -368,29 +368,41 @@ class ReleaseZone(object):
         return poly
 
 
-def create_release_zone(group_id=1, radius=100.0, centre=[0.0, 0.0],
-                        n_particles=100, depth=0.0, random=True):
+def create_release_zone(group_id: Optional[int] = 1,
+                        radius: Optional[float] = 100.0,
+                        centre=[0.0, 0.0],
+                        coordinate_system: Optional[str]='cartesian',
+                        n_particles: Optional[int] = 100,
+                        depth: Optional[float] = 0.0,
+                        random: Optional[bool] = True) -> ReleaseZone:
     """ Create a new release zone
 
     Parameters
     ----------
     group_id : integer, optional
-        Group identifier.
+        Group identifier. Optional, defaults to 1.
 
     radius : float, optional
-        Radius of the circle in meters.
+        Radius of the circle in meters. Optional, defaults to 100.0 m.
 
     centre : ndarray [float, float], optional
-        x, y coordinates of the circle centre in meters.
+        x, y coordinates of the circle centre in meters. Optional,
+        defaults to [0.0, 0.0].
+
+    coordinate_system : str, optional
+        Coordinate system used to interpret the given `centre` coordinates.
+        The options are 'geographic' or 'cartesian' (default). If 'geographic'
+        is given, the coordinates are assumed to be in lon/lat. If 'cartesian'
+        is given, the coordinates are assumed to be in x/y.
 
     n_particles : integer, optional
-        The number of particles.
-
+        The number of particles. Optional, defaults to 100.
+ 
     depth : float, optional
-        Zone depth in m (default 0.0m).
+        Zone depth in m. Optional, defaults to 0.0 m.
 
     random : boolean, optional
-        Assign x/y positions randomly (default).
+        Assign x/y positions randomly. Optional, defaults to True.
 
     Returns
     -------
@@ -398,45 +410,64 @@ def create_release_zone(group_id=1, radius=100.0, centre=[0.0, 0.0],
        ReleaseZone object.
 
     """
-    if ~isinstance(radius, numbers.Real):
-        radius = float(radius)
-
-    if ~isinstance(depth, numbers.Real):
-        depth = float(depth)
-
     # Create a new release zone given its radius and centre
-    release_zone = ReleaseZone(group_id, radius, centre)
+    release_zone = ReleaseZone(group_id=group_id,
+                               radius=radius,
+                               centre=centre,
+                               coordinate_system=coordinate_system)
 
     # Create a new particle set of n_particles at the given depth
-    release_zone.create_particle_set(n_particles, depth, random)
+    release_zone.create_particle_set(n_particles=n_particles,
+                                     depth=depth,
+                                     random=random)
 
     return release_zone
 
 
-def create_release_zones_along_cord(r1, r2, group_id=1, radius=100.0,
-                                    n_particles=100, depth=0.0, random=True,
-                                    verbose=False):
+def create_release_zones_along_cord(
+        start_point, end_point,
+        coordinate_system: Optional[str] = 'cartesian',
+        group_id: Optional[int] = 1,
+        radius: Optional[float] = 100.0,
+        n_particles: Optional[int] = 100,
+        depth: Optional[float] = 0.0,
+        random: Optional[bool] = True,
+        verbose: Optional[bool] = False) -> list:
     """ Generate a set of release zones along a cord
 
-    Return particle positions along a line `r3`, defined by the
-    position vectors `r1` and `r2`. Particles are packed into
-    circlular zones of radius radius, running along `r3`. Positions
-    for approximately n particles (`= n` if random is `True`) are returned
-    per zone. If `2*radius` is `> |r3|`, no zones are created.
+    Return particle positions along a line `r`, defined by the
+    position vectors `start_point` and `end_point`.
+    `start_point` and `end_point` may be defined
+    in Cartesian or geographic coordinates. If they are defined in
+    geographic coordiantes, as specified by the `coordinate_system`
+    argument, they are transformed into UTM coordinates before
+    release zones are created, with the correct UTM EPSG code
+    calculated from `start_point`. Particles are packed into circlular zones
+    of radius `radius`, running along `r`. Positions
+    for approximately `n` particles (`= n` if random is `True`) are
+    returned per zone. If `2*radius` is `> |r|`, no zones are created.
 
     Parameters
     ----------
-    r1 : ndarray [float, float]
-        Two component position vector in cartesian coordinates (x,y).
+    start_point : array_like [float, float]
+        Two component position vector in cartesian or geographic
+        coordinates (x,y or lon/lat) that defines the start of the
+        cord.
 
-    r2 : ndarray [float, float]
-        Two component position vector in cartesian coordinates (x,y).
+    end_point : array_like [float, float]
+        Two component position vector in cartesian coordinates or
+        geographic coordinates (x,y or lon/lat) that defines the
+        end of the cord.
+
+    coordinate_system : str, optional
+        Coordinate system used to interpret the given `r1` and `r2`
+        coordinates. The options are 'geographic' or 'cartesian'.
 
     group_id : integer, optional
         Group id for the 1st release zone created along the cord.
 
     radius : float, optional
-        Zone radius in m.
+        The radius of each zone m.
 
     n_particles : integer, optional
         Number of particles per zone.
@@ -453,13 +484,26 @@ def create_release_zones_along_cord(r1, r2, group_id=1, radius=100.0,
 
     Returns
     -------
-    zones : object, iterable
+    zones : list
         List of release zone objects along the cord.
     """
+    if coordinate_system == 'cartesian':
+        r1 = np.array(start_point, dtype=float)
+        r2 = np.array(end_point, dtype=float)
+    elif coordinate_system == 'geographic':
+        x1, y1, epsg_code= utm_from_lonlat(start_point[0], start_point[1])
+        x2, y2, _ = utm_from_lonlat(end_point[0], end_point[1], epsg_code)
+
+        r1 = np.array([x1, y1], dtype=float)
+        r2 = np.array([x2, y2], dtype=float)
+    else:
+        raise ValueError(f"Unrecognised coordinate system "
+                         f"{coordinate_system}. Options are "
+                         f"'geographic' or 'cartesian'.")
 
     # Use the line vector running between the position vectors r1 and r2
     # to calculate the no. of release zones.
-    r3 = r2 - r1
+    r3 = r1 - r2
     r3_length = np.sqrt((r3*r3).sum())
     r3_unit_vector = r3 / r3_length
     n_zones, buffer_zone = divmod(r3_length, 2.0*radius)
@@ -477,12 +521,19 @@ def create_release_zones_along_cord(r1, r2, group_id=1, radius=100.0,
     # every (2.0*radius) m.
     release_zones = []
     for n in np.arange(n_zones, dtype=int):
-        r3_prime = (2.0 * float(n) * radius + radius + buffer_zone/2.0)*r3_unit_vector
+        r3_prime = (2.0 * float(n) * radius +
+                    radius + buffer_zone/2.0) * r3_unit_vector
         centre = r1 + r3_prime
-        release_zone = create_release_zone(group_id, radius, centre, n_particles, depth, random)
+
+        release_zone = create_release_zone(group_id,
+                                           radius,
+                                           centre,
+                                           n_particles,
+                                           depth,
+                                           random)
         if verbose:
-            n_particles_in_release_zone = release_zone.get_number_of_particles()
-            print(f"Zone {n} (group_id = {group_id}) contains {n_particles_in_release_zone} particles.")
+            np = release_zone.get_number_of_particles()
+            print(f"Zone {n} (group_id = {group_id}) contains {np} particles.")
         release_zones.append(release_zone)
         group_id += 1
 
