@@ -8,6 +8,7 @@ ConfigParser to be passed to all PyLag objects that use information within
 the PyLag configuration file during class initialisation.
 """
 
+import os
 import logging
 
 try:
@@ -15,6 +16,7 @@ try:
 except ImportError:
     import ConfigParser as configparser
 
+from pylag.exceptions import PyLagRuntimeError
 
 def get_config(config_filename=None):
     """ Get the run config
@@ -50,7 +52,13 @@ def get_config(config_filename=None):
         # Create new configuration object
         _config = configparser.ConfigParser()
         
-        if config_filename:
+        if config_filename is not None:
+
+            # Confirm that the file exists
+            if not os.path.isfile(config_filename):
+                raise PyLagRuntimeError(f"Configuration file "
+                                        f"{config_filename} not found.")
+
             _config.read(config_filename)
 
             # Add deprecation warning for the config section name 
