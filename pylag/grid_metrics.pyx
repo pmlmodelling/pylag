@@ -198,7 +198,7 @@ def create_fvcom_grid_metrics_file(fvcom_file_name: str,
                                    variable_names: Optional[dict]={},
                                    obc_file_name: Optional[str]=None,
                                    obc_file_delimiter: Optional[str]=' ',
-                                   central_latitude: Optional[float]=0.0,
+                                   central_latitude: Optional[int]=0,
                                    grid_metrics_file_name: Optional[str]='./grid_metrics.nc'):
     """Create FVCOM grid metrics file
 
@@ -659,7 +659,7 @@ def create_arakawa_a_grid_metrics_file(file_name, lon_var_name='longitude',
         reference_var_name=None, bathymetry_var_name=None, dim_names=None,
         is_global=False, surface_only=False, save_mask=True, prng_seed=10,
         masked_vertices_per_element=0,
-        central_latitude: Optional[int]=0.0,
+        central_latitude: Optional[int]=0,
         grid_metrics_file_name='./grid_metrics.nc'):
     """ Create a Arakawa A-grid metrics file
 
