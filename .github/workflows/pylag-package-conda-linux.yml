@@ -18,7 +18,7 @@ jobs:
         with:
           activate-environment: "pylag_test"
           auto-activate-base: false
-          channels: conda-forge,JimClark
+          channels: conda-forge
           auto-update-conda: true
           environment-file: environment.yml
           python-version: ${{ matrix.python-version }}
