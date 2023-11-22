@@ -25,22 +25,22 @@ class ReleaseZoneCreatorTest(TestCase):
 
     def test_get_group_id(self):
         release_zone = ReleaseZone(self.group_id, self.radius, self.centre)
-        group_id = release_zone.get_group_id()
+        group_id = release_zone.group_id
         test.assert_equal(self.group_id, group_id)
 
     def test_get_radius(self):
         release_zone = ReleaseZone(self.group_id, self.radius, self.centre)
-        radius = release_zone.get_radius()
+        radius = release_zone.radius
         test.assert_almost_equal(self.radius, radius)
 
     def test_get_area(self):
         release_zone = ReleaseZone(self.group_id, self.radius, self.centre)
-        area = release_zone.get_area()
+        area = release_zone.area
         test.assert_almost_equal(np.pi*self.radius*self.radius, area)
 
     def test_get_centre(self):
         release_zone = ReleaseZone(self.group_id, self.radius, self.centre)
-        centre = release_zone.get_centre()
+        centre = release_zone.centre
         test.assert_almost_equal(self.centre[0], centre[0])
         test.assert_almost_equal(self.centre[1], centre[1])
 
@@ -71,7 +71,7 @@ class ReleaseZoneCreatorTest(TestCase):
         z = 0.0
         release_zone = ReleaseZone(self.group_id, self.radius, self.centre)
         release_zone.add_particle(x, y, z)
-        x_coords, y_coords, z_coords = release_zone.get_coords()
+        x_coords, y_coords, z_coords = release_zone.get_coordinates()
         test.assert_array_almost_equal(x, x_coords)
         test.assert_array_almost_equal(y, y_coords)
         test.assert_array_almost_equal(z, z_coords)
@@ -90,7 +90,7 @@ class ReleaseZoneCreatorTest(TestCase):
         lon_start = 0.1
         lat_start = 1.1
         points = np.array([[0.0, 0.0], [0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]])
-        start_idx = find_start_index(points, lon_start, lat_start, epsg_code=self.epsg_code)
+        start_idx = find_start_index(points, lon_start, lat_start)
         test.assert_equal(1, start_idx)
 
     def test_get_length(self):
