@@ -1,0 +1,42 @@
+name: Release
+on:
+  release:
+    types: [ released ]
+jobs:
+  build-linux:
+    name: Miniconda ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+        matrix:
+            os: ["ubuntu-latest"]
+            python-version: ["3.11"]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: "pylag_test"
+          auto-activate-base: false
+          channels: conda-forge,JimClark
+          auto-update-conda: true
+          environment-file: environment.yml
+          python-version: ${{ matrix.python-version }}
+      - name: Install package
+        shell: bash -l {0}
+        run: |
+          conda install -c JimClark pylag
+      - name: Show conda env
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+#      - name: Lint
+#        shell: bash -l {0}
+#        run: |
+#            conda install flake8
+#            python -m flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+#            python -m flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      - name: Run pytest
+        shell: bash -l {0}
+        run: |
+            conda install pytest
+            pytest
