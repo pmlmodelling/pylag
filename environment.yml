@@ -1,5 +1,18 @@
 name: pylag
 channels:
-  - JimClark
+  - conda-forge
 dependencies:
-  - pylag
+  - python
+  - mpi4py
+  - numpy>=1.20
+  - scipy>=1.4.1
+  - cython>=0.29
+  - progressbar
+  - natsort
+  - netCDF4
+  - cftime>=1.1
+  - configparser
+  - stripy
+  - shapely
+  - pyproj
+  - nose2
