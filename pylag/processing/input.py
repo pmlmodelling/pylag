@@ -91,10 +91,9 @@ def create_initial_positions_file_multi_group(filename, release_zones):
     f = open(filename, 'w')
     f.write(str(n) + '\n')
     for release_zone in release_zones:
-        eastings = release_zone.get_eastings()
-        northings = release_zone.get_northings()
-        depths = release_zone.get_depths()
-        for x, y, z in zip(eastings, northings, depths):
-            line = str(release_zone.get_group_id()) + ' ' + str(x) + ' ' + str(y) + ' ' + str(z) + '\n'
+        x_arr, y_arr, z_arr = release_zone.get_coordinates()
+        for x, y, z in zip(x_arr, y_arr, z_arr):
+            line = (str(release_zone.group_id) +
+                    ' ' + str(x) + ' ' + str(y) + ' ' + str(z) + '\n')
             f.write(line)
     f.close()

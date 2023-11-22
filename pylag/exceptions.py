@@ -15,6 +15,10 @@ class PyLagRuntimeError(PyLagException):
     pass
 
 
+class PyLagAttributeError(PyLagException):
+    pass
+
+
 class PyLagValueError(PyLagException):
     pass
 
