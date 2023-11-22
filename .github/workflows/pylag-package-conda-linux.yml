@@ -30,8 +30,7 @@ jobs:
       - name: Install local changes
         shell: bash -l {0}
         run: |
-          pip install .
-          python -c "import pylag; print(f'PyLag Git commit: {pylag.version.git_revision}')"
+          python -m pip install .
 #      - name: Lint
 #        shell: bash -l {0}
 #        run: |

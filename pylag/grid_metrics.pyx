@@ -198,7 +198,7 @@ def create_fvcom_grid_metrics_file(fvcom_file_name: str,
                                    variable_names: Optional[dict]={},
                                    obc_file_name: Optional[str]=None,
                                    obc_file_delimiter: Optional[str]=' ',
-                                   central_latitude: Optional[int]=0.0,
+                                   central_latitude: Optional[float]=0.0,
                                    grid_metrics_file_name: Optional[str]='./grid_metrics.nc'):
     """Create FVCOM grid metrics file
 
