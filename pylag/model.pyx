@@ -345,20 +345,7 @@ cdef class OPTModel:
                     # Don't set vertical grid vars as this will fail if
                     # zeta < h. They will be set later.
                     particle_ptr.set_is_beached(1)
-
-                # Initialise the age of the particle to 0 s.
-                particle_ptr.set_age(0.0)
-
-                # Initialise bio particle properties
-                if self.use_bio_model:
-                    if self.config.get("SIMULATION",
-                            "initialisation_method") != "restart_file":
-                        self.bio_model.set_initial_particle_properties(particle_ptr)
-                    else:
-                        raise NotImplementedError('It is not yet possible to '
-                                                  'run bio models with '
-                                                  'restarts')
-
+                
             self.particle_smart_ptrs.append(particle_smart_ptr)
             self.particle_ptrs.push_back(particle_ptr)
 
@@ -418,6 +405,32 @@ cdef class OPTModel:
                 flag = self.data_reader.find_host_using_global_search(
                         particle_smart_ptr.get_ptr())
 
+            # Initialise particle settling velocity parameters
+            if self.settling_velocity_calculator is not None:
+                self.settling_velocity_calculator.init_particle_settling_velocity(
+                        particle_smart_ptr.get_ptr())
+
+            # Initialise the age of the particle to 0 s.
+            particle_smart_ptr.set_age(0.0)
+
+            # Initialise bio particle properties
+            if self.use_bio_model:
+                if self.config.get("SIMULATION",
+                        "initialisation_method") != "restart_file":
+                    self.bio_model.set_initial_particle_properties(
+                        particle_smart_ptr.get_ptr())
+                else:
+                    # TODO: Add support for bio model restarts
+                    #
+                    # NB This would require one to read in bio model data
+                    # from the restart file and set the particle properties
+                    # accordingly. This is not yet possible - only particle
+                    # position data is read from restart files. So, for now,
+                    # raise an error.
+                    raise NotImplementedError('It is not yet possible to '
+                                              'run bio models with '
+                                              'restarts')
+
             if flag == IN_DOMAIN:
                 particle_smart_ptr.get_ptr().set_in_domain(True)
 
@@ -444,11 +457,6 @@ cdef class OPTModel:
 
                 particle_smart_ptr.get_ptr().set_fixed_depth(
                         fixed_depth_below_surface)
-
-                # Initialise particle settling velocity parameters
-                if self.settling_velocity_calculator is not None:
-                    self.settling_velocity_calculator.init_particle_settling_velocity(
-                            particle_smart_ptr.get_ptr())
 
                 # Add particle to the particle set
                 self.particle_seed_smart_ptrs.append(particle_smart_ptr)
