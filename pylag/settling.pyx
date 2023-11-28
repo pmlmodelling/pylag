@@ -218,7 +218,7 @@ cdef class DelayedSettlingVelocityCalculator(SettlingVelocityCalculator):
     cdef DTYPE_FLOAT_t _settling_velocity
 
     # Internal flags
-    cdef bint _settling_has_started
+    cdef string _has_started_var_name
 
     def __init__(self, config):
         self._config = config
@@ -233,8 +233,8 @@ cdef class DelayedSettlingVelocityCalculator(SettlingVelocityCalculator):
 
         self._settling_velocity = self._config.getfloat("DELAYED_SETTLING_VELOCITY_CALCULATOR", "settling_velocity")
 
-        # Internal flags
-        self._settling_has_started = False
+        # Setting has started flag
+        self._has_started_var_name = b'settling_has_started'
 
     cdef void init_particle_settling_velocity(self, Particle *particle) except *:
         """ Initialise the particle settling velocity
@@ -244,15 +244,19 @@ cdef class DelayedSettlingVelocityCalculator(SettlingVelocityCalculator):
         particle : C pointer
             C pointer to a particle struct.
         """
+        # Settling has not yet started
+        particle.set_boolean_flag(self._has_started_var_name, False)
+
         # The particle's position is initially restored to be at the surface
         particle.set_restore_to_fixed_depth(True)
         particle.set_fixed_depth(0.0)
 
         # The settling velocity of the particle (initially zero, overwritten below)
-        particle.set_diagnostic_variable(self._settling_velocity_variable_name, 0.0)
+        particle.set_diagnostic_variable(self._settling_velocity_variable_name,
+                                         0.0)
 
-    cdef void set_particle_settling_velocity(self, DataReader data_reader, DTYPE_FLOAT_t time,
-                    Particle *particle) except *:
+    cdef void set_particle_settling_velocity(self, DataReader data_reader,
+            DTYPE_FLOAT_t time, Particle *particle) except *:
         """ Set the settling velocity
 
         As the velocity is fixed, do nothing.
@@ -269,12 +273,13 @@ cdef class DelayedSettlingVelocityCalculator(SettlingVelocityCalculator):
         particle : C pointer
             C pointer to a particle struct.
         """
-        if self._settling_has_started == False:
+        if particle.get_boolean_flag(self._has_started_var_name) == False:
             if time >= self._duration_of_surface_transport_phase_in_seconds:
                 particle.set_restore_to_fixed_depth(False)
                 particle.set_fixed_depth(-999.)
-                particle.set_diagnostic_variable(self._settling_velocity_variable_name, self._settling_velocity)
-                self._settling_has_started = True
+                particle.set_diagnostic_variable(self._settling_velocity_variable_name,
+                                                 self._settling_velocity)
+                particle.set_boolean_flag(self._has_started_var_name, True)
 
 
 def get_settling_velocity_calculator(config):
