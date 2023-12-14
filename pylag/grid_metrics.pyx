@@ -612,6 +612,23 @@ def create_fvcom_grid_metrics_file(fvcom_file_name: str,
     nbe_data = nbe_data.T
     nv_data = nv_data.T
     sort_adjacency_array(nv_data, nbe_data)
+
+    # Save element areas
+    print('\nCalculating element areas ', end='... ')
+    lon_nodes = fvcom_dataset.variables[lon_var_name][:].astype(DTYPE_FLOAT)
+    lat_nodes = fvcom_dataset.variables[lat_var_name][:].astype(DTYPE_FLOAT)
+    areas = compute_element_areas(nv_data, lon_nodes, lat_nodes,
+                                  coordinate_system='geographic')
+    area_attrs = {'standard_name' : 'areas',
+                  'units' : 'm^2',
+                  'long_name' : 'Element areas'}
+ 
+    # Save areas
+    gm_file_creator.create_variable('area', areas, ('element',),
+            DTYPE_FLOAT, attrs=area_attrs)
+    print('done')
+
+    # Transpose back to original shape as expected by PyLag
     nbe_data = nbe_data.T
     nv_data = nv_data.T
 
