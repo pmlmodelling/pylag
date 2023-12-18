@@ -374,7 +374,8 @@ class FVCOMPlotter(PyLagPlotter):
         if update is True:
             for collection in ax.collections:
                 if type(collection) == PolyCollection:
-                    collection.set_array(field)
+                    field_masked = field[~self.tri.mask]
+                    collection.set_array(field_masked)
                     return ax
             raise RuntimeError('Received update is True, but the current axis does not contain a PolyCollection object.')
 
