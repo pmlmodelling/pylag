@@ -5,7 +5,7 @@ PyLag plotting functions
 from __future__ import division, print_function
 
 import numpy as np
-from scipy import interp
+from numpy import interp
 from netCDF4 import Dataset
 from cftime import num2pydate
 import stripy as stripy
