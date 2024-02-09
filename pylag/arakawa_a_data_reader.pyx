@@ -1531,11 +1531,13 @@ cdef class ArakawaADataReader(DataReader):
             if self._trim_last_latitude == 1:
                 var = var[:, :-1]
 
+            var = np.ascontiguousarray(var.reshape(np.prod(var.shape), order='C')[self._permutation])
+
             # Add depth axis if required
             if add_depth_axis:
-                var = var[np.newaxis, :, :]
+                var = var[np.newaxis, :]
 
-            return np.ascontiguousarray(var.reshape(np.prod(var.shape), order='C')[self._permutation])
+            return var
 
         elif n_dimensions == 3:
             depth_index = dimension_indices['depth']
