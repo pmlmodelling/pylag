@@ -41,4 +41,4 @@ jobs:
         shell: bash -l {0}
         run: |
             conda install pytest
-            pytest
+            python -m pytest
