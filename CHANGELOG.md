@@ -2,6 +2,22 @@
 
 PyLag is still very much in development. This page will be updated when future releases are made.
 
+## Version 0.7.1 21/06/2024
+
+* Enable release zone creator to work with geograpbhic and cartesian coordinates (#127)
+
+* Fix Cython compile time error (#130)
+
+* Fix github actions issues
+
+* Fix issue with delayed settling velocity calculator (#139)
+
+# Enable saving of FVCOM element areas (#141)
+
+# Switch to using NumPy's interp (#148)
+
+# Fix problem in advection and diffusion example notebook (#150)
+
 ## Version 0.7.0 12/07/2023
 
 * Address issue #94 relating to the number of FVCOM open boundary nodes.

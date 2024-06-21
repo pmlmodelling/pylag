@@ -10,7 +10,7 @@ import numpy
 
 MAJOR               = 0
 MINOR               = 7
-PATCH               = 0
+PATCH               = 1
 ISRELEASED          = True
 VERSION = '{}.{}.{}'.format(MAJOR, MINOR, PATCH)
 
