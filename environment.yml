@@ -16,3 +16,4 @@ dependencies:
   - shapely
   - pyproj
   - nose2
+  - pytest
