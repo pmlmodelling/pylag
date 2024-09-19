@@ -11,6 +11,11 @@ include "constants.pxi"
 
 import numpy as np
 
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
+
 from libcpp.vector cimport vector
 
 # Data types used for constructing C data structures
@@ -32,6 +37,10 @@ from pylag.parameters cimport seconds_per_day, radians_to_deg, deg_to_radians
 from pylag.particle cimport Particle
 from pylag.data_reader cimport DataReader
 from pylag.particle_cpp_wrapper cimport ParticleSmartPtr
+
+# Exceptions
+from pylag.exceptions import PyLagRuntimeError, PyLagValueError
+
 
 cdef class Regridder:
     """ A Regridder object
@@ -111,20 +120,51 @@ cdef class Regridder:
         self.datetime_start = datetime_start
         self.datetime_end = datetime_end
 
+        # At present, we only support the regridding of ocean data. If other data
+        # types are listed in the config file, raise an error.
+        try:
+            ocean_product_name = config.get("OCEAN_DATA",
+                                            "name").strip()
+        except (configparser.NoSectionError, configparser.NoOptionError):
+            raise PyLagRuntimeError("No ocean data specified in the config file. This "
+                                    "should be speficied using the OCEAN_DATA section of the config "
+                                    "file.")
+
+        # If atmosphere data is specified, raise a warning that this will not be read or used.
+        try:
+            atmos_product_name = config.get("ATMOSPHERE_DATA", "name").strip()
+        except (configparser.NoSectionError, configparser.NoOptionError):
+            atmos_product_name = "none"    
+
+        if atmos_product_name.lower() != "none":
+            print(f'Warning: Atmosphere data specified in config file. This will not be read or used '
+                  f'during regridding.')
+        
+        # If wave data is specified, raise a warning that this will not be read or used.
+        try:
+            wave_product_name = config.get("WAVE_DATA", "name").strip()
+        except (configparser.NoSectionError, configparser.NoOptionError):
+            wave_product_name = "none"
+
+        if wave_product_name.lower() != "none":
+            print(f'Warning: Wave data specified in config file. This will not be read or used '
+                  f'during regridding.')
+
         # Intialise the data reader
-        if config.get("OCEAN_DATA", "name") == "ArakawaA":
-            mediator = SerialMediator(config, datetime_start, datetime_end)
+        data_source = 'ocean'
+        if ocean_product_name == "ArakawaA":
+            mediator = SerialMediator(config, data_source, datetime_start, datetime_end)
             self.data_reader = ArakawaADataReader(config, mediator)
-        elif config.get("OCEAN_DATA", "name") == "FVCOM":
-            mediator = SerialMediator(config, datetime_start, datetime_end)
+        elif ocean_product_name == "FVCOM":
+            mediator = SerialMediator(config, data_source, datetime_start, datetime_end)
             self.data_reader = FVCOMDataReader(config, mediator)
-        elif config.get("OCEAN_DATA", "name") == "ROMS":
-            mediator = SerialMediator(config, datetime_start, datetime_end)
+        elif ocean_product_name == "ROMS":
+            mediator = SerialMediator(config, data_source, datetime_start, datetime_end)
             self.data_reader = ROMSDataReader(config, mediator)
         else:
-            raise ValueError('Unsupported ocean circulation model.')
+            raise PyLagValueError('Unsupported ocean data product.')
 
-        self.coordinate_system = config.get("SIMULATION", "coordinate_system")
+        self.coordinate_system = self.config.get("SIMULATION", "coordinate_system").strip().lower()
 
         # Generate particle set, including interpolation coefficients
         print('Computing weights ', end='... ')
@@ -188,9 +228,8 @@ cdef class Regridder:
 
         # Check that the coordinate system is supported
         # TODO if support for Cartesian input grids is added, will need to apply xmin and xmax offsets
-        self.coordinate_system = self.config.get("OCEAN_DATA", "coordinate_system").strip().lower()
         if not self.coordinate_system == "geographic":
-            raise ValueError('Input oordinate sytem {} is not supported in regridding tasks.'.format(self.coordinate_system))
+            raise ValueError(f'Input oordinate sytem {self.coordinate_system} is not supported in regridding tasks.')
 
         # Initialise variables involved in creating the particle set
         host_elements = None
