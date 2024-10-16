@@ -14,7 +14,7 @@ import collections
 try:
     import matplotlib
     from matplotlib import pyplot as plt
-    from matplotlib.tri.triangulation import Triangulation
+    from matplotlib.tri import Triangulation
     from matplotlib.collections import PolyCollection
     from matplotlib.colors import Normalize
     from matplotlib import cm as mplcm
