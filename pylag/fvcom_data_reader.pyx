@@ -28,6 +28,7 @@ from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 from libcpp.string cimport string
 from libcpp.vector cimport vector
+from libc.math cimport log
 
 # PyLag cython imports
 from pylag.parameters cimport cartesian, geographic, deg_to_radians
@@ -160,6 +161,13 @@ cdef class FVCOMDataReader(DataReader):
     cdef DTYPE_FLOAT_t _time_last
     cdef DTYPE_FLOAT_t _time_next
 
+    # Options controlling velocity corrections near to surface and bottom boundaries
+    cdef bint _correct_near_bottom_velocities
+
+    # Bottom roughness parameter
+    # TODO - Allow this to vary spatially?
+    cdef DTYPE_FLOAT_t _z0
+
     # Options controlling the reading of eddy diffusivities
     cdef object _Kz_method_name, _Ah_method_name
     cdef DTYPE_INT_t _Kz_method, _Ah_method
@@ -190,6 +198,28 @@ cdef class FVCOMDataReader(DataReader):
         else:
             raise PyLagValueError(f"Unsupported model coordinate system "
                                   f"`{coordinate_system}'")
+
+        # Set options for correcting near bottom velocities
+        try:
+            self._correct_near_bottom_velocities = self.config.getboolean("OCEAN_DATA",
+                                                                          "use_near_bottom_log_velocity_profile")
+        except (configparser.NoOptionError) as e:
+            self._correct_near_bottom_velocities = False
+
+        if self._correct_near_bottom_velocities:
+            try:
+                self._z0 = self.config.getfloat("OCEAN_DATA",
+                                                "z0")
+            except (configparser.NoOptionError) as e:
+                raise PyLagValueError(f"Missing required bottom roughness parameter `z0' for "
+                                      f"near bottom velocity correction. This parameter is required "
+                                      f"when `use_near_bottom_log_velocity_profile = True'.")
+            
+            # Ensure we have a sensible value for z0
+            if self._z0 <= 0.0:
+                raise PyLagValueError(f"Invalid value for bottom roughness parameter `z0'. "
+                                      f"This parameter must be greater than zero. Received "
+                                      f"z0 = {self._z0}.")
 
         # Set options for handling the vertical eddy diffusivity
         self._Kz_method_name = self.config.get('OCEAN_DATA',
@@ -1143,14 +1173,31 @@ cdef class FVCOMDataReader(DataReader):
         In FVCOM, the u, v, and w velocity components are defined at element
         centres on sigma layers and saved at discrete points in time. Here,
         u(t,x,y,z), v(t,x,y,z) and w(t,x,y,z) are retrieved through i) linear
-        interpolation in t and z, and ii) Shepard interpolation (which is
-        basically a special case of normalized radial basis function
-        interpolation) in x and y.
+        interpolation in t and z, and ii) Shepard interpolation (a special
+        case of normalized radial basis function interpolation) in x and y.
 
         In Shepard interpolation, the algorithm uses velocities defined at 
         the host element's centre and its immediate neghbours (i.e. at the
         centre of those elements that share a face with the host element).
+
+        If the particle is in the bottom boundary layer - meaning it lies
+        above the sea bed but below the bottom sigma layer - the velocity
+        can be corrected using the Law of the Wall. This option is enabled
+        using the run time configuration parameters
+        `correct_near_bottom_velocities' and `z0' (the roughness length
+        scale). If `correct_near_bottom_velocities' is set to False, the
+        velocity at the bottom sigma layer is extrapolated to the particle's
+        position.
         
+        When applying the log correction, the velocity is given by:
+
+        u(z_p) = u(z_1) ln(z_p/z0) / ln(z_1/z0)
+
+        where u(z_p) is the velocity at the particle's position, u(z_1) is the
+        velocity at the bottom sigma layer, z_p is the height of the particle
+        above the sea bed, z_1 is the height of the bottom sigma layer above the
+        sea bed, and z0 is the roughness length scale.
+
         NB - this function returns the vertical velocity in z coordinate space
         (units m/s) and not the vertical velocity in sigma coordinate space.
         
@@ -1199,6 +1246,10 @@ cdef class FVCOMDataReader(DataReader):
         # Variables used in interpolation in time      
         cdef DTYPE_FLOAT_t time_fraction
 
+        # Variables used in the Law of the Wall correction
+        cdef DTYPE_FLOAT_t z_min, z_layer
+        cdef DTYPE_FLOAT_t A1, A2
+
         # Array and loop indices
         cdef int i, j, neighbour
         
@@ -1245,10 +1296,36 @@ cdef class FVCOMDataReader(DataReader):
                 return
 
             elif particle.get_in_bottom_boundary_layer() is True:
-                # TODO - Include options here to correct near bottom velocities.
-                vel[0] = up1
-                vel[1] = vp1
-                vel[2] = wp1
+                if self._correct_near_bottom_velocities:
+                    # Use the Law of the Wall to correct the near bottom velocity
+                    # -----------------------------------------------------------
+
+                    # Determine the sea floor depth at the particle's position
+                    z_min = self.get_zmin(time, particle)
+
+                    # Compute the depth of the bottom sigma layer at the particle's position
+                    z_layer = self._unstructured_grid.interpolate_in_time_and_space(self._depth_layers_last,
+                                                                                    self._depth_layers_next,
+                                                                                    particle.get_k_layer(),
+                                                                                    time_fraction,
+                                                                                    particle)
+
+                    # Precalculate logarithmic terms
+                    A1 = log((z_layer - z_min) / self._z0)
+                    A2 = log((particle.get_x3() - z_min) / self._z0)
+
+                    # Apply correction
+                    vel[0] = up1 * A2 / A1
+                    vel[1] = vp1 * A2 / A1
+                    vel[2] = wp1 * A2 / A1
+
+                else:
+                    # Simply extrapolate downwards
+                    # ----------------------------
+                    vel[0] = up1
+                    vel[1] = vp1
+                    vel[2] = wp1
+
                 return 
             
             else:
