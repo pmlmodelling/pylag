@@ -155,11 +155,17 @@ cdef class StdNumMethod(NumMethod):
         cdef DTYPE_INT_t flag
         cdef DTYPE_INT_t counter
         cdef bint _depth_restoring
+        cdef bint _height_restoring
         cdef DTYPE_FLOAT_t _fixed_depth_below_surface
+        cdef DTYPE_FLOAT_t _fixed_height_above_bed
 
         # Are we using depth restoring
         _depth_restoring = particle.get_restore_to_fixed_depth()
         _fixed_depth_below_surface = particle.get_fixed_depth()
+
+        # Are we using height restoring
+        _height_restoring = particle.get_restore_to_fixed_height()
+        _fixed_height_above_bed = particle.get_fixed_height()
 
         # Create a clone of the current particle to work on
         _particle_copy = particle[0]
@@ -204,10 +210,31 @@ cdef class StdNumMethod(NumMethod):
         if flag != IN_DOMAIN:
             return flag
         
-        # Restore to a fixed depth?
+        # Restore to a fixed depth or height?
         if _depth_restoring is True:
             zmax = data_reader.get_zmax(time+self._time_step, &_particle_copy)
             _particle_copy.set_x3(_fixed_depth_below_surface + zmax)
+
+            # Only try to set vertical grid vars if the particle is not beached
+            if data_reader.is_wet(time+self._time_step, &_particle_copy) == 1:
+
+                # Determine the new host zlayer
+                flag = data_reader.set_vertical_grid_vars(time+self._time_step, &_particle_copy)
+
+                # Return if failure recorded
+                if flag != IN_DOMAIN:
+                    return flag
+            else:
+                _particle_copy.set_is_beached(1)
+
+            # Copy back particle properties
+            particle[0] = _particle_copy
+
+            return flag
+        
+        elif _height_restoring is True:
+            zmin = data_reader.get_zmin(time+self._time_step, &_particle_copy)
+            _particle_copy.set_x3(_fixed_height_above_bed + zmin)
 
             # Only try to set vertical grid vars if the particle is not beached
             if data_reader.is_wet(time+self._time_step, &_particle_copy) == 1:
@@ -360,10 +387,16 @@ cdef class OS0NumMethod(NumMethod):
         cdef DTYPE_INT_t counter
         cdef bint _depth_restoring
         cdef DTYPE_FLOAT_t _fixed_depth_below_surface
+        cdef bint _height_restoring
+        cdef DTYPE_FLOAT_t _fixed_height_above_bed
 
         # Are we using depth restoring
         _depth_restoring = particle.get_restore_to_fixed_depth()
         _fixed_depth_below_surface = particle.get_fixed_depth()
+
+        # Are we using height restoring
+        _height_restoring = particle.get_restore_to_fixed_height()
+        _fixed_height_above_bed = particle.get_fixed_height()
 
         # Advection
         # ---------
@@ -483,11 +516,32 @@ cdef class OS0NumMethod(NumMethod):
             # Save the particle's last position to help with host element searching
             _particle_copy_a = _particle_copy_b
 
-        # Restore to a fixed depth?
+        # Restore to a fixed depth or height?
         if _depth_restoring is True:
             zmax = data_reader.get_zmax(time+self._adv_time_step, &_particle_copy_b)
             _particle_copy_b.set_x3(_fixed_depth_below_surface + zmax)
             
+            # Only try to set vertical grid vars if the particle is not beached
+            if data_reader.is_wet(time+self._adv_time_step, &_particle_copy_b) == 1:
+
+                # Determine the new host zlayer
+                flag = data_reader.set_vertical_grid_vars(time+self._adv_time_step, &_particle_copy_b)
+
+                # Return if failure recorded
+                if flag != IN_DOMAIN:
+                    return flag
+
+            else:
+                _particle_copy_b.set_is_beached(1)
+
+            particle[0] = _particle_copy_b
+
+            return flag
+
+        elif _height_restoring is True:
+            zmin = data_reader.get_zmin(time+self._adv_time_step, &_particle_copy_b)
+            _particle_copy_b.set_x3(_fixed_height_above_bed + zmin)
+
             # Only try to set vertical grid vars if the particle is not beached
             if data_reader.is_wet(time+self._adv_time_step, &_particle_copy_b) == 1:
 
@@ -610,10 +664,16 @@ cdef class OS1NumMethod(NumMethod):
         cdef DTYPE_INT_t counter
         cdef bint _depth_restoring
         cdef DTYPE_FLOAT_t _fixed_depth_below_surface
+        cdef bint _height_restoring
+        cdef DTYPE_FLOAT_t _fixed_height_above_bed
 
         # Are we using depth restoring
         _depth_restoring = particle.get_restore_to_fixed_depth()
         _fixed_depth_below_surface = particle.get_fixed_depth()
+
+        # Are we using height restoring
+        _height_restoring = particle.get_restore_to_fixed_height()
+        _fixed_height_above_bed = particle.get_fixed_height()
 
         # 1st Diffusion step
         # ------------------
@@ -760,10 +820,35 @@ cdef class OS1NumMethod(NumMethod):
 
         t = time + self._adv_time_step
 
-        # Restore to a fixed depth?
+        # Restore to a fixed depth or height?
         if _depth_restoring is True:
             zmax = data_reader.get_zmax(t, &_particle_copy_b)
             _particle_copy_b.set_x3(_fixed_depth_below_surface + zmax)
+
+            if data_reader.is_wet(t, &_particle_copy_b) == 1:
+
+                # Determine the new host zlayer
+                flag = data_reader.set_vertical_grid_vars(t, &_particle_copy_b)
+
+                # Apply surface/bottom boundary conditions if required
+                if flag != IN_DOMAIN:
+                    flag = self._vert_bc_calculator.apply(data_reader, t, &_particle_copy_b)
+
+                # Return if failure recorded
+                if flag != IN_DOMAIN:
+                    return flag
+
+            else:
+                _particle_copy_b.set_is_beached(1)
+
+            # Copy back particle properties
+            particle[0] = _particle_copy_b
+
+            return flag
+
+        elif _height_restoring is True:
+            zmin = data_reader.get_zmin(t, &_particle_copy_b)
+            _particle_copy_b.set_x3(_fixed_height_above_bed + zmin)
 
             if data_reader.is_wet(t, &_particle_copy_b) == 1:
 

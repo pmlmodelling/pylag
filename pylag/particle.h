@@ -102,6 +102,12 @@ namespace particles {
             void set_fixed_depth(const double& rhs);
             double get_fixed_depth() const;
 
+            void set_restore_to_fixed_height(const bool& rhs);
+            bool get_restore_to_fixed_height() const;
+
+            void set_fixed_height(const double& rhs);
+            double get_fixed_height() const;
+
             void set_age(const float& rhs);
             float get_age() const;
 
@@ -212,6 +218,12 @@ namespace particles {
 
             // Depth below the surface to which the particle is restored
             double fixed_depth;
+
+            // Restore the particle to a fixed height?
+            bool restore_to_fixed_height;
+
+            // Height above the sea bed to which the particle is restored
+            double fixed_height;
 
             // Particle age in seconds
             float age;

@@ -35,6 +35,7 @@ cdef class ParticleSmartPtr:
                   DTYPE_INT_t id=INT_INVALID, DTYPE_INT_t status=0, DTYPE_FLOAT_t age=FLOAT_INVALID,
                   bint is_alive=False, DTYPE_INT_t land_boundary_encounters=0,
                   bint restore_to_fixed_depth=False, DTYPE_FLOAT_t fixed_depth=FLOAT_INVALID,
+                  bint restore_to_fixed_height=False, DTYPE_FLOAT_t fixed_height=FLOAT_INVALID,
                   parameters={}, state_variables={}, diagnostic_variables={},
                   boolean_flags={}, ParticleSmartPtr particle_smart_ptr=None):
 
@@ -67,6 +68,8 @@ cdef class ParticleSmartPtr:
             self._particle.set_k_upper_layer(k_upper_layer)
             self._particle.set_restore_to_fixed_depth(restore_to_fixed_depth)
             self._particle.set_fixed_depth(fixed_depth)
+            self._particle.set_restore_to_fixed_height(restore_to_fixed_height)
+            self._particle.set_fixed_height(fixed_height)
             self._particle.set_age(age)
             self._particle.set_is_alive(is_alive)
             self._particle.set_land_boundary_encounters(land_boundary_encounters)
@@ -572,6 +575,16 @@ cdef class ParticleSmartPtr:
         return self._particle.get_fixed_depth()
 
     @property
+    def restore_to_fixed_height(self):
+        """ Flag signifying whether a particle's position is restored to a fixed height """
+        return self._particle.get_restore_to_fixed_height()
+
+    @property
+    def fixed_height(self):
+        """ The fixed height below the surface that particle's are restored to  """
+        return self._particle.get_fixed_height()
+
+    @property
     def age(self):
         """ The age of the particle in seconds """
         return self._particle.get_age()
@@ -650,6 +663,8 @@ cdef to_string(Particle* particle):
              "Particle is beached = {} \n"\
              "Particle is restored to a fixed depth = {} \n"\
              "Particle fixed depth (only used if depth restoring has been activated) = {} \n"\
+             "Particle is restored to a fixed height = {} \n"\
+             "Particle fixed height (only used if height restoring has been activated) = {} \n"\
              "Particle age = {} seconds \n".format(particle.get_id(),
                                                    particle.get_x1(),
                                                    particle.get_x2(),
@@ -665,6 +680,8 @@ cdef to_string(Particle* particle):
                                                    particle.get_is_beached(),
                                                    particle.get_restore_to_fixed_depth(),
                                                    particle.get_fixed_depth(),
+                                                   particle.get_restore_to_fixed_height(),
+                                                   particle.get_fixed_height(),
                                                    particle.get_age())
 
     # Get host elements

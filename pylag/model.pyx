@@ -119,6 +119,21 @@ cdef class OPTModel:
                                f'no depth restoring, set `depth_restoring = '
                                f'False`.')
 
+            try:
+                height_restoring = self.config.getboolean("SIMULATION",
+                                                          "height_restoring")
+            except (configparser.NoSectionError, configparser.NoOptionError) as e:
+                height_restoring = False
+            
+            if height_restoring == True:
+                logger = logging.getLogger(__name__)
+                logger.warning(f'Height restoring (`height_restoring = True`) is '
+                               f'being used with settling. The impact '
+                               f'of settling may be ignored or conflict with '
+                               f'this setting. To run with settling and '
+                               f'no height restoring, set `height_restoring = '
+                               f'False`.')
+
         # Read in the coordinate system
         coordinate_system = self.config.get("SIMULATION",
                                             "coordinate_system").strip().lower()
@@ -457,6 +472,36 @@ cdef class OPTModel:
 
                 particle_smart_ptr.get_ptr().set_fixed_depth(
                         fixed_depth_below_surface)
+
+                # Will the height of the particle be restored to a fixed height?
+                try:
+                    height_restoring = self.config.getboolean("SIMULATION",
+                                                              "height_restoring")
+                except (configparser.NoSectionError, configparser.NoOptionError) as e:
+                    height_restoring = False
+                
+                # Block attempts to both restore to a fixed depth and height
+                if height_restoring == True and depth_restoring == True:
+                    raise PyLagValueError(f'Both depth and height restoring '
+                            f'are being used. Only one restoring method can be '
+                            f'used at a time. To run with height restoring, '
+                            f'set `height_restoring = True` and '
+                            f'`depth_restoring = False`, and vice versa. If you '
+                            f'want to run with neither, set both to `False`.')
+                
+                particle_smart_ptr.get_ptr().set_restore_to_fixed_height(
+                        height_restoring)
+
+                try:
+                    fixed_height_above_bottom = self.config.getfloat(
+                            "SIMULATION", "fixed_height")
+                except (configparser.NoSectionError, configparser.NoOptionError) as e:
+                    if height_restoring == True:
+                        raise PyLagRuntimeError(f'Height restoring is being used '
+                                f'but a restoring height has not been given. '
+                                f'You can choose a restoring height with the '
+                                f'configuration option `fixed_height`.')
+                    fixed_height_above_bottom = FLOAT_ERR
 
                 # Add particle to the particle set
                 self.particle_seed_smart_ptrs.append(particle_smart_ptr)

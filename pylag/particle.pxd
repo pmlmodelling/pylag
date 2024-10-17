@@ -88,6 +88,12 @@ cdef extern from "particle.h" namespace "particles":
         void set_fixed_depth(const DTYPE_FLOAT_t&) except +
         DTYPE_FLOAT_t get_fixed_depth() except +
 
+        void set_restore_to_fixed_height(const bint&) except +
+        bint get_restore_to_fixed_height() except +
+
+        void set_fixed_height(const DTYPE_FLOAT_t&) except +
+        DTYPE_FLOAT_t get_fixed_height() except +
+
         void set_age(const DTYPE_FLOAT_t&) except +
         DTYPE_FLOAT_t get_age() except +
 
