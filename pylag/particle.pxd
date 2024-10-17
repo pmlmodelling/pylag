@@ -70,8 +70,11 @@ cdef extern from "particle.h" namespace "particles":
         void set_k_layer(const DTYPE_INT_t&) except +
         DTYPE_INT_t get_k_layer() except +
 
-        void set_in_vertical_boundary_layer(const bint&) except +
-        bint get_in_vertical_boundary_layer() except +
+        void set_in_surface_boundary_layer(const bint&) except +
+        bint get_in_surface_boundary_layer() except +
+
+        void set_in_bottom_boundary_layer(const bint&) except +
+        bint get_in_bottom_boundary_layer() except +
 
         void set_k_lower_layer(const DTYPE_INT_t&) except +
         DTYPE_INT_t get_k_lower_layer() except +

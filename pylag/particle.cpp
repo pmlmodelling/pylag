@@ -18,7 +18,8 @@ namespace particles {
           is_beached(0),
           host_elements{},
           k_layer(-999),
-          in_vertical_boundary_layer(false),
+          in_surface_boundary_layer(false),
+          in_bottom_boundary_layer(false),
           k_lower_layer(-999),
           k_upper_layer(-999),
           restore_to_fixed_depth(false),
@@ -47,7 +48,8 @@ namespace particles {
           is_beached(rhs.is_beached),
           host_elements(rhs.host_elements),
           k_layer(rhs.k_layer),
-          in_vertical_boundary_layer(rhs.in_vertical_boundary_layer),
+          in_surface_boundary_layer(rhs.in_surface_boundary_layer),
+          in_bottom_boundary_layer(rhs.in_bottom_boundary_layer),
           k_lower_layer(rhs.k_lower_layer),
           k_upper_layer(rhs.k_upper_layer),
           restore_to_fixed_depth(rhs.restore_to_fixed_depth),
@@ -77,7 +79,8 @@ namespace particles {
         is_beached = rhs.is_beached;
         host_elements = rhs.host_elements;
         k_layer = rhs.k_layer;
-        in_vertical_boundary_layer = rhs.in_vertical_boundary_layer;
+        in_surface_boundary_layer = rhs.in_surface_boundary_layer;
+        in_bottom_boundary_layer = rhs.in_bottom_boundary_layer;
         k_lower_layer = rhs.k_lower_layer;
         k_upper_layer = rhs.k_upper_layer;
         restore_to_fixed_depth = rhs.restore_to_fixed_depth;
@@ -247,12 +250,20 @@ namespace particles {
         return k_layer;
     }
 
-    void Particle::set_in_vertical_boundary_layer(const bool& rhs) {
-        in_vertical_boundary_layer = rhs;
+    void Particle::set_in_surface_boundary_layer(const bool& rhs) {
+        in_surface_boundary_layer = rhs;
     }
 
-    bool Particle::get_in_vertical_boundary_layer() const {
-        return in_vertical_boundary_layer;
+    bool Particle::get_in_surface_boundary_layer() const {
+        return in_surface_boundary_layer;
+    }
+
+    void Particle::set_in_bottom_boundary_layer(const bool& rhs) {
+        in_bottom_boundary_layer = rhs;
+    }
+
+    bool Particle::get_in_bottom_boundary_layer() const {
+        return in_bottom_boundary_layer;
     }
 
     void Particle::set_k_lower_layer(const int& rhs) {

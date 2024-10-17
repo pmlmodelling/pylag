@@ -29,7 +29,8 @@ cdef class ParticleSmartPtr:
                   DTYPE_FLOAT_t omega_interfaces=FLOAT_INVALID,
                   DTYPE_FLOAT_t omega_layers=FLOAT_INVALID, bint in_domain=False,
                   DTYPE_INT_t is_beached=0, host_elements={},
-                  DTYPE_INT_t k_layer=INT_INVALID, bint in_vertical_boundary_layer=False,
+                  DTYPE_INT_t k_layer=INT_INVALID, bint in_surface_boundary_layer=False,
+                  bint in_bottom_boundary_layer=False,
                   DTYPE_INT_t k_lower_layer=INT_INVALID, DTYPE_INT_t k_upper_layer=INT_INVALID,
                   DTYPE_INT_t id=INT_INVALID, DTYPE_INT_t status=0, DTYPE_FLOAT_t age=FLOAT_INVALID,
                   bint is_alive=False, DTYPE_INT_t land_boundary_encounters=0,
@@ -60,7 +61,8 @@ cdef class ParticleSmartPtr:
             self._particle.set_in_domain(in_domain)
             self._particle.set_is_beached(is_beached)
             self._particle.set_k_layer(k_layer)
-            self._particle.set_in_vertical_boundary_layer(in_vertical_boundary_layer)
+            self._particle.set_in_surface_boundary_layer(in_surface_boundary_layer)
+            self._particle.set_in_bottom_boundary_layer(in_bottom_boundary_layer)
             self._particle.set_k_lower_layer(k_lower_layer)
             self._particle.set_k_upper_layer(k_upper_layer)
             self._particle.set_restore_to_fixed_depth(restore_to_fixed_depth)
@@ -550,9 +552,14 @@ cdef class ParticleSmartPtr:
         return self._particle.get_k_upper_layer()
 
     @property
-    def in_vertical_boundary_layer(self):
-        """ Flag signifying whether or not the particle resides in either the top or bottom boundary layers """
-        return self._particle.get_in_vertical_boundary_layer()
+    def in_surface_boundary_layer(self):
+        """ Flag signifying whether or not the particle resides in the surface boundary layer """
+        return self._particle.get_in_surface_boundary_layer()
+
+    @property
+    def in_bottom_boundary_layer(self):
+        """ Flag signifying whether or not the particle resides in the bottom boundary layer """
+        return self._particle.get_in_bottom_boundary_layer()
 
     @property
     def restore_to_fixed_depth(self):
@@ -634,7 +641,8 @@ cdef to_string(Particle* particle):
              "Particle x3 = {} \n"\
              "Particle omega interfaces = {} \n"\
              "Particle omega layers = {} \n"\
-             "Partilce in vertical boundary layer = {} \n"\
+             "Partilce in surface boundary layer = {} \n"\
+             "Partilce in bottom boundary layer = {} \n"\
              "Partilce k layer = {} \n"\
              "Partilce k lower layer = {} \n"\
              "Partilce k upper layer = {} \n"\
@@ -648,7 +656,8 @@ cdef to_string(Particle* particle):
                                                    particle.get_x3(),
                                                    particle.get_omega_interfaces(),
                                                    particle.get_omega_layers(),
-                                                   particle.get_in_vertical_boundary_layer(),
+                                                   particle.get_in_surface_boundary_layer(),
+                                                   particle.get_in_bottom_boundary_layer(),
                                                    particle.get_k_layer(),
                                                    particle.get_k_lower_layer(),
                                                    particle.get_k_upper_layer(),

@@ -504,12 +504,18 @@ cdef class FVCOMDataReader(DataReader):
                                                                                    particle)
 
                 # Is x3 in the top or bottom boundary layer?
-                if (k == 0 and depth_particle >= depth_test) or (k == self._n_siglay - 1 and depth_particle <= depth_test):
-                        particle.set_in_vertical_boundary_layer(True)
-                        return IN_DOMAIN
+                if (k == 0 and depth_particle >= depth_test):
+                    particle.set_in_surface_boundary_layer(True)
+                    particle.set_in_bottom_boundary_layer(False)
+                    return IN_DOMAIN
+                elif (k == self._n_siglay - 1 and depth_particle <= depth_test):
+                    particle.set_in_surface_boundary_layer(False)
+                    particle.set_in_bottom_boundary_layer(True)
+                    return IN_DOMAIN
 
                 # x3 bounded by upper and lower depth layers
-                particle.set_in_vertical_boundary_layer(False)
+                particle.set_in_surface_boundary_layer(False)
+                particle.set_in_bottom_boundary_layer(False)
                 if depth_particle >= depth_test:
                     particle.set_k_upper_layer(k - 1)
                     particle.set_k_lower_layer(k)
@@ -755,7 +761,7 @@ cdef class FVCOMDataReader(DataReader):
 
             # No vertical interpolation for particles near to the surface or bottom,
             # i.e. above or below the top or bottom sigma layer depths respectively.
-            if particle.get_in_vertical_boundary_layer() is True:
+            if (particle.get_in_surface_boundary_layer() is True or particle.get_in_bottom_boundary_layer() is True):
                 self._unstructured_grid.interpolate_grad_in_time_and_space(self._viscofh_last, self._viscofh_next,
                                                                            k_layer, time_fraction, particle,
                                                                            Ah_prime)
@@ -1108,7 +1114,7 @@ cdef class FVCOMDataReader(DataReader):
 
         # No vertical interpolation for particles near to the surface or bottom, 
         # i.e. above or below the top or bottom sigma layer depths respectively.
-        if particle.get_in_vertical_boundary_layer() is True:
+        if (particle.get_in_surface_boundary_layer() is True or particle.get_in_bottom_boundary_layer() is True):
             return self._unstructured_grid.interpolate_in_time_and_space(var_last,
                                                                          var_next,
                                                                          k_layer,
@@ -1199,7 +1205,9 @@ cdef class FVCOMDataReader(DataReader):
         # Time fraction
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
-        if particle.get_in_vertical_boundary_layer() is True:
+        if (particle.get_in_surface_boundary_layer() is True or particle.get_in_bottom_boundary_layer() is True):
+            # These two situations may be handled differently. This comes later. For now, we interpolate velocity components
+            # in the nearest sigma layer.
             xc[0] = self._xc[host_element]
             yc[0] = self._yc[host_element]
             uc1[0] = interp.linear_interp(time_fraction, self._u_last[k_layer, host_element], self._u_next[k_layer, host_element])
@@ -1225,11 +1233,26 @@ cdef class FVCOMDataReader(DataReader):
                     wc1[j] = 0.0
                     valid_points[j] = 0
 
-            vel[0] = self._unstructured_grid.shepard_interpolation(particle.get_x1(), particle.get_x2(), xc, yc, uc1, valid_points)
-            vel[1] = self._unstructured_grid.shepard_interpolation(particle.get_x1(), particle.get_x2(), xc, yc, vc1, valid_points)
-            vel[2] = self._unstructured_grid.shepard_interpolation(particle.get_x1(), particle.get_x2(), xc, yc, wc1, valid_points)
+            up1 = self._unstructured_grid.shepard_interpolation(particle.get_x1(), particle.get_x2(), xc, yc, uc1, valid_points)
+            vp1 = self._unstructured_grid.shepard_interpolation(particle.get_x1(), particle.get_x2(), xc, yc, vc1, valid_points)
+            wp1 = self._unstructured_grid.shepard_interpolation(particle.get_x1(), particle.get_x2(), xc, yc, wc1, valid_points)
 
-            return  
+            if particle.get_in_surface_boundary_layer() is True:
+                # TODO - Include options here to correct near surface velocities?
+                vel[0] = up1
+                vel[1] = vp1
+                vel[2] = wp1
+                return
+
+            elif particle.get_in_bottom_boundary_layer() is True:
+                # TODO - Include options here to correct near bottom velocities.
+                vel[0] = up1
+                vel[1] = vp1
+                vel[2] = wp1
+                return 
+            
+            else:
+                raise PyLagRuntimeError("Check above if logic - it should be impossible to reach this point.")
 
         # Interpolate between depth levels
         xc[0] = self._xc[host_element]

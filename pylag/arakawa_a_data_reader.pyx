@@ -523,7 +523,8 @@ cdef class ArakawaADataReader(DataReader):
 
         # Surface only case
         if self._surface_only is True:
-            particle.set_in_vertical_boundary_layer(True)
+            particle.set_in_surface_boundary_layer(True)
+            particle.set_in_bottom_boundary_layer(False)
             particle.set_k_layer(0)
             return IN_DOMAIN
 
@@ -554,17 +555,19 @@ cdef class ArakawaADataReader(DataReader):
 
                 # If the bottom layer is masked, flag the particle as being in the bottom boundary layer.
                 if mask_upper_level == 0 and mask_lower_level == 1:
-                    particle.set_in_vertical_boundary_layer(True)
+                    particle.set_in_surface_boundary_layer(False)
+                    particle.set_in_bottom_boundary_layer(True)
                 else:
-                    particle.set_in_vertical_boundary_layer(False)
+                    particle.set_in_surface_boundary_layer(False)
+                    particle.set_in_bottom_boundary_layer(False)
 
                 return IN_DOMAIN
 
         # Allow for the following situations:
-        # a) the particle is below zeta but above the highest depth level
-        # b) the particle is above h but below the lowest depth level.
-        # If this has happened, flag the particle as being in the vertical boundary layer, meaning all
-        # variables will be extrapolated from the below/above depth level.
+        # a) The particle is below zeta but above the highest depth level. If this has happended,
+        # the particle is in the surface boundary layer.
+        # b) The particle is above h but below the lowest depth level. If this has happened, the particle
+        # is in the bottom boundary layer.
         h = self.get_zmin(time, particle)
         zeta = self.get_zmax(time, particle)
 
@@ -579,7 +582,8 @@ cdef class ArakawaADataReader(DataReader):
             mask_upper_level = self._interp_mask_status_on_level(host_element, k)
             if mask_upper_level == 0:
                 particle.set_k_layer(k)
-                particle.set_in_vertical_boundary_layer(True)
+                particle.set_in_surface_boundary_layer(True)
+                particle.set_in_bottom_boundary_layer(False)
 
                 return IN_DOMAIN
             else:
@@ -596,7 +600,8 @@ cdef class ArakawaADataReader(DataReader):
             mask_upper_level = self._interp_mask_status_on_level(host_element, k)
             if mask_upper_level == 0:
                 particle.set_k_layer(k)
-                particle.set_in_vertical_boundary_layer(True)
+                particle.set_in_surface_boundary_layer(False)
+                particle.set_in_bottom_boundary_layer(True)
 
                 return IN_DOMAIN
             else:
@@ -786,7 +791,7 @@ cdef class ArakawaADataReader(DataReader):
         """ Compute horizontal eddy diffusivity term from Smagorinsky expression
 
         The approach here is to compute the eddy diffusivity from the velocity field
-        using the Smagorinsky. The diffusivity is assumed to be isotropic is x and y.
+        using Smagorinsky. The diffusivity is assumed to be isotropic is x and y.
 
         Parameters
         ----------
@@ -812,8 +817,8 @@ cdef class ArakawaADataReader(DataReader):
 
         cdef DTYPE_FLOAT_t time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
-        # No vertical interpolation for particles near to the bottom
-        if particle.get_in_vertical_boundary_layer() is True:
+        # No vertical interpolation for particles in the surface or bottom boundary layers
+        if (particle.get_in_surface_boundary_layer() is True or particle.get_in_bottom_boundary_layer() is True):
             Kz = self._compute_smagorinsky_eddy_diffusivity_on_level(time_fraction, k_layer, particle)
 
         else:
@@ -897,8 +902,8 @@ cdef class ArakawaADataReader(DataReader):
             # K layer
             k_layer = particle.get_k_layer()
 
-            # No vertical interpolation for particles near to the bottom,
-            if particle.get_in_vertical_boundary_layer() is True:
+            # No vertical interpolation for particles in the surface or bottom boundary layers
+            if (particle.get_in_surface_boundary_layer() is True or particle.get_in_bottom_boundary_layer() is True):
                 self._unstructured_grid.interpolate_grad_in_time_and_space(self._ah_last, self._ah_next, k_layer,
                                                                            time_fraction, particle, Ah_prime)
             else:
@@ -1152,8 +1157,8 @@ cdef class ArakawaADataReader(DataReader):
 
         cdef DTYPE_FLOAT_t time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
-        # No vertical interpolation for particles near to the bottom
-        if particle.get_in_vertical_boundary_layer() is True:
+        # No vertical interpolation for particles in the surface or bottom boundary layers
+        if (particle.get_in_surface_boundary_layer() is True or particle.get_in_bottom_boundary_layer() is True):
             return self._unstructured_grid.interpolate_in_time_and_space(var_last,
                                                                          var_next,
                                                                          k_layer,
