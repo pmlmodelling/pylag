@@ -1182,7 +1182,7 @@ cdef class FVCOMDataReader(DataReader):
 
         If the particle is in the bottom boundary layer - meaning it lies
         above the sea bed but below the bottom sigma layer - the velocity
-        can be corrected using the Law of the Wall. This option is enabled
+        can be corrected using a logarithmic profile. This option is enabled
         using the run time configuration parameters
         `correct_near_bottom_velocities' and `z0' (the roughness length
         scale). If `correct_near_bottom_velocities' is set to False, the
@@ -1246,7 +1246,7 @@ cdef class FVCOMDataReader(DataReader):
         # Variables used in interpolation in time      
         cdef DTYPE_FLOAT_t time_fraction
 
-        # Variables used in the Law of the Wall correction
+        # Variables used in log profile correction
         cdef DTYPE_FLOAT_t z_min, z_layer
         cdef DTYPE_FLOAT_t A1, A2
 
@@ -1297,8 +1297,8 @@ cdef class FVCOMDataReader(DataReader):
 
             elif particle.get_in_bottom_boundary_layer() is True:
                 if self._correct_near_bottom_velocities:
-                    # Use the Law of the Wall to correct the near bottom velocity
-                    # -----------------------------------------------------------
+                    # Use the logarithmic profile to correct the near bottom velocity
+                    # ---------------------------------------------------------------
 
                     # Determine the sea floor depth at the particle's position
                     z_min = self.get_zmin(time, particle)
