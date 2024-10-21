@@ -202,7 +202,7 @@ cdef class FVCOMDataReader(DataReader):
         # Set options for correcting near bottom velocities
         try:
             self._correct_near_bottom_velocities = self.config.getboolean("OCEAN_DATA",
-                                                                          "use_near_bottom_log_velocity_profile")
+                                                                          "apply_near_bottom_log_velocity_profile")
         except (configparser.NoOptionError) as e:
             self._correct_near_bottom_velocities = False
 
@@ -1311,13 +1311,18 @@ cdef class FVCOMDataReader(DataReader):
                                                                                     particle)
 
                     # Precalculate logarithmic terms
-                    A1 = log((z_layer - z_min) / self._z0)
-                    A2 = log((particle.get_x3() - z_min) / self._z0)
+                    if particle.get_x3() > (z_min + self._z0):
+                        A1 = log((z_layer - z_min) / self._z0)
+                        A2 = log((particle.get_x3() - z_min) / self._z0)
 
-                    # Apply correction
-                    vel[0] = up1 * A2 / A1
-                    vel[1] = vp1 * A2 / A1
-                    vel[2] = wp1 * A2 / A1
+                        # Apply correction
+                        vel[0] = up1 * A2 / A1
+                        vel[1] = vp1 * A2 / A1
+                        vel[2] = wp1 * A2 / A1
+                    else:
+                        vel[0] = 0.0
+                        vel[1] = 0.0
+                        vel[2] = 0.0
 
                 else:
                     # Simply extrapolate downwards
