@@ -28,6 +28,7 @@ from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 from libcpp.string cimport string
 from libcpp.vector cimport vector
+from libc.math cimport log
 
 # PyLag cython imports
 from pylag.parameters cimport cartesian, geographic, deg_to_radians
@@ -160,6 +161,13 @@ cdef class FVCOMDataReader(DataReader):
     cdef DTYPE_FLOAT_t _time_last
     cdef DTYPE_FLOAT_t _time_next
 
+    # Options controlling velocity corrections near to surface and bottom boundaries
+    cdef bint _correct_near_bottom_velocities
+
+    # Bottom roughness parameter
+    # TODO - Allow this to vary spatially?
+    cdef DTYPE_FLOAT_t _z0
+
     # Options controlling the reading of eddy diffusivities
     cdef object _Kz_method_name, _Ah_method_name
     cdef DTYPE_INT_t _Kz_method, _Ah_method
@@ -190,6 +198,28 @@ cdef class FVCOMDataReader(DataReader):
         else:
             raise PyLagValueError(f"Unsupported model coordinate system "
                                   f"`{coordinate_system}'")
+
+        # Set options for correcting near bottom velocities
+        try:
+            self._correct_near_bottom_velocities = self.config.getboolean("OCEAN_DATA",
+                                                                          "apply_near_bottom_log_velocity_profile")
+        except (configparser.NoOptionError) as e:
+            self._correct_near_bottom_velocities = False
+
+        if self._correct_near_bottom_velocities:
+            try:
+                self._z0 = self.config.getfloat("OCEAN_DATA",
+                                                "z0")
+            except (configparser.NoOptionError) as e:
+                raise PyLagValueError(f"Missing required bottom roughness parameter `z0' for "
+                                      f"near bottom velocity correction. This parameter is required "
+                                      f"when `use_near_bottom_log_velocity_profile = True'.")
+            
+            # Ensure we have a sensible value for z0
+            if self._z0 <= 0.0:
+                raise PyLagValueError(f"Invalid value for bottom roughness parameter `z0'. "
+                                      f"This parameter must be greater than zero. Received "
+                                      f"z0 = {self._z0}.")
 
         # Set options for handling the vertical eddy diffusivity
         self._Kz_method_name = self.config.get('OCEAN_DATA',
@@ -504,12 +534,18 @@ cdef class FVCOMDataReader(DataReader):
                                                                                    particle)
 
                 # Is x3 in the top or bottom boundary layer?
-                if (k == 0 and depth_particle >= depth_test) or (k == self._n_siglay - 1 and depth_particle <= depth_test):
-                        particle.set_in_vertical_boundary_layer(True)
-                        return IN_DOMAIN
+                if (k == 0 and depth_particle >= depth_test):
+                    particle.set_in_surface_boundary_layer(True)
+                    particle.set_in_bottom_boundary_layer(False)
+                    return IN_DOMAIN
+                elif (k == self._n_siglay - 1 and depth_particle <= depth_test):
+                    particle.set_in_surface_boundary_layer(False)
+                    particle.set_in_bottom_boundary_layer(True)
+                    return IN_DOMAIN
 
                 # x3 bounded by upper and lower depth layers
-                particle.set_in_vertical_boundary_layer(False)
+                particle.set_in_surface_boundary_layer(False)
+                particle.set_in_bottom_boundary_layer(False)
                 if depth_particle >= depth_test:
                     particle.set_k_upper_layer(k - 1)
                     particle.set_k_lower_layer(k)
@@ -755,7 +791,7 @@ cdef class FVCOMDataReader(DataReader):
 
             # No vertical interpolation for particles near to the surface or bottom,
             # i.e. above or below the top or bottom sigma layer depths respectively.
-            if particle.get_in_vertical_boundary_layer() is True:
+            if (particle.get_in_surface_boundary_layer() is True or particle.get_in_bottom_boundary_layer() is True):
                 self._unstructured_grid.interpolate_grad_in_time_and_space(self._viscofh_last, self._viscofh_next,
                                                                            k_layer, time_fraction, particle,
                                                                            Ah_prime)
@@ -1108,7 +1144,7 @@ cdef class FVCOMDataReader(DataReader):
 
         # No vertical interpolation for particles near to the surface or bottom, 
         # i.e. above or below the top or bottom sigma layer depths respectively.
-        if particle.get_in_vertical_boundary_layer() is True:
+        if (particle.get_in_surface_boundary_layer() is True or particle.get_in_bottom_boundary_layer() is True):
             return self._unstructured_grid.interpolate_in_time_and_space(var_last,
                                                                          var_next,
                                                                          k_layer,
@@ -1137,14 +1173,31 @@ cdef class FVCOMDataReader(DataReader):
         In FVCOM, the u, v, and w velocity components are defined at element
         centres on sigma layers and saved at discrete points in time. Here,
         u(t,x,y,z), v(t,x,y,z) and w(t,x,y,z) are retrieved through i) linear
-        interpolation in t and z, and ii) Shepard interpolation (which is
-        basically a special case of normalized radial basis function
-        interpolation) in x and y.
+        interpolation in t and z, and ii) Shepard interpolation (a special
+        case of normalized radial basis function interpolation) in x and y.
 
         In Shepard interpolation, the algorithm uses velocities defined at 
         the host element's centre and its immediate neghbours (i.e. at the
         centre of those elements that share a face with the host element).
+
+        If the particle is in the bottom boundary layer - meaning it lies
+        above the sea bed but below the bottom sigma layer - the velocity
+        can be corrected using a logarithmic profile. This option is enabled
+        using the run time configuration parameters
+        `correct_near_bottom_velocities' and `z0' (the roughness length
+        scale). If `correct_near_bottom_velocities' is set to False, the
+        velocity at the bottom sigma layer is extrapolated to the particle's
+        position.
         
+        When applying the log correction, the velocity is given by:
+
+        u(z_p) = u(z_1) ln(z_p/z0) / ln(z_1/z0)
+
+        where u(z_p) is the velocity at the particle's position, u(z_1) is the
+        velocity at the bottom sigma layer, z_p is the height of the particle
+        above the sea bed, z_1 is the height of the bottom sigma layer above the
+        sea bed, and z0 is the roughness length scale.
+
         NB - this function returns the vertical velocity in z coordinate space
         (units m/s) and not the vertical velocity in sigma coordinate space.
         
@@ -1193,13 +1246,19 @@ cdef class FVCOMDataReader(DataReader):
         # Variables used in interpolation in time      
         cdef DTYPE_FLOAT_t time_fraction
 
+        # Variables used in log profile correction
+        cdef DTYPE_FLOAT_t z_min, z_layer
+        cdef DTYPE_FLOAT_t A1, A2
+
         # Array and loop indices
         cdef int i, j, neighbour
         
         # Time fraction
         time_fraction = interp.get_linear_fraction_safe(time, self._time_last, self._time_next)
 
-        if particle.get_in_vertical_boundary_layer() is True:
+        if (particle.get_in_surface_boundary_layer() is True or particle.get_in_bottom_boundary_layer() is True):
+            # These two situations may be handled differently. This comes later. For now, we interpolate velocity components
+            # in the nearest sigma layer.
             xc[0] = self._xc[host_element]
             yc[0] = self._yc[host_element]
             uc1[0] = interp.linear_interp(time_fraction, self._u_last[k_layer, host_element], self._u_next[k_layer, host_element])
@@ -1225,11 +1284,57 @@ cdef class FVCOMDataReader(DataReader):
                     wc1[j] = 0.0
                     valid_points[j] = 0
 
-            vel[0] = self._unstructured_grid.shepard_interpolation(particle.get_x1(), particle.get_x2(), xc, yc, uc1, valid_points)
-            vel[1] = self._unstructured_grid.shepard_interpolation(particle.get_x1(), particle.get_x2(), xc, yc, vc1, valid_points)
-            vel[2] = self._unstructured_grid.shepard_interpolation(particle.get_x1(), particle.get_x2(), xc, yc, wc1, valid_points)
+            up1 = self._unstructured_grid.shepard_interpolation(particle.get_x1(), particle.get_x2(), xc, yc, uc1, valid_points)
+            vp1 = self._unstructured_grid.shepard_interpolation(particle.get_x1(), particle.get_x2(), xc, yc, vc1, valid_points)
+            wp1 = self._unstructured_grid.shepard_interpolation(particle.get_x1(), particle.get_x2(), xc, yc, wc1, valid_points)
 
-            return  
+            if particle.get_in_surface_boundary_layer() is True:
+                # TODO - Include options here to correct near surface velocities?
+                vel[0] = up1
+                vel[1] = vp1
+                vel[2] = wp1
+                return
+
+            elif particle.get_in_bottom_boundary_layer() is True:
+                if self._correct_near_bottom_velocities:
+                    # Use the logarithmic profile to correct the near bottom velocity
+                    # ---------------------------------------------------------------
+
+                    # Determine the sea floor depth at the particle's position
+                    z_min = self.get_zmin(time, particle)
+
+                    # Compute the depth of the bottom sigma layer at the particle's position
+                    z_layer = self._unstructured_grid.interpolate_in_time_and_space(self._depth_layers_last,
+                                                                                    self._depth_layers_next,
+                                                                                    particle.get_k_layer(),
+                                                                                    time_fraction,
+                                                                                    particle)
+
+                    # Precalculate logarithmic terms
+                    if particle.get_x3() > (z_min + self._z0):
+                        A1 = log((z_layer - z_min) / self._z0)
+                        A2 = log((particle.get_x3() - z_min) / self._z0)
+
+                        # Apply correction
+                        vel[0] = up1 * A2 / A1
+                        vel[1] = vp1 * A2 / A1
+                        vel[2] = wp1 * A2 / A1
+                    else:
+                        vel[0] = 0.0
+                        vel[1] = 0.0
+                        vel[2] = 0.0
+
+                else:
+                    # Simply extrapolate downwards
+                    # ----------------------------
+                    vel[0] = up1
+                    vel[1] = vp1
+                    vel[2] = wp1
+
+                return 
+            
+            else:
+                raise PyLagRuntimeError("Check above if logic - it should be impossible to reach this point.")
 
         # Interpolate between depth levels
         xc[0] = self._xc[host_element]

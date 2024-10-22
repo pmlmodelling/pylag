@@ -81,8 +81,11 @@ namespace particles {
             void set_all_host_horizontal_elems(const std::vector<std::string>& grids, const std::vector<int>& hosts);
             void get_all_host_horizontal_elems(std::vector<std::string>& grids, std::vector<int>& hosts) const;
 
-            void set_in_vertical_boundary_layer(const bool& rhs);
-            bool get_in_vertical_boundary_layer() const;
+            void set_in_surface_boundary_layer(const bool& rhs);
+            bool get_in_surface_boundary_layer() const;
+
+            void set_in_bottom_boundary_layer(const bool& rhs);
+            bool get_in_bottom_boundary_layer() const;
 
             void set_k_lower_layer(const int& rhs);
             int get_k_lower_layer() const;
@@ -98,6 +101,12 @@ namespace particles {
 
             void set_fixed_depth(const double& rhs);
             double get_fixed_depth() const;
+
+            void set_restore_to_fixed_height(const bool& rhs);
+            bool get_restore_to_fixed_height() const;
+
+            void set_fixed_height(const double& rhs);
+            double get_fixed_height() const;
 
             void set_age(const float& rhs);
             float get_age() const;
@@ -188,7 +197,8 @@ namespace particles {
             int k_layer;
 
             // Flag for whether the particle is in the top or bottom boundary layers
-            bool in_vertical_boundary_layer;
+            bool in_surface_boundary_layer;
+            bool in_bottom_boundary_layer;
 
             // Index of the k-layer lying immediately below the particle's current
             // position. Only set if the particle is not in the top or bottom boundary
@@ -208,6 +218,12 @@ namespace particles {
 
             // Depth below the surface to which the particle is restored
             double fixed_depth;
+
+            // Restore the particle to a fixed height?
+            bool restore_to_fixed_height;
+
+            // Height above the sea bed to which the particle is restored
+            double fixed_height;
 
             // Particle age in seconds
             float age;

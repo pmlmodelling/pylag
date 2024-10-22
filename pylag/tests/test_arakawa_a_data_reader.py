@@ -341,7 +341,8 @@ class ArawawaADataReader_test(TestCase):
 
         test.assert_equal(flag, 0)
         test.assert_equal(particle.k_layer, 0)
-        test.assert_equal(particle.in_vertical_boundary_layer, False)
+        test.assert_equal(particle.in_surface_boundary_layer, False)
+        test.assert_equal(particle.in_bottom_boundary_layer, False)
         test.assert_almost_equal(particle.omega_interfaces, 1.0)
 
     def test_set_vertical_grid_vars_for_a_particle_on_the_sea_floor(self):
@@ -357,7 +358,8 @@ class ArawawaADataReader_test(TestCase):
 
         test.assert_equal(flag, 0)
         test.assert_equal(particle.k_layer, 0)
-        test.assert_equal(particle.in_vertical_boundary_layer, False)
+        test.assert_equal(particle.in_surface_boundary_layer, False)
+        test.assert_equal(particle.in_bottom_boundary_layer, False)
         test.assert_almost_equal(particle.omega_interfaces, 0.0)
 
     def test_set_vertical_grid_vars_for_a_particle_in_the_surface_layer(self):
@@ -373,7 +375,8 @@ class ArawawaADataReader_test(TestCase):
 
         test.assert_equal(flag, 0)
         test.assert_equal(particle.k_layer, 0)
-        test.assert_equal(particle.in_vertical_boundary_layer, False)
+        test.assert_equal(particle.in_surface_boundary_layer, False)
+        test.assert_equal(particle.in_bottom_boundary_layer, False)
         test.assert_almost_equal(particle.omega_interfaces, 0.5)
 
     def test_get_velocity_in_surface_layer(self):

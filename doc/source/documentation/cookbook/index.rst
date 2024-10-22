@@ -11,6 +11,8 @@ In the cookbook, you can find hints and tips for working with PyLag; explanation
     
     initial_positions
     boundary_conditions
+    fixed_vertical_positioning
+    boundary_layer_dynamics
     settling
     ibm
     regridding

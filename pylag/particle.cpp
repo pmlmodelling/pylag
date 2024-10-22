@@ -18,11 +18,14 @@ namespace particles {
           is_beached(0),
           host_elements{},
           k_layer(-999),
-          in_vertical_boundary_layer(false),
+          in_surface_boundary_layer(false),
+          in_bottom_boundary_layer(false),
           k_lower_layer(-999),
           k_upper_layer(-999),
           restore_to_fixed_depth(false),
           fixed_depth(-999.),
+          restore_to_fixed_height(false),
+          fixed_height(-999.),
           age(-999.),
           is_alive(false),
           land_boundary_encounters(0),
@@ -47,11 +50,14 @@ namespace particles {
           is_beached(rhs.is_beached),
           host_elements(rhs.host_elements),
           k_layer(rhs.k_layer),
-          in_vertical_boundary_layer(rhs.in_vertical_boundary_layer),
+          in_surface_boundary_layer(rhs.in_surface_boundary_layer),
+          in_bottom_boundary_layer(rhs.in_bottom_boundary_layer),
           k_lower_layer(rhs.k_lower_layer),
           k_upper_layer(rhs.k_upper_layer),
           restore_to_fixed_depth(rhs.restore_to_fixed_depth),
           fixed_depth(rhs.fixed_depth),
+          restore_to_fixed_height(rhs.restore_to_fixed_height),
+          fixed_height(rhs.fixed_height),
           age(rhs.age),
           is_alive(rhs.is_alive),
           land_boundary_encounters(rhs.land_boundary_encounters),
@@ -77,11 +83,14 @@ namespace particles {
         is_beached = rhs.is_beached;
         host_elements = rhs.host_elements;
         k_layer = rhs.k_layer;
-        in_vertical_boundary_layer = rhs.in_vertical_boundary_layer;
+        in_surface_boundary_layer = rhs.in_surface_boundary_layer;
+        in_bottom_boundary_layer = rhs.in_bottom_boundary_layer;
         k_lower_layer = rhs.k_lower_layer;
         k_upper_layer = rhs.k_upper_layer;
         restore_to_fixed_depth = rhs.restore_to_fixed_depth;
         fixed_depth = rhs.fixed_depth;
+        restore_to_fixed_height = rhs.restore_to_fixed_height;
+        fixed_height = rhs.fixed_height;
         age = rhs.age;
         is_alive = rhs.is_alive;
         land_boundary_encounters = rhs.land_boundary_encounters;
@@ -247,12 +256,20 @@ namespace particles {
         return k_layer;
     }
 
-    void Particle::set_in_vertical_boundary_layer(const bool& rhs) {
-        in_vertical_boundary_layer = rhs;
+    void Particle::set_in_surface_boundary_layer(const bool& rhs) {
+        in_surface_boundary_layer = rhs;
     }
 
-    bool Particle::get_in_vertical_boundary_layer() const {
-        return in_vertical_boundary_layer;
+    bool Particle::get_in_surface_boundary_layer() const {
+        return in_surface_boundary_layer;
+    }
+
+    void Particle::set_in_bottom_boundary_layer(const bool& rhs) {
+        in_bottom_boundary_layer = rhs;
+    }
+
+    bool Particle::get_in_bottom_boundary_layer() const {
+        return in_bottom_boundary_layer;
     }
 
     void Particle::set_k_lower_layer(const int& rhs) {
@@ -285,6 +302,22 @@ namespace particles {
 
     double Particle::get_fixed_depth() const {
         return fixed_depth;
+    }
+
+    void Particle::set_restore_to_fixed_height(const bool& rhs) {
+        restore_to_fixed_height = rhs;
+    }
+
+    bool Particle::get_restore_to_fixed_height() const {
+        return restore_to_fixed_height;
+    }
+
+    void Particle::set_fixed_height(const double& rhs) {
+        fixed_height = rhs;
+    }
+
+    double Particle::get_fixed_height() const {
+        return fixed_height;
     }
 
     void Particle::set_age(const float& rhs) {

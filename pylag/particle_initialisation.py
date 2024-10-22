@@ -47,7 +47,7 @@ class ASCIIInitialParticleStateReader(InitialParticleStateReader):
 
     TODO
     ----
-    * At the moment, such objects only read in particle position info.
+    At the moment, such objects only read in particle position info.
     It may be desirable to have them read other types of data in the future.
     """
     def __init__(self, config):

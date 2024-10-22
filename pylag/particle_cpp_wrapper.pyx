@@ -29,11 +29,13 @@ cdef class ParticleSmartPtr:
                   DTYPE_FLOAT_t omega_interfaces=FLOAT_INVALID,
                   DTYPE_FLOAT_t omega_layers=FLOAT_INVALID, bint in_domain=False,
                   DTYPE_INT_t is_beached=0, host_elements={},
-                  DTYPE_INT_t k_layer=INT_INVALID, bint in_vertical_boundary_layer=False,
+                  DTYPE_INT_t k_layer=INT_INVALID, bint in_surface_boundary_layer=False,
+                  bint in_bottom_boundary_layer=False,
                   DTYPE_INT_t k_lower_layer=INT_INVALID, DTYPE_INT_t k_upper_layer=INT_INVALID,
                   DTYPE_INT_t id=INT_INVALID, DTYPE_INT_t status=0, DTYPE_FLOAT_t age=FLOAT_INVALID,
                   bint is_alive=False, DTYPE_INT_t land_boundary_encounters=0,
                   bint restore_to_fixed_depth=False, DTYPE_FLOAT_t fixed_depth=FLOAT_INVALID,
+                  bint restore_to_fixed_height=False, DTYPE_FLOAT_t fixed_height=FLOAT_INVALID,
                   parameters={}, state_variables={}, diagnostic_variables={},
                   boolean_flags={}, ParticleSmartPtr particle_smart_ptr=None):
 
@@ -60,11 +62,14 @@ cdef class ParticleSmartPtr:
             self._particle.set_in_domain(in_domain)
             self._particle.set_is_beached(is_beached)
             self._particle.set_k_layer(k_layer)
-            self._particle.set_in_vertical_boundary_layer(in_vertical_boundary_layer)
+            self._particle.set_in_surface_boundary_layer(in_surface_boundary_layer)
+            self._particle.set_in_bottom_boundary_layer(in_bottom_boundary_layer)
             self._particle.set_k_lower_layer(k_lower_layer)
             self._particle.set_k_upper_layer(k_upper_layer)
             self._particle.set_restore_to_fixed_depth(restore_to_fixed_depth)
             self._particle.set_fixed_depth(fixed_depth)
+            self._particle.set_restore_to_fixed_height(restore_to_fixed_height)
+            self._particle.set_fixed_height(fixed_height)
             self._particle.set_age(age)
             self._particle.set_is_alive(is_alive)
             self._particle.set_land_boundary_encounters(land_boundary_encounters)
@@ -550,9 +555,14 @@ cdef class ParticleSmartPtr:
         return self._particle.get_k_upper_layer()
 
     @property
-    def in_vertical_boundary_layer(self):
-        """ Flag signifying whether or not the particle resides in either the top or bottom boundary layers """
-        return self._particle.get_in_vertical_boundary_layer()
+    def in_surface_boundary_layer(self):
+        """ Flag signifying whether or not the particle resides in the surface boundary layer """
+        return self._particle.get_in_surface_boundary_layer()
+
+    @property
+    def in_bottom_boundary_layer(self):
+        """ Flag signifying whether or not the particle resides in the bottom boundary layer """
+        return self._particle.get_in_bottom_boundary_layer()
 
     @property
     def restore_to_fixed_depth(self):
@@ -563,6 +573,16 @@ cdef class ParticleSmartPtr:
     def fixed_depth(self):
         """ The fixed depth below the surface that particle's are restored to  """
         return self._particle.get_fixed_depth()
+
+    @property
+    def restore_to_fixed_height(self):
+        """ Flag signifying whether a particle's position is restored to a fixed height """
+        return self._particle.get_restore_to_fixed_height()
+
+    @property
+    def fixed_height(self):
+        """ The fixed height below the surface that particle's are restored to  """
+        return self._particle.get_fixed_height()
 
     @property
     def age(self):
@@ -634,7 +654,8 @@ cdef to_string(Particle* particle):
              "Particle x3 = {} \n"\
              "Particle omega interfaces = {} \n"\
              "Particle omega layers = {} \n"\
-             "Partilce in vertical boundary layer = {} \n"\
+             "Partilce in surface boundary layer = {} \n"\
+             "Partilce in bottom boundary layer = {} \n"\
              "Partilce k layer = {} \n"\
              "Partilce k lower layer = {} \n"\
              "Partilce k upper layer = {} \n"\
@@ -642,13 +663,16 @@ cdef to_string(Particle* particle):
              "Particle is beached = {} \n"\
              "Particle is restored to a fixed depth = {} \n"\
              "Particle fixed depth (only used if depth restoring has been activated) = {} \n"\
+             "Particle is restored to a fixed height = {} \n"\
+             "Particle fixed height (only used if height restoring has been activated) = {} \n"\
              "Particle age = {} seconds \n".format(particle.get_id(),
                                                    particle.get_x1(),
                                                    particle.get_x2(),
                                                    particle.get_x3(),
                                                    particle.get_omega_interfaces(),
                                                    particle.get_omega_layers(),
-                                                   particle.get_in_vertical_boundary_layer(),
+                                                   particle.get_in_surface_boundary_layer(),
+                                                   particle.get_in_bottom_boundary_layer(),
                                                    particle.get_k_layer(),
                                                    particle.get_k_lower_layer(),
                                                    particle.get_k_upper_layer(),
@@ -656,6 +680,8 @@ cdef to_string(Particle* particle):
                                                    particle.get_is_beached(),
                                                    particle.get_restore_to_fixed_depth(),
                                                    particle.get_fixed_depth(),
+                                                   particle.get_restore_to_fixed_height(),
+                                                   particle.get_fixed_height(),
                                                    particle.get_age())
 
     # Get host elements

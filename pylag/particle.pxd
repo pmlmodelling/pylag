@@ -70,8 +70,11 @@ cdef extern from "particle.h" namespace "particles":
         void set_k_layer(const DTYPE_INT_t&) except +
         DTYPE_INT_t get_k_layer() except +
 
-        void set_in_vertical_boundary_layer(const bint&) except +
-        bint get_in_vertical_boundary_layer() except +
+        void set_in_surface_boundary_layer(const bint&) except +
+        bint get_in_surface_boundary_layer() except +
+
+        void set_in_bottom_boundary_layer(const bint&) except +
+        bint get_in_bottom_boundary_layer() except +
 
         void set_k_lower_layer(const DTYPE_INT_t&) except +
         DTYPE_INT_t get_k_lower_layer() except +
@@ -84,6 +87,12 @@ cdef extern from "particle.h" namespace "particles":
 
         void set_fixed_depth(const DTYPE_FLOAT_t&) except +
         DTYPE_FLOAT_t get_fixed_depth() except +
+
+        void set_restore_to_fixed_height(const bint&) except +
+        bint get_restore_to_fixed_height() except +
+
+        void set_fixed_height(const DTYPE_FLOAT_t&) except +
+        DTYPE_FLOAT_t get_fixed_height() except +
 
         void set_age(const DTYPE_FLOAT_t&) except +
         DTYPE_FLOAT_t get_age() except +
