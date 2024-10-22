@@ -503,6 +503,9 @@ cdef class OPTModel:
                                 f'configuration option `fixed_height`.')
                     fixed_height_above_bottom = FLOAT_ERR
 
+                particle_smart_ptr.get_ptr().set_fixed_height(
+                        fixed_height_above_bottom)
+
                 # Add particle to the particle set
                 self.particle_seed_smart_ptrs.append(particle_smart_ptr)
 
