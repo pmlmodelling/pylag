@@ -107,6 +107,8 @@ cdef class StdNumMethod(NumMethod):
     """
     cdef DTYPE_FLOAT_t _time_step
 
+    cdef bint _allow_beaching
+
     cdef ItMethod _iterative_method
     cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
     cdef VertBoundaryConditionCalculator _vert_bc_calculator
@@ -122,6 +124,11 @@ cdef class StdNumMethod(NumMethod):
         self._position_modifier = get_position_modifier(config)
 
         self._time_step = self._iterative_method.get_time_step()
+
+        try:
+            self._allow_beaching = config.getboolean('SIMULATION', 'allow_beaching')
+        except (configparser.NoOptionError) as e:
+            self._allow_beaching = True
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
             Particle *particle) except INT_ERR:
@@ -176,6 +183,15 @@ cdef class StdNumMethod(NumMethod):
                 # If the cell is still dry, pass over
                 return IN_DOMAIN
             else:
+                # Apply depth/height restoring (the position of the free surface may have changed)
+                if _depth_restoring is True:
+                    zmax = data_reader.get_zmax(time, &_particle_copy)
+                    _particle_copy.set_x3(_fixed_depth_below_surface + zmax)
+
+                elif _height_restoring is True:
+                    zmin = data_reader.get_zmin(time, &_particle_copy)
+                    _particle_copy.set_x3(_fixed_height_above_bed + zmin)
+
                 # Set vertical grid vars, which may have changed while the particle was beached
                 flag = data_reader.set_vertical_grid_vars(time, &_particle_copy)
 
@@ -210,68 +226,45 @@ cdef class StdNumMethod(NumMethod):
         if flag != IN_DOMAIN:
             return flag
         
+        # Check for beaching
+        if data_reader.is_wet(time+self._time_step, &_particle_copy) == 0:
+
+            if self._allow_beaching:
+                _particle_copy.set_is_beached(1)
+
+                # Copy back particle properties
+                particle[0] = _particle_copy
+
+                return flag
+            else:
+                # Relocate to the nearest wet host. NB used t + dt!
+                data_reader.find_nearest_wet_host(time+self._time_step, &_particle_copy)
+
         # Restore to a fixed depth or height?
         if _depth_restoring is True:
             zmax = data_reader.get_zmax(time+self._time_step, &_particle_copy)
             _particle_copy.set_x3(_fixed_depth_below_surface + zmax)
 
-            # Only try to set vertical grid vars if the particle is not beached
-            if data_reader.is_wet(time+self._time_step, &_particle_copy) == 1:
-
-                # Determine the new host zlayer
-                flag = data_reader.set_vertical_grid_vars(time+self._time_step, &_particle_copy)
-
-                # Return if failure recorded
-                if flag != IN_DOMAIN:
-                    return flag
-            else:
-                _particle_copy.set_is_beached(1)
-
-            # Copy back particle properties
-            particle[0] = _particle_copy
-
-            return flag
-        
         elif _height_restoring is True:
             zmin = data_reader.get_zmin(time+self._time_step, &_particle_copy)
             _particle_copy.set_x3(_fixed_height_above_bed + zmin)
 
-            # Only try to set vertical grid vars if the particle is not beached
-            if data_reader.is_wet(time+self._time_step, &_particle_copy) == 1:
+        # Determine the new host zlayer
+        flag = data_reader.set_vertical_grid_vars(time+self._time_step, &_particle_copy)
 
-                # Determine the new host zlayer
-                flag = data_reader.set_vertical_grid_vars(time+self._time_step, &_particle_copy)
-
-                # Return if failure recorded
-                if flag != IN_DOMAIN:
-                    return flag
-            else:
-                _particle_copy.set_is_beached(1)
-
-            # Copy back particle properties
-            particle[0] = _particle_copy
-
-            return flag
-
-        # Check to see if the particle has beached. Only set vertical grid vars if it is in water.
-        if data_reader.is_wet(time+self._time_step, &_particle_copy) == 1:
-            # Set vertical grid vars. NB use t + dt!
-            flag = data_reader.set_vertical_grid_vars(time+self._time_step, &_particle_copy)
-
-            # Apply surface/bottom boundary conditions if required
+        if flag != IN_DOMAIN:
+            # TODO - Depth/height restoring may fail in shallow water. Apply BC or return an error?    
+            flag = self._vert_bc_calculator.apply(data_reader, time+self._time_step, &_particle_copy)
+                
+            # Return without updating the particle's position if failure recorded
             if flag != IN_DOMAIN:
-                flag = self._vert_bc_calculator.apply(data_reader, time+self._time_step, &_particle_copy)
-
-                # Return if failure recorded
-                if flag != IN_DOMAIN:
-                    return flag
-        else:
-            _particle_copy.set_is_beached(1)
-
+                return flag
+            
         # Copy back particle properties
         particle[0] = _particle_copy
 
         return flag
+
 
 cdef class OS0NumMethod(NumMethod):
     """ Numerical method that employs operator splitting
@@ -317,6 +310,8 @@ cdef class OS0NumMethod(NumMethod):
     cdef DTYPE_FLOAT_t _diff_time_step
     cdef DTYPE_INT_t _n_sub_time_steps
 
+    cdef bint _allow_beaching
+
     cdef ItMethod _adv_iterative_method
     cdef ItMethod _diff_iterative_method
     cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
@@ -350,6 +345,11 @@ cdef class OS0NumMethod(NumMethod):
                     "".format(self._adv_time_step, self._diff_time_step))
         
         self._n_sub_time_steps = int(self._adv_time_step / self._diff_time_step)
+
+        try:
+            self._allow_beaching = config.getboolean('SIMULATION', 'allow_beaching')
+        except (configparser.NoOptionError) as e:
+            self._allow_beaching = True
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
             Particle *particle) except INT_ERR:
@@ -410,6 +410,15 @@ cdef class OS0NumMethod(NumMethod):
                 # If the cell is still dry, pass over
                 return IN_DOMAIN
             else:
+                # Apply depth/height restoring (the position of the free surface may have changed)
+                if _depth_restoring is True:
+                    zmax = data_reader.get_zmax(time, &_particle_copy_a)
+                    _particle_copy_a.set_x3(_fixed_depth_below_surface + zmax)
+
+                elif _height_restoring is True:
+                    zmin = data_reader.get_zmin(time, &_particle_copy_a)
+                    _particle_copy_a.set_x3(_fixed_height_above_bed + zmin)
+
                 # Set vertical grid vars, which may have changed while the particle was beached
                 flag = data_reader.set_vertical_grid_vars(time, &_particle_copy_a)
 
@@ -448,11 +457,15 @@ cdef class OS0NumMethod(NumMethod):
         # Check to see if the particle has beached. NB use time `time',
         # since this is when the diffusion loop starts.
         if data_reader.is_wet(time, &_particle_copy_a) == 0:
-            _particle_copy_a.set_is_beached(1)
+            if self._allow_beaching:
+                _particle_copy_a.set_is_beached(1)
 
-            particle[0] = _particle_copy_a
+                particle[0] = _particle_copy_a
 
-            return flag
+                return flag
+            else:
+                # Relocate to the nearest wet host
+                data_reader.find_nearest_wet_host(time, &_particle_copy_a)
 
         # Set vertical grid vars
         flag = data_reader.set_vertical_grid_vars(time, &_particle_copy_a)
@@ -497,11 +510,15 @@ cdef class OS0NumMethod(NumMethod):
 
             # Check to see if the particle has beached
             if data_reader.is_wet(t+self._diff_time_step, &_particle_copy_b) == 0:
-                _particle_copy_b.set_is_beached(1)
+                if self._allow_beaching:
+                    _particle_copy_b.set_is_beached(1)
 
-                particle[0] = _particle_copy_b
+                    particle[0] = _particle_copy_b
 
-                return flag
+                    return flag
+                else:
+                    data_reader.find_nearest_wet_host(t+self._diff_time_step, &_particle_copy_b)
+
 
             flag = data_reader.set_vertical_grid_vars(t+self._diff_time_step, &_particle_copy_b)
 
@@ -516,56 +533,41 @@ cdef class OS0NumMethod(NumMethod):
             # Save the particle's last position to help with host element searching
             _particle_copy_a = _particle_copy_b
 
+        # Check to see if the particle has beached
+        if data_reader.is_wet(time+self._adv_time_step, &_particle_copy_b) == 0:
+            if self._allow_beaching:
+                _particle_copy_b.set_is_beached(1)
+
+                particle[0] = _particle_copy_b
+
+                return flag
+            else:
+                data_reader.find_nearest_wet_host(time+self._adv_time_step, &_particle_copy_b) 
+
         # Restore to a fixed depth or height?
         if _depth_restoring is True:
             zmax = data_reader.get_zmax(time+self._adv_time_step, &_particle_copy_b)
             _particle_copy_b.set_x3(_fixed_depth_below_surface + zmax)
-            
-            # Only try to set vertical grid vars if the particle is not beached
-            if data_reader.is_wet(time+self._adv_time_step, &_particle_copy_b) == 1:
-
-                # Determine the new host zlayer
-                flag = data_reader.set_vertical_grid_vars(time+self._adv_time_step, &_particle_copy_b)
-
-                # Return if failure recorded
-                if flag != IN_DOMAIN:
-                    return flag
-
-            else:
-                _particle_copy_b.set_is_beached(1)
-
-            particle[0] = _particle_copy_b
-
-            return flag
 
         elif _height_restoring is True:
             zmin = data_reader.get_zmin(time+self._adv_time_step, &_particle_copy_b)
             _particle_copy_b.set_x3(_fixed_height_above_bed + zmin)
 
-            # Only try to set vertical grid vars if the particle is not beached
-            if data_reader.is_wet(time+self._adv_time_step, &_particle_copy_b) == 1:
+        # Determine the new host zlayer
+        flag = data_reader.set_vertical_grid_vars(time+self._adv_time_step, &_particle_copy_b)
 
-                # Determine the new host zlayer
-                flag = data_reader.set_vertical_grid_vars(time+self._adv_time_step, &_particle_copy_b)
+        if flag != IN_DOMAIN:
+            # TODO - Depth/height restoring may fail in shallow water. Apply BC or return an error?    
+            flag = self._vert_bc_calculator.apply(data_reader, t+self._diff_time_step, &_particle_copy_b)
 
-                # Return if failure recorded
-                if flag != IN_DOMAIN:
-                    return flag
-
-            else:
-                _particle_copy_b.set_is_beached(1)
-
-            particle[0] = _particle_copy_b
-
-            return flag
-
-        # Check to see if the particle has beached
-        if data_reader.is_wet(time+self._adv_time_step, &_particle_copy_b) == 0:
-            _particle_copy_b.set_is_beached(1)
+            # Return if failure recorded
+            if flag != IN_DOMAIN:
+                return flag
 
         particle[0] = _particle_copy_b
 
         return flag
+
 
 cdef class OS1NumMethod(NumMethod):
     """ Numerical method that employs strang splitting
@@ -603,6 +605,8 @@ cdef class OS1NumMethod(NumMethod):
     cdef DTYPE_FLOAT_t _adv_time_step
     cdef DTYPE_FLOAT_t _diff_time_step
 
+    cdef bint _allow_beaching
+
     cdef ItMethod _adv_iterative_method
     cdef ItMethod _diff_iterative_method
     cdef HorizBoundaryConditionCalculator _horiz_bc_calculator
@@ -628,6 +632,11 @@ cdef class OS1NumMethod(NumMethod):
                     "diffusion (time_step_diff, {} s) when using "\
                     "the numerical integration scheme OS1NumMethod."\
                     "".format(self._adv_time_step, self._diff_time_step))
+
+        try:
+            self._allow_beaching = config.getboolean('SIMULATION', 'allow_beaching')
+        except (configparser.NoOptionError) as e:
+            self._allow_beaching = True
 
     cdef DTYPE_INT_t step(self, DataReader data_reader, DTYPE_FLOAT_t time,
             Particle *particle) except INT_ERR:
@@ -687,6 +696,15 @@ cdef class OS1NumMethod(NumMethod):
                 # If the cell is still dry, pass over
                 return IN_DOMAIN
             else:
+                # Apply depth/height restoring (the position of the free surface may have changed)
+                if _depth_restoring is True:
+                    zmax = data_reader.get_zmax(time, &_particle_copy_a)
+                    _particle_copy_a.set_x3(_fixed_depth_below_surface + zmax)
+
+                elif _height_restoring is True:
+                    zmin = data_reader.get_zmin(time, &_particle_copy_a)
+                    _particle_copy_a.set_x3(_fixed_height_above_bed + zmin)
+
                 # Set vertical grid vars, which may have changed while the particle was beached
                 flag = data_reader.set_vertical_grid_vars(time, &_particle_copy_a)
 
@@ -723,11 +741,14 @@ cdef class OS1NumMethod(NumMethod):
         # Check is beached status. NB evaluated at time `time', since this is when the
         # advection update starts
         if data_reader.is_wet(time, &_particle_copy_a) == 0:
-            _particle_copy_a.set_is_beached(1)
+            if self._allow_beaching:
+                _particle_copy_a.set_is_beached(1)
 
-            particle[0] = _particle_copy_a
+                particle[0] = _particle_copy_a
 
-            return flag
+                return flag
+            else:
+                data_reader.find_nearest_wet_host(time, &_particle_copy_a)
 
         flag = data_reader.set_vertical_grid_vars(time, &_particle_copy_a)
 
@@ -776,11 +797,14 @@ cdef class OS1NumMethod(NumMethod):
 
         # Check is beached status
         if data_reader.is_wet(t, &_particle_copy_b) == 0:
-            _particle_copy_a.set_is_beached(1)
+            if self._allow_beaching:
+                _particle_copy_a.set_is_beached(1)
 
-            particle[0] = _particle_copy_b
+                particle[0] = _particle_copy_b
 
-            return flag
+                return flag
+            else:
+                data_reader.find_nearest_wet_host(t, &_particle_copy_b)
 
         flag = data_reader.set_vertical_grid_vars(t, &_particle_copy_b)
 
@@ -820,71 +844,36 @@ cdef class OS1NumMethod(NumMethod):
 
         t = time + self._adv_time_step
 
+        # Has the particle beached?
+        if data_reader.is_wet(t, &_particle_copy_b) == 0:
+            if self._allow_beaching:
+                _particle_copy_b.set_is_beached(1)
+
+                particle[0] = _particle_copy_b
+
+                return flag
+            else:
+                data_reader.find_nearest_wet_host(t, &_particle_copy_b)
+
         # Restore to a fixed depth or height?
         if _depth_restoring is True:
             zmax = data_reader.get_zmax(t, &_particle_copy_b)
             _particle_copy_b.set_x3(_fixed_depth_below_surface + zmax)
 
-            if data_reader.is_wet(t, &_particle_copy_b) == 1:
-
-                # Determine the new host zlayer
-                flag = data_reader.set_vertical_grid_vars(t, &_particle_copy_b)
-
-                # Apply surface/bottom boundary conditions if required
-                if flag != IN_DOMAIN:
-                    flag = self._vert_bc_calculator.apply(data_reader, t, &_particle_copy_b)
-
-                # Return if failure recorded
-                if flag != IN_DOMAIN:
-                    return flag
-
-            else:
-                _particle_copy_b.set_is_beached(1)
-
-            # Copy back particle properties
-            particle[0] = _particle_copy_b
-
-            return flag
-
         elif _height_restoring is True:
             zmin = data_reader.get_zmin(t, &_particle_copy_b)
             _particle_copy_b.set_x3(_fixed_height_above_bed + zmin)
 
-            if data_reader.is_wet(t, &_particle_copy_b) == 1:
+        # Determine the new host zlayer
+        flag = data_reader.set_vertical_grid_vars(t, &_particle_copy_b)
 
-                # Determine the new host zlayer
-                flag = data_reader.set_vertical_grid_vars(t, &_particle_copy_b)
+        if flag != IN_DOMAIN:
+            # TODO - Depth/height restoring may fail in shallow water. Apply BC or return an error?    
+            flag = self._vert_bc_calculator.apply(data_reader, t, &_particle_copy_b)
 
-                # Apply surface/bottom boundary conditions if required
-                if flag != IN_DOMAIN:
-                    flag = self._vert_bc_calculator.apply(data_reader, t, &_particle_copy_b)
-
-                # Return if failure recorded
-                if flag != IN_DOMAIN:
-                    return flag
-
-            else:
-                _particle_copy_b.set_is_beached(1)
-
-            # Copy back particle properties
-            particle[0] = _particle_copy_b
-
-            return flag
-
-        # Set vertical grid vars if the particle is in water
-        if data_reader.is_wet(t, &_particle_copy_b) == 1:
-
-            flag = data_reader.set_vertical_grid_vars(t, &_particle_copy_b)
-
-            # Apply surface/bottom boundary conditions if required
+            # Return if failure recorded
             if flag != IN_DOMAIN:
-                flag = self._vert_bc_calculator.apply(data_reader, t, &_particle_copy_b)
-
-                # Return if failure recorded
-                if flag != IN_DOMAIN:
-                    return flag
-        else:
-            _particle_copy_b.set_is_beached(1)
+                return flag
 
         # Copy back particle properties
         particle[0] = _particle_copy_b

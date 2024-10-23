@@ -178,6 +178,29 @@ cdef class DataReader:
                                    DTYPE_FLOAT_t intersection[2]):
         raise NotImplementedError
 
+    def find_nearest_wet_host_wrapper(self, DTYPE_FLOAT_t time,
+                                       ParticleSmartPtr particle):
+        """ Python wrapper for finding the nearest wet host element
+
+        This function is used to find the nearest wet host element to the
+        particle's current position.
+
+        Parameters
+        ----------
+        time : float
+            The current time.
+        
+        particle : pylag.particle_cpp_wrapper.ParticleSmartPtr
+            The particle at its current position.
+        
+        Returns
+        -------
+        """
+        return self.find_nearest_wet_host(time, particle.get_ptr())
+
+    cdef find_nearest_wet_host(self, DTYPE_FLOAT_t time, Particle *particle):
+        raise NotImplementedError
+
     def set_default_location_wrapper(self, ParticleSmartPtr particle):
         """ Python wrapper for setting the default location of a particle
 

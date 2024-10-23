@@ -28,7 +28,7 @@ from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
 from libcpp.string cimport string
 from libcpp.vector cimport vector
-from libc.math cimport log
+from libc.math cimport log, sqrt
 
 # PyLag cython imports
 from pylag.parameters cimport cartesian, geographic, deg_to_radians
@@ -462,6 +462,98 @@ cdef class FVCOMDataReader(DataReader):
         self._unstructured_grid.set_default_location(particle)
 
         return
+
+    cdef find_nearest_wet_host(self, DTYPE_FLOAT_t time, Particle *particle):
+        """ Find the nearest wet host element
+
+        Find the nearest wet host element to the particle's position and relocate
+        the particle to the centroid of this element. Begin by searching the 
+        the particle's host element and then its immediate neighbours. If no wet
+        elements are found, the neighbours of neighbours are searched and so on.
+        If multiple wet elements are found, the one closest to the particle is
+        selected.
+        """
+        cdef vector[DTYPE_INT_t] current_nbe_checks
+        cdef vector[DTYPE_INT_t] next_nbe_checks
+        cdef vector[DTYPE_INT_t] elems_checked
+        cdef vector[DTYPE_INT_t] wet_elems
+
+        cdef DTYPE_FLOAT_t dist, min_dist
+        cdef DTYPE_INT_t current_host, nbe, n_wet_elems, new_host
+        cdef DTYPE_INT_t i, j 
+        cdef bint has_been_checked
+
+        # Confirm the particle currently resides in a dry element
+        if self.is_wet(time, particle) == 1:
+            return
+
+        # Save the current host
+        current_host = particle.get_host_horizontal_elem(self._name)
+
+        # Add the current host to the list of elements whose neighbours we will check next
+        next_nbe_checks.push_back(current_host)
+
+        # Flag that we have already checked the element itself
+        elems_checked.push_back(current_host)
+
+        # Perform an ever widening search to find the nearest wet element
+        while True:
+            current_nbe_checks = next_nbe_checks
+
+            # Clear the list of elements to check next - we will repopulate this as we go
+            next_nbe_checks.clear()
+
+            # Loop over the current list of elements whose neighbours we will check
+            for elem in current_nbe_checks:
+
+                # Search the element's immediate neighbours
+                for i in range(3):
+                    nbe = self._nbe[i, elem]
+
+                    # Check if sea point
+                    if nbe == LAND_BDY_CROSSED or nbe == OPEN_BDY_CROSSED:
+                        continue
+
+                    # Have we cheked this element before?
+                    has_been_checked = False
+                    for j in range(elems_checked.size()):
+                        if nbe == elems_checked[j]:
+                            has_been_checked = True
+                            break
+
+                    if has_been_checked:
+                        continue
+                    else:
+                        # Check if the neighbour is wet
+                        particle.set_host_horizontal_elem(self._name, nbe)
+
+                        if self.is_wet(time, particle) == 1:
+                            wet_elems.push_back(nbe)
+
+                        next_nbe_checks.push_back(nbe)
+                        elems_checked.push_back(nbe)
+
+                n_wet_elems = wet_elems.size()
+                if n_wet_elems == 0:
+                    continue
+                else:
+                    if n_wet_elems == 1:
+                        new_host = wet_elems[0]
+                    else:
+                        # If multiple wet elements are found, select the one closest to the particle
+                        min_dist = 1.e20
+                        for i in range(wet_elems.size()):
+                            # TODO - Will work with geographic coordinates?
+                            dist = sqrt((particle.get_x1() - self._xc[wet_elems[i]])**2 +
+                                        (particle.get_x2() - self._yc[wet_elems[i]])**2)
+                            if dist < min_dist:
+                                min_dist = dist
+                                new_host = wet_elems[i]
+                        
+                    particle.set_host_horizontal_elem(self._name, new_host)
+                    self.set_default_location(particle)
+
+                    return
 
     cdef set_local_coordinates(self, Particle *particle):
         """ Set local coordinates
