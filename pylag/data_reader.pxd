@@ -33,6 +33,8 @@ cdef class DataReader:
                                    DTYPE_FLOAT_t particle_pathline[2],
                                    DTYPE_FLOAT_t intersection[2])
 
+    cdef find_nearest_wet_host(self, DTYPE_FLOAT_t time, Particle *particle)
+
     cdef set_default_location(self, Particle *particle)
 
     cdef set_local_coordinates(self, Particle *particle)
