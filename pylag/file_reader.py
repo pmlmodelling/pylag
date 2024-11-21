@@ -326,42 +326,50 @@ class FileReader:
 
             ds.close()
 
-            if (data_start_datetime <= self.sim_start_datetime <
+            # Set file names depending on time direction
+            if self.time_direction == 1:
+                # Forward tracking
+                if (data_start_datetime <= self.sim_start_datetime <
                     data_end_datetime + timedelta(seconds=time_delta)):
-                # Set file names depending on time direction
-                if self.time_direction == 1:
 
                     self.first_data_file_name = data_file_name
 
                     if self.sim_start_datetime < data_end_datetime:
                         self.second_data_file_name = data_file_name
                     else:
+
                         self.second_data_file_name = \
                                 self.data_file_names[idx + 1]
-                else:
 
-                    if self.sim_start_datetime == data_start_datetime:
-                        self.first_data_file_name = \
-                                self.data_file_names[idx - 1]
-                        self.second_data_file_name = data_file_name
-                    else:
-                        if self.sim_start_datetime <= data_end_datetime:
-                            self.first_data_file_name = data_file_name
-                            self.second_data_file_name = data_file_name
-                        else:
-                            self.first_data_file_name = data_file_name
-                            self.second_data_file_name = \
-                                    self.data_file_names[idx + 1]
-                    
-                logger.info(f"Found first initial data file "
-                            f"{self.first_data_file_name}.")
-                logger.info(f"Found second initial data file "
-                            f"{self.second_data_file_name}.")
-                break
+                    logger.info(f"Found first initial data file "
+                                f"{self.first_data_file_name}.")
+                    logger.info(f"Found second initial data file "
+                                f"{self.second_data_file_name}.")
+                    break
+                else:
+                    logger.info(f"Start point not found in file covering the "
+                                f"period {data_start_datetime} to "
+                                f"{data_end_datetime}")
             else:
-                logger.info(f"Start point not found in file covering the "
-                            f"period {data_start_datetime} to "
-                            f"{data_end_datetime}")
+                # Back tracking
+                if (data_start_datetime <= self.sim_start_datetime <= data_end_datetime):
+
+                    self.second_data_file_name = data_file_name
+                    
+                    if self.sim_start_datetime > data_start_datetime:
+                        self.first_data_file_name = data_file_name
+                    else:
+                        self.first_data_file_name = self.data_file_names[idx - 1]
+                    
+                    logger.info(f"Found first initial data file "
+                                f"{self.first_data_file_name}.")
+                    logger.info(f"Found second initial data file "
+                                f"{self.second_data_file_name}.")
+                    break
+                else:
+                    logger.info(f"Start point not found in file covering the "
+                                f"period {data_start_datetime} to "
+                                f"{data_end_datetime}")
 
         # Ensure the search was a success
         if (self.first_data_file_name is None) or \
