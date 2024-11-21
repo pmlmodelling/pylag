@@ -646,3 +646,32 @@ class FileReader_test(TestCase):
         test.assert_equal(2, file_reader.tidx_second)
 
 
+    def test_set_file_names_when_reverse_tracking_with_time_points_repeated_between_adjacent_files(self):
+        start_datetime = datetime.datetime(2000,1,1,0,5,0) # Valid = 300 seconds after data record start
+        end_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid - 1 second before data record end
+
+        config = self.get_config('reverse')
+
+        # Create file reader
+        file_reader = FileReader(config, 'ocean', self.file_name_reader,
+                                 self.dataset_reader, start_datetime,
+                                 end_datetime)
+
+        # Check file names
+        test.assert_array_equal('test_file_2', file_reader.first_data_file_name)
+        test.assert_array_equal('test_file_2', file_reader.second_data_file_name)
+
+    def test_set_time_indices_when_reverse_tracking_with_time_points_repeated_between_adjacent_files(self):
+        start_datetime = datetime.datetime(2000,1,1,0,5,0) # Valid = 300 seconds after data record start
+        end_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid - 1 second before data record end
+
+        config = self.get_config('reverse')
+
+        # Create file reader
+        file_reader = FileReader(config, 'ocean', self.file_name_reader,
+                                 self.dataset_reader, start_datetime,
+                                 end_datetime)
+
+        # Check time indices
+        test.assert_equal(1, file_reader.tidx_first)
+        test.assert_equal(2, file_reader.tidx_second)
