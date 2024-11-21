@@ -105,19 +105,6 @@ class MockDatasetReader(DatasetReader):
 class FileReader_test(TestCase):
 
     def setUp(self):
-        # Create config
-        self.config = configparser.ConfigParser()
-        self.config.add_section("OCEAN_DATA")
-        self.config.set('OCEAN_DATA', 'name', 'TEST')
-        self.config.set('OCEAN_DATA', 'data_dir', '')
-        self.config.set('OCEAN_DATA', 'data_file_stem', '')
-        self.config.set('OCEAN_DATA', 'grid_metrics_file', 'grid_metrics')
-        self.config.set('OCEAN_DATA', 'rounding_interval', rounding_interval)
-        self.config.add_section("SIMULATION")
-        self.config.add_section("NUMERICS")
-        self.config.set('NUMERICS', 'num_method', 'test')
-        self.config.set('NUMERICS', 'time_step_adv', '1.0')
-
 
         # Mock file name reader
         self.file_name_reader = MockFileNameReader()
@@ -125,8 +112,24 @@ class FileReader_test(TestCase):
         # Mock dataset reader
         self.dataset_reader = MockDatasetReader()
 
+    def get_config(self, time_direction, time_step_adv=1.0):
+        # Create config
+        config = configparser.ConfigParser()
+        config.add_section("SIMULATION")
+        config.set('SIMULATION', 'time_direction', f'{time_direction}')
+        config.add_section("OCEAN_DATA")
+        config.set('OCEAN_DATA', 'name', 'TEST')
+        config.set('OCEAN_DATA', 'data_dir', '')
+        config.set('OCEAN_DATA', 'data_file_stem', '')
+        config.set('OCEAN_DATA', 'grid_metrics_file', 'grid_metrics')
+        config.set('OCEAN_DATA', 'rounding_interval', rounding_interval)
+        config.add_section("NUMERICS")
+        config.set('NUMERICS', 'num_method', 'test')
+        config.set('NUMERICS', 'time_step_adv', f'{time_step_adv}')
+
+        return config
+
     def tearDown(self):
-        del(self.config)
         del(self.file_name_reader)
         del(self.dataset_reader)
 
@@ -134,89 +137,89 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid - 0 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
-        self.config.set('SIMULATION', 'time_direction', 'forward')
+        config = self.get_config('forward')
 
-        # Create file reader
-        file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        # Create file reader - will raise if invalid
+        _ = FileReader(config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
 
     def test_use_end_datetime_equal_to_data_record_start(self):
         # Should be valid during reverse tracking
         start_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 second before data record end
         end_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid - 0 seconds after data record start
 
-        self.config.set('SIMULATION', 'time_direction', 'reverse')
+        config = self.get_config('reverse')
 
         # Create file reader
-        file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        _ = FileReader(config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
 
     def test_use_start_datetime_equal_to_data_record_end(self):
         start_datetime = datetime.datetime(2000,1,1,0,8,0) # Invalid - 0 seconds after data record end
         end_datetime = datetime.datetime(2000,1,1,0,0,0) # Invalid - 0 seconds after data record start
 
-        self.config.set('SIMULATION', 'time_direction', 'forward')
+        config = self.get_config('forward')
 
         # Create file reader
-        self.assertRaises(PyLagValueError, FileReader, self.config, 'ocean', self.file_name_reader, self.dataset_reader,
+        self.assertRaises(PyLagValueError, FileReader, config, 'ocean', self.file_name_reader, self.dataset_reader,
                           start_datetime, end_datetime)
 
     def test_use_end_datetime_equal_to_data_record_end(self):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid - 0 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,8,0) # Invalid - 0 seconds after data record end
 
-        self.config.set('SIMULATION', 'time_direction', 'forward')
+        config = self.get_config('forward')
 
         # Create file reader
-        self.assertRaises(PyLagValueError, FileReader, self.config, 'ocean', self.file_name_reader, self.dataset_reader,
+        self.assertRaises(PyLagValueError, FileReader, config, 'ocean', self.file_name_reader, self.dataset_reader,
                           start_datetime, end_datetime)
 
     def test_use_start_datetime_before_data_record_start(self):
         start_datetime = datetime.datetime(1999,1,1,0,0,0) # Invalid - 1 year before data start date
         end_datetime = datetime.datetime(2000,1,1,0,8,0) # Valid - 480 seconds
 
-        self.config.set('SIMULATION', 'time_direction', 'forward')
+        config = self.get_config('forward')
 
         # Create file reader
-        self.assertRaises(PyLagValueError, FileReader, self.config, 'ocean', self.file_name_reader, self.dataset_reader,
+        self.assertRaises(PyLagValueError, FileReader, config, 'ocean', self.file_name_reader, self.dataset_reader,
                           start_datetime, end_datetime)
 
     def test_use_start_datetime_after_data_record_end(self):
         start_datetime = datetime.datetime(2001,1,1,8,0) # Invalid - 1 year after data end date
         end_datetime = datetime.datetime(2000,1,1,0,8,0) # Valid - 480 seconds
 
-        self.config.set('SIMULATION', 'time_direction', 'forward')
+        config = self.get_config('forward')
 
         # Create file reader
-        self.assertRaises(PyLagValueError, FileReader, self.config, 'ocean', self.file_name_reader, self.dataset_reader,
+        self.assertRaises(PyLagValueError, FileReader, config, 'ocean', self.file_name_reader, self.dataset_reader,
                           start_datetime, end_datetime)
 
     def test_use_end_datetime_before_data_record_start(self):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid - 0 seconds after data record start
         end_datetime = datetime.datetime(1999,1,1,0,0,0) # Invalid - 1 year before data start date
 
-        self.config.set('SIMULATION', 'time_direction', 'forward')
+        config = self.get_config('forward')
 
         # Create file reader
-        self.assertRaises(PyLagValueError, FileReader, self.config, 'ocean', self.file_name_reader, self.dataset_reader,
+        self.assertRaises(PyLagValueError, FileReader, config, 'ocean', self.file_name_reader, self.dataset_reader,
                           start_datetime, end_datetime)
 
     def test_use_end_datetime_after_data_record_start(self):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid - 0 seconds after data record start
         end_datetime = datetime.datetime(2001,1,1,0,8,0) # Invalid - 1 year after data end date
 
-        self.config.set('SIMULATION', 'time_direction', 'forward')
+        config = self.get_config('forward')
 
         # Create file reader
-        self.assertRaises(PyLagValueError, FileReader, self.config, 'ocean', self.file_name_reader, self.dataset_reader,
+        self.assertRaises(PyLagValueError, FileReader, config, 'ocean', self.file_name_reader, self.dataset_reader,
                           start_datetime, end_datetime)
 
     def test_set_file_names_with_start_datetime_equal_to_data_record_start(self):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid - 0 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
-        self.config.set('SIMULATION', 'time_direction', 'forward')
+        config = self.get_config('forward')
 
         # Create file reader
-        file_reader = FileReader(self.config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
+        file_reader = FileReader(config, 'ocean', self.file_name_reader, self.dataset_reader, start_datetime, end_datetime)
 
         # Check file names
         test.assert_array_equal('test_file_1', file_reader.first_data_file_name)
@@ -226,10 +229,10 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,1,0) # Valid = 60 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
-        self.config.set('SIMULATION', 'time_direction', 'forward')
+        config = self.get_config('forward')
 
         # Create file reader
-        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+        file_reader = FileReader(config, 'ocean', self.file_name_reader,
                                  self.dataset_reader, start_datetime,
                                  end_datetime)
 
@@ -241,10 +244,10 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,2,0) # Valid = 120 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
-        self.config.set('SIMULATION', 'time_direction', 'forward')
+        config = self.get_config('forward')
 
         # Create file reader
-        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+        file_reader = FileReader(config, 'ocean', self.file_name_reader,
                                  self.dataset_reader, start_datetime,
                                  end_datetime)
 
@@ -256,10 +259,10 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,2,30) # Valid = 150 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
-        self.config.set('SIMULATION', 'time_direction', 'forward')
+        config = self.get_config('forward')
 
         # Create file reader
-        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+        file_reader = FileReader(config, 'ocean', self.file_name_reader,
                                  self.dataset_reader, start_datetime,
                                  end_datetime)
 
@@ -271,10 +274,10 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,4,0) # Valid = 240 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
-        self.config.set('SIMULATION', 'time_direction', 'forward')
+        config = self.get_config('forward')
 
         # Create file reader
-        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+        file_reader = FileReader(config, 'ocean', self.file_name_reader,
                                  self.dataset_reader, start_datetime,
                                  end_datetime)
 
@@ -286,10 +289,10 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,5,0) # Valid = 300 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
-        self.config.set('SIMULATION', 'time_direction', 'forward')
+        config = self.get_config('forward')
 
         # Create file reader
-        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+        file_reader = FileReader(config, 'ocean', self.file_name_reader,
                                  self.dataset_reader, start_datetime,
                                  end_datetime)
 
@@ -301,12 +304,12 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000, 1, 1, 0, 0, 0)
         end_datetime = datetime.datetime(2000, 1, 1, 0, 1, 0)
 
-        self.config.set('SIMULATION', 'time_direction', 'forward')
+        config = self.get_config('forward')
 
-        self.config.set('NUMERICS', 'time_step_adv', '10')
+        config.set('NUMERICS', 'time_step_adv', '10')
 
         # Create file reader
-        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+        file_reader = FileReader(config, 'ocean', self.file_name_reader,
                                  self.dataset_reader, start_datetime,
                                  end_datetime)
 
@@ -314,12 +317,10 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000, 1, 1, 0, 0, 0)
         end_datetime = datetime.datetime(2000, 1, 1, 0, 1, 0)
 
-        self.config.set('SIMULATION', 'time_direction', 'forward')
-
-        self.config.set('NUMERICS', 'time_step_adv', '11')
+        config = self.get_config('forward', '11')
 
         # Create file reader
-        self.assertRaises(PyLagValueError, FileReader, self.config, 'ocean',
+        self.assertRaises(PyLagValueError, FileReader, config, 'ocean',
                           self.file_name_reader, self.dataset_reader,
                           start_datetime, end_datetime)
 
@@ -327,10 +328,10 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid = 0 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
-        self.config.set('SIMULATION', 'time_direction', 'forward')
+        config = self.get_config('forward')
 
         # Create file reader
-        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+        file_reader = FileReader(config, 'ocean', self.file_name_reader,
                                  self.dataset_reader, start_datetime,
                                  end_datetime)
 
@@ -342,10 +343,10 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,2,0) # Valid = 0 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
-        self.config.set('SIMULATION', 'time_direction', 'forward')
+        config = self.get_config('forward')
 
         # Create file reader
-        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+        file_reader = FileReader(config, 'ocean', self.file_name_reader,
                                  self.dataset_reader, start_datetime,
                                  end_datetime)
 
@@ -357,8 +358,10 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid = 0 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
+        config = self.get_config('forward')
+
         # Create file reader
-        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+        file_reader = FileReader(config, 'ocean', self.file_name_reader,
                                  self.dataset_reader, start_datetime,
                                  end_datetime)
 
@@ -370,10 +373,10 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,2,0) # Valid = 0 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
-        self.config.set('SIMULATION', 'time_direction', 'forward')
+        config = self.get_config('forward')
 
         # Create file reader
-        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+        file_reader = FileReader(config, 'ocean', self.file_name_reader,
                                  self.dataset_reader, start_datetime,
                                  end_datetime)
 
@@ -385,10 +388,10 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,5,0) # Valid = 300 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
-        self.config.set('SIMULATION', 'time_direction', 'forward')
+        config = self.get_config('forward')
 
         # Create file reader
-        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+        file_reader = FileReader(config, 'ocean', self.file_name_reader,
                                  self.dataset_reader, start_datetime,
                                  end_datetime)
 
@@ -400,10 +403,10 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid = 0 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
-        self.config.set('SIMULATION', 'time_direction', 'forward')
+        config = self.get_config('forward')
 
         # Create file reader
-        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+        file_reader = FileReader(config, 'ocean', self.file_name_reader,
                                  self.dataset_reader, start_datetime,
                                  end_datetime)
 
@@ -418,10 +421,10 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid = 0 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
-        self.config.set('SIMULATION', 'time_direction', 'forward')
+        config = self.get_config('forward')
 
         # Create file reader
-        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+        file_reader = FileReader(config, 'ocean', self.file_name_reader,
                                  self.dataset_reader, start_datetime,
                                  end_datetime)
 
@@ -436,10 +439,10 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid = 0 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
-        self.config.set('SIMULATION', 'time_direction', 'forward')
+        config = self.get_config('forward')
 
         # Create file reader
-        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+        file_reader = FileReader(config, 'ocean', self.file_name_reader,
                                  self.dataset_reader, start_datetime,
                                  end_datetime)
 
@@ -454,10 +457,10 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid = 0 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
-        self.config.set('SIMULATION', 'time_direction', 'forward')
+        config = self.get_config('forward')
 
         # Create file reader
-        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+        file_reader = FileReader(config, 'ocean', self.file_name_reader,
                                  self.dataset_reader, start_datetime,
                                  end_datetime)
 
@@ -472,10 +475,10 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid = 0 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
-        self.config.set('SIMULATION', 'time_direction', 'forward')
+        config = self.get_config('forward')
 
         # Create file reader
-        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+        file_reader = FileReader(config, 'ocean', self.file_name_reader,
                                  self.dataset_reader, start_datetime,
                                  end_datetime)
 
@@ -490,10 +493,10 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid = 0 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
-        self.config.set('SIMULATION', 'time_direction', 'forward')
+        config = self.get_config('forward')
 
         # Create file reader
-        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+        file_reader = FileReader(config, 'ocean', self.file_name_reader,
                                  self.dataset_reader, start_datetime,
                                  end_datetime)
 
@@ -508,10 +511,10 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid = 0 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
-        self.config.set('SIMULATION', 'time_direction', 'forward')
+        config = self.get_config('forward')
 
         # Create file reader
-        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+        file_reader = FileReader(config, 'ocean', self.file_name_reader,
                                  self.dataset_reader, start_datetime,
                                  end_datetime)
 
@@ -526,10 +529,10 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid = 0 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,7,59) # Valid - 1 seconds before data record end
 
-        self.config.set('SIMULATION', 'time_direction', 'forward')
+        config = self.get_config('forward')
 
         # Create file reader
-        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+        file_reader = FileReader(config, 'ocean', self.file_name_reader,
                                  self.dataset_reader, start_datetime,
                                  end_datetime)
 
@@ -544,10 +547,10 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,3,0) # Valid = 180 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid - 0 seconds before data record start
 
-        self.config.set('SIMULATION', 'time_direction', 'reverse')
+        config = self.get_config('reverse')
 
         # Create file reader
-        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+        file_reader = FileReader(config, 'ocean', self.file_name_reader,
                                  self.dataset_reader, start_datetime,
                                  end_datetime)
 
@@ -559,10 +562,10 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,3,0) # Valid = 180 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid - 0 seconds before data record start
 
-        self.config.set('SIMULATION', 'time_direction', 'reverse')
+        config = self.get_config('reverse')
 
         # Create file reader
-        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+        file_reader = FileReader(config, 'ocean', self.file_name_reader,
                                  self.dataset_reader, start_datetime,
                                  end_datetime)
 
@@ -577,10 +580,10 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,3,0) # Valid = 180 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid - 0 seconds before data record start
 
-        self.config.set('SIMULATION', 'time_direction', 'reverse')
+        config = self.get_config('reverse')
 
         # Create file reader
-        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+        file_reader = FileReader(config, 'ocean', self.file_name_reader,
                                  self.dataset_reader, start_datetime,
                                  end_datetime)
 
@@ -592,10 +595,10 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,3,0) # Valid = 180 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid - 0 seconds before data record start
 
-        self.config.set('SIMULATION', 'time_direction', 'reverse')
+        config = self.get_config('reverse')
 
         # Create file reader
-        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+        file_reader = FileReader(config, 'ocean', self.file_name_reader,
                                  self.dataset_reader, start_datetime,
                                  end_datetime)
 
@@ -610,8 +613,10 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,3,0) # Valid = 180 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid - 0 seconds before data record start
 
+        config = self.get_config('reverse')
+
         # Create file reader
-        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+        file_reader = FileReader(config, 'ocean', self.file_name_reader,
                                  self.dataset_reader, start_datetime,
                                  end_datetime)
 
@@ -626,8 +631,10 @@ class FileReader_test(TestCase):
         start_datetime = datetime.datetime(2000,1,1,0,3,0) # Valid = 180 seconds after data record start
         end_datetime = datetime.datetime(2000,1,1,0,0,0) # Valid - 0 seconds before data record start
 
+        config = self.get_config('reverse')
+
         # Create file reader
-        file_reader = FileReader(self.config, 'ocean', self.file_name_reader,
+        file_reader = FileReader(config, 'ocean', self.file_name_reader,
                                  self.dataset_reader, start_datetime,
                                  end_datetime)
 
