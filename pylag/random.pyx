@@ -13,6 +13,7 @@ include "constants.pxi"
 
 import os
 import time
+from typing import Optional
 
 from pylag.data_types_cython cimport DTYPE_INT_t, DTYPE_FLOAT_t
 
@@ -49,17 +50,23 @@ def get_seed():
     _seed : float
         The seed.
     """
+    global _seed
+
+    if _seed is None:
+        raise RuntimeError('PRNG has not been initialised. Try calling seed() first.')
+
     return _seed
 
-def seed(seed=None):
+def seed(seed: Optional[int] = None):
     """ Seed the random number generator
+
     If seed is None, use a combination of the system time and processor ID
     to set the random seed. The approach ensures each worker uses a unique
     seed during parallel simulations. Algorithm adapted from http://goo.gl/BVxgFl.
     
     Parameters
     ----------
-    seed: long, optional
+    seed: int, optional
         The seed to be used.
     """
     global _seed, generator
@@ -68,13 +75,14 @@ def seed(seed=None):
         # Initialise the PRNG. Use the pid to ensure each worker uses a unique seed
         pid = os.getpid()
         s = time.time() * 256
-        _seed = long(abs(((s*181)*((pid-83)*359))%104729))
+        _seed = int(abs(((s*181)*((pid-83)*359))%104729))
     else:
-        _seed = long(seed)
+        _seed = int(seed)
 
     # Set the seed for the RNG
     generator = Pymt19937(_seed)
-        
+
+
 cpdef DTYPE_FLOAT_t gauss(DTYPE_FLOAT_t mean = 0.0, DTYPE_FLOAT_t std = 1.0) except FLOAT_ERR:
     """
     Generate a random Gaussian variate. The Gaussian distribution has a standard
