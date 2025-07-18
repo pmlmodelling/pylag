@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=77.0.3", "cython", "numpy"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "PyLag"
+authors = [
+    {name = "James Clark (PML)", email="jcl@pml.ac.uk" }
+]
+description = "Lagrangian particle tracking framework"
+license = "GPL-3.0"
+license-files = ["LICENSE.txt"]
+dynamic = ["version"]
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "cython>=0.29",
+    "numpy>=1.20",
+    "scipy>=1.4.1",
+    "netCDF4",
+    "cftime>=1.1",
+    "mpi4py",
+    "configparser",
+    "natsort",
+    "progressbar",
+    "stripy",
+    "pyproj",
+    "nose2",
+    "shapely"
+]
+classifiers = [
+    'Development Status :: 3 - Alpha',
+    'Intended Audience :: Scientific researchers',
+    'Topic :: Particle Tracking',
+    'Programming Language :: C++',
+    'Programming Language :: Cython',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+    'Operating System :: UNIX',
+]
+
+keywords = ["Particle tracking", "Lagrangian", "Marine pollution", "Ocean modelling"]
+
+[project.urls]
+Repository = "https://github.com/pmlmodelling/pylag"
+Documentation = "https://pylag.readthedocs.io/en/latest/"
+Issues = "https://github.com/pmlmodelling/pylag/issues"
+Changelog = "https://github.com/pmlmodelling/pylag/blob/master/CHANGELOG.md"
+
+[project.optional-dependencies]
+docs =  ["sphinx", "nbsphinx", "sphinx_rtd_theme", "sphinxcontrib-napoleon",
+         "sphinx-copybutton", "jupyter", "jupyter_client", "ipykernel",
+         "cmocean", "matplotlib", "shapely", "cartopy"]
+
+[tool.setuptools]
+packages = ["pylag", "pylag.parallel", "pylag.regrid", "pylag.processing", "pylag.tests"]
