@@ -15,4 +15,4 @@ dependencies:
   - stripy
   - shapely
   - pyproj
-  - nose2
+  - pytest
