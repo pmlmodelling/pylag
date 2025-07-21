@@ -10,7 +10,7 @@ build:
   script: "{{ PYTHON }} -m pip install . --no-deps --ignore-installed -vv "
 
 source:
-  path: ../
+  path: ..
   
 requirements:
   host:
@@ -37,14 +37,18 @@ requirements:
     - stripy
     - shapely
     - pyproj
-    - nose2
+    - pytest
 
 test:
   import:
     - pylag.main
     - pylag.parallel.main
   requires:
-    - nose2
+    - pytest
+  source_files:
+    - pylag/tests
+  commands:
+    - pytest
 
 about:
   home: https://github.com/pmlmodelling/pylag

@@ -12,7 +12,8 @@ cftime>=1.1
 configparser
 stripy
 pyproj
+shapely
 
 # For testing
-nose2
+pytest
 
