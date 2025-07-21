@@ -35,26 +35,26 @@ time_units = "seconds since 2000-01-01 00:00:00"
 # Classes designed to mimic behaviours found in the NetCDF4 library
 # -----------------------------------------------------------------
 
-class TestVariable(list):
+class MyVariable(list):
     """ Simple test variable class
     
-    TestVariable is desgined to have similar behaviour to NetCDF4 Variable
+    MyVariable is desgined to have similar behaviour to NetCDF4 Variable
     objects with respect to a) returning a data array when invoked, and b)
     having a units attribute. Introduced here to assist in testing.
     """
     def __init__(self, data, units):
-        super(TestVariable, self).__init__(data)
+        super(MyVariable, self).__init__(data)
         self.units = units
 
 
-class TestDataset(object):
+class MyDataset(object):
     """ Simple test dataset class
     
-    TestDataset's are desgined to have similar behaviour to NetCDF4 Dataset
+    MyDataset's are desgined to have similar behaviour to NetCDF4 Dataset
     objects. Introduced here to assist in testing.
     """
     def __init__(self, time_array):
-        time_var = TestVariable(time_array, time_units)
+        time_var = MyVariable(time_array, time_units)
 
         # Initialise variable dictionary
         self.variables = {'time': time_var}
@@ -96,7 +96,7 @@ class MockDatasetReader(DatasetReader):
     def read_dataset(self, file_name):
         time_array = test_datasets[file_name]
 
-        return TestDataset(time_array)
+        return MyDataset(time_array)
 
 
 # FileReader test class
