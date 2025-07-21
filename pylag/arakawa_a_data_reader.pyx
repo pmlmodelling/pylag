@@ -1206,8 +1206,8 @@ cdef class ArakawaADataReader(DataReader):
 
         # Read in flags signifying whether time dependent variable arrays should be trimmed
         # in order to eliminate gridded data at -90 deg. or 90 deg. N.
-        self._trim_first_latitude = self.mediator.get_grid_variable('trim_first_latitude', (1), DTYPE_INT)
-        self._trim_last_latitude = self.mediator.get_grid_variable('trim_last_latitude', (1), DTYPE_INT)
+        self._trim_first_latitude = self.mediator.get_grid_variable('trim_first_latitude', (1), DTYPE_INT)[0]
+        self._trim_last_latitude = self.mediator.get_grid_variable('trim_last_latitude', (1), DTYPE_INT)[0]
 
         # Grid connectivity/adjacency
         self._nv = self.mediator.get_grid_variable('nv', (3, self._n_elems), DTYPE_INT)
