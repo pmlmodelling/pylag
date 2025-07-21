@@ -2,6 +2,24 @@
 
 PyLag is still very much in development. This page will be updated when future releases are made.
 
+## Version 0.8.0 21/07/2025
+
+* Add option to prevent particles from ever beaching (#155)
+
+* Add support for modelling a logarithimc velocity profile near to the bed (#158)
+
+* Add pyproject.toml file for build control using pip (#170)
+
+* Switch to using pytest rather than nose2 for unit testing (#173)
+
+* Fix problem in which Rrgridder was not passing the data source to Mediator (#153)
+
+* Fix import of Triangulation class (#156)
+
+* Fix backtracking bug which impacted midnight releases (#165)
+
+* Fix Cython issue related to the removal of support for type long (#171)
+
 ## Version 0.7.1 21/06/2024
 
 * Enable release zone creator to work with geograpbhic and cartesian coordinates (#127)
@@ -12,11 +30,11 @@ PyLag is still very much in development. This page will be updated when future r
 
 * Fix issue with delayed settling velocity calculator (#139)
 
-# Enable saving of FVCOM element areas (#141)
+* Enable saving of FVCOM element areas (#141)
 
-# Switch to using NumPy's interp (#148)
+* Switch to using NumPy's interp (#148)
 
-# Fix problem in advection and diffusion example notebook (#150)
+* Fix problem in advection and diffusion example notebook (#150)
 
 ## Version 0.7.0 12/07/2023
 
