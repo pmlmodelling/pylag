@@ -100,7 +100,7 @@ And finally, in the PyLag source code directory, build and install *PyLag*.
 .. code-block:: bash
 
     cd $HOME/code/git/PyLag/PyLag
-    conda build . --numpy 1.25
+    conda build ./conda --numpy 2.3
     conda install -n pylag --use-local pylag
 
 Occasionally, when building *PyLag* this way, users have hit upon clashes with locally installed packages. To get around this problem, you may find it useful to add the following aliases to your bashrc file, which you can use to activate and deactivate *Conda*:
