@@ -53,8 +53,8 @@ Changelog = "https://github.com/pmlmodelling/pylag/blob/master/CHANGELOG.md"
 
 [project.optional-dependencies]
 docs =  ["sphinx", "nbsphinx", "sphinx_rtd_theme", "sphinxcontrib-napoleon",
-         "sphinx-copybutton", "jupyter", "jupyter_client", "ipykernel",
-         "cmocean", "matplotlib", "cartopy"]
+         "sphinx-copybutton", "sphinxcontrib.googleanalytics", "jupyter",
+         "jupyter_client", "ipykernel", "cmocean", "matplotlib", "cartopy"]
 
 [tool.setuptools]
 packages = ["pylag", "pylag.parallel", "pylag.regrid", "pylag.processing", "pylag.tests"]
