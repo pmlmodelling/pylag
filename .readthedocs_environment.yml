@@ -4,7 +4,7 @@ channels:
   - conda-forge
   - JimClark
 dependencies:
-  - python=3.11
+  - python=3.12
   - pylag
   - matplotlib
   - cartopy
