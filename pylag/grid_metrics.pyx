@@ -581,7 +581,7 @@ def create_fvcom_grid_metrics_file(fvcom_file_name: str,
             attrs[attr_name] = nbe_var.getncattr(attr_name)
     else:
         try:
-            from matplotlib.tri.triangulation import Triangulation
+            from matplotlib.tri import Triangulation
         except ImportError:
             raise ImportError('matplotlib is required to reconstruct '
                               'the FVCOM nbe array from the nv array.')
