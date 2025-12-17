@@ -1,5 +1,6 @@
 {% set name = "PyLag" %}
 {% set version = "0.8.0" %}
+{% set version = load_setup_py_data().get('version') %}
 
 package:
   name: "{{ name|lower }}"
