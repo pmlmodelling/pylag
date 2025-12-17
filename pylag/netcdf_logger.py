@@ -119,6 +119,30 @@ class NetCDFLogger(object):
         except (configparser.NoSectionError, configparser.NoOptionError) as e:
             self.extra_grid_variables = []
 
+        # Save ocean current components
+        self._ocean_current_vars = {}
+        try:
+            self.save_ocean_current_vars = self.config.getboolean("OUTPUT",
+                                                       "save_ocean_current_variables")
+        except (configparser.NoSectionError, configparser.NoOptionError) as e:
+            self.save_ocean_current_vars = False
+        
+        # Save 10 meter wind velocity components
+        self._wind_velocity_vars = {}
+        try:
+            self.save_wind_velocity_vars = self.config.getboolean("OUTPUT",
+                                                       "save_surface_wind_variables")
+        except (configparser.NoSectionError, configparser.NoOptionError) as e:
+            self.save_wind_velocity_vars = False
+
+        # Save Stokes drift components
+        self._stokes_drift_vars = {}
+        try:
+            self.save_stokes_drift_vars = self.config.getboolean("OUTPUT",
+                                                       "save_stokes_drift_variables")
+        except (configparser.NoSectionError, configparser.NoOptionError) as e:
+            self.save_stokes_drift_vars = False
+
         # Grid names
         self.grid_names = grid_names
 
@@ -226,6 +250,48 @@ class NetCDFLogger(object):
             self._zeta.invalid = \
                     f'{variable_library.get_invalid_value(data_type)}'
 
+        # Ocean current variables
+        if self.save_ocean_current_vars:
+            for comp in ['uo', 'vo', 'wo']:
+                data_type = variable_library.get_data_type(comp,
+                                                           self._precision)
+                self._ocean_current_vars[comp] = self._ncfile.createVariable(
+                        comp, data_type, ('time', 'particles',), **self._ncopts)
+                self._ocean_current_vars[comp].units = \
+                    variable_library.get_units(comp)
+                self._ocean_current_vars[comp].long_name = \
+                    variable_library.get_long_name(comp)
+                self._ocean_current_vars[comp].invalid = \
+                    f'{variable_library.get_invalid_value(data_type)}'
+        
+        # Wind velocity variables
+        if self.save_wind_velocity_vars:
+            for comp in ['u10', 'v10']:
+                data_type = variable_library.get_data_type(comp,
+                                                           self._precision)
+                self._wind_velocity_vars[comp] = self._ncfile.createVariable(
+                        comp, data_type, ('time', 'particles',), **self._ncopts)
+                self._wind_velocity_vars[comp].units = \
+                    variable_library.get_units(comp)
+                self._wind_velocity_vars[comp].long_name = \
+                    variable_library.get_long_name(comp)
+                self._wind_velocity_vars[comp].invalid = \
+                    f'{variable_library.get_invalid_value(data_type)}'
+        
+        # Stokes drift variables
+        if self.save_stokes_drift_vars:
+            for comp in ['usd', 'vsd']:
+                data_type = variable_library.get_data_type(comp,
+                                                           self._precision)
+                self._stokes_drift_vars[comp] = self._ncfile.createVariable(
+                        comp, data_type, ('time', 'particles',), **self._ncopts)
+                self._stokes_drift_vars[comp].units = \
+                    variable_library.get_units(comp)
+                self._stokes_drift_vars[comp].long_name = \
+                    variable_library.get_long_name(comp)
+                self._stokes_drift_vars[comp].invalid = \
+                    f'{variable_library.get_invalid_value(data_type)}'
+
         # Add number of land boundary encounters
         data_type = variable_library.get_data_type('land_boundary_encounters',
                                                    self._precision)
@@ -325,6 +391,22 @@ class NetCDFLogger(object):
             self._h[tidx, :] = particle_data['h']
         if 'zeta' in self.extra_grid_variables:
             self._zeta[tidx, :] = particle_data['zeta']
+
+        # Add ocean current variables
+        if self.save_ocean_current_vars:
+            self._ocean_current_vars['uo'][tidx, :] = particle_data['uo']
+            self._ocean_current_vars['vo'][tidx, :] = particle_data['vo']
+            self._ocean_current_vars['wo'][tidx, :] = particle_data['wo']
+        
+        # Add wind velocity variables
+        if self.save_wind_velocity_vars:
+            self._wind_velocity_vars['u10'][tidx, :] = particle_data['u10']
+            self._wind_velocity_vars['v10'][tidx, :] = particle_data['v10']
+        
+        # Add Stokes drift variables
+        if self.save_stokes_drift_vars:
+            self._stokes_drift_vars['usd'][tidx, :] = particle_data['usd']
+            self._stokes_drift_vars['vsd'][tidx, :] = particle_data['vsd']
 
         # Add environmental variables
         for var_name in self.environmental_variables:

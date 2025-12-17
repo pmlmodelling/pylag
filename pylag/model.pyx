@@ -66,8 +66,8 @@ cdef class OPTModel:
     cdef NumMethod num_method
     cdef ParticleStateNumMethod particle_state_num_method
     cdef SettlingVelocityCalculator settling_velocity_calculator
-    cdef object environmental_variables
     cdef object extra_grid_variables
+    cdef object environmental_variables
     cdef object particle_seed_smart_ptrs
     cdef object particle_smart_ptrs
     cdef vector[Particle*] particle_ptrs
@@ -85,6 +85,11 @@ cdef class OPTModel:
     # Include a biological model?
     cdef bint use_bio_model
     cdef BioModel bio_model
+
+    # Output flags
+    cdef bint save_ocean_current_vars
+    cdef bint save_surface_wind_vars
+    cdef bint save_stokes_drift_vars
 
     # Data precision, used when constructing diagnostic variable arrays
     cdef object precision
@@ -143,15 +148,7 @@ cdef class OPTModel:
             raise PyLagValueError(f"Unsupported model coordinate "
                                   f"system `{coordinate_system}`")
 
-        # Save a list of environmental variables to be returned as diagnostics
-        try:
-            var_names = self.config.get("OUTPUT",
-                    "environmental_variables").strip().split(',')
-            self.environmental_variables = [var_name.strip() for var_name in var_names]
-        except (configparser.NoSectionError, configparser.NoOptionError) as e:
-            self.environmental_variables = []
-
-        # Save a list of extra grid variables to be returned as diagnostics
+        # Save extra grid variables; to be returned as diagnostics
         try:
             var_names = self.config.get("OUTPUT",
                     "extra_grid_variables").strip().split(',')
@@ -159,6 +156,38 @@ cdef class OPTModel:
                     [var_name.strip() for var_name in var_names]
         except (configparser.NoSectionError, configparser.NoOptionError) as e:
             self.extra_grid_variables = []
+
+        # Save ocean current variables; to be returned as diagnostics
+        try:
+            save_ocean_current_vars = self.config.getboolean(
+                    "OUTPUT", "save_ocean_current_variables")
+        except (configparser.NoSectionError, configparser.NoOptionError) as e:
+            save_ocean_current_vars = False
+        self.save_ocean_current_vars = save_ocean_current_vars
+
+        # Save surface wind variables; to be returned as diagnostics
+        try:
+            save_surface_wind_vars = self.config.getboolean(
+                    "OUTPUT", "save_surface_wind_variables")
+        except (configparser.NoSectionError, configparser.NoOptionError) as e:
+            save_surface_wind_vars = False
+        self.save_surface_wind_vars = save_surface_wind_vars
+
+        # Save Stokes drift variables; to be returned as diagnostics
+        try:
+            save_stokes_drift_vars = self.config.getboolean(
+                    "OUTPUT", "save_stokes_drift_variables")
+        except (configparser.NoSectionError, configparser.NoOptionError) as e:
+            save_stokes_drift_vars = False
+        self.save_stokes_drift_vars = save_stokes_drift_vars
+
+        # Save environmental variables; to be returned as diagnostics
+        try:
+            var_names = self.config.get("OUTPUT",
+                    "environmental_variables").strip().split(',')
+            self.environmental_variables = [var_name.strip() for var_name in var_names]
+        except (configparser.NoSectionError, configparser.NoOptionError) as e:
+            self.environmental_variables = []
 
         self._global_time_step = get_global_time_step(self.config)
 
@@ -609,6 +638,11 @@ cdef class OPTModel:
         """
         cdef ParticleSmartPtr particle_smart_ptr
 
+        # Velocity components
+        cdef DTYPE_FLOAT_t ocean_velocity[3]
+        cdef DTYPE_FLOAT_t wind_velocity[2]
+        cdef DTYPE_FLOAT_t stokes_drift_velocity[2]
+
         # Grid offsets
         if self.coordinate_system == "cartesian":
             xmin = self.data_reader.get_xmin()
@@ -641,15 +675,33 @@ cdef class OPTModel:
             dtype = variable_library.get_data_type(var_name, self.precision)
             diags[var_name] = np.empty(self._n_particles, dtype)
 
+        # Number of boundary encounters
+        dtype = variable_library.get_data_type('land_boundary_encounters',
+                                               self.precision)
+        diags['land_boundary_encounters'] = np.empty(self._n_particles, dtype)
+
         # Extra grid variables
         for var_name in self.extra_grid_variables:
             dtype = variable_library.get_data_type(var_name, self.precision)
             diags[var_name] = np.empty(self._n_particles, dtype)
 
-        # Number of boundary encounters
-        dtype = variable_library.get_data_type('land_boundary_encounters',
-                                               self.precision)
-        diags['land_boundary_encounters'] = np.empty(self._n_particles, dtype)
+        # Ocean current variables
+        if self.save_ocean_current_vars:
+            for var_name in ['uo', 'vo', 'wo']:
+                dtype = variable_library.get_data_type(var_name, self.precision)
+                diags[var_name] = np.empty(self._n_particles, dtype)
+
+        # Surface wind variables
+        if self.save_surface_wind_vars:
+            for var_name in ['u10', 'v10']:
+                dtype = variable_library.get_data_type(var_name, self.precision)
+                diags[var_name] = np.empty(self._n_particles, dtype)
+
+        # Stokes drift variables
+        if self.save_stokes_drift_vars:
+            for var_name in ['usd', 'vsd']:
+                dtype = variable_library.get_data_type(var_name, self.precision)
+                diags[var_name] = np.empty(self._n_particles, dtype)
 
         # Environmental variables
         for var_name in self.environmental_variables:
@@ -707,6 +759,47 @@ cdef class OPTModel:
                             diags['zeta'].dtype)
 
                 diags['zeta'][i] = zeta
+
+            # Ocean current variables
+            if self.save_ocean_current_vars:
+                if particle_smart_ptr.in_domain:
+                    self.data_reader.get_velocity(time, particle_smart_ptr.get_ptr(), ocean_velocity)
+                    diags['uo'][i] = ocean_velocity[0]
+                    diags['vo'][i] = ocean_velocity[1]
+                    diags['wo'][i] = ocean_velocity[2]
+                else:
+                    diags['uo'][i] = variable_library.get_invalid_value(
+                        diags['uo'].dtype)
+                    diags['vo'][i] = variable_library.get_invalid_value(
+                        diags['vo'].dtype)
+                    diags['wo'][i] = variable_library.get_invalid_value(
+                        diags['wo'].dtype)
+            
+            # Surface wind variables
+            if self.save_surface_wind_vars:
+                if particle_smart_ptr.in_domain:
+                    self.data_reader.get_ten_meter_wind_velocity(time,
+                            particle_smart_ptr.get_ptr(), wind_velocity)
+                    diags['u10'][i] = wind_velocity[0]
+                    diags['v10'][i] = wind_velocity[1]
+                else:
+                    diags['u10'][i] = variable_library.get_invalid_value(
+                        diags['u10'].dtype)
+                    diags['v10'][i] = variable_library.get_invalid_value(
+                        diags['v10'].dtype)
+
+            # Stokes drift variables
+            if self.save_stokes_drift_vars:
+                if particle_smart_ptr.in_domain:
+                    self.data_reader.get_surface_stokes_drift_velocity(time, 
+                            particle_smart_ptr.get_ptr(), stokes_drift_velocity)
+                    diags['usd'][i] = stokes_drift_velocity[0]
+                    diags['vsd'][i] = stokes_drift_velocity[1]
+                else:
+                    diags['usd'][i] = variable_library.get_invalid_value(
+                        diags['usd'].dtype)
+                    diags['vsd'][i] = variable_library.get_invalid_value(
+                        diags['vsd'].dtype)
 
             # Number of boundary encounters
             diags['land_boundary_encounters'][i] = \
