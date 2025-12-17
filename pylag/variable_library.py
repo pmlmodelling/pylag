@@ -230,6 +230,44 @@ _variable_data_types['depth'] = 'REAL'
 _variable_units['depth'] = 'm'
 _variable_long_names['depth'] = 'depth'
 
+# Velocity components
+# -------------------
+
+# u current component
+_variable_data_types['uo'] = 'REAL'
+_variable_units['uo'] = 'm s-1'
+_variable_long_names['uo'] = 'Eastward Current Velocity in the Water Column'
+
+# v current component
+_variable_data_types['vo'] = 'REAL'
+_variable_units['vo'] = 'm s-1'
+_variable_long_names['vo'] = 'Northward Current Velocity in the Water Column'
+
+# w current component
+_variable_data_types['wo'] = 'REAL'
+_variable_units['wo'] = 'm s-1'
+_variable_long_names['wo'] = 'Vertical Current Velocity in the Water Column'
+
+# u10 wind component
+_variable_data_types['u10'] = 'REAL'
+_variable_units['u10'] = 'm s-1'
+_variable_long_names['u10'] = '10 meter U wind component'
+
+# v10 wind component
+_variable_data_types['v10'] = 'REAL'
+_variable_units['v10'] = 'm s-1'
+_variable_long_names['v10'] = '10 meter V wind component'
+
+# usd Stokes drift u-component
+_variable_data_types['usd'] = 'REAL'
+_variable_units['usd'] = 'm s-1'
+_variable_long_names['usd'] = 'Sea surface wave stokes drift x velocity'
+
+# vsd Stokes drift v-component
+_variable_data_types['vsd'] = 'REAL'
+_variable_units['vsd'] = 'm s-1'
+_variable_long_names['vsd'] = 'Sea surface wave stokes drift y velocity'
+
 
 # Extra grid variables
 # --------------------
