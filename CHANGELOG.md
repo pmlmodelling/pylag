@@ -2,6 +2,14 @@
 
 PyLag is still very much in development. This page will be updated when future releases are made.
 
+## Version 0.8.1 18/12/2025
+
+* Add ability to save velocities along a particle pathline
+
+* Update Python and Conda versions
+
+* Fix Triangulation import
+
 ## Version 0.8.0 21/07/2025
 
 * Add option to prevent particles from ever beaching (#155)
