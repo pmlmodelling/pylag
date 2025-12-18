@@ -10,8 +10,8 @@ import numpy
 
 MAJOR               = 0
 MINOR               = 8
-PATCH               = 0
-ISRELEASED          = False
+PATCH               = 1
+ISRELEASED          = True
 VERSION = '{}.{}.{}'.format(MAJOR, MINOR, PATCH)
 
 build_type = 'prod'
