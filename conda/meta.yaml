@@ -7,7 +7,7 @@ package:
 
 build:
   number: 0
-  script: python -m pip install . --no-deps --ignore-installed -vv 
+  script: "{{ PYTHON }} -m pip install . --no-deps --ignore-installed -vv --no-build-isolation"
 
 source:
   path: ..
@@ -16,6 +16,8 @@ requirements:
   host:
     - python
     - pip
+    - setuptools
+    - wheel
     - openmpi
     - mpi4py
     - numpy x.x
@@ -26,16 +28,14 @@ requirements:
     - python
     - mpi4py
     - scipy>=1.4.1
-    - cython>=3.0
     - progressbar
     - natsort
-    - netCDF4
+    - netcdf4
     - cftime>=1.1
     - configparser
     - stripy
     - shapely
     - pyproj
-    - pytest
 
 test:
   imports:
