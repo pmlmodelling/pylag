@@ -6,7 +6,6 @@ import glob
 from setuptools import setup
 from setuptools.extension import Extension
 from Cython.Build import cythonize
-import numpy
 
 MAJOR               = 0
 MINOR               = 8
@@ -117,6 +116,7 @@ def makeExtension(ext_name, file_type):
         <module_name>.cpp
         <module_name>_cpp_wrapper.pyx
     """
+    import numpy
     ext_path = ext_name.replace(".", os.path.sep)+file_type
 
     cpp_path = None
