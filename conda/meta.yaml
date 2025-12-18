@@ -1,5 +1,4 @@
 {% set name = "PyLag" %}
-{% set version = "0.8.0" %}
 {% set version = load_setup_py_data().get('version') %}
 
 package:
@@ -8,7 +7,7 @@ package:
 
 build:
   number: 0
-  script: "{{ PYTHON }} -m pip install . --no-deps --ignore-installed -vv "
+  script: python -m pip install . --no-deps --ignore-installed -vv 
 
 source:
   path: ..
@@ -19,15 +18,13 @@ requirements:
     - pip
     - openmpi
     - mpi4py
-    - numpy>=2.0
+    - numpy x.x
     - cython>=3.0
   build:
-    - python
     - {{ compiler('cxx') }}
   run:
     - python
     - mpi4py
-    - numpy>=2.0
     - scipy>=1.4.1
     - cython>=3.0
     - progressbar
@@ -41,7 +38,7 @@ requirements:
     - pytest
 
 test:
-  import:
+  imports:
     - pylag.main
     - pylag.parallel.main
   requires:
