@@ -111,8 +111,8 @@ class RestartInitialParticleStateReader(InitialParticleStateReader):
                                                    'restart_file_name')
 
         # Read in the coordinate system
-        coordinate_system = self.config.get("SIMULATION",
-                                            "coordinate_system").strip().lower()
+        coordinate_system = self._config.get("SIMULATION",
+                                             "coordinate_system").strip().lower()
         if coordinate_system in ["cartesian", "geographic"]:
             self.coordinate_system = coordinate_system
         else:

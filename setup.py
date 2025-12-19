@@ -10,7 +10,7 @@ from Cython.Build import cythonize
 MAJOR               = 0
 MINOR               = 8
 PATCH               = 1
-ISRELEASED          = True
+ISRELEASED          = False
 VERSION = '{}.{}.{}'.format(MAJOR, MINOR, PATCH)
 
 build_type = 'prod'
