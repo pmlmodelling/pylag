@@ -13,6 +13,7 @@ dependencies:
   - nbsphinx
   - sphinx_rtd_theme
   - sphinxcontrib-napoleon
+  - sphinxcontrib.googleanalytics
   - sphinx-copybutton
   - jupyter
   - jupyter_client
