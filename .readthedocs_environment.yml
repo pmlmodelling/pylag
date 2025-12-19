@@ -5,6 +5,7 @@ channels:
   - JimClark
 dependencies:
   - python=3.12
+  - pip
   - pylag
   - matplotlib
   - cartopy
@@ -13,7 +14,7 @@ dependencies:
   - nbsphinx
   - sphinx_rtd_theme
   - sphinxcontrib-napoleon
-  - sphinxcontrib.googleanalytics
+  - sphinxcontrib-googleanalytics
   - sphinx-copybutton
   - jupyter
   - jupyter_client
