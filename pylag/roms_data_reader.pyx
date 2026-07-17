@@ -971,12 +971,12 @@ cdef class ROMSDataReader(DataReader):
                                                                                      k_layer,
                                                                                      time_fraction, particle)
                 else:
-                    var_lower_layer = self._unstructured_grid_rho.interpolate_in_time_and_space(self._theato_last,
+                    var_lower_layer = self._unstructured_grid_rho.interpolate_in_time_and_space(self._thetao_last,
                                                                                                 self._thetao_next,
                                                                                                 k_lower_layer,
                                                                                                 time_fraction, particle)
 
-                    var_upper_layer = self._unstructured_grid_rho.interpolate_in_time_and_space(self._theato_last,
+                    var_upper_layer = self._unstructured_grid_rho.interpolate_in_time_and_space(self._thetao_last,
                                                                                                 self._thetao_next,
                                                                                                 k_upper_layer,
                                                                                                 time_fraction, particle)
