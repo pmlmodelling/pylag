@@ -362,6 +362,20 @@ cdef class OPTModel:
                         # Use this and h (zmin) to compute z
                         particle_ptr.set_x3(z_test)
 
+                else:
+                    # There can be small differences in sea suface height between
+                    # restarts so clamp the z value between min and max (as in 
+                    # depth_below_surface case for regular starts
+
+                    z_test = particle_ptr.get_x3()
+
+                    if z_test < zmin:
+                        z_test = zmin
+                    elif z_test > zmax:
+                        z_test = zmax
+
+                    particle_ptr.set_x3(z_test)
+
                 # Determine if the host element is presently dry
                 if self.data_reader.is_wet(time, particle_ptr) == 1:
                     particle_ptr.set_is_beached(0)
