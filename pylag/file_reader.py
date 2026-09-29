@@ -302,6 +302,7 @@ class FileReader:
         # Check for unusable input data
         ds_first = self.dataset_reader.read_dataset(self.data_file_names[0])
         datetimes_first = self.datetime_reader.get_datetime(ds_first)
+        ds_first.close()
         if self.n_data_files == 1 and len(datetimes_first) == 1:
             logger.info(f"The single input data file found contains just a "
                         f"single time point which is insufficient to perform "
@@ -319,12 +320,11 @@ class FileReader:
                     time_index=0)
             data_end_datetime = self.datetime_reader.get_datetime(ds,
                     time_index=-1)
+            ds.close()
 
             # Compute time delta
             time_delta = self.compute_time_delta_between_datasets(
                     data_file_name, forward=True)
-
-            ds.close()
 
             # Set file names depending on time direction
             if self.time_direction == 1:
@@ -480,18 +480,43 @@ class FileReader:
             time_index_a = 0
             time_index_b = -1
 
-        ds_a = self.dataset_reader.read_dataset(data_file_name)
+        ds_a, close_a = self._get_dataset_avoiding_duplicate_handle(
+                data_file_name)
         datetime_a = self.datetime_reader.get_datetime(ds_a,
                                                        time_index=time_index_a)
-        ds_a.close()
+        if close_a:
+            ds_a.close()
 
-        ds_b = self.dataset_reader.read_dataset(
+        ds_b, close_b = self._get_dataset_avoiding_duplicate_handle(
                 self.data_file_names[file_idx_b])
         datetime_b = self.datetime_reader.get_datetime(ds_b,
                                                        time_index=time_index_b)
-        ds_b.close()
+        if close_b:
+            ds_b.close()
 
         return abs((datetime_b - datetime_a).total_seconds())
+
+    def _get_dataset_avoiding_duplicate_handle(self, file_name):
+        """Return an open dataset handle for `file_name`.
+
+        If `file_name` is already open as `first_data_file` or
+        `second_data_file`, that existing handle is reused rather than
+        opening a second, concurrent netCDF4/HDF5 handle on the same file,
+        which has been observed to trigger a segfault/HDF error.
+
+        Returns
+        -------
+        (dataset, should_close) : tuple
+            The dataset handle, and whether the caller is responsible for
+            closing it (False if it is a handle owned elsewhere).
+        """
+        if self.first_data_file is not None and \
+                file_name == self.first_data_file_name:
+            return self.first_data_file, False
+        if self.second_data_file is not None and \
+                file_name == self.second_data_file_name:
+            return self.second_data_file, False
+        return self.dataset_reader.read_dataset(file_name), True
 
     def update_reading_frames(self, time):
         """ Update input datasets and reading frames
@@ -864,38 +889,70 @@ class FileReader:
     def _open_first_data_file_for_reading(self):
         logger = logging.getLogger(__name__)
 
-        # Close the first data file if one has been opened previously
-        if self.first_data_file:
-            self.first_data_file.close()
+        old_first_data_file = self.first_data_file
 
-        # Open the first data file
-        try:
-            self.first_data_file = self.dataset_reader.read_dataset(
-                self.first_data_file_name)
-            logger.info(f'Opened first data file {self.first_data_file_name} '
-                        f'for reading.')
-        except RuntimeError:
-            logger.error(f'Could not open data file '
-                         f'{self.first_data_file_name}.')
-            raise PyLagRuntimeError('Could not open data file for reading.')
+        # Reuse the already open second data file's handle if it points at
+        # the same file, rather than holding two concurrent netCDF4/HDF5
+        # handles open on the same file (which has been observed to trigger
+        # a segfault in netCDF4/HDF5 - see CHANGELOG for details).
+        if self.second_data_file is not None and \
+                self.first_data_file_name == self.second_data_file_name:
+            self.first_data_file = self.second_data_file
+            logger.info(f'Reusing already open data file '
+                        f'{self.first_data_file_name} as the first data '
+                        f'file.')
+        else:
+            try:
+                logger.info(f'Opening first data file '
+                            f'{self.first_data_file_name} for reading.')
+                self.first_data_file = self.dataset_reader.read_dataset(
+                    self.first_data_file_name)
+                logger.info(f'Opened first data file '
+                            f'{self.first_data_file_name} for reading.')
+            except RuntimeError:
+                logger.error(f'Could not open data file '
+                             f'{self.first_data_file_name}.')
+                raise PyLagRuntimeError('Could not open data file for reading.')
+
+        # Close the old first data file, unless it is still in use as the
+        # second data file
+        if old_first_data_file is not None and \
+                old_first_data_file is not self.second_data_file:
+            old_first_data_file.close()
 
     def _open_second_data_file_for_reading(self):
         logger = logging.getLogger(__name__)
 
-        # Close the second data file if one has been opened previously
-        if self.second_data_file:
-            self.second_data_file.close()
+        old_second_data_file = self.second_data_file
 
-        # Open the second data file
-        try:
-            self.second_data_file = self.dataset_reader.read_dataset(
-                self.second_data_file_name)
-            logger.info(f'Opened second data file {self.second_data_file_name} '
-                        f'for reading.')
-        except RuntimeError:
-            logger.error(f'Could not open data file '
-                         f'{self.second_data_file_name}.')
-            raise PyLagRuntimeError('Could not open data file for reading.')
+        # Reuse the already open first data file's handle if it points at
+        # the same file, rather than holding two concurrent netCDF4/HDF5
+        # handles open on the same file (which has been observed to trigger
+        # a segfault in netCDF4/HDF5 - see CHANGELOG for details).
+        if self.first_data_file is not None and \
+                self.second_data_file_name == self.first_data_file_name:
+            self.second_data_file = self.first_data_file
+            logger.info(f'Reusing already open data file '
+                        f'{self.second_data_file_name} as the second data '
+                        f'file.')
+        else:
+            try:
+                logger.info(f'Opening second data file '
+                            f'{self.second_data_file_name} for reading.')
+                self.second_data_file = self.dataset_reader.read_dataset(
+                    self.second_data_file_name)
+                logger.info(f'Opened second data file '
+                            f'{self.second_data_file_name} for reading.')
+            except RuntimeError:
+                logger.error(f'Could not open data file '
+                             f'{self.second_data_file_name}.')
+                raise PyLagRuntimeError('Could not open data file for reading.')
+
+        # Close the old second data file, unless it is still in use as the
+        # first data file
+        if old_second_data_file is not None and \
+                old_second_data_file is not self.first_data_file:
+            old_second_data_file.close()
 
     def _set_time_arrays(self):
         self._set_first_time_array()

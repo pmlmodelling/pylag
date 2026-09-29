@@ -128,11 +128,17 @@ def makeExtension(ext_name, file_type):
 
     ext_path_list = [ext_path] if cpp_path is None else [ext_path, cpp_path]
 
+    # Emit DWARF debug symbols and disable optimisation so gdb/cygdb can
+    # resolve source lines and locals in debug builds
+    extra_compile_args = ["-std=c++11"]
+    if build_type == 'debug':
+        extra_compile_args += ["-g", "-O0"]
+
     return Extension(
         ext_name,
         ext_path_list,
         language="c++",
-        extra_compile_args=["-std=c++11"],
+        extra_compile_args=extra_compile_args,
         libraries=["stdc++"],
         include_dirs=['.', numpy.get_include()],
         )
