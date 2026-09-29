@@ -156,20 +156,21 @@ class RestartInitialParticleStateReader(InitialParticleStateReader):
                                   f"restart file.")
 
         # Extract particle data
+
         n_particles = restart.dimensions['particles'].size
-        group_ids = restart.variables['group_id'][0, :]
+        group_ids = np.asarray(restart.variables['group_id'][0, :], dtype=DTYPE_INT)
 
         x1_var_name = variable_library.get_coordinate_variable_name(
                 self.coordinate_system, 'x1')
-        x1_positions = restart.variables[x1_var_name][0, :]
+        x1_positions = np.asarray(restart.variables[x1_var_name][0, :], dtype=DTYPE_FLOAT)
 
         x2_var_name = variable_library.get_coordinate_variable_name(
                 self.coordinate_system, 'x2')
-        x2_positions = restart.variables[x2_var_name][0, :]
+        x2_positions = np.asarray(restart.variables[x2_var_name][0, :], dtype=DTYPE_FLOAT)
 
         x3_var_name = variable_library.get_coordinate_variable_name(
                 self.coordinate_system, 'x3')
-        x3_positions = restart.variables[x3_var_name][0, :]
+        x3_positions = np.asarray(restart.variables[x3_var_name][0, :], dtype=DTYPE_FLOAT)
 
         restart.close()
 
