@@ -17,7 +17,7 @@ try:
     from matplotlib.tri import Triangulation
     from matplotlib.collections import PolyCollection
     from matplotlib.colors import Normalize
-    from matplotlib import cm as mplcm
+    from matplotlib import colormaps as mplcm
     from mpl_toolkits.axes_grid1 import make_axes_locatable
     import cartopy.crs as ccrs
     from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
@@ -1749,7 +1749,7 @@ def colourmap(variable):
 
     """
 
-    default_cmap = mplcm.get_cmap('viridis')
+    default_cmap = mplcm.get('viridis')
 
     cmaps = {'q2': cm.dense,
              'l': cm.dense,
